@@ -1,16 +1,17 @@
 import numpy as np
+from dataclasses import dataclass, field
 
 
+@dataclass
 class RandomWalk:
-    
-    std_Δt_ratio = 1.0
-    max_walk = np.inf
-    min_walk = -np.inf
-    _value = None
-    _init_value = None
+    initial_value: float = 0.0
+    std_Δt_ratio: float = 1.0
+    max_walk: float = field(default_factory=lambda: np.inf)
+    min_walk: float = field(default_factory=lambda: -np.inf)
+    _value: float = field(init=False, repr=False)
 
-    def __init__(self, value = 0.0):
-        self._value = value
+    def __post_init__(self):
+        self._value = self.initial_value
 
     @property
     def value(self) -> float:

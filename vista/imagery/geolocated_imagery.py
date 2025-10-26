@@ -1,34 +1,31 @@
 from astropy.coordinates import EarthLocation
 from astropy import units
+from dataclasses import dataclass
 import h5py
 import numpy as np
 from typing import Tuple
 from vista.imagery.imagery import Imagery
 
 
+@dataclass
 class GeolocatedImagery(Imagery):
+    title: str
+    imagery: np.ndarray
+    frames: np.ndarray
+    times: np.ndarray
+    to_geodetic_polys: np.ndarray
+    to_pixel_polys: np.ndarray
+    description: str = ""
 
-    def __init__(
-        self, 
-        title: str,
-        imagery: np.ndarray, 
-        frames: np.ndarray, 
-        times: np.ndarray,
-        to_geodetic_polys: np.ndarray,
-        to_pixel_polys: np.ndarray,
-        description: str = "",
-    ):
-        self.title = title
-        self.imagery = imagery
-        self.frames = frames
-        self.times = times
-        self.to_geodetic_polys = to_geodetic_polys
-        self.to_pixel_polys = to_pixel_polys
-        self.description = description
+    def __post_init__(self):
+        # Set parent class attributes to match child attributes
+        self.name = self.title
+        self.images = self.imagery
+        self.unix_times = self.times
 
     def __str__(self):
         return self.__repr__()
-    
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.title}, {self.imagery.shape})"
         

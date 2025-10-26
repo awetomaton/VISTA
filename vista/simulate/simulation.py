@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import pathlib
-from typing import Union
+from dataclasses import dataclass
+from typing import Union, Optional, Tuple, List
 from vista.utils.random_walk import RandomWalk
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
@@ -9,32 +10,29 @@ from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
 
 
+@dataclass
 class Simulation:
-
+    name: str
     frames: int = 100
     rows: int = 256
     columns: int = 256
     num_detectors: int = 1
-    detectors_std: int = 1.0
-    detection_prob: float = 0.5,
-    detection_false_alarm_range = (20, 100)
+    detectors_std: float = 1.0
+    detection_prob: float = 0.5
+    detection_false_alarm_range: Tuple[int, int] = (20, 100)
     num_trackers: int = 1
     tracker_std: float = 1.0
-    num_tracks_range = (5, 8)
-    track_intensity_range = (1.0, 7.0)
-    track_intensity_sigma_range = (0.5, 2.0)
-    track_speed_range = (1.5, 2.5)
-    track_speed_std = 1.0
-    track_θ_std = 0.1
-    track_life_range = (75, 100)
-    start = None
-
-    imagery = None
-    detectors = None
-    trackers = None
-    
-    def __init__(self, name):
-        self.name = name 
+    num_tracks_range: Tuple[int, int] = (5, 8)
+    track_intensity_range: Tuple[float, float] = (1.0, 7.0)
+    track_intensity_sigma_range: Tuple[float, float] = (0.5, 2.0)
+    track_speed_range: Tuple[float, float] = (1.5, 2.5)
+    track_speed_std: float = 1.0
+    track_θ_std: float = 0.1
+    track_life_range: Tuple[int, int] = (75, 100)
+    start: Optional[any] = None
+    imagery: Optional[Imagery] = None
+    detectors: Optional[List[Detector]] = None
+    trackers: Optional[List[Tracker]] = None 
 
     def save(self, dir = Union[str, pathlib.Path]):
         dir = pathlib.Path(dir)

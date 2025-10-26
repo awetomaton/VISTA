@@ -12,18 +12,22 @@ class Vista(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Define icons
+        self.icons = VistaIcons()
+
         # Class attributes
         app.setWindowIcon(self.icons.logo)
         self.setWindowIcon(self.icons.logo)
         self.setWindowTitle("VISTA - 1.0.0")
 
-        # Define icons
-        self.icons = VistaIcons()
-
+        # Create central widget
+        self.central_widget = QtWidgets.QWidget()
+        
         self.setCentralWidget(self.central_widget)
-        self.show()
-        sys.exit(app.exec())
+        
 
 
 if __name__ == "__main__":
-    Vista()
+    vista = Vista()
+    vista.show()
+    sys.exit(app.exec())

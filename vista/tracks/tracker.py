@@ -1,25 +1,21 @@
 import numpy as np
 import pandas as pd
 import pathlib
+from dataclasses import dataclass
 from typing import List, Union
 from vista.tracks.track import Track
 
 
-class Tracker(object):
-
-    def __init__(
-        self, 
-        name: str,
-        tracks: List[Track], 
-    ):
-        self.name = name
-        self.tracks = tracks
+@dataclass
+class Tracker:
+    name: str
+    tracks: List[Track]
 
     def __str__(self):
         return self.__repr__()
-    
+
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.title}, {len(self.tracks)} Tracks)"
+        return f"{self.__class__.__name__}({self.name}, {len(self.tracks)} Tracks)"
     
     @classmethod
     def from_dataframe(cls, name: str, df: pd.DataFrame):

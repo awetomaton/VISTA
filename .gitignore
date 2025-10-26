@@ -157,3 +157,4 @@ _static
 _templates
 
 tests/data/*
+data/**

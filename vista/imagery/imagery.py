@@ -5,31 +5,24 @@ file readers and pixel-to-geodetic conversions
 """
 from astropy.coordinates import EarthLocation
 from astropy import units
+from dataclasses import dataclass
 import h5py
 import numpy as np
 import pathlib
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 
+@dataclass
 class Imagery:
-
-    def __init__(
-        self, 
-        name: str,
-        images: np.ndarray, 
-        frames: np.ndarray, 
-        unix_times: np.ndarray = None,
-        description: str = ""
-    ):
-        self.name = name
-        self.images = images
-        self.frames = frames
-        self.unix_times = unix_times
-        self.description = description
+    name: str
+    images: np.ndarray
+    frames: np.ndarray
+    unix_times: Optional[np.ndarray] = None
+    description: str = ""
 
     def __str__(self):
         return self.__repr__()
-    
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name}, {self.images.shape})"
         
