@@ -117,7 +117,7 @@ class Simulation:
                         ((column_grid - column)**2 / (2 * track_intensity_sigma**2)) + 
                         ((row_grid - row)**2 / (2 * track_intensity_sigma**2))
                     ))
-                    images[i] += track_point_image
+                    images[f] += track_point_image
                     
                     frames[i] = f
                     rows[i] = row
