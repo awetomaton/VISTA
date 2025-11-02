@@ -12,6 +12,11 @@ class Detector:
     rows: np.ndarray
     columns: np.ndarray
     description: str = ""
+    # Styling attributes
+    color: str = 'r'  # Red by default
+    marker: str = 'o'  # Circle by default
+    marker_size: int = 10
+    visible: bool = True
 
     def __len__(self):
         return len(self.frames)

@@ -10,6 +10,12 @@ class Track:
     frames: np.ndarray
     rows: np.ndarray
     columns: np.ndarray
+    # Styling attributes
+    color: str = 'g'  # Green by default
+    marker: str = 'o'  # Circle by default
+    line_width: int = 2
+    marker_size: int = 12
+    visible: bool = True
 
     def __len__(self):
         return len(self.frames)
