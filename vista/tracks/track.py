@@ -16,6 +16,7 @@ class Track:
     line_width: int = 2
     marker_size: int = 12
     visible: bool = True
+    tail_length: int = 0  # 0 means show all history, >0 means show only last N frames
 
     def __len__(self):
         return len(self.frames)

@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QComboBox, QColorDialog,
-    QHeaderView, QLabel, QTabWidget, QStyledItemDelegate
+    QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QBrush
@@ -119,7 +119,7 @@ class DataManagerPanel(QWidget):
         tracker_layout.addWidget(self.tracker_combo)
         layout.addLayout(tracker_layout)
 
-        # Show/Hide all buttons
+        # Show/Hide all buttons and global tail length
         button_layout = QHBoxLayout()
         self.show_all_tracks_btn = QPushButton("Show All")
         self.show_all_tracks_btn.clicked.connect(self.show_all_tracks)
@@ -128,13 +128,28 @@ class DataManagerPanel(QWidget):
         button_layout.addWidget(self.show_all_tracks_btn)
         button_layout.addWidget(self.hide_all_tracks_btn)
         button_layout.addStretch()
+
+        # Global tail length control
+        button_layout.addWidget(QLabel("Tail Length:"))
+        self.global_tail_spinbox = QSpinBox()
+        self.global_tail_spinbox.setMinimum(0)
+        self.global_tail_spinbox.setMaximum(1000)
+        self.global_tail_spinbox.setValue(0)
+        self.global_tail_spinbox.setToolTip("0 = show all history, >0 = show last N frames")
+        self.global_tail_spinbox.setMaximumWidth(80)
+        button_layout.addWidget(self.global_tail_spinbox)
+
+        apply_tail_btn = QPushButton("Apply to All")
+        apply_tail_btn.clicked.connect(self.apply_global_tail_length)
+        button_layout.addWidget(apply_tail_btn)
+
         layout.addLayout(button_layout)
 
         # Tracks table
         self.tracks_table = QTableWidget()
-        self.tracks_table.setColumnCount(6)
+        self.tracks_table.setColumnCount(7)
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Color", "Marker", "Line Width", "Marker Size"
+            "Visible", "Name", "Color", "Marker", "Line Width", "Marker Size", "Tail Length"
         ])
         self.tracks_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tracks_table.cellChanged.connect(self.on_track_cell_changed)
@@ -257,6 +272,10 @@ class DataManagerPanel(QWidget):
             size_item = QTableWidgetItem(str(track.marker_size))
             self.tracks_table.setItem(row, 5, size_item)
 
+            # Tail Length
+            tail_item = QTableWidgetItem(str(track.tail_length))
+            self.tracks_table.setItem(row, 6, tail_item)
+
         self.tracks_table.blockSignals(False)
 
     def refresh_detections_table(self):
@@ -339,6 +358,12 @@ class DataManagerPanel(QWidget):
             item = self.tracks_table.item(row, column)
             try:
                 track.marker_size = int(item.text())
+            except ValueError:
+                pass
+        elif column == 6:  # Tail Length
+            item = self.tracks_table.item(row, column)
+            try:
+                track.tail_length = int(item.text())
             except ValueError:
                 pass
 
@@ -449,6 +474,20 @@ class DataManagerPanel(QWidget):
         tracker = self.viewer.trackers[tracker_index]
         for track in tracker.tracks:
             track.visible = False
+
+        self.refresh_tracks_table()
+        self.data_changed.emit()
+
+    def apply_global_tail_length(self):
+        """Apply global tail length to all tracks in current tracker"""
+        tracker_index = self.tracker_combo.currentIndex()
+        if tracker_index < 0 or tracker_index >= len(self.viewer.trackers):
+            return
+
+        tail_length = self.global_tail_spinbox.value()
+        tracker = self.viewer.trackers[tracker_index]
+        for track in tracker.tracks:
+            track.tail_length = tail_length
 
         self.refresh_tracks_table()
         self.data_changed.emit()

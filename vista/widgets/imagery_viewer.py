@@ -177,6 +177,14 @@ class ImageryViewer(QWidget):
                 if np.any(mask):
                     rows = track.rows[mask]
                     cols = track.columns[mask]
+                    frames = track.frames[mask]
+
+                    # Apply tail length if specified
+                    if track.tail_length > 0 and len(rows) > track.tail_length:
+                        # Only show the last N points
+                        rows = rows[-track.tail_length:]
+                        cols = cols[-track.tail_length:]
+                        frames = frames[-track.tail_length:]
 
                     # Update track path
                     path.setData(
@@ -186,7 +194,7 @@ class ImageryViewer(QWidget):
 
                     # Update current position marker
                     if frame_num in track.frames:
-                        idx = np.where(track.frames == frame_num)[0][0]
+                        idx = np.where(frames == frame_num)[0][0]
                         marker.setData(
                             x=[cols[idx]], y=[rows[idx]],
                             pen=pg.mkPen(color=track.color, width=2),
