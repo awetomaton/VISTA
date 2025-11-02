@@ -15,7 +15,7 @@ def simulate_scenario():
     basic_scenario_dir = DATA_DIR / "basic_scenario"
     basic_scenario_dir.mkdir(exist_ok=True)
     simulation.save(basic_scenario_dir)
-
+    
     with h5py.File(R"C:\Users\Stephen Hartzell\projects\vista\data\basic_scenario\imagery.h5", "r") as fid:
         datacube = fid["images"][:]
     px.imshow(np.max(datacube, axis=0), color_continuous_scale="Bluered").show()

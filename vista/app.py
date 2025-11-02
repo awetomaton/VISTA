@@ -27,7 +27,7 @@ class ImageryViewer(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.current_frame = 0
+        self.current_frame_number = 0  # Actual frame number from imagery
         self.imagery = None
         self.detectors = []
         self.tracks = []
@@ -74,20 +74,35 @@ class ImageryViewer(QWidget):
     def load_imagery(self, imagery: Imagery):
         """Load imagery data into the viewer"""
         self.imagery = imagery
-        self.current_frame = 0
+        self.current_frame_number = imagery.frames[0] if len(imagery.frames) > 0 else 0
 
         # Display the first frame
         self.image_item.setImage(imagery.images[0])
 
-    def set_frame(self, frame_index: int):
-        """Set the current frame to display"""
-        if self.imagery is not None and 0 <= frame_index < len(self.imagery.frames):
-            self.current_frame = frame_index
+    def set_frame_number(self, frame_number: int):
+        """Set the current frame to display by frame number"""
+        if self.imagery is None:
+            return
+
+        # Find the index in the imagery array that corresponds to this frame number
+        # Use the closest frame number that is <= the requested frame number
+        valid_indices = np.where(self.imagery.frames <= frame_number)[0]
+
+        if len(valid_indices) > 0:
+            # Get the index of the closest frame that is <= frame_number
+            image_index = valid_indices[-1]
+            self.current_frame_number = self.imagery.frames[image_index]
 
             # Update the displayed image (histogram updates automatically)
-            self.image_item.setImage(self.imagery.images[frame_index])
+            self.image_item.setImage(self.imagery.images[image_index])
 
             self.update_overlays()
+
+    def get_frame_range(self):
+        """Get the min and max frame numbers from the imagery"""
+        if self.imagery is not None and len(self.imagery.frames) > 0:
+            return int(self.imagery.frames[0]), int(self.imagery.frames[-1])
+        return 0, 0
 
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
@@ -100,7 +115,7 @@ class ImageryViewer(QWidget):
             return
 
         # Get current frame number
-        frame_num = self.imagery.frames[self.current_frame]
+        frame_num = self.current_frame_number
 
         # Plot detections for current frame
         for detector in self.detectors:
@@ -170,8 +185,9 @@ class PlaybackControls(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.is_playing = False
-        self.frame_count = 0
-        self.current_frame = 0
+        self.min_frame = 0  # Minimum frame number
+        self.max_frame = 0  # Maximum frame number
+        self.current_frame = 0  # Current frame number
         self.fps = 10  # frames per second
         self.playback_direction = 1  # 1 for forward, -1 for reverse
         self.bounce_mode = False
@@ -295,25 +311,40 @@ class PlaybackControls(QWidget):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-    def set_frame_count(self, count: int):
-        """Set the total number of frames"""
-        self.frame_count = count
-        self.frame_slider.setMaximum(count - 1 if count > 0 else 0)
-        self.bounce_start_spinbox.setMaximum(count - 1 if count > 0 else 0)
-        self.bounce_end_spinbox.setMaximum(count - 1 if count > 0 else 0)
-        self.bounce_end_spinbox.setValue(count - 1 if count > 0 else 0)
-        self.bounce_end = count - 1 if count > 0 else 0
+    def set_frame_range(self, min_frame: int, max_frame: int):
+        """Set the range of frame numbers"""
+        self.min_frame = min_frame
+        self.max_frame = max_frame
+        self.current_frame = min_frame
+
+        # Update slider range
+        self.frame_slider.setMinimum(min_frame)
+        self.frame_slider.setMaximum(max_frame)
+        self.frame_slider.setValue(min_frame)
+
+        # Update bounce spinboxes
+        self.bounce_start_spinbox.setMinimum(min_frame)
+        self.bounce_start_spinbox.setMaximum(max_frame)
+        self.bounce_start_spinbox.setValue(min_frame)
+
+        self.bounce_end_spinbox.setMinimum(min_frame)
+        self.bounce_end_spinbox.setMaximum(max_frame)
+        self.bounce_end_spinbox.setValue(max_frame)
+
+        self.bounce_start = min_frame
+        self.bounce_end = max_frame
+
         self.update_label()
 
-    def set_frame(self, frame_index: int):
-        """Set current frame"""
-        self.current_frame = frame_index
-        self.frame_slider.setValue(frame_index)
+    def set_frame(self, frame_number: int):
+        """Set current frame by frame number"""
+        self.current_frame = frame_number
+        self.frame_slider.setValue(frame_number)
         self.update_label()
 
     def update_label(self):
         """Update frame label"""
-        self.frame_label.setText(f"Frame: {self.current_frame} / {self.frame_count - 1 if self.frame_count > 0 else 0}")
+        self.frame_label.setText(f"Frame: {self.current_frame} / {self.max_frame}")
 
     def on_slider_changed(self, value):
         """Handle slider value change"""
@@ -436,24 +467,24 @@ class PlaybackControls(QWidget):
 
     def next_frame(self):
         """Go to next frame"""
-        if self.current_frame < self.frame_count - 1:
+        if self.current_frame < self.max_frame:
             self.set_frame(self.current_frame + 1)
         else:
             # Loop back to beginning
-            self.set_frame(0)
+            self.set_frame(self.min_frame)
 
     def prev_frame(self):
         """Go to previous frame"""
-        if self.current_frame > 0:
+        if self.current_frame > self.min_frame:
             self.set_frame(self.current_frame - 1)
 
     def prev_frame_reverse(self):
         """Go to previous frame (for reverse playback with looping)"""
-        if self.current_frame > 0:
+        if self.current_frame > self.min_frame:
             self.set_frame(self.current_frame - 1)
         else:
             # Loop to end
-            self.set_frame(self.frame_count - 1)
+            self.set_frame(self.max_frame)
 
     def on_bounce_toggled(self, state):
         """Handle bounce mode toggle"""
@@ -587,9 +618,10 @@ class VistaMainWindow(QMainWindow):
                 # Load into viewer
                 self.viewer.load_imagery(imagery)
 
-                # Update playback controls
-                self.controls.set_frame_count(len(imagery.frames))
-                self.controls.set_frame(0)
+                # Update playback controls with frame range
+                min_frame, max_frame = self.viewer.get_frame_range()
+                self.controls.set_frame_range(min_frame, max_frame)
+                self.controls.set_frame(min_frame)
 
                 self.statusBar().showMessage(f"Loaded imagery: {file_path}", 3000)
 
@@ -695,9 +727,9 @@ class VistaMainWindow(QMainWindow):
                     QMessageBox.StandardButton.Ok
                 )
 
-    def on_frame_changed(self, frame_index):
+    def on_frame_changed(self, frame_number):
         """Handle frame change from playback controls"""
-        self.viewer.set_frame(frame_index)
+        self.viewer.set_frame_number(frame_number)
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
