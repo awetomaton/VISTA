@@ -9,7 +9,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QSlider, QLabel, QFileDialog, QSplitter, QMenuBar, QMenu,
-    QSpinBox, QCheckBox, QDial
+    QSpinBox, QCheckBox, QDial, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer, QSettings
 from PyQt6.QtGui import QAction
@@ -226,36 +226,11 @@ class PlaybackControls(QWidget):
         self.next_button.setToolTip("Next Frame")
         self.next_button.clicked.connect(self.next_frame)
 
+        button_layout.addStretch()
         button_layout.addWidget(self.play_button)
         button_layout.addWidget(self.reverse_button)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.next_button)
-        button_layout.addStretch()
-
-        
-
-        # FPS controls
-        self.fps_label = QLabel("FPS:")
-        self.fps_spinbox = QSpinBox()
-        self.fps_spinbox.setMinimum(-100)
-        self.fps_spinbox.setMaximum(100)
-        self.fps_spinbox.setValue(self.fps)
-        self.fps_spinbox.setMaximumWidth(60)
-        self.fps_spinbox.valueChanged.connect(self.on_fps_spinbox_changed)
-
-        self.fps_dial = QDial()
-        self.fps_dial.setMinimum(-100)
-        self.fps_dial.setMaximum(100)
-        self.fps_dial.setValue(self.fps)
-        self.fps_dial.setMaximumWidth(80)
-        self.fps_dial.setMaximumHeight(80)
-        self.fps_dial.setNotchesVisible(True)
-        self.fps_dial.setWrapping(False)
-        self.fps_dial.valueChanged.connect(self.on_fps_dial_changed)
-
-        button_layout.addWidget(self.fps_label)
-        button_layout.addWidget(self.fps_spinbox)
-        button_layout.addWidget(self.fps_dial)
 
         # Bounce mode controls row
         bounce_layout = QHBoxLayout()
@@ -289,11 +264,35 @@ class PlaybackControls(QWidget):
         bounce_layout.addWidget(self.bounce_end_label)
         bounce_layout.addWidget(self.bounce_end_spinbox)
         bounce_layout.addWidget(self.set_bounce_button)
-        bounce_layout.addStretch()
+
+        button_layout.addLayout(bounce_layout)
+
+        # FPS controls
+        self.fps_label = QLabel("FPS:")
+        self.fps_spinbox = QSpinBox()
+        self.fps_spinbox.setMinimum(-100)
+        self.fps_spinbox.setMaximum(100)
+        self.fps_spinbox.setValue(self.fps)
+        self.fps_spinbox.setMaximumWidth(60)
+        self.fps_spinbox.valueChanged.connect(self.on_fps_spinbox_changed)
+
+        self.fps_dial = QDial()
+        self.fps_dial.setMinimum(-100)
+        self.fps_dial.setMaximum(100)
+        self.fps_dial.setValue(self.fps)
+        self.fps_dial.setMaximumWidth(80)
+        self.fps_dial.setMaximumHeight(80)
+        self.fps_dial.setNotchesVisible(True)
+        self.fps_dial.setWrapping(False)
+        self.fps_dial.valueChanged.connect(self.on_fps_dial_changed)
+
+        button_layout.addWidget(self.fps_label)
+        button_layout.addWidget(self.fps_spinbox)
+        button_layout.addWidget(self.fps_dial)
+        button_layout.addStretch()
 
         layout.addLayout(slider_layout)
         layout.addLayout(button_layout)
-        layout.addLayout(bounce_layout)
         self.setLayout(layout)
 
     def set_frame_count(self, count: int):
@@ -595,7 +594,12 @@ class VistaMainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Loaded imagery: {file_path}", 3000)
 
             except Exception as e:
-                self.statusBar().showMessage(f"Error loading imagery: {str(e)}", 5000)
+                QMessageBox.critical(
+                    self,
+                    "Error Loading Imagery",
+                    f"Failed to load imagery file:\n\n{str(e)}",
+                    QMessageBox.StandardButton.Ok
+                )
 
     def load_detections_file(self):
         """Load detections from CSV file"""
@@ -637,7 +641,12 @@ class VistaMainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Loaded detections: {file_path}", 3000)
 
             except Exception as e:
-                self.statusBar().showMessage(f"Error loading detections: {str(e)}", 5000)
+                QMessageBox.critical(
+                    self,
+                    "Error Loading Detections",
+                    f"Failed to load detections file:\n\n{str(e)}",
+                    QMessageBox.StandardButton.Ok
+                )
 
     def load_tracks_file(self):
         """Load tracks from CSV file"""
@@ -679,7 +688,12 @@ class VistaMainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Loaded tracks: {file_path}", 3000)
 
             except Exception as e:
-                self.statusBar().showMessage(f"Error loading tracks: {str(e)}", 5000)
+                QMessageBox.critical(
+                    self,
+                    "Error Loading Tracks",
+                    f"Failed to load tracks file:\n\n{str(e)}",
+                    QMessageBox.StandardButton.Ok
+                )
 
     def on_frame_changed(self, frame_index):
         """Handle frame change from playback controls"""
