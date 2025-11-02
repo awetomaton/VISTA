@@ -10,7 +10,8 @@
             "cwd": "${fileDirname}",
             "env": {
                 "PYTHONPATH": "C:\\projects\\hdf5schema\\hdf5schema"
-            }
+            },
+            "justMyCode": false
         }
     ]
 }
