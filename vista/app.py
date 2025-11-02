@@ -83,7 +83,12 @@ class ImageryViewer(QWidget):
         self.imagery = None
         self.detectors = []  # List of Detector objects
         self.trackers = []  # List of Tracker objects
-        self.overlay_items = []  # Track overlay items to remove them later
+
+        # Persistent plot items (created once, reused for efficiency)
+        # Use id(object) as key since dataclass objects are not hashable
+        self.detector_plot_items = {}  # id(detector) -> ScatterPlotItem
+        self.track_path_items = {}  # id(track) -> PlotCurveItem (for track path)
+        self.track_marker_items = {}  # id(track) -> ScatterPlotItem (for current position)
 
         self.init_ui()
 
@@ -177,37 +182,60 @@ class ImageryViewer(QWidget):
 
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
-        # Clear existing overlay items only
-        for item in self.overlay_items:
-            self.plot_item.removeItem(item)
-        self.overlay_items.clear()
-
         # Get current frame number
         frame_num = self.current_frame_number
 
-        # Plot detections for current frame
+        # Update detections for current frame
         for detector in self.detectors:
+            # Get or create plot item for this detector
+            detector_id = id(detector)
+            if detector_id not in self.detector_plot_items:
+                scatter = pg.ScatterPlotItem()
+                self.plot_item.addItem(scatter)
+                self.detector_plot_items[detector_id] = scatter
+
+            scatter = self.detector_plot_items[detector_id]
+
+            # Update visibility
             if not detector.visible:
+                scatter.setData(x=[], y=[])  # Hide by setting empty data
                 continue
 
+            # Update data for current frame
             mask = detector.frames == frame_num
             if np.any(mask):
                 rows = detector.rows[mask]
                 cols = detector.columns[mask]
-                scatter = pg.ScatterPlotItem(
+                scatter.setData(
                     x=cols, y=rows,
                     pen=pg.mkPen(color=detector.color, width=2),
                     brush=None,
                     size=detector.marker_size,
                     symbol=detector.marker
                 )
-                self.plot_item.addItem(scatter)
-                self.overlay_items.append(scatter)
+            else:
+                scatter.setData(x=[], y=[])  # No data at this frame
 
-        # Plot tracks for current frame
+        # Update tracks for current frame
         for tracker in self.trackers:
             for track in tracker.tracks:
+                # Get or create plot items for this track
+                track_id = id(track)
+                if track_id not in self.track_path_items:
+                    path = pg.PlotCurveItem()
+                    marker = pg.ScatterPlotItem()
+                    self.plot_item.addItem(path)
+                    self.plot_item.addItem(marker)
+                    self.track_path_items[track_id] = path
+                    self.track_marker_items[track_id] = marker
+
+                path = self.track_path_items[track_id]
+                marker = self.track_marker_items[track_id]
+
+                # Update visibility
                 if not track.visible:
+                    path.setData(x=[], y=[])
+                    marker.setData(x=[], y=[])
                     continue
 
                 # Show track history up to current frame
@@ -216,26 +244,28 @@ class ImageryViewer(QWidget):
                     rows = track.rows[mask]
                     cols = track.columns[mask]
 
-                    # Draw track path
-                    path = pg.PlotCurveItem(
+                    # Update track path
+                    path.setData(
                         x=cols, y=rows,
                         pen=pg.mkPen(color=track.color, width=track.line_width)
                     )
-                    self.plot_item.addItem(path)
-                    self.overlay_items.append(path)
 
-                    # Mark current position
+                    # Update current position marker
                     if frame_num in track.frames:
                         idx = np.where(track.frames == frame_num)[0][0]
-                        current_pos = pg.ScatterPlotItem(
+                        marker.setData(
                             x=[cols[idx]], y=[rows[idx]],
                             pen=pg.mkPen(color=track.color, width=2),
                             brush=pg.mkBrush(color=track.color),
                             size=track.marker_size,
                             symbol=track.marker
                         )
-                        self.plot_item.addItem(current_pos)
-                        self.overlay_items.append(current_pos)
+                    else:
+                        marker.setData(x=[], y=[])  # No current position
+                else:
+                    # Track hasn't started yet
+                    path.setData(x=[], y=[])
+                    marker.setData(x=[], y=[])
 
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
@@ -251,9 +281,23 @@ class ImageryViewer(QWidget):
 
     def clear_overlays(self):
         """Clear all tracks and detections"""
+        # Remove all plot items from the scene
+        for scatter in self.detector_plot_items.values():
+            self.plot_item.removeItem(scatter)
+        for path in self.track_path_items.values():
+            self.plot_item.removeItem(path)
+        for marker in self.track_marker_items.values():
+            self.plot_item.removeItem(marker)
+
+        # Clear dictionaries
+        self.detector_plot_items.clear()
+        self.track_path_items.clear()
+        self.track_marker_items.clear()
+
+        # Clear data lists
         self.detectors = []
         self.trackers = []
-        self.update_overlays()
+
         return self.get_frame_range()  # Return updated frame range
 
 
@@ -1095,6 +1139,9 @@ class VistaMainWindow(QMainWindow):
         # Create menu bar
         self.create_menu_bar()
 
+        # Synchronize dock visibility with menu action
+        self.data_dock.visibilityChanged.connect(self.on_data_dock_visibility_changed)
+
         main_layout.addWidget(splitter, stretch=1)
 
         # Create playback controls
@@ -1138,11 +1185,11 @@ class VistaMainWindow(QMainWindow):
         # View menu
         view_menu = menubar.addMenu("View")
 
-        toggle_data_manager_action = QAction("Data Manager", self)
-        toggle_data_manager_action.setCheckable(True)
-        toggle_data_manager_action.setChecked(True)
-        toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
-        view_menu.addAction(toggle_data_manager_action)
+        self.toggle_data_manager_action = QAction("Data Manager", self)
+        self.toggle_data_manager_action.setCheckable(True)
+        self.toggle_data_manager_action.setChecked(True)
+        self.toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
+        view_menu.addAction(self.toggle_data_manager_action)
 
     def load_imagery_file(self):
         """Load imagery from HDF5 file"""
@@ -1331,6 +1378,13 @@ class VistaMainWindow(QMainWindow):
     def toggle_data_manager(self, checked):
         """Toggle data manager visibility"""
         self.data_dock.setVisible(checked)
+
+    def on_data_dock_visibility_changed(self, visible):
+        """Update menu action when dock visibility changes"""
+        # Block signals to prevent recursive calls
+        self.toggle_data_manager_action.blockSignals(True)
+        self.toggle_data_manager_action.setChecked(visible)
+        self.toggle_data_manager_action.blockSignals(False)
 
     def on_data_changed(self):
         """Handle data changes from data manager"""
