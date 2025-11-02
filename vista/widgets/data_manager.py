@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QComboBox, QColorDialog,
-    QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox
+    QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox, QCheckBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QBrush
@@ -119,31 +119,82 @@ class DataManagerPanel(QWidget):
         tracker_layout.addWidget(self.tracker_combo)
         layout.addLayout(tracker_layout)
 
-        # Show/Hide all buttons and global tail length
-        button_layout = QHBoxLayout()
+        # Bulk Actions section
+        bulk_layout = QHBoxLayout()
+        bulk_layout.addWidget(QLabel("Bulk Actions:"))
+
+        # Property selector dropdown
+        bulk_layout.addWidget(QLabel("Property:"))
+        self.bulk_property_combo = QComboBox()
+        self.bulk_property_combo.addItems([
+            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Marker Size"
+        ])
+        self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
+        bulk_layout.addWidget(self.bulk_property_combo)
+
+        # Value label and control container
+        bulk_layout.addWidget(QLabel("Value:"))
+
+        # Create all possible controls (we'll show/hide based on selection)
+        # Visibility checkbox
+        self.bulk_visibility_checkbox = QCheckBox("Visible")
+        self.bulk_visibility_checkbox.setChecked(True)
+        bulk_layout.addWidget(self.bulk_visibility_checkbox)
+
+        # Tail Length spinbox
+        self.bulk_tail_spinbox = QSpinBox()
+        self.bulk_tail_spinbox.setMinimum(0)
+        self.bulk_tail_spinbox.setMaximum(1000)
+        self.bulk_tail_spinbox.setValue(0)
+        self.bulk_tail_spinbox.setMaximumWidth(80)
+        self.bulk_tail_spinbox.setToolTip("0 = show all history, >0 = show last N frames")
+        bulk_layout.addWidget(self.bulk_tail_spinbox)
+
+        # Color button
+        self.bulk_color_btn = QPushButton("Choose Color")
+        self.bulk_color_btn.clicked.connect(self.choose_bulk_color)
+        self.bulk_color = QColor('green')  # Default color
+        bulk_layout.addWidget(self.bulk_color_btn)
+
+        # Marker dropdown
+        self.bulk_marker_combo = QComboBox()
+        self.bulk_marker_combo.addItems(['Circle', 'Square', 'Triangle', 'Diamond', 'Plus', 'Cross', 'Star'])
+        bulk_layout.addWidget(self.bulk_marker_combo)
+
+        # Line Width spinbox
+        self.bulk_line_width_spinbox = QSpinBox()
+        self.bulk_line_width_spinbox.setMinimum(1)
+        self.bulk_line_width_spinbox.setMaximum(20)
+        self.bulk_line_width_spinbox.setValue(2)
+        self.bulk_line_width_spinbox.setMaximumWidth(60)
+        bulk_layout.addWidget(self.bulk_line_width_spinbox)
+
+        # Marker Size spinbox
+        self.bulk_marker_size_spinbox = QSpinBox()
+        self.bulk_marker_size_spinbox.setMinimum(1)
+        self.bulk_marker_size_spinbox.setMaximum(100)
+        self.bulk_marker_size_spinbox.setValue(12)
+        self.bulk_marker_size_spinbox.setMaximumWidth(60)
+        bulk_layout.addWidget(self.bulk_marker_size_spinbox)
+
+        # Apply button
+        self.bulk_apply_btn = QPushButton("Apply to All")
+        self.bulk_apply_btn.clicked.connect(self.apply_bulk_action)
+        bulk_layout.addWidget(self.bulk_apply_btn)
+
+        bulk_layout.addStretch()
+        layout.addLayout(bulk_layout)
+
+        # Quick action buttons
+        quick_layout = QHBoxLayout()
         self.show_all_tracks_btn = QPushButton("Show All")
         self.show_all_tracks_btn.clicked.connect(self.show_all_tracks)
         self.hide_all_tracks_btn = QPushButton("Hide All")
         self.hide_all_tracks_btn.clicked.connect(self.hide_all_tracks)
-        button_layout.addWidget(self.show_all_tracks_btn)
-        button_layout.addWidget(self.hide_all_tracks_btn)
-        button_layout.addStretch()
-
-        # Global tail length control
-        button_layout.addWidget(QLabel("Tail Length:"))
-        self.global_tail_spinbox = QSpinBox()
-        self.global_tail_spinbox.setMinimum(0)
-        self.global_tail_spinbox.setMaximum(1000)
-        self.global_tail_spinbox.setValue(0)
-        self.global_tail_spinbox.setToolTip("0 = show all history, >0 = show last N frames")
-        self.global_tail_spinbox.setMaximumWidth(80)
-        button_layout.addWidget(self.global_tail_spinbox)
-
-        apply_tail_btn = QPushButton("Apply to All")
-        apply_tail_btn.clicked.connect(self.apply_global_tail_length)
-        button_layout.addWidget(apply_tail_btn)
-
-        layout.addLayout(button_layout)
+        quick_layout.addWidget(self.show_all_tracks_btn)
+        quick_layout.addWidget(self.hide_all_tracks_btn)
+        quick_layout.addStretch()
+        layout.addLayout(quick_layout)
 
         # Tracks table
         self.tracks_table = QTableWidget()
@@ -166,6 +217,9 @@ class DataManagerPanel(QWidget):
         layout.addWidget(self.tracks_table)
 
         self.tracks_tab.setLayout(layout)
+
+        # Initialize bulk action controls visibility
+        self.on_bulk_property_changed(0)
 
     def init_detections_tab(self):
         """Initialize the detections tab"""
@@ -478,16 +532,68 @@ class DataManagerPanel(QWidget):
         self.refresh_tracks_table()
         self.data_changed.emit()
 
-    def apply_global_tail_length(self):
-        """Apply global tail length to all tracks in current tracker"""
+    def on_bulk_property_changed(self, _index):
+        """Show/hide bulk action controls based on selected property"""
+        # Hide all controls first
+        self.bulk_visibility_checkbox.hide()
+        self.bulk_tail_spinbox.hide()
+        self.bulk_color_btn.hide()
+        self.bulk_marker_combo.hide()
+        self.bulk_line_width_spinbox.hide()
+        self.bulk_marker_size_spinbox.hide()
+
+        # Show the appropriate control
+        property_name = self.bulk_property_combo.currentText()
+        if property_name == "Visibility":
+            self.bulk_visibility_checkbox.show()
+        elif property_name == "Tail Length":
+            self.bulk_tail_spinbox.show()
+        elif property_name == "Color":
+            self.bulk_color_btn.show()
+        elif property_name == "Marker":
+            self.bulk_marker_combo.show()
+        elif property_name == "Line Width":
+            self.bulk_line_width_spinbox.show()
+        elif property_name == "Marker Size":
+            self.bulk_marker_size_spinbox.show()
+
+    def choose_bulk_color(self):
+        """Open color dialog for bulk color selection"""
+        color = QColorDialog.getColor(self.bulk_color, self, "Select Track Color")
+        if color.isValid():
+            self.bulk_color = color
+            # Update button to show selected color
+            self.bulk_color_btn.setStyleSheet(f"background-color: {color.name()};")
+
+    def apply_bulk_action(self):
+        """Apply the selected bulk action to all tracks in current tracker"""
         tracker_index = self.tracker_combo.currentIndex()
         if tracker_index < 0 or tracker_index >= len(self.viewer.trackers):
             return
 
-        tail_length = self.global_tail_spinbox.value()
+        property_name = self.bulk_property_combo.currentText()
         tracker = self.viewer.trackers[tracker_index]
+
+        # Map marker names to symbols
+        marker_map = {
+            'Circle': 'o', 'Square': 's', 'Triangle': 't',
+            'Diamond': 'd', 'Plus': '+', 'Cross': 'x', 'Star': 'star'
+        }
+
         for track in tracker.tracks:
-            track.tail_length = tail_length
+            if property_name == "Visibility":
+                track.visible = self.bulk_visibility_checkbox.isChecked()
+            elif property_name == "Tail Length":
+                track.tail_length = self.bulk_tail_spinbox.value()
+            elif property_name == "Color":
+                track.color = qcolor_to_pg_color(self.bulk_color)
+            elif property_name == "Marker":
+                marker_name = self.bulk_marker_combo.currentText()
+                track.marker = marker_map.get(marker_name, 'o')
+            elif property_name == "Line Width":
+                track.line_width = self.bulk_line_width_spinbox.value()
+            elif property_name == "Marker Size":
+                track.marker_size = self.bulk_marker_size_spinbox.value()
 
         self.refresh_tracks_table()
         self.data_changed.emit()
