@@ -34,11 +34,19 @@ class Detector:
     def from_dataframe(cls, df: pd.DataFrame, name: str = None):
         if name is None:
             name = df["Detector"][0]
+        kwargs = {}
+        if "Color" in df.columns:
+            kwargs["color"] = df["Color"].iloc[0]
+        if "Marker" in df.columns:
+            kwargs["marker"] = df["Marker"].iloc[0]
+        if "Marker Size" in df.columns:
+            kwargs["marker_size"] = df["Marker Size"].iloc[0]
         return cls(
             name = name,
             frames = df["Frames"].to_numpy(),
             rows = df["Rows"].to_numpy(),
             columns = df["Columns"].to_numpy(),
+            **kwargs
         )
 
     def to_csv(self, file: Union[str, pathlib.Path]):
@@ -50,4 +58,7 @@ class Detector:
             "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
+            "Color": self.color,
+            "Marker": self.marker,
+            "Marker Size": self.marker_size,
         })

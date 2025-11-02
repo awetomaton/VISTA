@@ -34,11 +34,21 @@ class Track:
     def from_dataframe(cls, df: pd.DataFrame, name: str = None):
         if name is None:
             name = df["Detector"][0]
+        kwargs = {}
+        if "Color" in df.columns:
+            kwargs["color"] = df["Color"].iloc[0]
+        if "Marker" in df.columns:
+            kwargs["marker"] = df["Marker"].iloc[0]
+        if "Line Width" in df.columns:
+            kwargs["line_width"] = df["Line Width"].iloc[0]
+        if "Marker Size" in df.columns:
+            kwargs["marker_size"] = df["Marker Size"].iloc[0]
         return cls(
             name = name,
             frames = df["Frames"].to_numpy(),
             rows = df["Rows"].to_numpy(),
             columns = df["Columns"].to_numpy(),
+            **kwargs
         )
     
     def to_dataframe(self) -> pd.DataFrame:
@@ -47,5 +57,9 @@ class Track:
             "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
+            "Color": self.color,
+            "Marker": self.marker,
+            "Line Width": self.line_width,
+            "Marker Size": self.marker_size,
         })
     
