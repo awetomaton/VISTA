@@ -1,0 +1,346 @@
+"""PlaybackControls widget for controlling imagery playback"""
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QSlider, QLabel, QSpinBox, QCheckBox, QDial, QApplication
+)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QStyle
+
+
+class PlaybackControls(QWidget):
+    """Widget for playback controls"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.is_playing = False
+        self.min_frame = 0  # Minimum frame number
+        self.max_frame = 0  # Maximum frame number
+        self.current_frame = 0  # Current frame number
+        self.fps = 10  # frames per second
+        self.playback_direction = 1  # 1 for forward, -1 for reverse
+        self.bounce_mode = False
+        self.bounce_start = 0
+        self.bounce_end = 0
+
+        self.init_ui()
+
+        # Timer for playback
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.advance_frame)
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        # Frame slider
+        slider_layout = QHBoxLayout()
+        self.frame_label = QLabel("Frame: 0 / 0")
+        self.frame_slider = QSlider(Qt.Orientation.Horizontal)
+        self.frame_slider.setMinimum(0)
+        self.frame_slider.setMaximum(0)
+        self.frame_slider.valueChanged.connect(self.on_slider_changed)
+
+        slider_layout.addWidget(self.frame_label)
+        slider_layout.addWidget(self.frame_slider)
+
+        # Playback buttons row
+        button_layout = QHBoxLayout()
+
+        # Get standard icons from the application style
+        style = QApplication.style()
+
+        self.play_button = QPushButton()
+        self.play_icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        self.pause_icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
+        self.play_button.setIcon(self.play_icon)
+        self.play_button.setToolTip("Play")
+        self.play_button.clicked.connect(self.toggle_play)
+
+        self.reverse_button = QPushButton()
+        self.reverse_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSeekBackward))
+        self.reverse_button.setToolTip("Reverse")
+        self.reverse_button.clicked.connect(self.toggle_reverse)
+
+        self.prev_button = QPushButton()
+        self.prev_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSkipBackward))
+        self.prev_button.setToolTip("Previous Frame")
+        self.prev_button.clicked.connect(self.prev_frame)
+
+        self.next_button = QPushButton()
+        self.next_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSkipForward))
+        self.next_button.setToolTip("Next Frame")
+        self.next_button.clicked.connect(self.next_frame)
+
+        button_layout.addStretch()
+        button_layout.addWidget(self.play_button)
+        button_layout.addWidget(self.reverse_button)
+        button_layout.addWidget(self.prev_button)
+        button_layout.addWidget(self.next_button)
+
+        # Bounce mode controls row
+        bounce_layout = QHBoxLayout()
+
+        self.bounce_checkbox = QCheckBox("Bounce Mode")
+        self.bounce_checkbox.stateChanged.connect(self.on_bounce_toggled)
+
+        self.bounce_start_label = QLabel("Start:")
+        self.bounce_start_spinbox = QSpinBox()
+        self.bounce_start_spinbox.setMinimum(0)
+        self.bounce_start_spinbox.setMaximum(0)
+        self.bounce_start_spinbox.setValue(0)
+        self.bounce_start_spinbox.setEnabled(False)
+        self.bounce_start_spinbox.valueChanged.connect(self.on_bounce_range_changed)
+
+        self.bounce_end_label = QLabel("End:")
+        self.bounce_end_spinbox = QSpinBox()
+        self.bounce_end_spinbox.setMinimum(0)
+        self.bounce_end_spinbox.setMaximum(0)
+        self.bounce_end_spinbox.setValue(0)
+        self.bounce_end_spinbox.setEnabled(False)
+        self.bounce_end_spinbox.valueChanged.connect(self.on_bounce_range_changed)
+
+        self.set_bounce_button = QPushButton("Set Current Range")
+        self.set_bounce_button.setEnabled(False)
+        self.set_bounce_button.clicked.connect(self.set_bounce_to_current)
+
+        bounce_layout.addWidget(self.bounce_checkbox)
+        bounce_layout.addWidget(self.bounce_start_label)
+        bounce_layout.addWidget(self.bounce_start_spinbox)
+        bounce_layout.addWidget(self.bounce_end_label)
+        bounce_layout.addWidget(self.bounce_end_spinbox)
+        bounce_layout.addWidget(self.set_bounce_button)
+
+        button_layout.addLayout(bounce_layout)
+
+        # FPS controls
+        self.fps_label = QLabel("FPS:")
+        self.fps_spinbox = QSpinBox()
+        self.fps_spinbox.setMinimum(-100)
+        self.fps_spinbox.setMaximum(100)
+        self.fps_spinbox.setValue(self.fps)
+        self.fps_spinbox.setMaximumWidth(60)
+        self.fps_spinbox.valueChanged.connect(self.on_fps_spinbox_changed)
+
+        self.fps_dial = QDial()
+        self.fps_dial.setMinimum(-100)
+        self.fps_dial.setMaximum(100)
+        self.fps_dial.setValue(self.fps)
+        self.fps_dial.setMaximumWidth(80)
+        self.fps_dial.setMaximumHeight(80)
+        self.fps_dial.setNotchesVisible(True)
+        self.fps_dial.setWrapping(False)
+        self.fps_dial.valueChanged.connect(self.on_fps_dial_changed)
+
+        button_layout.addWidget(self.fps_label)
+        button_layout.addWidget(self.fps_spinbox)
+        button_layout.addWidget(self.fps_dial)
+        button_layout.addStretch()
+
+        layout.addLayout(slider_layout)
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+
+    def set_frame_range(self, min_frame: int, max_frame: int):
+        """Set the range of frame numbers"""
+        self.min_frame = min_frame
+        self.max_frame = max_frame
+        self.current_frame = min_frame
+
+        # Update slider range
+        self.frame_slider.setMinimum(min_frame)
+        self.frame_slider.setMaximum(max_frame)
+        self.frame_slider.setValue(min_frame)
+
+        # Update bounce spinboxes
+        self.bounce_start_spinbox.setMinimum(min_frame)
+        self.bounce_start_spinbox.setMaximum(max_frame)
+        self.bounce_start_spinbox.setValue(min_frame)
+
+        self.bounce_end_spinbox.setMinimum(min_frame)
+        self.bounce_end_spinbox.setMaximum(max_frame)
+        self.bounce_end_spinbox.setValue(max_frame)
+
+        self.bounce_start = min_frame
+        self.bounce_end = max_frame
+
+        self.update_label()
+
+    def set_frame(self, frame_number: int):
+        """Set current frame by frame number"""
+        self.current_frame = frame_number
+        self.frame_slider.setValue(frame_number)
+        self.update_label()
+
+    def update_label(self):
+        """Update frame label"""
+        self.frame_label.setText(f"Frame: {self.current_frame} / {self.max_frame}")
+
+    def on_slider_changed(self, value):
+        """Handle slider value change"""
+        self.current_frame = value
+        self.update_label()
+        self.frame_changed(value)
+
+    def on_fps_dial_changed(self, value):
+        """Handle FPS dial change"""
+        if value == 0:
+            # Don't allow 0 FPS, skip to 1 or -1
+            return
+
+        self.fps = abs(value)
+
+        # Set playback direction based on sign
+        if value < 0:
+            self.playback_direction = -1
+        else:
+            self.playback_direction = 1
+
+        # Update spinbox
+        self.fps_spinbox.blockSignals(True)
+        self.fps_spinbox.setValue(value)
+        self.fps_spinbox.blockSignals(False)
+
+        if self.is_playing:
+            self.timer.setInterval(1000 // self.fps)
+
+    def on_fps_spinbox_changed(self, value):
+        """Handle FPS spinbox change"""
+        if value == 0:
+            # Don't allow 0 FPS, skip to 1 or -1
+            if self.fps_spinbox.value() == 0:
+                self.fps_spinbox.setValue(1 if self.playback_direction > 0 else -1)
+            return
+
+        self.fps = abs(value)
+
+        # Set playback direction based on sign
+        if value < 0:
+            self.playback_direction = -1
+            self.reverse_button.setText("Forward")
+        else:
+            self.playback_direction = 1
+            self.reverse_button.setText("Reverse")
+
+        # Update dial
+        self.fps_dial.blockSignals(True)
+        self.fps_dial.setValue(value)
+        self.fps_dial.blockSignals(False)
+
+        if self.is_playing:
+            self.timer.setInterval(1000 // self.fps)
+
+    def toggle_play(self):
+        """Toggle playback"""
+        if self.is_playing:
+            self.pause()
+        else:
+            self.play()
+
+    def toggle_reverse(self):
+        """Toggle reverse playback"""
+        self.playback_direction *= -1
+
+        # Update button text
+        if self.playback_direction == 1:
+            self.reverse_button.setText("Reverse")
+        else:
+            self.reverse_button.setText("Forward")
+
+        # Update dial and spinbox to reflect direction
+        new_value = self.fps * self.playback_direction
+
+        self.fps_dial.blockSignals(True)
+        self.fps_dial.setValue(new_value)
+        self.fps_dial.blockSignals(False)
+
+        self.fps_spinbox.blockSignals(True)
+        self.fps_spinbox.setValue(new_value)
+        self.fps_spinbox.blockSignals(False)
+
+    def play(self):
+        """Start playback"""
+        self.is_playing = True
+        self.play_button.setIcon(self.pause_icon)
+        self.play_button.setToolTip("Pause")
+        self.timer.start(1000 // self.fps)
+
+    def pause(self):
+        """Pause playback"""
+        self.is_playing = False
+        self.play_button.setIcon(self.play_icon)
+        self.play_button.setToolTip("Play")
+        self.timer.stop()
+
+    def advance_frame(self):
+        """Advance frame based on playback direction and bounce mode"""
+        if self.bounce_mode:
+            # Bounce between start and end frames
+            next_frame = self.current_frame + self.playback_direction
+
+            if next_frame > self.bounce_end:
+                # Hit the end, reverse direction
+                self.playback_direction = -1
+                next_frame = self.bounce_end - 1
+            elif next_frame < self.bounce_start:
+                # Hit the start, reverse direction
+                self.playback_direction = 1
+                next_frame = self.bounce_start + 1
+
+            self.set_frame(next_frame)
+        else:
+            # Normal playback with looping
+            if self.playback_direction == 1:
+                self.next_frame()
+            else:
+                self.prev_frame_reverse()
+
+    def next_frame(self):
+        """Go to next frame"""
+        if self.current_frame < self.max_frame:
+            self.set_frame(self.current_frame + 1)
+        else:
+            # Loop back to beginning
+            self.set_frame(self.min_frame)
+
+    def prev_frame(self):
+        """Go to previous frame"""
+        if self.current_frame > self.min_frame:
+            self.set_frame(self.current_frame - 1)
+
+    def prev_frame_reverse(self):
+        """Go to previous frame (for reverse playback with looping)"""
+        if self.current_frame > self.min_frame:
+            self.set_frame(self.current_frame - 1)
+        else:
+            # Loop to end
+            self.set_frame(self.max_frame)
+
+    def on_bounce_toggled(self, state):
+        """Handle bounce mode toggle"""
+        self.bounce_mode = state == Qt.CheckState.Checked.value
+        self.bounce_start_spinbox.setEnabled(self.bounce_mode)
+        self.bounce_end_spinbox.setEnabled(self.bounce_mode)
+        self.set_bounce_button.setEnabled(self.bounce_mode)
+
+    def on_bounce_range_changed(self):
+        """Handle bounce range change"""
+        self.bounce_start = self.bounce_start_spinbox.value()
+        self.bounce_end = self.bounce_end_spinbox.value()
+
+        # Ensure start < end
+        if self.bounce_start >= self.bounce_end:
+            self.bounce_start_spinbox.blockSignals(True)
+            self.bounce_start = max(0, self.bounce_end - 1)
+            self.bounce_start_spinbox.setValue(self.bounce_start)
+            self.bounce_start_spinbox.blockSignals(False)
+
+    def set_bounce_to_current(self):
+        """Set bounce range to include current frame"""
+        # Set start to 0 and end to current frame, or adjust as needed
+        self.bounce_start_spinbox.setValue(0)
+        self.bounce_end_spinbox.setValue(self.current_frame)
+
+    def frame_changed(self, frame_index):
+        """Override this method to handle frame changes"""
+        pass
+
+
