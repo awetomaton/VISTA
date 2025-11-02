@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QFileDialog, QMessageBox, QDockWidget
+    QFileDialog, QMessageBox, QDockWidget, QProgressDialog, QApplication
 )
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction
@@ -139,6 +139,20 @@ class VistaMainWindow(QMainWindow):
                     frames=frames,
                     unix_times=unix_times
                 )
+
+                # Pre-compute histograms with progress dialog
+                progress = QProgressDialog("Computing histograms...", "Cancel", 0, len(imagery.images), self)
+                progress.setWindowModality(Qt.WindowModality.WindowModal)
+                progress.show()
+
+                for i in range(len(imagery.images)):
+                    if progress.wasCanceled():
+                        break
+                    imagery.get_histogram(i)  # Lazy computation
+                    progress.setValue(i + 1)
+                    QApplication.processEvents()
+
+                progress.close()
 
                 # Load into viewer
                 self.viewer.load_imagery(imagery)

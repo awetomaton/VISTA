@@ -84,8 +84,13 @@ class ImageryViewer(QWidget):
                 # Get the index of the closest frame that is <= frame_number
                 image_index = valid_indices[-1]
 
-                # Update the displayed image (histogram updates automatically)
+                # Update the displayed image
                 self.image_item.setImage(self.imagery.images[image_index])
+
+                # Use cached histogram if available, otherwise let HistogramLUTItem compute it
+                if self.imagery.has_cached_histograms():
+                    hist_y, hist_x = self.imagery.get_histogram(image_index)
+                    self.histogram.plot.setData(hist_x, hist_y)
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
