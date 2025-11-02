@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QSlider, QLabel, QSpinBox, QCheckBox, QDial, QApplication
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
 from PyQt6.QtWidgets import QStyle
 
 
@@ -22,11 +22,19 @@ class PlaybackControls(QWidget):
         self.bounce_start = 0
         self.bounce_end = 0
 
+        # Elapsed time tracking for responsive playback
+        self.elapsed_timer = QElapsedTimer()
+        self.last_frame_time = 0  # Time in ms when last frame was advanced
+
+        # Actual FPS tracking
+        self.frame_times = []  # Store recent frame timestamps for FPS calculation
+        self.max_frame_history = 30  # Use last 30 frames for FPS calculation
+
         self.init_ui()
 
-        # Timer for playback
+        # Timer for playback - fires frequently to check if it's time to advance
         self.timer = QTimer()
-        self.timer.timeout.connect(self.advance_frame)
+        self.timer.timeout.connect(self.on_timer_tick)
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -133,6 +141,13 @@ class PlaybackControls(QWidget):
         button_layout.addWidget(self.fps_label)
         button_layout.addWidget(self.fps_spinbox)
         button_layout.addWidget(self.fps_dial)
+
+        # Actual FPS display
+        self.actual_fps_label = QLabel("Actual: -- FPS")
+        self.actual_fps_label.setMinimumWidth(100)
+        self.actual_fps_label.setStyleSheet("QLabel { color: #666; font-style: italic; }")
+        button_layout.addWidget(self.actual_fps_label)
+
         button_layout.addStretch()
 
         layout.addLayout(slider_layout)
@@ -198,9 +213,7 @@ class PlaybackControls(QWidget):
         self.fps_spinbox.blockSignals(True)
         self.fps_spinbox.setValue(value)
         self.fps_spinbox.blockSignals(False)
-
-        if self.is_playing:
-            self.timer.setInterval(1000 // self.fps)
+        # No need to update timer interval - on_timer_tick uses self.fps directly
 
     def on_fps_spinbox_changed(self, value):
         """Handle FPS spinbox change"""
@@ -215,18 +228,14 @@ class PlaybackControls(QWidget):
         # Set playback direction based on sign
         if value < 0:
             self.playback_direction = -1
-            self.reverse_button.setText("Forward")
         else:
             self.playback_direction = 1
-            self.reverse_button.setText("Reverse")
 
         # Update dial
         self.fps_dial.blockSignals(True)
         self.fps_dial.setValue(value)
         self.fps_dial.blockSignals(False)
-
-        if self.is_playing:
-            self.timer.setInterval(1000 // self.fps)
+        # No need to update timer interval - on_timer_tick uses self.fps directly
 
     def toggle_play(self):
         """Toggle playback"""
@@ -238,12 +247,6 @@ class PlaybackControls(QWidget):
     def toggle_reverse(self):
         """Toggle reverse playback"""
         self.playback_direction *= -1
-
-        # Update button text
-        if self.playback_direction == 1:
-            self.reverse_button.setText("Reverse")
-        else:
-            self.reverse_button.setText("Forward")
 
         # Update dial and spinbox to reflect direction
         new_value = self.fps * self.playback_direction
@@ -261,7 +264,13 @@ class PlaybackControls(QWidget):
         self.is_playing = True
         self.play_button.setIcon(self.pause_icon)
         self.play_button.setToolTip("Pause")
-        self.timer.start(1000 // self.fps)
+        # Start elapsed timer and reset frame time
+        self.elapsed_timer.start()
+        self.last_frame_time = 0
+        # Reset FPS tracking
+        self.frame_times.clear()
+        # Timer fires every 10ms to check if we should advance frame (responsive)
+        self.timer.start(10)
 
     def pause(self):
         """Pause playback"""
@@ -269,6 +278,37 @@ class PlaybackControls(QWidget):
         self.play_button.setIcon(self.play_icon)
         self.play_button.setToolTip("Play")
         self.timer.stop()
+        # Reset actual FPS display
+        self.actual_fps_label.setText("Actual: -- FPS")
+
+    def on_timer_tick(self):
+        """Called by timer frequently - checks if enough time has passed to advance frame"""
+        if not self.is_playing:
+            return
+
+        # Calculate frame period in milliseconds
+        frame_period_ms = 1000.0 / self.fps if self.fps > 0 else 1000.0
+
+        # Get elapsed time since last frame
+        elapsed_ms = self.elapsed_timer.elapsed()
+        time_since_last_frame = elapsed_ms - self.last_frame_time
+
+        # Only advance if enough time has passed
+        if time_since_last_frame >= frame_period_ms:
+            self.last_frame_time = elapsed_ms
+            self.advance_frame()
+
+            # Track frame time for actual FPS calculation
+            self.frame_times.append(elapsed_ms)
+            if len(self.frame_times) > self.max_frame_history:
+                self.frame_times.pop(0)
+
+            # Calculate and update actual FPS
+            self.update_actual_fps()
+
+            # Process pending events to ensure UI remains responsive
+            # This allows pause/stop actions to take effect immediately
+            QApplication.processEvents()
 
     def advance_frame(self):
         """Advance frame based on playback direction and bounce mode"""
@@ -313,6 +353,21 @@ class PlaybackControls(QWidget):
         else:
             # Loop to end
             self.set_frame(self.max_frame)
+
+    def update_actual_fps(self):
+        """Calculate and update the actual achieved FPS display"""
+        if len(self.frame_times) < 2:
+            self.actual_fps_label.setText("Actual: -- FPS")
+            return
+
+        # Calculate FPS from frame times
+        time_span_ms = self.frame_times[-1] - self.frame_times[0]
+        if time_span_ms > 0:
+            num_frames = len(self.frame_times) - 1
+            actual_fps = (num_frames * 1000.0) / time_span_ms
+            self.actual_fps_label.setText(f"Actual: {actual_fps:.1f} FPS")
+        else:
+            self.actual_fps_label.setText("Actual: -- FPS")
 
     def on_bounce_toggled(self, state):
         """Handle bounce mode toggle"""
