@@ -75,7 +75,7 @@ class Imagery:
     def to_hdf5(self, file: Union[str, pathlib.Path]):
         file = pathlib.Path(file)
         with h5py.File(file, "w") as fid:
-            fid.create_dataset("images", data=self.images)
+            fid.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
             fid.create_dataset("frames", data=self.frames)
             if self.unix_times is not None:
                 fid.create_dataset("unix_times", data=self.unix_times.astype(np.int32))

@@ -1,22 +1,17 @@
 """Main window for the Vista application"""
-import h5py
-import pandas as pd
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QFileDialog, QMessageBox, QDockWidget, QProgressDialog, QApplication
+    QFileDialog, QMessageBox, QDockWidget, QProgressDialog
 )
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction
 
 from vista.icons import VistaIcons
-from vista.imagery.imagery import Imagery
-from vista.detections.detector import Detector
-from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 from .imagery_viewer import ImageryViewer
 from .playback_controls import PlaybackControls
 from .data_manager import DataManagerPanel
+from .data_loader import DataLoaderThread
 
 
 class VistaMainWindow(QMainWindow):
@@ -31,6 +26,10 @@ class VistaMainWindow(QMainWindow):
 
         # Initialize settings for persistent storage
         self.settings = QSettings("Vista", "VistaApp")
+
+        # Track active loading threads
+        self.loader_thread = None
+        self.progress_dialog = None
 
         self.init_ui()
 
@@ -113,7 +112,7 @@ class VistaMainWindow(QMainWindow):
         view_menu.addAction(self.toggle_data_manager_action)
 
     def load_imagery_file(self):
-        """Load imagery from HDF5 file"""
+        """Load imagery from HDF5 file using background thread"""
         # Get last used directory from settings
         last_dir = self.settings.value("last_imagery_dir", "")
 
@@ -122,58 +121,38 @@ class VistaMainWindow(QMainWindow):
         )
 
         if file_path:
-            try:
-                # Save the directory for next time
-                self.settings.setValue("last_imagery_dir", str(Path(file_path).parent))
+            # Save the directory for next time
+            self.settings.setValue("last_imagery_dir", str(Path(file_path).parent))
 
-                # Load HDF5 file
-                with h5py.File(file_path, 'r') as f:
-                    images = f['images'][:]
-                    frames = f['frames'][:]
-                    unix_times = f['unix_times'][:] if 'unix_times' in f else None
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading imagery...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("Vista - Progress")
+            self.progress_dialog.setWindowIcon(self.icons.logo)
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
 
-                # Create Imagery object
-                imagery = Imagery(
-                    name=Path(file_path).stem,
-                    images=images,
-                    frames=frames,
-                    unix_times=unix_times
-                )
+            # Create and start loader thread
+            self.loader_thread = DataLoaderThread(file_path, 'imagery')
+            self.loader_thread.imagery_loaded.connect(self.on_imagery_loaded)
+            self.loader_thread.error_occurred.connect(self.on_loading_error)
+            self.loader_thread.progress_updated.connect(self.on_loading_progress)
+            self.loader_thread.finished.connect(self.on_loading_finished)
+            self.loader_thread.start()
 
-                # Pre-compute histograms with progress dialog
-                progress = QProgressDialog("Computing histograms...", "Cancel", 0, len(imagery.images), self)
-                progress.setWindowModality(Qt.WindowModality.WindowModal)
-                progress.show()
+    def on_imagery_loaded(self, imagery):
+        """Handle imagery loaded in background thread"""
+        # Load into viewer
+        self.viewer.load_imagery(imagery)
 
-                for i in range(len(imagery.images)):
-                    if progress.wasCanceled():
-                        break
-                    imagery.get_histogram(i)  # Lazy computation
-                    progress.setValue(i + 1)
-                    QApplication.processEvents()
+        # Update playback controls with frame range
+        min_frame, max_frame = self.viewer.get_frame_range()
+        self.controls.set_frame_range(min_frame, max_frame)
+        self.controls.set_frame(min_frame)
 
-                progress.close()
-
-                # Load into viewer
-                self.viewer.load_imagery(imagery)
-
-                # Update playback controls with frame range
-                min_frame, max_frame = self.viewer.get_frame_range()
-                self.controls.set_frame_range(min_frame, max_frame)
-                self.controls.set_frame(min_frame)
-
-                self.statusBar().showMessage(f"Loaded imagery: {file_path}", 3000)
-
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Error Loading Imagery",
-                    f"Failed to load imagery file:\n\n{str(e)}",
-                    QMessageBox.StandardButton.Ok
-                )
+        self.statusBar().showMessage(f"Loaded imagery: {imagery.name}", 3000)
 
     def load_detections_file(self):
-        """Load detections from CSV file"""
+        """Load detections from CSV file using background thread"""
         # Get last used directory from settings
         last_dir = self.settings.value("last_detections_dir", "")
 
@@ -182,53 +161,40 @@ class VistaMainWindow(QMainWindow):
         )
 
         if file_path:
-            try:
-                # Save the directory for next time
-                self.settings.setValue("last_detections_dir", str(Path(file_path).parent))
+            # Save the directory for next time
+            self.settings.setValue("last_detections_dir", str(Path(file_path).parent))
 
-                import pandas as pd
-                df = pd.read_csv(file_path)
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading detections...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
 
-                # Group by detector name if column exists
-                if 'Detector' in df.columns:
-                    for detector_name, group_df in df.groupby('Detector'):
-                        detector = Detector(
-                            name=detector_name,
-                            frames=group_df['Frames'].to_numpy(),
-                            rows=group_df['Rows'].to_numpy(),
-                            columns=group_df['Columns'].to_numpy()
-                        )
-                        frame_range = self.viewer.add_detector(detector)
-                else:
-                    # Single detector
-                    detector = Detector(
-                        name=Path(file_path).stem,
-                        frames=df['Frames'].to_numpy(),
-                        rows=df['Rows'].to_numpy(),
-                        columns=df['Columns'].to_numpy()
-                    )
-                    frame_range = self.viewer.add_detector(detector)
+            # Create and start loader thread
+            self.loader_thread = DataLoaderThread(file_path, 'detections', 'csv')
+            self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
+            self.loader_thread.error_occurred.connect(self.on_loading_error)
+            self.loader_thread.progress_updated.connect(self.on_loading_progress)
+            self.loader_thread.finished.connect(self.on_loading_finished)
+            self.loader_thread.start()
 
-                # Update playback controls with new frame range
-                min_frame, max_frame = frame_range
-                if max_frame > 0:
-                    self.controls.set_frame_range(min_frame, max_frame)
+    def on_detectors_loaded(self, detectors):
+        """Handle detectors loaded in background thread"""
+        # Add each detector to the viewer
+        for detector in detectors:
+            self.viewer.add_detector(detector)
 
-                # Refresh data manager
-                self.data_manager.refresh()
+        # Update playback controls with new frame range
+        min_frame, max_frame = self.viewer.get_frame_range()
+        if max_frame > 0:
+            self.controls.set_frame_range(min_frame, max_frame)
 
-                self.statusBar().showMessage(f"Loaded detections: {file_path}", 3000)
+        # Refresh data manager
+        self.data_manager.refresh()
 
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Error Loading Detections",
-                    f"Failed to load detections file:\n\n{str(e)}",
-                    QMessageBox.StandardButton.Ok
-                )
+        self.statusBar().showMessage(f"Loaded {len(detectors)} detector(s)", 3000)
 
     def load_tracks_file(self):
-        """Load tracks from CSV file"""
+        """Load tracks from CSV file using background thread"""
         # Get last used directory from settings
         last_dir = self.settings.value("last_tracks_dir", "")
 
@@ -237,70 +203,69 @@ class VistaMainWindow(QMainWindow):
         )
 
         if file_path:
-            try:
-                # Save the directory for next time
-                self.settings.setValue("last_tracks_dir", str(Path(file_path).parent))
+            # Save the directory for next time
+            self.settings.setValue("last_tracks_dir", str(Path(file_path).parent))
 
-                import pandas as pd
-                df = pd.read_csv(file_path)
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading tracks...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
 
-                # Check if there's a Tracker column
-                if 'Tracker' in df.columns:
-                    # Group by tracker first
-                    for tracker_name, tracker_df in df.groupby('Tracker'):
-                        tracks = []
-                        # Then group by track within each tracker
-                        for track_name, track_df in tracker_df.groupby('Track'):
-                            track = Track(
-                                name=track_name,
-                                frames=track_df['Frames'].to_numpy(),
-                                rows=track_df['Rows'].to_numpy(),
-                                columns=track_df['Columns'].to_numpy()
-                            )
-                            tracks.append(track)
-                        tracker = Tracker(name=tracker_name, tracks=tracks)
-                        frame_range = self.viewer.add_tracker(tracker)
-                elif 'Track' in df.columns:
-                    # No tracker column, create a default tracker
-                    tracks = []
-                    for track_name, track_df in df.groupby('Track'):
-                        track = Track(
-                            name=track_name,
-                            frames=track_df['Frames'].to_numpy(),
-                            rows=track_df['Rows'].to_numpy(),
-                            columns=track_df['Columns'].to_numpy()
-                        )
-                        tracks.append(track)
-                    tracker = Tracker(name=Path(file_path).stem, tracks=tracks)
-                    frame_range = self.viewer.add_tracker(tracker)
-                else:
-                    # Single track, single tracker
-                    track = Track(
-                        name="Track 1",
-                        frames=df['Frames'].to_numpy(),
-                        rows=df['Rows'].to_numpy(),
-                        columns=df['Columns'].to_numpy()
-                    )
-                    tracker = Tracker(name=Path(file_path).stem, tracks=[track])
-                    frame_range = self.viewer.add_tracker(tracker)
+            # Create and start loader thread
+            self.loader_thread = DataLoaderThread(file_path, 'tracks', 'csv')
+            self.loader_thread.trackers_loaded.connect(self.on_trackers_loaded)
+            self.loader_thread.error_occurred.connect(self.on_loading_error)
+            self.loader_thread.progress_updated.connect(self.on_loading_progress)
+            self.loader_thread.finished.connect(self.on_loading_finished)
+            self.loader_thread.start()
 
-                # Update playback controls with new frame range
-                min_frame, max_frame = frame_range
-                if max_frame > 0:
-                    self.controls.set_frame_range(min_frame, max_frame)
+    def on_trackers_loaded(self, trackers):
+        """Handle trackers loaded in background thread"""
+        # Add each tracker to the viewer
+        for tracker in trackers:
+            self.viewer.add_tracker(tracker)
 
-                # Refresh data manager
-                self.data_manager.refresh()
+        # Update playback controls with new frame range
+        min_frame, max_frame = self.viewer.get_frame_range()
+        if max_frame > 0:
+            self.controls.set_frame_range(min_frame, max_frame)
 
-                self.statusBar().showMessage(f"Loaded tracks: {file_path}", 3000)
+        # Refresh data manager
+        self.data_manager.refresh()
 
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Error Loading Tracks",
-                    f"Failed to load tracks file:\n\n{str(e)}",
-                    QMessageBox.StandardButton.Ok
-                )
+        total_tracks = sum(len(tracker.tracks) for tracker in trackers)
+        self.statusBar().showMessage(f"Loaded {len(trackers)} tracker(s) with {total_tracks} track(s)", 3000)
+
+    def on_loading_progress(self, message, current, total):
+        """Handle progress updates from background loading thread"""
+        if self.progress_dialog:
+            self.progress_dialog.setLabelText(message)
+            self.progress_dialog.setMaximum(total)
+            self.progress_dialog.setValue(current)
+
+    def on_loading_error(self, error_message):
+        """Handle errors from background loading thread"""
+        if self.progress_dialog:
+            self.progress_dialog.close()
+            self.progress_dialog = None
+
+        QMessageBox.critical(
+            self,
+            "Error Loading Data",
+            f"Failed to load data:\n\n{error_message}",
+            QMessageBox.StandardButton.Ok
+        )
+
+    def on_loading_finished(self):
+        """Handle thread completion"""
+        if self.progress_dialog:
+            self.progress_dialog.close()
+            self.progress_dialog = None
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
 
     def clear_overlays(self):
         """Clear all overlays and update frame range"""
