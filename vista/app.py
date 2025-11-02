@@ -8,10 +8,12 @@ import h5py
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QSlider, QLabel, QFileDialog, QSplitter, QMenuBar, QMenu
+    QPushButton, QSlider, QLabel, QFileDialog, QSplitter, QMenuBar, QMenu,
+    QSpinBox, QCheckBox, QDial
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QSettings
 from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QStyle
 import pyqtgraph as pg
 
 from vista.icons import VistaIcons
@@ -34,39 +36,38 @@ class ImageryViewer(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        # Define icons
-        self.icons = VistaIcons()
-
-        # Class attributes
-        self.setWindowIcon(self.icons.logo)
-        self.setWindowTitle("VISTA - 1.0.0")
+        # Create layout
         layout = QVBoxLayout()
 
-        # Create pyqtgraph ImageView for imagery display
-        self.image_view = pg.ImageView(view=pg.PlotItem())
-        self.image_view.ui.roiBtn.hide()  # Hide ROI button
-        self.image_view.ui.menuBtn.hide()  # Hide menu button
+        # Create main graphics layout widget
+        
+        self.graphics_layout = pg.GraphicsLayoutWidget()
 
-        # Hide the default vertical histogram
-        self.image_view.ui.histogram.hide()
+        # Create plot item for the image
+        self.plot_item = self.graphics_layout.addPlot()
+        self.plot_item.setAspectLocked(True)
+        self.plot_item.invertY(True)
+        #self.plot_item.hideAxis('left')
+        #self.plot_item.hideAxis('bottom')
 
-        # Hide the built-in animation timeline/slider
-        self.image_view.ui.roiPlot.hide()
+        # Create image item
+        self.image_item = pg.ImageItem()
+        self.plot_item.addItem(self.image_item)
 
-        # Create a horizontal histogram below the image
-        self.hist_layout = pg.GraphicsLayoutWidget()
-        self.hist_layout.setMaximumHeight(150)
-        self.hist_plot = self.hist_layout.addPlot()
-        self.hist_plot.setLabel('bottom', 'Intensity')
-        self.hist_plot.setLabel('left', 'Count')
+        # Create a horizontal HistogramLUTItem
+        self.hist_widget = pg.GraphicsLayoutWidget()
+        self.hist_widget.setMaximumHeight(150)
 
-        # Create histogram curve item
-        self.hist_curve = pg.PlotCurveItem(fillLevel=0, brush=(100, 100, 200, 100))
-        self.hist_plot.addItem(self.hist_curve)
+        # Create HistogramLUTItem and set it to horizontal orientation
+        self.histogram = pg.HistogramLUTItem(orientation='horizontal')
+        self.hist_widget.addItem(self.histogram)
+
+        # Link the histogram to the image item
+        self.histogram.setImageItem(self.image_item)
 
         # Add widgets to layout
-        layout.addWidget(self.image_view)
-        layout.addWidget(self.hist_layout)
+        layout.addWidget(self.graphics_layout)
+        layout.addWidget(self.hist_widget)
 
         self.setLayout(layout)
 
@@ -75,40 +76,24 @@ class ImageryViewer(QWidget):
         self.imagery = imagery
         self.current_frame = 0
 
-        # Display the imagery
-        self.image_view.setImage(imagery.images, axes={'t': 0, 'x': 1, 'y': 2})
-        self.image_view.setCurrentIndex(0)
-
-        # Update histogram for first frame
-        self.update_histogram()
+        # Display the first frame
+        self.image_item.setImage(imagery.images[0])
 
     def set_frame(self, frame_index: int):
         """Set the current frame to display"""
         if self.imagery is not None and 0 <= frame_index < len(self.imagery.frames):
             self.current_frame = frame_index
-            self.image_view.setCurrentIndex(frame_index)
+
+            # Update the displayed image (histogram updates automatically)
+            self.image_item.setImage(self.imagery.images[frame_index])
+
             self.update_overlays()
-            self.update_histogram()
-
-    def update_histogram(self):
-        """Update the horizontal histogram for the current frame"""
-        if self.imagery is None:
-            return
-
-        # Get current frame data
-        current_image = self.imagery.images[self.current_frame]
-
-        # Compute histogram
-        hist, bin_edges = np.histogram(current_image.flatten(), bins=256)
-
-        # Update histogram plot
-        self.hist_curve.setData(bin_edges[:-1], hist)
 
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
         # Clear existing overlay items only
         for item in self.overlay_items:
-            self.image_view.getView().removeItem(item)
+            self.plot_item.removeItem(item)
         self.overlay_items.clear()
 
         if self.imagery is None:
@@ -130,7 +115,7 @@ class ImageryViewer(QWidget):
                     size=10,
                     symbol='o'
                 )
-                self.image_view.getView().addItem(scatter)
+                self.plot_item.addItem(scatter)
                 self.overlay_items.append(scatter)
 
         # Plot tracks for current frame
@@ -146,7 +131,7 @@ class ImageryViewer(QWidget):
                     x=cols, y=rows,
                     pen=pg.mkPen(color='g', width=2)
                 )
-                self.image_view.getView().addItem(path)
+                self.plot_item.addItem(path)
                 self.overlay_items.append(path)
 
                 # Mark current position
@@ -159,7 +144,7 @@ class ImageryViewer(QWidget):
                         size=12,
                         symbol='o'
                     )
-                    self.image_view.getView().addItem(current_pos)
+                    self.plot_item.addItem(current_pos)
                     self.overlay_items.append(current_pos)
 
     def add_detector(self, detector: Detector):
@@ -188,12 +173,16 @@ class PlaybackControls(QWidget):
         self.frame_count = 0
         self.current_frame = 0
         self.fps = 10  # frames per second
+        self.playback_direction = 1  # 1 for forward, -1 for reverse
+        self.bounce_mode = False
+        self.bounce_start = 0
+        self.bounce_end = 0
 
         self.init_ui()
 
         # Timer for playback
         self.timer = QTimer()
-        self.timer.timeout.connect(self.next_frame)
+        self.timer.timeout.connect(self.advance_frame)
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -209,41 +198,112 @@ class PlaybackControls(QWidget):
         slider_layout.addWidget(self.frame_label)
         slider_layout.addWidget(self.frame_slider)
 
-        # Playback buttons
+        # Playback buttons row
         button_layout = QHBoxLayout()
 
-        self.play_button = QPushButton("Play")
+        # Get standard icons from the application style
+        style = QApplication.style()
+
+        self.play_button = QPushButton()
+        self.play_icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        self.pause_icon = style.standardIcon(QStyle.StandardPixmap.SP_MediaPause)
+        self.play_button.setIcon(self.play_icon)
+        self.play_button.setToolTip("Play")
         self.play_button.clicked.connect(self.toggle_play)
 
-        self.prev_button = QPushButton("Previous")
+        self.reverse_button = QPushButton()
+        self.reverse_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSeekBackward))
+        self.reverse_button.setToolTip("Reverse")
+        self.reverse_button.clicked.connect(self.toggle_reverse)
+
+        self.prev_button = QPushButton()
+        self.prev_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSkipBackward))
+        self.prev_button.setToolTip("Previous Frame")
         self.prev_button.clicked.connect(self.prev_frame)
 
-        self.next_button = QPushButton("Next")
+        self.next_button = QPushButton()
+        self.next_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSkipForward))
+        self.next_button.setToolTip("Next Frame")
         self.next_button.clicked.connect(self.next_frame)
 
-        self.fps_label = QLabel(f"FPS: {self.fps}")
-        self.fps_slider = QSlider(Qt.Orientation.Horizontal)
-        self.fps_slider.setMinimum(1)
-        self.fps_slider.setMaximum(60)
-        self.fps_slider.setValue(self.fps)
-        self.fps_slider.setMaximumWidth(150)
-        self.fps_slider.valueChanged.connect(self.on_fps_changed)
-
         button_layout.addWidget(self.play_button)
+        button_layout.addWidget(self.reverse_button)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.next_button)
         button_layout.addStretch()
+
+        
+
+        # FPS controls
+        self.fps_label = QLabel("FPS:")
+        self.fps_spinbox = QSpinBox()
+        self.fps_spinbox.setMinimum(-100)
+        self.fps_spinbox.setMaximum(100)
+        self.fps_spinbox.setValue(self.fps)
+        self.fps_spinbox.setMaximumWidth(60)
+        self.fps_spinbox.valueChanged.connect(self.on_fps_spinbox_changed)
+
+        self.fps_dial = QDial()
+        self.fps_dial.setMinimum(-100)
+        self.fps_dial.setMaximum(100)
+        self.fps_dial.setValue(self.fps)
+        self.fps_dial.setMaximumWidth(80)
+        self.fps_dial.setMaximumHeight(80)
+        self.fps_dial.setNotchesVisible(True)
+        self.fps_dial.setWrapping(False)
+        self.fps_dial.valueChanged.connect(self.on_fps_dial_changed)
+
         button_layout.addWidget(self.fps_label)
-        button_layout.addWidget(self.fps_slider)
+        button_layout.addWidget(self.fps_spinbox)
+        button_layout.addWidget(self.fps_dial)
+
+        # Bounce mode controls row
+        bounce_layout = QHBoxLayout()
+
+        self.bounce_checkbox = QCheckBox("Bounce Mode")
+        self.bounce_checkbox.stateChanged.connect(self.on_bounce_toggled)
+
+        self.bounce_start_label = QLabel("Start:")
+        self.bounce_start_spinbox = QSpinBox()
+        self.bounce_start_spinbox.setMinimum(0)
+        self.bounce_start_spinbox.setMaximum(0)
+        self.bounce_start_spinbox.setValue(0)
+        self.bounce_start_spinbox.setEnabled(False)
+        self.bounce_start_spinbox.valueChanged.connect(self.on_bounce_range_changed)
+
+        self.bounce_end_label = QLabel("End:")
+        self.bounce_end_spinbox = QSpinBox()
+        self.bounce_end_spinbox.setMinimum(0)
+        self.bounce_end_spinbox.setMaximum(0)
+        self.bounce_end_spinbox.setValue(0)
+        self.bounce_end_spinbox.setEnabled(False)
+        self.bounce_end_spinbox.valueChanged.connect(self.on_bounce_range_changed)
+
+        self.set_bounce_button = QPushButton("Set Current Range")
+        self.set_bounce_button.setEnabled(False)
+        self.set_bounce_button.clicked.connect(self.set_bounce_to_current)
+
+        bounce_layout.addWidget(self.bounce_checkbox)
+        bounce_layout.addWidget(self.bounce_start_label)
+        bounce_layout.addWidget(self.bounce_start_spinbox)
+        bounce_layout.addWidget(self.bounce_end_label)
+        bounce_layout.addWidget(self.bounce_end_spinbox)
+        bounce_layout.addWidget(self.set_bounce_button)
+        bounce_layout.addStretch()
 
         layout.addLayout(slider_layout)
         layout.addLayout(button_layout)
+        layout.addLayout(bounce_layout)
         self.setLayout(layout)
 
     def set_frame_count(self, count: int):
         """Set the total number of frames"""
         self.frame_count = count
         self.frame_slider.setMaximum(count - 1 if count > 0 else 0)
+        self.bounce_start_spinbox.setMaximum(count - 1 if count > 0 else 0)
+        self.bounce_end_spinbox.setMaximum(count - 1 if count > 0 else 0)
+        self.bounce_end_spinbox.setValue(count - 1 if count > 0 else 0)
+        self.bounce_end = count - 1 if count > 0 else 0
         self.update_label()
 
     def set_frame(self, frame_index: int):
@@ -262,10 +322,51 @@ class PlaybackControls(QWidget):
         self.update_label()
         self.frame_changed(value)
 
-    def on_fps_changed(self, value):
-        """Handle FPS slider change"""
-        self.fps = value
-        self.fps_label.setText(f"FPS: {self.fps}")
+    def on_fps_dial_changed(self, value):
+        """Handle FPS dial change"""
+        if value == 0:
+            # Don't allow 0 FPS, skip to 1 or -1
+            return
+
+        self.fps = abs(value)
+
+        # Set playback direction based on sign
+        if value < 0:
+            self.playback_direction = -1
+        else:
+            self.playback_direction = 1
+
+        # Update spinbox
+        self.fps_spinbox.blockSignals(True)
+        self.fps_spinbox.setValue(value)
+        self.fps_spinbox.blockSignals(False)
+
+        if self.is_playing:
+            self.timer.setInterval(1000 // self.fps)
+
+    def on_fps_spinbox_changed(self, value):
+        """Handle FPS spinbox change"""
+        if value == 0:
+            # Don't allow 0 FPS, skip to 1 or -1
+            if self.fps_spinbox.value() == 0:
+                self.fps_spinbox.setValue(1 if self.playback_direction > 0 else -1)
+            return
+
+        self.fps = abs(value)
+
+        # Set playback direction based on sign
+        if value < 0:
+            self.playback_direction = -1
+            self.reverse_button.setText("Forward")
+        else:
+            self.playback_direction = 1
+            self.reverse_button.setText("Reverse")
+
+        # Update dial
+        self.fps_dial.blockSignals(True)
+        self.fps_dial.setValue(value)
+        self.fps_dial.blockSignals(False)
+
         if self.is_playing:
             self.timer.setInterval(1000 // self.fps)
 
@@ -276,17 +377,63 @@ class PlaybackControls(QWidget):
         else:
             self.play()
 
+    def toggle_reverse(self):
+        """Toggle reverse playback"""
+        self.playback_direction *= -1
+
+        # Update button text
+        if self.playback_direction == 1:
+            self.reverse_button.setText("Reverse")
+        else:
+            self.reverse_button.setText("Forward")
+
+        # Update dial and spinbox to reflect direction
+        new_value = self.fps * self.playback_direction
+
+        self.fps_dial.blockSignals(True)
+        self.fps_dial.setValue(new_value)
+        self.fps_dial.blockSignals(False)
+
+        self.fps_spinbox.blockSignals(True)
+        self.fps_spinbox.setValue(new_value)
+        self.fps_spinbox.blockSignals(False)
+
     def play(self):
         """Start playback"""
         self.is_playing = True
-        self.play_button.setText("Pause")
+        self.play_button.setIcon(self.pause_icon)
+        self.play_button.setToolTip("Pause")
         self.timer.start(1000 // self.fps)
 
     def pause(self):
         """Pause playback"""
         self.is_playing = False
-        self.play_button.setText("Play")
+        self.play_button.setIcon(self.play_icon)
+        self.play_button.setToolTip("Play")
         self.timer.stop()
+
+    def advance_frame(self):
+        """Advance frame based on playback direction and bounce mode"""
+        if self.bounce_mode:
+            # Bounce between start and end frames
+            next_frame = self.current_frame + self.playback_direction
+
+            if next_frame > self.bounce_end:
+                # Hit the end, reverse direction
+                self.playback_direction = -1
+                next_frame = self.bounce_end - 1
+            elif next_frame < self.bounce_start:
+                # Hit the start, reverse direction
+                self.playback_direction = 1
+                next_frame = self.bounce_start + 1
+
+            self.set_frame(next_frame)
+        else:
+            # Normal playback with looping
+            if self.playback_direction == 1:
+                self.next_frame()
+            else:
+                self.prev_frame_reverse()
 
     def next_frame(self):
         """Go to next frame"""
@@ -301,6 +448,39 @@ class PlaybackControls(QWidget):
         if self.current_frame > 0:
             self.set_frame(self.current_frame - 1)
 
+    def prev_frame_reverse(self):
+        """Go to previous frame (for reverse playback with looping)"""
+        if self.current_frame > 0:
+            self.set_frame(self.current_frame - 1)
+        else:
+            # Loop to end
+            self.set_frame(self.frame_count - 1)
+
+    def on_bounce_toggled(self, state):
+        """Handle bounce mode toggle"""
+        self.bounce_mode = state == Qt.CheckState.Checked.value
+        self.bounce_start_spinbox.setEnabled(self.bounce_mode)
+        self.bounce_end_spinbox.setEnabled(self.bounce_mode)
+        self.set_bounce_button.setEnabled(self.bounce_mode)
+
+    def on_bounce_range_changed(self):
+        """Handle bounce range change"""
+        self.bounce_start = self.bounce_start_spinbox.value()
+        self.bounce_end = self.bounce_end_spinbox.value()
+
+        # Ensure start < end
+        if self.bounce_start >= self.bounce_end:
+            self.bounce_start_spinbox.blockSignals(True)
+            self.bounce_start = max(0, self.bounce_end - 1)
+            self.bounce_start_spinbox.setValue(self.bounce_start)
+            self.bounce_start_spinbox.blockSignals(False)
+
+    def set_bounce_to_current(self):
+        """Set bounce range to include current frame"""
+        # Set start to 0 and end to current frame, or adjust as needed
+        self.bounce_start_spinbox.setValue(0)
+        self.bounce_end_spinbox.setValue(self.current_frame)
+
     def frame_changed(self, frame_index):
         """Override this method to handle frame changes"""
         pass
@@ -311,8 +491,13 @@ class VistaMainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Vista - Visual Imagery Software Tool for Analysis")
+        self.setWindowTitle("VISTA - 1.0.0")
+        self.icons = VistaIcons()
+        self.setWindowIcon(self.icons.logo)
         self.setGeometry(100, 100, 1200, 800)
+
+        # Initialize settings for persistent storage
+        self.settings = QSettings("Vista", "VistaApp")
 
         self.init_ui()
 
@@ -374,12 +559,18 @@ class VistaMainWindow(QMainWindow):
 
     def load_imagery_file(self):
         """Load imagery from HDF5 file"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_imagery_dir", "")
+
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Imagery", "", "HDF5 Files (*.h5 *.hdf5)"
+            self, "Load Imagery", last_dir, "HDF5 Files (*.h5 *.hdf5)"
         )
 
         if file_path:
             try:
+                # Save the directory for next time
+                self.settings.setValue("last_imagery_dir", str(Path(file_path).parent))
+
                 # Load HDF5 file
                 with h5py.File(file_path, 'r') as f:
                     images = f['images'][:]
@@ -408,12 +599,18 @@ class VistaMainWindow(QMainWindow):
 
     def load_detections_file(self):
         """Load detections from CSV file"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_detections_dir", "")
+
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Detections", "", "CSV Files (*.csv)"
+            self, "Load Detections", last_dir, "CSV Files (*.csv)"
         )
 
         if file_path:
             try:
+                # Save the directory for next time
+                self.settings.setValue("last_detections_dir", str(Path(file_path).parent))
+
                 import pandas as pd
                 df = pd.read_csv(file_path)
 
@@ -444,12 +641,18 @@ class VistaMainWindow(QMainWindow):
 
     def load_tracks_file(self):
         """Load tracks from CSV file"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_tracks_dir", "")
+
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Tracks", "", "CSV Files (*.csv)"
+            self, "Load Tracks", last_dir, "CSV Files (*.csv)"
         )
 
         if file_path:
             try:
+                # Save the directory for next time
+                self.settings.setValue("last_tracks_dir", str(Path(file_path).parent))
+
                 import pandas as pd
                 df = pd.read_csv(file_path)
 
@@ -481,6 +684,20 @@ class VistaMainWindow(QMainWindow):
     def on_frame_changed(self, frame_index):
         """Handle frame change from playback controls"""
         self.viewer.set_frame(frame_index)
+
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts"""
+        key = event.key()
+
+        if key == Qt.Key.Key_Left:
+            # Left arrow - previous frame
+            self.controls.prev_frame()
+        elif key == Qt.Key.Key_Right:
+            # Right arrow - next frame
+            self.controls.next_frame()
+        else:
+            # Pass other keys to parent class
+            super().keyPressEvent(event)
 
 
 def main():
