@@ -21,7 +21,6 @@ class GeolocatedImagery(Imagery):
         # Set parent class attributes to match child attributes
         self.name = self.title
         self.images = self.imagery
-        self.unix_times = self.times
 
     def __str__(self):
         return self.__repr__()
