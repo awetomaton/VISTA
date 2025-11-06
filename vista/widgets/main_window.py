@@ -297,6 +297,11 @@ class VistaMainWindow(QMainWindow):
     def on_loading_finished(self):
         """Handle thread completion"""
         if self.progress_dialog:
+            # Disconnect canceled signal before closing to prevent false "Loading cancelled" message
+            try:
+                self.progress_dialog.canceled.disconnect(self.on_loading_cancelled)
+            except:
+                pass  # Signal may not be connected
             self.progress_dialog.close()
             self.progress_dialog = None
 
