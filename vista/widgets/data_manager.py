@@ -196,7 +196,11 @@ class DataManagerPanel(QWidget):
         self.tracks_table.horizontalHeader().customContextMenuRequested.connect(self.on_track_header_context_menu)
 
         # Track column filters and sort state
-        self.track_column_filters = {}  # column_index -> set of selected values
+        # Filter structure: column_index -> {'type': 'set'/'text'/'numeric', 'values': set()/dict}
+        # For 'set' type: {'type': 'set', 'values': set of values}
+        # For 'text' type: {'type': 'text', 'values': {'mode': 'equals'/'contains'/'not_contains', 'text': str}}
+        # For 'numeric' type: {'type': 'numeric', 'values': {'mode': 'greater'/'less', 'value': float}}
+        self.track_column_filters = {}
         self.track_sort_column = None
         self.track_sort_order = Qt.SortOrder.AscendingOrder
 
@@ -261,6 +265,9 @@ class DataManagerPanel(QWidget):
         self.tracks_table.blockSignals(True)
         self.tracks_table.setRowCount(0)
 
+        # Update header labels with filter/sort icons
+        self._update_track_header_icons()
+
         # Build list of all tracks with their tracker reference
         all_tracks = []
         for tracker in self.viewer.trackers:
@@ -321,6 +328,27 @@ class DataManagerPanel(QWidget):
 
         self.tracks_table.blockSignals(False)
 
+    def _update_track_header_icons(self):
+        """Update header labels to show filter and sort indicators"""
+        # Base column names
+        base_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length"]
+
+        for col_idx in range(len(base_names)):
+            label = base_names[col_idx]
+
+            # Add filter icon if column is filtered
+            if col_idx in self.track_column_filters:
+                label += " 🔍"  # Filter icon
+
+            # Add sort icon if column is sorted
+            if col_idx == self.track_sort_column:
+                if self.track_sort_order == Qt.SortOrder.AscendingOrder:
+                    label += " ▲"  # Ascending sort icon
+                else:
+                    label += " ▼"  # Descending sort icon
+
+            self.tracks_table.setHorizontalHeaderItem(col_idx, QTableWidgetItem(label))
+
     def _apply_track_filters(self, tracks_list):
         """Apply column filters to tracks list"""
         if not self.track_column_filters:
@@ -329,9 +357,12 @@ class DataManagerPanel(QWidget):
         filtered = []
         for tracker, track in tracks_list:
             include = True
-            for col_idx, filter_values in self.track_column_filters.items():
-                if not filter_values:
+            for col_idx, filter_config in self.track_column_filters.items():
+                if not filter_config:
                     continue
+
+                filter_type = filter_config.get('type', 'set')
+                filter_values = filter_config.get('values')
 
                 # Get the value for this column
                 if col_idx == 0:
@@ -341,23 +372,47 @@ class DataManagerPanel(QWidget):
                 elif col_idx == 2:
                     value = track.name
                 elif col_idx == 3:
-                    value = f"{track.length:.2f}"
-                elif col_idx == 4:
-                    value = track.color
-                elif col_idx == 5:
-                    value = track.marker
-                elif col_idx == 6:
-                    value = str(track.line_width)
-                elif col_idx == 7:
-                    value = str(track.marker_size)
-                elif col_idx == 8:
-                    value = str(track.tail_length)
+                    value = track.length
                 else:
                     continue
 
-                if value not in filter_values:
-                    include = False
-                    break
+                # Apply filter based on type
+                if filter_type == 'set':
+                    # Set-based filter (for Visible and Tracker columns)
+                    if value not in filter_values:
+                        include = False
+                        break
+                elif filter_type == 'text':
+                    # Text-based filter (for Name column)
+                    mode = filter_values.get('mode')
+                    text = filter_values.get('text', '').lower()
+                    value_lower = value.lower()
+
+                    if mode == 'equals':
+                        if value_lower != text:
+                            include = False
+                            break
+                    elif mode == 'contains':
+                        if text not in value_lower:
+                            include = False
+                            break
+                    elif mode == 'not_contains':
+                        if text in value_lower:
+                            include = False
+                            break
+                elif filter_type == 'numeric':
+                    # Numeric filter (for Length column)
+                    mode = filter_values.get('mode')
+                    threshold = filter_values.get('value', 0.0)
+
+                    if mode == 'greater':
+                        if value <= threshold:
+                            include = False
+                            break
+                    elif mode == 'less':
+                        if value >= threshold:
+                            include = False
+                            break
 
             if include:
                 filtered.append((tracker, track))
@@ -376,16 +431,6 @@ class DataManagerPanel(QWidget):
                 return track.name
             elif column == 3:
                 return track.length
-            elif column == 4:
-                return track.color
-            elif column == 5:
-                return track.marker
-            elif column == 6:
-                return track.line_width
-            elif column == 7:
-                return track.marker_size
-            elif column == 8:
-                return track.tail_length
             return ""
 
         reverse = (order == Qt.SortOrder.DescendingOrder)
@@ -395,6 +440,10 @@ class DataManagerPanel(QWidget):
         """Show context menu on track table header"""
         header = self.tracks_table.horizontalHeader()
         column = header.logicalIndexAt(pos)
+
+        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3)
+        if column not in [0, 1, 2, 3]:
+            return
 
         menu = QMenu(self)
 
@@ -429,6 +478,160 @@ class DataManagerPanel(QWidget):
 
     def show_track_filter_dialog(self, column):
         """Show filter dialog for column"""
+        column_name = self.tracks_table.horizontalHeaderItem(column).text()
+
+        # Column 2 (Name) uses text filter
+        if column == 2:
+            self._show_text_filter_dialog(column, column_name)
+        # Column 3 (Length) uses numeric filter
+        elif column == 3:
+            self._show_numeric_filter_dialog(column, column_name)
+        # Columns 0 (Visible) and 1 (Tracker) use set filter
+        else:
+            self._show_set_filter_dialog(column, column_name)
+
+    def _show_text_filter_dialog(self, column, column_name):
+        """Show text-based filter dialog"""
+        from PyQt6.QtWidgets import QDialog, QLineEdit, QRadioButton, QButtonGroup
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Filter: {column_name}")
+        dialog.setMinimumWidth(350)
+
+        layout = QVBoxLayout()
+
+        # Get current filter
+        current_filter = self.track_column_filters.get(column, {})
+        current_mode = current_filter.get('values', {}).get('mode', 'contains') if current_filter else 'contains'
+        current_text = current_filter.get('values', {}).get('text', '') if current_filter else ''
+
+        # Radio buttons for filter mode
+        mode_group = QButtonGroup(dialog)
+        equals_radio = QRadioButton("Equals")
+        contains_radio = QRadioButton("Contains")
+        not_contains_radio = QRadioButton("Does not contain")
+
+        mode_group.addButton(equals_radio, 0)
+        mode_group.addButton(contains_radio, 1)
+        mode_group.addButton(not_contains_radio, 2)
+
+        if current_mode == 'equals':
+            equals_radio.setChecked(True)
+        elif current_mode == 'contains':
+            contains_radio.setChecked(True)
+        else:
+            not_contains_radio.setChecked(True)
+
+        layout.addWidget(equals_radio)
+        layout.addWidget(contains_radio)
+        layout.addWidget(not_contains_radio)
+
+        # Text input
+        layout.addWidget(QLabel("Text:"))
+        text_input = QLineEdit()
+        text_input.setText(current_text)
+        layout.addWidget(text_input)
+
+        # OK/Cancel buttons
+        button_layout = QHBoxLayout()
+        ok_btn = QPushButton("OK")
+        ok_btn.clicked.connect(dialog.accept)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+
+        dialog.setLayout(layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            text = text_input.text().strip()
+            if not text:
+                # Empty text = no filter
+                if column in self.track_column_filters:
+                    del self.track_column_filters[column]
+            else:
+                # Determine mode
+                if equals_radio.isChecked():
+                    mode = 'equals'
+                elif contains_radio.isChecked():
+                    mode = 'contains'
+                else:
+                    mode = 'not_contains'
+
+                self.track_column_filters[column] = {
+                    'type': 'text',
+                    'values': {'mode': mode, 'text': text}
+                }
+            self.refresh_tracks_table()
+
+    def _show_numeric_filter_dialog(self, column, column_name):
+        """Show numeric filter dialog"""
+        from PyQt6.QtWidgets import QDialog, QRadioButton, QButtonGroup, QDoubleSpinBox
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Filter: {column_name}")
+        dialog.setMinimumWidth(350)
+
+        layout = QVBoxLayout()
+
+        # Get current filter
+        current_filter = self.track_column_filters.get(column, {})
+        current_mode = current_filter.get('values', {}).get('mode', 'greater') if current_filter else 'greater'
+        current_value = current_filter.get('values', {}).get('value', 0.0) if current_filter else 0.0
+
+        # Radio buttons for filter mode
+        mode_group = QButtonGroup(dialog)
+        greater_radio = QRadioButton("Greater than")
+        less_radio = QRadioButton("Less than")
+
+        mode_group.addButton(greater_radio, 0)
+        mode_group.addButton(less_radio, 1)
+
+        if current_mode == 'greater':
+            greater_radio.setChecked(True)
+        else:
+            less_radio.setChecked(True)
+
+        layout.addWidget(greater_radio)
+        layout.addWidget(less_radio)
+
+        # Numeric input
+        layout.addWidget(QLabel("Value:"))
+        value_input = QDoubleSpinBox()
+        value_input.setMinimum(0.0)
+        value_input.setMaximum(999999.0)
+        value_input.setDecimals(2)
+        value_input.setValue(current_value)
+        layout.addWidget(value_input)
+
+        # OK/Cancel buttons
+        button_layout = QHBoxLayout()
+        ok_btn = QPushButton("OK")
+        ok_btn.clicked.connect(dialog.accept)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        clear_btn = QPushButton("Clear Filter")
+        clear_btn.clicked.connect(lambda: (dialog.reject(), self.clear_track_column_filter(column)))
+        button_layout.addWidget(ok_btn)
+        button_layout.addWidget(cancel_btn)
+        button_layout.addWidget(clear_btn)
+        layout.addLayout(button_layout)
+
+        dialog.setLayout(layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            value = value_input.value()
+            mode = 'greater' if greater_radio.isChecked() else 'less'
+
+            self.track_column_filters[column] = {
+                'type': 'numeric',
+                'values': {'mode': mode, 'value': value}
+            }
+            self.refresh_tracks_table()
+
+    def _show_set_filter_dialog(self, column, column_name):
+        """Show set-based filter dialog with checkboxes"""
         from PyQt6.QtWidgets import QDialog, QScrollArea
 
         # Get all unique values for this column
@@ -439,24 +642,10 @@ class DataManagerPanel(QWidget):
                     unique_values.add("True" if track.visible else "False")
                 elif column == 1:
                     unique_values.add(tracker.name)
-                elif column == 2:
-                    unique_values.add(track.name)
-                elif column == 3:
-                    unique_values.add(f"{track.length:.2f}")
-                elif column == 4:
-                    unique_values.add(track.color)
-                elif column == 5:
-                    unique_values.add(track.marker)
-                elif column == 6:
-                    unique_values.add(str(track.line_width))
-                elif column == 7:
-                    unique_values.add(str(track.marker_size))
-                elif column == 8:
-                    unique_values.add(str(track.tail_length))
 
         # Create dialog with checkboxes for each unique value
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Filter: {self.tracks_table.horizontalHeaderItem(column).text()}")
+        dialog.setWindowTitle(f"Filter: {column_name}")
         dialog.setMinimumWidth(300)
 
         layout = QVBoxLayout()
@@ -467,13 +656,14 @@ class DataManagerPanel(QWidget):
         scroll_layout = QVBoxLayout()
 
         # Get current filter
-        current_filter = self.track_column_filters.get(column, set())
+        current_filter = self.track_column_filters.get(column, {})
+        current_values = current_filter.get('values', set()) if current_filter else set()
 
         # Create checkboxes
         checkboxes = {}
         for value in sorted(unique_values):
             cb = QCheckBox(str(value))
-            cb.setChecked(value in current_filter or not current_filter)
+            cb.setChecked(value in current_values or not current_values)
             checkboxes[value] = cb
             scroll_layout.addWidget(cb)
 
@@ -514,7 +704,10 @@ class DataManagerPanel(QWidget):
                 if column in self.track_column_filters:
                     del self.track_column_filters[column]
             else:
-                self.track_column_filters[column] = selected_values
+                self.track_column_filters[column] = {
+                    'type': 'set',
+                    'values': selected_values
+                }
             self.refresh_tracks_table()
 
     def clear_track_column_filter(self, column):

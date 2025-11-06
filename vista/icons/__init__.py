@@ -9,4 +9,5 @@ class VistaIcons(object):
     
     def __init__(self):
         self.logo = QIcon(str(ICON_DIR / "logo.jpg"))
-        
+        self.geodetic_tooltip = QIcon(str(ICON_DIR / "geodetic_tooltip.png"))
+    
