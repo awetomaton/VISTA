@@ -24,6 +24,10 @@ class ImageryViewer(QWidget):
         self.track_path_items = {}  # id(track) -> PlotCurveItem (for track path)
         self.track_marker_items = {}  # id(track) -> ScatterPlotItem (for current position)
 
+        # Geolocation tooltip
+        self.geolocation_enabled = False
+        self.geolocation_text = None  # TextItem for displaying lat/lon
+
         self.init_ui()
 
     def init_ui(self):
@@ -35,7 +39,7 @@ class ImageryViewer(QWidget):
         self.graphics_layout = pg.GraphicsLayoutWidget()
 
         # Create plot item for the image
-        self.plot_item = self.graphics_layout.addPlot()
+        self.plot_item = self.graphics_layout.addPlot(row=0, col=0)
         self.plot_item.setAspectLocked(True)
         self.plot_item.invertY(True)
         #self.plot_item.hideAxis('left')
@@ -44,6 +48,14 @@ class ImageryViewer(QWidget):
         # Create image item
         self.image_item = pg.ImageItem()
         self.plot_item.addItem(self.image_item)
+
+        # Create geolocation text overlay using TextItem positioned in scene coordinates
+        self.geolocation_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
+        self.geolocation_text.setVisible(False)
+        self.plot_item.addItem(self.geolocation_text, ignoreBounds=True)
+
+        # Connect mouse hover signal
+        self.plot_item.scene().sigMouseMoved.connect(self.on_mouse_moved)
 
         # Create a horizontal HistogramLUTItem
         self.hist_widget = pg.GraphicsLayoutWidget()
@@ -248,6 +260,62 @@ class ImageryViewer(QWidget):
         self.trackers.append(tracker)
         self.update_overlays()
         return self.get_frame_range()  # Return updated frame range
+
+    def set_geolocation_enabled(self, enabled):
+        """Enable or disable geolocation tooltip"""
+        self.geolocation_enabled = enabled
+        if not enabled:
+            self.geolocation_text.setVisible(False)
+
+    def on_mouse_moved(self, pos):
+        """Handle mouse movement over the image"""
+        if not self.geolocation_enabled or self.imagery is None:
+            return
+
+        # Map mouse position to image coordinates
+        mouse_point = self.plot_item.vb.mapSceneToView(pos)
+        col = mouse_point.x()
+        row = mouse_point.y()
+
+        # Check if position is within image bounds
+        if self.imagery.images is not None and len(self.imagery.images) > 0:
+            img_shape = self.imagery.images[0].shape
+            if 0 <= row < img_shape[0] and 0 <= col < img_shape[1]:
+                # Get current frame index
+                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+                if len(valid_indices) > 0:
+                    image_index = valid_indices[-1]
+                    frame = self.imagery.frames[image_index]
+
+                    # Convert pixel to geodetic coordinates
+                    frames_array = np.array([frame])
+                    rows_array = np.array([row])
+                    cols_array = np.array([col])
+
+                    locations = self.imagery.pixel_to_geodetic(frames_array, rows_array, cols_array)
+
+                    # Extract lat/lon from EarthLocation
+                    if locations is not None and len(locations) > 0:
+                        location = locations[0]
+                        lat = location.lat.deg
+                        lon = location.lon.deg
+
+                        # Check if coordinates are valid (not NaN)
+                        if not (np.isnan(lat) or np.isnan(lon)):
+                            # Update text and position
+                            text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
+                            self.geolocation_text.setText(text)
+
+                            # Position in lower right corner of the view (in data coordinates)
+                            view_rect = self.plot_item.viewRect()
+                            self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
+                            self.geolocation_text.setVisible(True)
+                        else:
+                            self.geolocation_text.setVisible(False)
+                    else:
+                        self.geolocation_text.setVisible(False)
+            else:
+                self.geolocation_text.setVisible(False)
 
     def clear_overlays(self):
         """Clear all tracks and detections"""

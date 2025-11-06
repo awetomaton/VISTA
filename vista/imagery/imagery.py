@@ -65,7 +65,7 @@ class Imagery:
 
     def pixel_to_geodetic(self, frames: np.ndarray, rows: np.ndarray, columns: np.ndarray):
         invalid = np.empty_like(frames)
-        invalid.fill(np.nan)
+        invalid.fill(0)
         return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
 
     def geodetic_to_pixel(self, loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:

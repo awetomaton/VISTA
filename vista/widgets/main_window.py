@@ -59,6 +59,9 @@ class VistaMainWindow(QMainWindow):
         # Create menu bar
         self.create_menu_bar()
 
+        # Create toolbar
+        self.create_toolbar()
+
         # Synchronize dock visibility with menu action
         self.data_dock.visibilityChanged.connect(self.on_data_dock_visibility_changed)
 
@@ -112,6 +115,23 @@ class VistaMainWindow(QMainWindow):
         self.toggle_data_manager_action.setChecked(True)
         self.toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
         view_menu.addAction(self.toggle_data_manager_action)
+
+    def create_toolbar(self):
+        """Create toolbar with tools"""
+        toolbar = self.addToolBar("Tools")
+        toolbar.setObjectName("ToolsToolbar")  # For saving state
+
+        # Geolocation tooltip toggle
+        self.geolocation_action = QAction(self.icons.logo, "Geolocation Tooltip", self)
+        self.geolocation_action.setCheckable(True)
+        self.geolocation_action.setChecked(False)
+        self.geolocation_action.setToolTip("Show latitude/longitude on hover")
+        self.geolocation_action.toggled.connect(self.on_geolocation_toggled)
+        toolbar.addAction(self.geolocation_action)
+
+    def on_geolocation_toggled(self, checked):
+        """Handle geolocation tooltip toggle"""
+        self.viewer.set_geolocation_enabled(checked)
 
     def load_imagery_file(self):
         """Load imagery from HDF5 file using background thread"""
