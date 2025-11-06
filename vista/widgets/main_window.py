@@ -122,7 +122,7 @@ class VistaMainWindow(QMainWindow):
         toolbar.setObjectName("ToolsToolbar")  # For saving state
 
         # Geolocation tooltip toggle
-        self.geolocation_action = QAction(self.icons.logo, "Geolocation Tooltip", self)
+        self.geolocation_action = QAction(self.icons.geodetic_tooltip, "Geolocation Tooltip", self)
         self.geolocation_action.setCheckable(True)
         self.geolocation_action.setChecked(False)
         self.geolocation_action.setToolTip("Show latitude/longitude on hover")

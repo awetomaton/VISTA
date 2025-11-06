@@ -188,7 +188,19 @@ class DataManagerPanel(QWidget):
         self.tracks_table.setHorizontalHeaderLabels([
             "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length"
         ])
-        self.tracks_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        # Set column resize modes - only Tracker and Name should stretch
+        header = self.tracks_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Tracker (can be long)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Length (numeric)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
+        header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
+
         self.tracks_table.cellChanged.connect(self.on_track_cell_changed)
 
         # Enable context menu on header
@@ -239,7 +251,15 @@ class DataManagerPanel(QWidget):
         self.detections_table.setHorizontalHeaderLabels([
             "Visible", "Name", "Color", "Marker", "Size"
         ])
-        self.detections_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        # Set column resize modes - only Name should stretch
+        header = self.detections_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Size (numeric)
+
         self.detections_table.cellChanged.connect(self.on_detection_cell_changed)
 
         # Set delegates for special columns (keep references to prevent garbage collection)
