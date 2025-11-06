@@ -105,6 +105,19 @@ class ImageryViewer(QWidget):
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
 
+    def get_current_time(self):
+        """Get the current time for the displayed frame (if available)"""
+        if self.imagery is not None and self.imagery.times is not None and len(self.imagery.frames) > 0:
+            # Find the index in the imagery array that corresponds to current frame number
+            valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+
+            if len(valid_indices) > 0:
+                # Get the index of the closest frame
+                image_index = valid_indices[-1]
+                return self.imagery.times[image_index]
+
+        return None
+
     def get_frame_range(self):
         """Get the min and max frame numbers from all data sources (imagery, tracks, detections)"""
         all_frames = []

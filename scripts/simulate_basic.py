@@ -21,7 +21,5 @@ def simulate_scenario():
     px.imshow(np.max(datacube, axis=0), color_continuous_scale="Bluered").show()
 
 
-
-
 if __name__ == "__main__":
     simulate_scenario()

@@ -30,6 +30,9 @@ class PlaybackControls(QWidget):
         self.frame_times = []  # Store recent frame timestamps for FPS calculation
         self.max_frame_history = 30  # Use last 30 frames for FPS calculation
 
+        # Callback to get current time from imagery
+        self.get_current_time = None  # Function that returns current datetime or None
+
         self.init_ui()
 
         # Timer for playback - fires frequently to check if it's time to advance
@@ -39,16 +42,28 @@ class PlaybackControls(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # Frame slider
-        slider_layout = QHBoxLayout()
-        self.frame_label = QLabel("Frame: 0 / 0")
+        # Frame slider and info layout
+        slider_section = QVBoxLayout()
+
+        # Slider on top
         self.frame_slider = QSlider(Qt.Orientation.Horizontal)
         self.frame_slider.setMinimum(0)
         self.frame_slider.setMaximum(0)
         self.frame_slider.valueChanged.connect(self.on_slider_changed)
+        slider_section.addWidget(self.frame_slider)
 
-        slider_layout.addWidget(self.frame_label)
-        slider_layout.addWidget(self.frame_slider)
+        # Frame and time info underneath
+        info_layout = QHBoxLayout()
+        self.frame_label = QLabel("Frame: 0 / 0")
+        self.time_label = QLabel("")  # Will show ISO time when available
+        #self.time_label.setMinimumWidth(200)
+
+        info_layout.addStretch()
+        info_layout.addWidget(self.frame_label)
+        info_layout.addWidget(self.time_label)
+        info_layout.addStretch()
+
+        slider_section.addLayout(info_layout)
 
         # Playback buttons row
         button_layout = QHBoxLayout()
@@ -150,7 +165,7 @@ class PlaybackControls(QWidget):
 
         button_layout.addStretch()
 
-        layout.addLayout(slider_layout)
+        layout.addLayout(slider_section)
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
@@ -186,8 +201,20 @@ class PlaybackControls(QWidget):
         self.update_label()
 
     def update_label(self):
-        """Update frame label"""
+        """Update frame label and time display"""
         self.frame_label.setText(f"Frame: {self.current_frame} / {self.max_frame}")
+
+        # Update time display if callback is available
+        if self.get_current_time is not None:
+            current_time = self.get_current_time()
+            if current_time is not None:
+                # Convert numpy.datetime64 to ISO format string
+                time_str = str(current_time)
+                self.time_label.setText(f"Time: {time_str}")
+            else:
+                self.time_label.setText("")
+        else:
+            self.time_label.setText("")
 
     def on_slider_changed(self, value):
         """Handle slider value change"""
