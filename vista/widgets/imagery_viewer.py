@@ -14,7 +14,8 @@ class ImageryViewer(QWidget):
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
-        self.imagery = None
+        self.imageries = []  # List of Imagery objects
+        self.imagery = None  # Currently selected imagery for display
         self.detectors = []  # List of Detector objects
         self.trackers = []  # List of Tracker objects
 
@@ -74,13 +75,28 @@ class ImageryViewer(QWidget):
 
         self.setLayout(layout)
 
-    def load_imagery(self, imagery: Imagery):
-        """Load imagery data into the viewer"""
-        self.imagery = imagery
-        self.current_frame_number = imagery.frames[0] if len(imagery.frames) > 0 else 0
+    def add_imagery(self, imagery: Imagery):
+        """Add imagery to the list of available imageries"""
+        if imagery not in self.imageries:
+            self.imageries.append(imagery)
+            # If this is the first imagery, select it for display
+            if len(self.imageries) == 1:
+                self.select_imagery(imagery)
 
-        # Display the first frame
-        self.image_item.setImage(imagery.images[0])
+    def select_imagery(self, imagery: Imagery):
+        """Select which imagery to display"""
+        if imagery in self.imageries:
+            self.imagery = imagery
+            self.current_frame_number = imagery.frames[0] if len(imagery.frames) > 0 else 0
+            # Display the first frame
+            self.image_item.setImage(imagery.images[0])
+            # Refresh the current frame display
+            self.set_frame_number(self.current_frame_number)
+
+    def load_imagery(self, imagery: Imagery):
+        """Load imagery data into the viewer (legacy method, now adds and selects)"""
+        self.add_imagery(imagery)
+        self.select_imagery(imagery)
 
     def set_frame_number(self, frame_number: int):
         """Set the current frame to display by frame number"""

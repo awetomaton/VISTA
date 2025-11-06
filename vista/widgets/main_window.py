@@ -134,20 +134,22 @@ class VistaMainWindow(QMainWindow):
         self.viewer.set_geolocation_enabled(checked)
 
     def load_imagery_file(self):
-        """Load imagery from HDF5 file using background thread"""
+        """Load imagery from HDF5 file(s) using background thread"""
         # Get last used directory from settings
         last_dir = self.settings.value("last_imagery_dir", "")
 
-        file_path, _ = QFileDialog.getOpenFileName(
+        file_paths, _ = QFileDialog.getOpenFileNames(
             self, "Load Imagery", last_dir, "HDF5 Files (*.h5 *.hdf5)"
         )
 
-        if file_path:
+        if file_paths:
+            file_path = file_paths[0]  # Process first file for now, can be extended later
             # Save the directory for next time
             self.settings.setValue("last_imagery_dir", str(Path(file_path).parent))
 
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading imagery...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
             self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
             self.progress_dialog.show()
 
@@ -165,15 +167,31 @@ class VistaMainWindow(QMainWindow):
 
     def on_imagery_loaded(self, imagery):
         """Handle imagery loaded in background thread"""
-        # Load into viewer
-        self.viewer.load_imagery(imagery)
+        # Add imagery to viewer (will be selected if it's the first one)
+        self.viewer.add_imagery(imagery)
+
+        # Select this imagery for viewing
+        self.viewer.select_imagery(imagery)
 
         # Update playback controls with frame range
         min_frame, max_frame = self.viewer.get_frame_range()
         self.controls.set_frame_range(min_frame, max_frame)
         self.controls.set_frame(min_frame)
 
+        # Refresh data manager to show the new imagery
+        self.data_manager.refresh()
+
         self.statusBar().showMessage(f"Loaded imagery: {imagery.name}", 3000)
+
+    def update_frame_range_from_imagery(self):
+        """Update frame range controls when imagery selection changes"""
+        min_frame, max_frame = self.viewer.get_frame_range()
+        self.controls.set_frame_range(min_frame, max_frame)
+        # Set to the first frame of the selected imagery
+        if self.viewer.imagery:
+            first_frame = self.viewer.imagery.frames[0] if len(self.viewer.imagery.frames) > 0 else 0
+            self.controls.set_frame(first_frame)
+            self.viewer.set_frame_number(first_frame)
 
     def load_detections_file(self):
         """Load detections from CSV file using background thread"""
@@ -190,6 +208,7 @@ class VistaMainWindow(QMainWindow):
 
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading detections...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
             self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
             self.progress_dialog.show()
 
@@ -236,6 +255,7 @@ class VistaMainWindow(QMainWindow):
 
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading tracks...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
             self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
             self.progress_dialog.show()
 

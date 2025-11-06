@@ -16,13 +16,16 @@ from typing import Tuple, Union, Optional
 @dataclass
 class Imagery:
     name: str
-    images: np.ndarray
-    frames: np.ndarray
+    images: NDArray[np.float32]
+    frames: NDArray[np.int_]
     times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
 
+    def __len__(self):
+        return self.images.shape[0]
+    
     def __str__(self):
         return self.__repr__()
 

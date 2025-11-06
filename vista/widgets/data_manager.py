@@ -94,6 +94,11 @@ class DataManagerPanel(QWidget):
         # Create tab widget
         self.tabs = QTabWidget()
 
+        # Imagery tab
+        self.imagery_tab = QWidget()
+        self.init_imagery_tab()
+        self.tabs.addTab(self.imagery_tab, "Imagery")
+
         # Tracks tab
         self.tracks_tab = QWidget()
         self.init_tracks_tab()
@@ -106,6 +111,29 @@ class DataManagerPanel(QWidget):
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
+
+    def init_imagery_tab(self):
+        """Initialize the imagery tab"""
+        layout = QVBoxLayout()
+
+        # Imagery table
+        self.imagery_table = QTableWidget()
+        self.imagery_table.setColumnCount(3)
+        self.imagery_table.setHorizontalHeaderLabels([
+            "Selected", "Name", "Frames"
+        ])
+
+        # Set column resize modes
+        header = self.imagery_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Selected (radio button)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
+
+        self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
+        self.imagery_table.cellClicked.connect(self.on_imagery_cell_clicked)
+
+        layout.addWidget(self.imagery_table)
+        self.imagery_tab.setLayout(layout)
 
     def init_tracks_tab(self):
         """Initialize the tracks tab with consolidated tracker view"""
@@ -277,8 +305,36 @@ class DataManagerPanel(QWidget):
 
     def refresh(self):
         """Refresh all data from viewer"""
+        self.refresh_imagery_table()
         self.refresh_tracks_table()
         self.refresh_detections_table()
+
+    def refresh_imagery_table(self):
+        """Refresh the imagery table"""
+        self.imagery_table.blockSignals(True)
+        self.imagery_table.setRowCount(0)
+
+        for row, imagery in enumerate(self.viewer.imageries):
+            self.imagery_table.insertRow(row)
+
+            # Selected (radio button behavior - only one can be selected)
+            selected_item = QTableWidgetItem()
+            selected_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            is_selected = (imagery == self.viewer.imagery)
+            selected_item.setCheckState(Qt.CheckState.Checked if is_selected else Qt.CheckState.Unchecked)
+            self.imagery_table.setItem(row, 0, selected_item)
+
+            # Name (not editable)
+            name_item = QTableWidgetItem(imagery.name)
+            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.imagery_table.setItem(row, 1, name_item)
+
+            # Frames (not editable)
+            frames_item = QTableWidgetItem(str(len(imagery.frames)))
+            frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.imagery_table.setItem(row, 2, frames_item)
+
+        self.imagery_table.blockSignals(False)
 
     def refresh_tracks_table(self):
         """Refresh the tracks table with all trackers consolidated"""
@@ -788,6 +844,37 @@ class DataManagerPanel(QWidget):
             import traceback
             traceback.print_exc()
             self.detections_table.blockSignals(False)
+
+    def on_imagery_cell_changed(self, row, column):
+        """Handle imagery cell changes"""
+        if column == 0:  # Selected checkbox
+            if row >= len(self.viewer.imageries):
+                return
+
+            item = self.imagery_table.item(row, column)
+            if item and item.checkState() == Qt.CheckState.Checked:
+                # User checked this imagery - select it
+                imagery = self.viewer.imageries[row]
+                self.viewer.select_imagery(imagery)
+                # Update frame range in main window
+                self.parent().parent().update_frame_range_from_imagery()
+                # Refresh to uncheck other rows
+                self.refresh_imagery_table()
+                self.data_changed.emit()
+
+    def on_imagery_cell_clicked(self, row, column):
+        """Handle imagery cell clicks"""
+        if column == 0:  # Selected column
+            if row >= len(self.viewer.imageries):
+                return
+
+            # Toggle selection by clicking
+            imagery = self.viewer.imageries[row]
+            self.viewer.select_imagery(imagery)
+            # Update frame range in main window
+            self.parent().parent().update_frame_range_from_imagery()
+            self.refresh_imagery_table()
+            self.data_changed.emit()
 
     def on_track_cell_changed(self, row, column):
         """Handle track cell changes"""
