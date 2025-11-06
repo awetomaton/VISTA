@@ -1,15 +1,17 @@
 """This modules stores an object representing a single track from a tracker"""
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class Track:
     name: str
-    frames: np.ndarray
-    rows: np.ndarray
-    columns: np.ndarray
+    frames: NDArray[np.int_]
+    rows: NDArray[np.float64]
+    columns: NDArray[np.float64]
+    length: int = field(init=False)
     # Styling attributes
     color: str = 'g'  # Green by default
     marker: str = 'o'  # Circle by default
@@ -17,6 +19,12 @@ class Track:
     marker_size: int = 12
     visible: bool = True
     tail_length: int = 0  # 0 means show all history, >0 means show only last N frames
+
+    def __post_init__(self):
+        if len(self.rows) < 2:
+            self.length = 0.0
+        else:
+            self.length = np.sum(np.sqrt(np.diff(self.rows)**2 + np.diff(self.columns)**2))
 
     def __len__(self):
         return len(self.frames)

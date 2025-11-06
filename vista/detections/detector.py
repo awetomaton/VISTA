@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 import pathlib
 from dataclasses import dataclass
@@ -8,9 +9,9 @@ from typing import Union
 @dataclass
 class Detector:
     name: str
-    frames: np.ndarray
-    rows: np.ndarray
-    columns: np.ndarray
+    frames: NDArray[np.int_]
+    rows: NDArray[np.float64]
+    columns: NDArray[np.float64]
     description: str = ""
     # Styling attributes
     color: str = 'r'  # Red by default
