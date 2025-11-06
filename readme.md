@@ -42,7 +42,7 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 
 ### Geolocation Support
 - Optional geodetic coordinate tooltip (latitude/longitude display)
-- Infrastructure for custom geolocation implementations (via `GeolocatedImagery` subclass)
+- Infrastructure for custom imagery implementations (via `Imagery` subclass)
 
 ### Robust Data Loading
 - Background threading for non-blocking file I/O
@@ -370,7 +370,7 @@ Vista/
 2. **Async Loading**: Background threads prevent UI freezing during file I/O
 3. **Signal-Slot Communication**: PyQt signals coordinate between components
 4. **Lazy Evaluation**: Histograms computed on-demand and cached
-5. **Extensibility**: `Imagery` and `GeolocatedImagery` base classes for customization
+5. **Extensibility**: `Imagery` base class for customization
 
 ### Key Classes
 
@@ -383,21 +383,6 @@ Vista/
 - **`DataManagerPanel`**: Widget for data editing
 
 ## Advanced Usage
-
-### Custom Geolocation
-
-Extend the `GeolocatedImagery` class to implement custom coordinate transformations:
-
-```python
-from vista.imagery.geolocated_imagery import GeolocatedImagery
-
-class MyGeolocatedImagery(GeolocatedImagery):
-    def row_col_to_lat_lon(self, row, col, frame_index):
-        # Implement your coordinate transformation
-        lat = ...
-        lon = ...
-        return lat, lon
-```
 
 ### Programmatic Data Loading
 

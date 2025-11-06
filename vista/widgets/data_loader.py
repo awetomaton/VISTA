@@ -69,11 +69,13 @@ class DataLoaderThread(QThread):
             frames = f['frames'][:]
 
             # Load time data
-            unix_time = f['unix_time'][:]
-            unix_fine_time = f['unix_fine_time'][:]
-            # Combine into total nanoseconds and convert to datetime64[ns]
-            total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
-            times = total_nanoseconds.astype('datetime64[ns]')
+            times = None
+            if 'unix_time' in f and 'unix_fine_time' in f:
+                unix_time = f['unix_time'][:]
+                unix_fine_time = f['unix_fine_time'][:]
+                # Combine into total nanoseconds and convert to datetime64[ns]
+                total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
+                times = total_nanoseconds.astype('datetime64[ns]')
 
             # Check if dataset is chunked
             is_chunked = images_dataset.chunks is not None
