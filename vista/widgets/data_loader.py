@@ -36,6 +36,11 @@ class DataLoaderThread(QThread):
         self.file_path = file_path
         self.data_type = data_type
         self.file_format = file_format
+        self._cancelled = False
+
+    def cancel(self):
+        """Request cancellation of the loading operation"""
+        self._cancelled = True
 
     def run(self):
         """Execute the data loading in background thread"""
@@ -92,6 +97,8 @@ class DataLoaderThread(QThread):
                 # Load using iter_chunks for efficient chunked reading
                 images_loaded = 0
                 for chunk_slice in images_dataset.iter_chunks():
+                    if self._cancelled:
+                        return  # Exit early if cancelled
                     images[chunk_slice] = images_dataset[chunk_slice]
                     # Calculate how many images we've loaded (first dimension)
                     images_loaded = chunk_slice[0].stop if chunk_slice[0].stop else num_images
@@ -99,8 +106,13 @@ class DataLoaderThread(QThread):
             else:
                 # Load all at once for non-chunked data
                 self.progress_updated.emit("Loading imagery...", 0, 1)
+                if self._cancelled:
+                    return  # Exit early if cancelled
                 images = images_dataset[:]
                 self.progress_updated.emit("Loading imagery...", 1, 1)
+
+        if self._cancelled:
+            return  # Exit early if cancelled
 
         # Create Imagery object
         imagery = Imagery(
@@ -114,6 +126,8 @@ class DataLoaderThread(QThread):
         self.progress_updated.emit("Computing histograms...", 0, len(imagery.images))
 
         for i in range(len(imagery.images)):
+            if self._cancelled:
+                return  # Exit early if cancelled
             imagery.get_histogram(i)  # Lazy computation
             self.progress_updated.emit("Computing histograms...", i + 1, len(imagery.images))
 
@@ -124,6 +138,9 @@ class DataLoaderThread(QThread):
         """Load detections from CSV file"""
         df = pd.read_csv(self.file_path)
 
+        if self._cancelled:
+            return  # Exit early if cancelled
+
         detectors = []
 
         # Group by detector name if column exists
@@ -132,6 +149,8 @@ class DataLoaderThread(QThread):
             self.progress_updated.emit("Loading detections...", 0, len(detector_groups))
 
             for idx, (detector_name, group_df) in enumerate(detector_groups):
+                if self._cancelled:
+                    return  # Exit early if cancelled
                 detector = Detector(
                     name=detector_name,
                     frames=group_df['Frames'].to_numpy(),
@@ -149,6 +168,9 @@ class DataLoaderThread(QThread):
                 columns=df['Columns'].to_numpy()
             )
             detectors.append(detector)
+
+        if self._cancelled:
+            return  # Exit early if cancelled
 
         # Emit the loaded detectors
         self.detectors_loaded.emit(detectors)
@@ -185,6 +207,9 @@ class DataLoaderThread(QThread):
         """Load tracks from CSV file"""
         df = pd.read_csv(self.file_path)
 
+        if self._cancelled:
+            return  # Exit early if cancelled
+
         trackers = []
 
         # Check if there's a Tracker column
@@ -194,9 +219,13 @@ class DataLoaderThread(QThread):
             self.progress_updated.emit("Loading tracks...", 0, len(tracker_groups))
 
             for idx, (tracker_name, tracker_df) in enumerate(tracker_groups):
+                if self._cancelled:
+                    return  # Exit early if cancelled
                 tracks = []
                 # Then group by track within each tracker
                 for track_name, track_df in tracker_df.groupby('Track'):
+                    if self._cancelled:
+                        return  # Exit early if cancelled
                     track = Track(
                         name=track_name,
                         frames=track_df['Frames'].to_numpy(),
@@ -214,6 +243,8 @@ class DataLoaderThread(QThread):
             self.progress_updated.emit("Loading tracks...", 0, len(track_groups))
 
             for idx, (track_name, track_df) in enumerate(track_groups):
+                if self._cancelled:
+                    return  # Exit early if cancelled
                 track = Track(
                     name=track_name,
                     frames=track_df['Frames'].to_numpy(),
@@ -235,6 +266,9 @@ class DataLoaderThread(QThread):
             )
             tracker = Tracker(name=Path(self.file_path).stem, tracks=[track])
             trackers.append(tracker)
+
+        if self._cancelled:
+            return  # Exit early if cancelled
 
         # Emit the loaded trackers
         self.trackers_loaded.emit(trackers)

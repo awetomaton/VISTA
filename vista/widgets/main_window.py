@@ -128,8 +128,6 @@ class VistaMainWindow(QMainWindow):
 
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading imagery...", "Cancel", 0, 100, self)
-            self.progress_dialog.setWindowTitle("Vista - Progress")
-            self.progress_dialog.setWindowIcon(self.icons.logo)
             self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
             self.progress_dialog.show()
 
@@ -139,6 +137,10 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread.error_occurred.connect(self.on_loading_error)
             self.loader_thread.progress_updated.connect(self.on_loading_progress)
             self.loader_thread.finished.connect(self.on_loading_finished)
+
+            # Connect cancel button to thread cancellation
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
             self.loader_thread.start()
 
     def on_imagery_loaded(self, imagery):
@@ -177,6 +179,10 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread.error_occurred.connect(self.on_loading_error)
             self.loader_thread.progress_updated.connect(self.on_loading_progress)
             self.loader_thread.finished.connect(self.on_loading_finished)
+
+            # Connect cancel button to thread cancellation
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
             self.loader_thread.start()
 
     def on_detectors_loaded(self, detectors):
@@ -219,6 +225,10 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread.error_occurred.connect(self.on_loading_error)
             self.loader_thread.progress_updated.connect(self.on_loading_progress)
             self.loader_thread.finished.connect(self.on_loading_finished)
+
+            # Connect cancel button to thread cancellation
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
             self.loader_thread.start()
 
     def on_trackers_loaded(self, trackers):
@@ -244,6 +254,12 @@ class VistaMainWindow(QMainWindow):
             self.progress_dialog.setLabelText(message)
             self.progress_dialog.setMaximum(total)
             self.progress_dialog.setValue(current)
+
+    def on_loading_cancelled(self):
+        """Handle user cancelling the loading operation"""
+        if self.loader_thread:
+            self.loader_thread.cancel()
+        self.statusBar().showMessage("Loading cancelled", 3000)
 
     def on_loading_error(self, error_message):
         """Handle errors from background loading thread"""
