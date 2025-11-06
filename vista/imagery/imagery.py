@@ -8,6 +8,7 @@ from astropy import units
 from dataclasses import dataclass
 import h5py
 import numpy as np
+from numpy.typing import NDArray
 import pathlib
 from typing import Tuple, Union, Optional
 
@@ -17,7 +18,7 @@ class Imagery:
     name: str
     images: np.ndarray
     frames: np.ndarray
-    unix_times: Optional[np.ndarray] = None
+    times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
@@ -77,5 +78,12 @@ class Imagery:
         with h5py.File(file, "w") as fid:
             fid.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
             fid.create_dataset("frames", data=self.frames)
-            if self.unix_times is not None:
-                fid.create_dataset("unix_times", data=self.unix_times.astype(np.int32))
+            if self.times is not None:
+                # Convert datetime64 to unix seconds + nanoseconds
+                # datetime64 is in nanoseconds since epoch
+                total_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
+                unix_time = (total_nanoseconds // 1_000_000_000).astype(np.int64)
+                unix_fine_time = (total_nanoseconds % 1_000_000_000).astype(np.int64)
+
+                fid.create_dataset("unix_time", data=unix_time)
+                fid.create_dataset("unix_fine_time", data=unix_fine_time)
