@@ -167,6 +167,19 @@ class VistaMainWindow(QMainWindow):
 
     def on_imagery_loaded(self, imagery):
         """Handle imagery loaded in background thread"""
+        # Check for duplicate imagery name
+        existing_names = [img.name for img in self.viewer.imageries]
+        if imagery.name in existing_names:
+            QMessageBox.critical(
+                self,
+                "Duplicate Imagery Name",
+                f"An imagery with the name '{imagery.name}' is already loaded.\n\n"
+                f"Please rename one of the imagery files or close the existing imagery before loading.",
+                QMessageBox.StandardButton.Ok
+            )
+            self.statusBar().showMessage(f"Failed to load imagery: duplicate name '{imagery.name}'", 5000)
+            return
+
         # Add imagery to viewer (will be selected if it's the first one)
         self.viewer.add_imagery(imagery)
 
