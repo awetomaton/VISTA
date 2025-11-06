@@ -1,5 +1,7 @@
 # VISTA - Visual Imagery Software Tool for Analysis
 
+![Logo](/vista/icons/logo.jpg)
+
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
@@ -43,6 +45,13 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 ### Geolocation Support
 - Optional geodetic coordinate tooltip (latitude/longitude display)
 - Infrastructure for custom imagery implementations (via `Imagery` subclass)
+
+### Image Processing Algorithms
+- **Background Removal**: Temporal Median algorithm for removing static backgrounds
+- Configurable algorithm parameters via dedicated dialogs
+- Background processing with progress tracking and cancellation support
+- Automatic creation of new imagery datasets with processed results
+- Non-blocking execution preserves UI responsiveness
 
 ### Robust Data Loading
 - Background threading for non-blocking file I/O
@@ -304,6 +313,49 @@ The Data Manager panel provides tabs for managing:
 - **Right Arrow / D**: Next frame
 - **Space**: Play/Pause (when playback controls have focus)
 
+### Image Processing
+
+VISTA includes built-in image processing algorithms that can be applied to loaded imagery.
+
+#### Running Image Processing Algorithms
+
+1. **Load Imagery**: Ensure imagery is loaded and selected
+2. **Open Algorithm Dialog**: Navigate to `Image Processing` menu and select the desired algorithm
+3. **Configure Parameters**: Adjust algorithm-specific parameters in the dialog
+4. **Run Processing**: Click "Run" to start processing
+5. **Monitor Progress**: Watch the progress bar and cancel if needed
+6. **View Results**: Processed imagery is automatically added and selected for viewing
+
+#### Background Removal - Temporal Median
+
+The Temporal Median algorithm removes static backgrounds by computing the median of nearby frames while excluding a temporal window around the current frame.
+
+**Menu Path:** `Image Processing → Background Removal → Temporal Median`
+
+**Parameters:**
+- **Background Frames** (default: 5): Number of frames on each side of the temporal window to use for median computation. Higher values provide more robust background estimates but require more memory.
+- **Temporal Offset** (default: 2): Number of frames to skip immediately before and after the current frame. This prevents the current frame from contaminating the background estimate, preserving moving objects.
+
+**Algorithm Behavior:**
+- For each frame `i`, the algorithm selects background frames from:
+  - Left window: frames `[i - offset - background : i - offset]`
+  - Right window: frames `[i + offset + 1 : i + offset + background + 1]`
+- Computes the median across all selected background frames
+- Returns the median background for frame `i`
+
+**Output:**
+- Creates a new Imagery dataset with name: `"{original_name} Temporal Median"`
+- Preserves frame numbers and timestamps from the original imagery
+- New imagery is automatically added to the Data Manager and selected for viewing
+
+**Use Cases:**
+- Removing static backgrounds from surveillance footage
+- Isolating moving objects in temporal sequences
+- Background estimation for change detection algorithms
+
+**Example:**
+If you have imagery named "my_imagery", running Temporal Median with default parameters will create a new imagery dataset named "my_imagery Temporal Median" containing the computed background for each frame.
+
 ## Generating Example Data
 
 Use the provided simulation scripts to generate example datasets:
@@ -338,7 +390,8 @@ Vista/
 │   │   ├── imagery_viewer.py     # Image display with pyqtgraph
 │   │   ├── data_manager.py       # Data panel with editing
 │   │   ├── data_loader.py        # Background loading thread
-│   │   └── playback_controls.py  # Playback UI
+│   │   ├── playback_controls.py  # Playback UI
+│   │   └── temporal_median_widget.py  # Temporal Median algorithm UI
 │   ├── imagery/                  # Image data models
 │   │   ├── imagery.py            # Base Imagery class
 │   │   └── geolocated_imagery.py # Extendable geolocation class
@@ -347,6 +400,9 @@ Vista/
 │   │   └── tracker.py            # Tracker container
 │   ├── detections/               # Detection data models
 │   │   └── detector.py           # Detector class
+│   ├── algorithms/               # Image processing algorithms
+│   │   └── background_removal/   # Background removal algorithms
+│   │       └── temporal_median.py  # Temporal Median algorithm
 │   ├── simulate/                 # Data generation utilities
 │   │   └── simulation.py         # Synthetic data simulator
 │   ├── utils/                    # Utilities
@@ -391,8 +447,18 @@ from vista.imagery.imagery import Imagery
 from vista.tracks.tracker import Tracker
 from vista.detections.detector import Detector
 
-# Load imagery
-imagery = Imagery.from_hdf5("imagery.h5", name="My Imagery")
+# Load imagery programmatically
+# Note: Currently, imagery loading is primarily done through the UI
+# The Imagery class can be instantiated directly with numpy arrays
+
+import numpy as np
+import h5py
+
+# Load from HDF5 manually
+with h5py.File("imagery.h5", "r") as f:
+    images = f['images'][:]
+    frames = f['frames'][:]
+    imagery = Imagery(name="My Imagery", images=images, frames=frames)
 
 # Load tracks
 tracker = Tracker.from_csv("tracks.csv", name="My Tracker")
@@ -401,12 +467,138 @@ tracker = Tracker.from_csv("tracks.csv", name="My Tracker")
 detector = Detector.from_csv("detections.csv", name="My Detector")
 ```
 
+### Creating Custom Image Processing Algorithms
+
+You can extend VISTA with custom image processing algorithms by following the pattern established by TemporalMedian:
+
+#### 1. Create the Algorithm Class
+
+```python
+from dataclasses import dataclass, field
+import numpy as np
+from numpy.typing import NDArray
+from typing import Tuple
+from vista.imagery.imagery import Imagery
+
+
+@dataclass
+class MyCustomAlgorithm:
+    """Custom image processing algorithm"""
+
+    name: str = "My Custom Algorithm"
+    imagery: Imagery
+    parameter1: int = 10
+    parameter2: float = 0.5
+    _current_frame: int = field(init=False, default=-1)
+
+    def __call__(self) -> Tuple[int, NDArray]:
+        """
+        Process the next frame incrementally.
+
+        Returns:
+            Tuple of (frame_index, processed_frame)
+        """
+        self._current_frame += 1
+
+        # Your processing logic here
+        processed_frame = self.process_frame(self._current_frame)
+
+        return self._current_frame, processed_frame
+
+    def process_frame(self, frame_idx: int) -> NDArray:
+        """Process a single frame"""
+        # Implement your algorithm here
+        frame = self.imagery.images[frame_idx]
+        # ... processing ...
+        return processed_frame
+```
+
+#### 2. Create a Configuration Widget
+
+Create a widget following the pattern in [temporal_median_widget.py](vista/widgets/temporal_median_widget.py):
+
+```python
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QSpinBox, QPushButton
+from PyQt6.QtCore import QThread, pyqtSignal
+from vista.imagery.imagery import Imagery
+
+
+class MyAlgorithmProcessingThread(QThread):
+    """Worker thread for processing"""
+    progress_updated = pyqtSignal(int, int)
+    processing_complete = pyqtSignal(object)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, imagery, param1, param2):
+        super().__init__()
+        self.imagery = imagery
+        self.param1 = param1
+        self.param2 = param2
+        self._cancelled = False
+
+    def run(self):
+        # Process imagery with your algorithm
+        # Emit progress_updated signals
+        # Emit processing_complete with new Imagery object
+        pass
+
+
+class MyAlgorithmWidget(QDialog):
+    """Configuration dialog for your algorithm"""
+    imagery_processed = pyqtSignal(object)
+
+    def __init__(self, parent=None, imagery=None):
+        super().__init__(parent)
+        self.imagery = imagery
+        self.init_ui()
+
+    def init_ui(self):
+        # Create UI with parameter controls
+        pass
+```
+
+#### 3. Integrate with Main Window
+
+Add your algorithm to the menu in [main_window.py](vista/widgets/main_window.py):
+
+```python
+# In create_menu_bar method
+my_algorithm_action = QAction("My Custom Algorithm", self)
+my_algorithm_action.triggered.connect(self.open_my_algorithm_widget)
+image_processing_menu.addAction(my_algorithm_action)
+
+# Add handler method
+def open_my_algorithm_widget(self):
+    if not self.viewer.imagery:
+        QMessageBox.warning(self, "No Imagery", "Please load imagery first.")
+        return
+
+    widget = MyAlgorithmWidget(self, self.viewer.imagery)
+    widget.imagery_processed.connect(self.on_algorithm_complete)
+    widget.exec()
+
+def on_algorithm_complete(self, processed_imagery):
+    # Add processed imagery to viewer
+    self.viewer.add_imagery(processed_imagery)
+    self.viewer.select_imagery(processed_imagery)
+    self.data_manager.refresh()
+```
+
+**Key Design Principles:**
+- Algorithms should be **callable** and return incremental results
+- Use **background threads** to prevent UI blocking
+- Emit **progress signals** for user feedback
+- Create **new Imagery objects** rather than modifying originals
+- Follow naming convention: `"{original_name} {algorithm_name}"`
+
 ## Performance Considerations
 
 - **Chunked HDF5**: Use chunked storage for large imagery files to enable progressive loading
 - **Lazy Histograms**: Histograms are computed on-demand and cached
 - **Efficient Playback**: Bounce mode uses efficient frame looping
 - **Background Loading**: All file I/O happens in background threads
+- **Image Processing**: Algorithms run in background threads with incremental progress updates
+- **Memory Usage**: Image processing algorithms may create full copies of imagery in memory. Monitor system memory when processing large datasets.
 
 ## Troubleshooting
 
@@ -423,6 +615,11 @@ If you see "An imagery dataset with this name already exists", ensure each loade
 - Check that HDF5 files contain required datasets: `images` and `frames`
 - Ensure coordinate values (rows/columns) are within image bounds
 
+### Image Processing Issues
+- **Out of Memory**: Processing large imagery datasets may require significant memory. Try reducing the imagery size or closing other applications.
+- **Processing Cancelled**: If processing is cancelled, the partial results are discarded and no new imagery is created.
+- **Processing Errors**: Check the error message for details. Common issues include invalid parameter values or corrupted imagery data.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
@@ -433,4 +630,8 @@ MIT License
 
 ## Recent Updates
 
-- v1.0.0: Initial release with multi-imagery support, geodetic tooltips, and enhanced track filtering
+- v1.0.0: Initial release with multi-imagery support, geodetic tooltips, enhanced track filtering, and image processing capabilities
+  - Added Image Processing menu with Background Removal algorithms
+  - Implemented Temporal Median algorithm for background removal
+  - Background processing with progress tracking and cancellation support
+  - Automatic creation and management of processed imagery datasets
