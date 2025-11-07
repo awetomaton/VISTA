@@ -137,6 +137,8 @@ class ImageryViewer(QWidget):
             self.current_frame_number = imagery.frames[0] if len(imagery.frames) > 0 else 0
             # Display the first frame
             self.image_item.setImage(imagery.images[0])
+            # Apply imagery offsets for positioning
+            self.image_item.setPos(imagery.column_offset, imagery.row_offset)
             # Refresh the current frame display
             self.set_frame_number(self.current_frame_number)
 

@@ -88,7 +88,7 @@ class Imagery:
         with h5py.File(file, "w") as fid:
             fid.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
             fid["images"].attrs["row_offset"] = self.row_offset
-            fid["images"].attrs["column_offset"] = self.column_offset_offset
+            fid["images"].attrs["column_offset"] = self.column_offset
             fid.create_dataset("frames", data=self.frames)
             if self.times is not None:
                 # Convert datetime64 to unix seconds + nanoseconds
