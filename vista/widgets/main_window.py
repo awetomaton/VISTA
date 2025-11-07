@@ -13,6 +13,7 @@ from .playback_controls import PlaybackControls
 from .data_manager import DataManagerPanel
 from .data_loader import DataLoaderThread
 from .temporal_median_widget import TemporalMedianWidget
+from .simple_threshold_widget import SimpleThresholdWidget
 
 
 class VistaMainWindow(QMainWindow):
@@ -127,6 +128,13 @@ class VistaMainWindow(QMainWindow):
         temporal_median_action = QAction("Temporal Median", self)
         temporal_median_action.triggered.connect(self.open_temporal_median_widget)
         background_removal_menu.addAction(temporal_median_action)
+
+        # Detectors menu
+        detectors_menu = image_processing_menu.addMenu("Detectors")
+
+        simple_threshold_action = QAction("Simple Threshold", self)
+        simple_threshold_action.triggered.connect(self.open_simple_threshold_widget)
+        detectors_menu.addAction(simple_threshold_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -470,6 +478,51 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Added processed imagery: {processed_imagery.name}", 3000)
+
+    def open_simple_threshold_widget(self):
+        """Open the Simple Threshold detector configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running detector algorithms.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = SimpleThresholdWidget(self, current_imagery, aois)
+        widget.detector_processed.connect(self.on_simple_threshold_complete)
+        widget.exec()
+
+    def on_simple_threshold_complete(self, detector):
+        """Handle completion of Simple Threshold detector processing"""
+        # Check for duplicate detector name
+        existing_names = [det.name for det in self.viewer.detectors]
+        if detector.name in existing_names:
+            QMessageBox.critical(
+                self,
+                "Duplicate Detector Name",
+                f"A detector with the name '{detector.name}' already exists.\n\n"
+                f"Please rename or remove the existing detector before processing.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Add the detector to the viewer
+        self.viewer.add_detector(detector)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
