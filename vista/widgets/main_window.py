@@ -433,8 +433,11 @@ class VistaMainWindow(QMainWindow):
         # Get the currently selected imagery
         current_imagery = self.viewer.imagery
 
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
         # Create and show the widget
-        widget = TemporalMedianWidget(self, current_imagery)
+        widget = TemporalMedianWidget(self, current_imagery, aois)
         widget.imagery_processed.connect(self.on_temporal_median_complete)
         widget.exec()
 

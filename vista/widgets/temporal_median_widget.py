@@ -1,13 +1,15 @@
 """Widget for configuring and running the Temporal Median background removal algorithm"""
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QSpinBox, QPushButton, QProgressBar, QMessageBox
+    QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import numpy as np
+import traceback
 
 from vista.imagery.imagery import Imagery
 from vista.algorithms.background_removal.temporal_median import TemporalMedian
+from vista.aoi.aoi import AOI
 
 
 class TemporalMedianProcessingThread(QThread):
@@ -18,7 +20,7 @@ class TemporalMedianProcessingThread(QThread):
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, background, offset):
+    def __init__(self, imagery, background, offset, aoi=None):
         """
         Initialize the processing thread
 
@@ -26,11 +28,13 @@ class TemporalMedianProcessingThread(QThread):
             imagery: Imagery object to process
             background: Background parameter for TemporalMedian
             offset: Offset parameter for TemporalMedian
+            aoi: Optional AOI object to process subset of imagery
         """
         super().__init__()
         self.imagery = imagery
         self.background = background
         self.offset = offset
+        self.aoi = aoi
         self._cancelled = False
 
     def cancel(self):
@@ -40,16 +44,44 @@ class TemporalMedianProcessingThread(QThread):
     def run(self):
         """Execute the temporal median algorithm in background thread"""
         try:
+            # Determine the region to process
+            if self.aoi:
+                # Extract AOI bounds
+                row_start = int(self.aoi.y) - self.imagery.row_offset
+                row_end = int(self.aoi.y + self.aoi.height) - self.imagery.row_offset
+                col_start = int(self.aoi.x) - self.imagery.column_offset
+                col_end = int(self.aoi.x + self.aoi.width) - self.imagery.column_offset
+
+                # Crop imagery to AOI
+                cropped_images = self.imagery.images[:, row_start:row_end, col_start:col_end]
+
+                # Create temporary imagery object for the cropped region
+                temp_imagery = Imagery(
+                    name=self.imagery.name,
+                    images=cropped_images,
+                    frames=self.imagery.frames,
+                    times=self.imagery.times
+                )
+
+                # Store offsets for later use
+                row_offset = self.imagery.row_offset + row_start
+                column_offset = self.imagery.column_offset + col_start
+            else:
+                # Process entire imagery
+                temp_imagery = self.imagery
+                row_offset = self.imagery.row_offset
+                column_offset = self.imagery.column_offset
+
             # Create the algorithm instance
             algorithm = TemporalMedian(
-                imagery=self.imagery,
+                imagery=temp_imagery,
                 background=self.background,
                 offset=self.offset
             )
 
             # Pre-allocate result array
-            num_frames = len(self.imagery)
-            processed_images = np.empty_like(self.imagery.images)
+            num_frames = len(temp_imagery)
+            processed_images = np.empty_like(temp_imagery.images)
 
             # Process each frame
             for i in range(num_frames):
@@ -68,11 +100,16 @@ class TemporalMedianProcessingThread(QThread):
 
             # Create new Imagery object with processed data
             new_name = f"{self.imagery.name} {algorithm.name}"
+            if self.aoi:
+                new_name += f" (AOI: {self.aoi.name})"
+
             processed_imagery = Imagery(
                 name=new_name,
                 images=processed_images,
-                frames=self.imagery.frames.copy(),
-                times=self.imagery.times.copy() if self.imagery.times is not None else None,
+                frames=temp_imagery.frames.copy(),
+                row_offset=row_offset,
+                column_offset=column_offset,
+                times=temp_imagery.times.copy() if temp_imagery.times is not None else None,
                 description=f"Processed with {algorithm.name} (background={self.background}, offset={self.offset})"
             )
 
@@ -80,7 +117,10 @@ class TemporalMedianProcessingThread(QThread):
             self.processing_complete.emit(processed_imagery)
 
         except Exception as e:
-            self.error_occurred.emit(f"Error processing imagery: {str(e)}")
+            # Get full traceback
+            tb_str = traceback.format_exc()
+            error_msg = f"Error processing imagery: {str(e)}\n\nTraceback:\n{tb_str}"
+            self.error_occurred.emit(error_msg)
 
 
 class TemporalMedianWidget(QDialog):
@@ -89,16 +129,18 @@ class TemporalMedianWidget(QDialog):
     # Signal emitted when processing is complete
     imagery_processed = pyqtSignal(object)  # Emits processed Imagery object
 
-    def __init__(self, parent=None, imagery=None):
+    def __init__(self, parent=None, imagery=None, aois=None):
         """
         Initialize the Temporal Median configuration widget
 
         Args:
             parent: Parent widget
             imagery: Imagery object to process
+            aois: List of AOI objects to choose from (optional)
         """
         super().__init__(parent)
         self.imagery = imagery
+        self.aois = aois if aois is not None else []
         self.processing_thread = None
 
         self.setWindowTitle("Temporal Median Background Removal")
@@ -119,6 +161,23 @@ class TemporalMedianWidget(QDialog):
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
+
+        # AOI selection
+        aoi_layout = QHBoxLayout()
+        aoi_label = QLabel("Process Region:")
+        aoi_label.setToolTip(
+            "Select an Area of Interest (AOI) to process only a subset of the imagery.\n"
+            "The resulting imagery will have offsets to position it correctly."
+        )
+        self.aoi_combo = QComboBox()
+        self.aoi_combo.addItem("Full Image", None)
+        for aoi in self.aois:
+            self.aoi_combo.addItem(aoi.name, aoi)
+        self.aoi_combo.setToolTip(aoi_label.toolTip())
+        aoi_layout.addWidget(aoi_label)
+        aoi_layout.addWidget(self.aoi_combo)
+        aoi_layout.addStretch()
+        layout.addLayout(aoi_layout)
 
         # Background parameter
         background_layout = QHBoxLayout()
@@ -194,12 +253,14 @@ class TemporalMedianWidget(QDialog):
         # Get parameter values
         background = self.background_spinbox.value()
         offset = self.offset_spinbox.value()
+        selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
 
         # Update UI for processing state
         self.run_button.setEnabled(False)
         self.close_button.setEnabled(False)
         self.background_spinbox.setEnabled(False)
         self.offset_spinbox.setEnabled(False)
+        self.aoi_combo.setEnabled(False)
         self.cancel_button.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -207,7 +268,7 @@ class TemporalMedianWidget(QDialog):
 
         # Create and start processing thread
         self.processing_thread = TemporalMedianProcessingThread(
-            self.imagery, background, offset
+            self.imagery, background, offset, selected_aoi
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -245,12 +306,21 @@ class TemporalMedianWidget(QDialog):
 
     def on_error_occurred(self, error_message):
         """Handle errors from the processing thread"""
-        QMessageBox.critical(
-            self,
-            "Processing Error",
-            error_message,
-            QMessageBox.StandardButton.Ok
-        )
+        # Create message box with detailed text
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
+        msg_box.setWindowTitle("Processing Error")
+
+        # Split error message to show brief summary and full traceback
+        if "\n\nTraceback:\n" in error_message:
+            summary, full_traceback = error_message.split("\n\nTraceback:\n", 1)
+            msg_box.setText(summary)
+            msg_box.setDetailedText(f"Traceback:\n{full_traceback}")
+        else:
+            msg_box.setText(error_message)
+
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
 
         # Reset UI
         self.reset_ui()
@@ -271,6 +341,7 @@ class TemporalMedianWidget(QDialog):
         self.close_button.setEnabled(True)
         self.background_spinbox.setEnabled(True)
         self.offset_spinbox.setEnabled(True)
+        self.aoi_combo.setEnabled(True)
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
