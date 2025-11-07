@@ -1322,18 +1322,22 @@ class DataManagerPanel(QWidget):
 
         # AOIs table
         self.aois_table = QTableWidget()
-        self.aois_table.setColumnCount(3)
+        self.aois_table.setColumnCount(2)
         self.aois_table.setHorizontalHeaderLabels([
-            "Select", "Name", "Bounds (x, y, w, h)"
+            "Name", "Bounds (x, y, w, h)"
         ])
+
+        # Enable row selection via vertical header
+        self.aois_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.aois_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
         # Set column resize modes
         header = self.aois_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Select checkbox
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (editable)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Bounds (read-only)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (editable)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Bounds (read-only)
 
         self.aois_table.cellChanged.connect(self.on_aoi_cell_changed)
+        self.aois_table.itemSelectionChanged.connect(self.on_aoi_selection_changed)
 
         layout.addWidget(self.aois_table)
         self.aois_tab.setLayout(layout)
@@ -1346,53 +1350,37 @@ class DataManagerPanel(QWidget):
         for row, aoi in enumerate(self.viewer.aois):
             self.aois_table.insertRow(row)
 
-            # Select checkbox
-            select_checkbox = QCheckBox()
-            # Check if this AOI is selected (newly created AOIs start selected)
-            if hasattr(aoi, '_selected'):
-                select_checkbox.setChecked(aoi._selected)
-            else:
-                # Default to checked for backward compatibility
-                select_checkbox.setChecked(True)
-                aoi._selected = True
-
-            # Connect checkbox to update AOI selectability
-            select_checkbox.stateChanged.connect(
-                lambda state, a=aoi: self.on_aoi_checkbox_changed(a, state)
-            )
-
-            select_widget = QWidget()
-            select_layout = QHBoxLayout(select_widget)
-            select_layout.addWidget(select_checkbox)
-            select_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            select_layout.setContentsMargins(0, 0, 0, 0)
-            self.aois_table.setCellWidget(row, 0, select_widget)
-
             # Name (editable)
             name_item = QTableWidgetItem(aoi.name)
             name_item.setData(Qt.ItemDataRole.UserRole, id(aoi))  # Store AOI ID
-            self.aois_table.setItem(row, 1, name_item)
+            self.aois_table.setItem(row, 0, name_item)
 
             # Bounds (read-only)
             bounds_text = f"({aoi.x:.1f}, {aoi.y:.1f}, {aoi.width:.1f}, {aoi.height:.1f})"
             bounds_item = QTableWidgetItem(bounds_text)
             bounds_item.setFlags(bounds_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.aois_table.setItem(row, 2, bounds_item)
+            self.aois_table.setItem(row, 1, bounds_item)
 
         self.aois_table.blockSignals(False)
 
-    def on_aoi_checkbox_changed(self, aoi, state):
-        """Handle AOI checkbox state change"""
-        # Update the AOI's selected state
-        is_checked = (state == Qt.CheckState.Checked.value)
-        aoi._selected = is_checked
+        # Select rows for AOIs that are marked as selected
+        for row, aoi in enumerate(self.viewer.aois):
+            if hasattr(aoi, '_selected') and aoi._selected:
+                self.aois_table.selectRow(row)
 
-        # Update the viewer to make it movable/resizable or not
-        self.viewer.set_aoi_selectable(aoi, is_checked)
+    def on_aoi_selection_changed(self):
+        """Handle AOI selection changes from table"""
+        # Get selected rows
+        selected_rows = set(index.row() for index in self.aois_table.selectedIndexes())
+
+        # Update all AOIs selectability based on selection
+        for row, aoi in enumerate(self.viewer.aois):
+            is_selected = row in selected_rows
+            self.viewer.set_aoi_selectable(aoi, is_selected)
 
     def on_aoi_cell_changed(self, row, column):
         """Handle AOI cell changes"""
-        if column == 1:  # Name column
+        if column == 0:  # Name column
             item = self.aois_table.item(row, column)
             if item:
                 aoi_id = item.data(Qt.ItemDataRole.UserRole)
@@ -1406,23 +1394,22 @@ class DataManagerPanel(QWidget):
                         break
 
     def delete_selected_aois(self):
-        """Delete all selected AOIs"""
+        """Delete AOIs that are selected in the table"""
         aois_to_delete = []
 
-        # Collect selected AOIs
-        for row in range(self.aois_table.rowCount()):
-            select_widget = self.aois_table.cellWidget(row, 0)
-            if select_widget:
-                checkbox = select_widget.findChild(QCheckBox)
-                if checkbox and checkbox.isChecked():
-                    name_item = self.aois_table.item(row, 1)
-                    if name_item:
-                        aoi_id = name_item.data(Qt.ItemDataRole.UserRole)
-                        # Find the AOI
-                        for aoi in self.viewer.aois:
-                            if id(aoi) == aoi_id:
-                                aois_to_delete.append(aoi)
-                                break
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.aois_table.selectedIndexes())
+
+        # Collect AOIs from selected rows
+        for row in selected_rows:
+            name_item = self.aois_table.item(row, 0)  # Name column
+            if name_item:
+                aoi_id = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the AOI by ID
+                for aoi in self.viewer.aois:
+                    if id(aoi) == aoi_id:
+                        aois_to_delete.append(aoi)
+                        break
 
         # Delete the AOIs
         for aoi in aois_to_delete:
