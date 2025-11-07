@@ -15,6 +15,7 @@ from .data_loader import DataLoaderThread
 from .temporal_median_widget import TemporalMedianWidget
 from .simple_threshold_widget import SimpleThresholdWidget
 from .cfar_widget import CFARWidget
+from .coaddition_widget import CoadditionWidget
 
 
 class VistaMainWindow(QMainWindow):
@@ -129,6 +130,13 @@ class VistaMainWindow(QMainWindow):
         temporal_median_action = QAction("Temporal Median", self)
         temporal_median_action.triggered.connect(self.open_temporal_median_widget)
         background_removal_menu.addAction(temporal_median_action)
+
+        # Enhancement submenu
+        enhancement_menu = image_processing_menu.addMenu("Enhancement")
+
+        coaddition_action = QAction("Coaddition", self)
+        coaddition_action.triggered.connect(self.open_coaddition_widget)
+        enhancement_menu.addAction(coaddition_action)
 
         # Detectors menu
         detectors_menu = image_processing_menu.addMenu("Detectors")
@@ -456,6 +464,59 @@ class VistaMainWindow(QMainWindow):
 
     def on_temporal_median_complete(self, processed_imagery):
         """Handle completion of Temporal Median processing"""
+        # Check for duplicate imagery name
+        existing_names = [img.name for img in self.viewer.imageries]
+        if processed_imagery.name in existing_names:
+            QMessageBox.critical(
+                self,
+                "Duplicate Imagery Name",
+                f"An imagery with the name '{processed_imagery.name}' already exists.\n\n"
+                f"Please rename or remove the existing imagery before processing.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Add the processed imagery to the viewer
+        self.viewer.add_imagery(processed_imagery)
+
+        # Select the new imagery for viewing
+        self.viewer.select_imagery(processed_imagery)
+
+        # Update playback controls
+        min_frame, max_frame = self.viewer.get_frame_range()
+        self.controls.set_frame_range(min_frame, max_frame)
+        self.controls.set_frame(min_frame)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Added processed imagery: {processed_imagery.name}", 3000)
+
+    def open_coaddition_widget(self):
+        """Open the Coaddition enhancement configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running enhancement algorithms.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = CoadditionWidget(self, current_imagery, aois)
+        widget.imagery_processed.connect(self.on_coaddition_complete)
+        widget.exec()
+
+    def on_coaddition_complete(self, processed_imagery):
+        """Handle completion of Coaddition processing"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries]
         if processed_imagery.name in existing_names:
