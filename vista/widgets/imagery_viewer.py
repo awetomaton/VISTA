@@ -2,14 +2,50 @@
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from vista.imagery.imagery import Imagery
 from vista.detections.detector import Detector
 from vista.tracks.tracker import Tracker
+from vista.aoi.aoi import AOI
+
+
+class CustomViewBox(pg.ViewBox):
+    """Custom ViewBox to add Draw AOI to context menu"""
+
+    def __init__(self, *args, **kwargs):
+        self.imagery_viewer = kwargs.pop('imagery_viewer', None)
+        super().__init__(*args, **kwargs)
+
+    def raiseContextMenu(self, ev):
+        """Override to add custom menu items to the context menu"""
+        # Get the default menu
+        menu = self.getMenu(ev)
+
+        if self.imagery_viewer and menu is not None:
+            # Check if we already added our custom action
+            # to avoid duplicates when menu is opened multiple times
+            actions = menu.actions()
+            has_draw_roi = any(action.text() == "Draw AOI" for action in actions)
+
+            if not has_draw_roi:
+                # Add separator before our custom actions
+                menu.addSeparator()
+
+                # Add "Draw AOI" action
+                draw_roi_action = menu.addAction("Draw AOI")
+                draw_roi_action.triggered.connect(self.imagery_viewer.start_draw_roi)
+
+        # Show the menu
+        if menu is not None:
+            menu.popup(ev.screenPos().toPoint())
 
 
 class ImageryViewer(QWidget):
     """Widget for displaying imagery with pyqtgraph"""
+
+    # Signal emitted when AOIs are updated
+    aoi_updated = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -18,6 +54,7 @@ class ImageryViewer(QWidget):
         self.imagery = None  # Currently selected imagery for display
         self.detectors = []  # List of Detector objects
         self.trackers = []  # List of Tracker objects
+        self.aois = []  # List of AOI objects
 
         # Persistent plot items (created once, reused for efficiency)
         # Use id(object) as key since dataclass objects are not hashable
@@ -29,6 +66,10 @@ class ImageryViewer(QWidget):
         self.geolocation_enabled = False
         self.geolocation_text = None  # TextItem for displaying lat/lon
 
+        # ROI drawing mode
+        self.draw_roi_mode = False
+        self.drawing_roi = None  # Temporary ROI being drawn
+
         self.init_ui()
 
     def init_ui(self):
@@ -36,11 +77,14 @@ class ImageryViewer(QWidget):
         layout = QVBoxLayout()
 
         # Create main graphics layout widget
-        
+
         self.graphics_layout = pg.GraphicsLayoutWidget()
 
-        # Create plot item for the image
-        self.plot_item = self.graphics_layout.addPlot(row=0, col=0)
+        # Create custom view box
+        custom_vb = CustomViewBox(imagery_viewer=self)
+
+        # Create plot item for the image with custom ViewBox
+        self.plot_item = self.graphics_layout.addPlot(row=0, col=0, viewBox=custom_vb)
         self.plot_item.setAspectLocked(True)
         self.plot_item.invertY(True)
         #self.plot_item.hideAxis('left')
@@ -57,6 +101,9 @@ class ImageryViewer(QWidget):
 
         # Connect mouse hover signal
         self.plot_item.scene().sigMouseMoved.connect(self.on_mouse_moved)
+
+        # Keep default context menu enabled
+        # We'll add to it in getContextMenus()
 
         # Create a horizontal HistogramLUTItem
         self.hist_widget = pg.GraphicsLayoutWidget()
@@ -353,5 +400,233 @@ class ImageryViewer(QWidget):
         self.trackers = []
 
         return self.get_frame_range()  # Return updated frame range
+
+    def set_draw_roi_mode(self, enabled):
+        """Enable or disable ROI drawing mode"""
+        self.draw_roi_mode = enabled
+        if not enabled and self.drawing_roi:
+            # Cancel any in-progress ROI
+            self.plot_item.removeItem(self.drawing_roi)
+            self.drawing_roi = None
+
+    def start_draw_roi(self):
+        """Start drawing a new ROI"""
+        if self.imagery is None:
+            return
+
+        # Get image dimensions for default size
+        img_shape = self.imagery.images[0].shape if len(self.imagery.images) > 0 else (100, 100)
+        default_width = int(img_shape[1] * 0.2)  # 20% of image width
+        default_height = int(img_shape[0] * 0.2)  # 20% of image height
+
+        # Get center of current view
+        view_rect = self.plot_item.viewRect()
+        center_x = int(view_rect.center().x())
+        center_y = int(view_rect.center().y())
+
+        # Create ROI at center of view with integer coordinates
+        pos = (center_x - default_width//2, center_y - default_height//2)
+        size = (default_width, default_height)
+
+        roi = pg.RectROI(pos, size, pen=pg.mkPen('y', width=2), snapSize=1.0)
+        self.plot_item.addItem(roi)
+
+        # Set as drawing ROI temporarily
+        self.drawing_roi = roi
+
+        # Immediately finish the ROI (convert to AOI)
+        # This allows toolbar/menu creation to work without dragging
+        self.finish_draw_roi(roi)
+
+    def snap_roi_to_integers(self, roi):
+        """Snap ROI position and size to integer coordinates"""
+        # Temporarily disconnect to avoid recursive calls
+        roi.sigRegionChanged.disconnect()
+
+        pos = roi.pos()
+        size = roi.size()
+
+        # Round to integers
+        new_pos = (int(round(pos.x())), int(round(pos.y())))
+        new_size = (max(1, int(round(size.x()))), max(1, int(round(size.y()))))
+
+        # Only update if changed to avoid unnecessary updates
+        if (new_pos[0] != pos.x() or new_pos[1] != pos.y() or
+            new_size[0] != size.x() or new_size[1] != size.y()):
+            roi.setPos(new_pos, finish=False)
+            roi.setSize(new_size, finish=False)
+
+        # Reconnect
+        roi.sigRegionChanged.connect(lambda: self.snap_roi_to_integers(roi))
+
+    def finish_draw_roi(self, roi):
+        """Finish drawing and create AOI from ROI"""
+        if roi != self.drawing_roi:
+            return
+
+        # Get ROI position and size (already snapped to integers)
+        pos = roi.pos()
+        size = roi.size()
+
+        # Generate unique name
+        aoi_num = len(self.aois) + 1
+        name = f"AOI {aoi_num}"
+        while any(aoi.name == name for aoi in self.aois):
+            aoi_num += 1
+            name = f"AOI {aoi_num}"
+
+        # Create AOI object with integer coordinates
+        aoi = AOI(
+            name=name,
+            x=int(pos.x()),
+            y=int(pos.y()),
+            width=int(size.x()),
+            height=int(size.y()),
+            color='y'
+        )
+
+        # Store references
+        aoi._roi_item = roi
+        aoi._selected = True  # Mark as selected
+        self.aois.append(aoi)
+
+        # Add text label
+        text_item = pg.TextItem(text=aoi.name, color='y', anchor=(0, 0))
+        text_item.setPos(pos.x(), pos.y())
+        self.plot_item.addItem(text_item)
+        aoi._text_item = text_item
+
+        # Disconnect the snap handler from drawing
+        try:
+            roi.sigRegionChanged.disconnect()
+        except:
+            pass
+
+        # Update text position and bounds when ROI moves
+        roi.sigRegionChanged.connect(lambda: self.update_aoi_from_roi(aoi, roi))
+
+        # Make the newly created AOI movable/resizable (selected by default)
+        self.set_aoi_selectable(aoi, True)
+
+        # Reset drawing mode
+        self.drawing_roi = None
+        self.draw_roi_mode = False
+
+        # Emit signal
+        self.aoi_updated.emit()
+
+    def update_aoi_from_roi(self, aoi, roi):
+        """Update AOI data from ROI item when moved/resized"""
+        # Get current position and size
+        pos = roi.pos()
+        size = roi.size()
+
+        # Calculate integer coordinates
+        new_x = int(round(pos.x()))
+        new_y = int(round(pos.y()))
+        new_width = max(1, int(round(size.x())))
+        new_height = max(1, int(round(size.y())))
+
+        # Check if we need to snap (avoid unnecessary updates)
+        needs_snap = (new_x != pos.x() or new_y != pos.y() or
+                     new_width != size.x() or new_height != size.y())
+
+        if needs_snap:
+            # Temporarily block signals to avoid recursion
+            roi.blockSignals(True)
+
+            # Snap the ROI to integer coordinates
+            roi.setPos((new_x, new_y), update=False)
+            roi.setSize((new_width, new_height), update=False)
+
+            # Re-enable signals
+            roi.blockSignals(False)
+
+        # Update AOI with integer coordinates
+        aoi.x = new_x
+        aoi.y = new_y
+        aoi.width = new_width
+        aoi.height = new_height
+
+        # Update text position
+        if aoi._text_item:
+            aoi._text_item.setPos(aoi.x, aoi.y)
+
+        # Emit signal to update data manager
+        self.aoi_updated.emit()
+
+    def add_aoi(self, aoi: AOI):
+        """Add an AOI to the viewer"""
+        if aoi not in self.aois:
+            self.aois.append(aoi)
+
+            # Create ROI item
+            pos = (aoi.x, aoi.y)
+            size = (aoi.width, aoi.height)
+            roi = pg.RectROI(pos, size, pen=pg.mkPen(aoi.color, width=2), snapSize=1.0)
+            self.plot_item.addItem(roi)
+            aoi._roi_item = roi
+            aoi._selected = False  # Start unselected
+
+            # Add text label
+            text_item = pg.TextItem(text=aoi.name, color=aoi.color, anchor=(0, 0))
+            text_item.setPos(aoi.x, aoi.y)
+            self.plot_item.addItem(text_item)
+            aoi._text_item = text_item
+
+            # Update when ROI changes
+            roi.sigRegionChanged.connect(lambda: self.update_aoi_from_roi(aoi, roi))
+
+            # Set visibility
+            roi.setVisible(aoi.visible)
+            text_item.setVisible(aoi.visible)
+
+            # Make non-movable/resizable by default
+            self.set_aoi_selectable(aoi, False)
+
+            self.aoi_updated.emit()
+
+    def set_aoi_selectable(self, aoi: AOI, selectable: bool):
+        """Set whether an AOI can be moved/resized"""
+        if aoi._roi_item:
+            # Enable/disable translation (moving)
+            aoi._roi_item.translatable = selectable
+
+            # Enable/disable handles (resizing)
+            for handle in aoi._roi_item.getHandles():
+                # In PyQtGraph 0.13.7, handles are Handle objects with a direct reference
+                if hasattr(handle, 'setVisible'):
+                    handle.setVisible(selectable)
+                elif hasattr(handle, 'item'):
+                    # Fallback for different PyQtGraph versions
+                    handle.item.setVisible(selectable)
+
+    def remove_aoi(self, aoi: AOI):
+        """Remove an AOI from the viewer"""
+        if aoi in self.aois:
+            # Remove from plot
+            if aoi._roi_item:
+                self.plot_item.removeItem(aoi._roi_item)
+                aoi._roi_item = None
+            if aoi._text_item:
+                self.plot_item.removeItem(aoi._text_item)
+                aoi._text_item = None
+
+            # Remove from list
+            self.aois.remove(aoi)
+            self.aoi_updated.emit()
+
+    def update_aoi_display(self, aoi: AOI):
+        """Update AOI display (name, visibility, color)"""
+        if aoi._text_item:
+            aoi._text_item.setText(aoi.name)
+            aoi._text_item.setColor(aoi.color)
+
+        if aoi._roi_item:
+            aoi._roi_item.setPen(pg.mkPen(aoi.color, width=2))
+            aoi._roi_item.setVisible(aoi.visible)
+
+        if aoi._text_item:
+            aoi._text_item.setVisible(aoi.visible)
 
 

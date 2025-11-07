@@ -109,6 +109,11 @@ class DataManagerPanel(QWidget):
         self.init_detections_tab()
         self.tabs.addTab(self.detections_tab, "Detections")
 
+        # AOIs tab
+        self.aois_tab = QWidget()
+        self.init_aois_tab()
+        self.tabs.addTab(self.aois_tab, "AOIs")
+
         layout.addWidget(self.tabs)
         self.setLayout(layout)
 
@@ -308,6 +313,7 @@ class DataManagerPanel(QWidget):
         self.refresh_imagery_table()
         self.refresh_tracks_table()
         self.refresh_detections_table()
+        self.refresh_aois_table()
 
     def refresh_imagery_table(self):
         """Refresh the imagery table"""
@@ -1182,5 +1188,131 @@ class DataManagerPanel(QWidget):
 
         self.refresh_detections_table()
         self.data_changed.emit()
+
+    def init_aois_tab(self):
+        """Initialize the AOIs tab"""
+        layout = QVBoxLayout()
+
+        # Button bar for actions
+        button_layout = QHBoxLayout()
+
+        # Delete button
+        self.delete_aoi_btn = QPushButton("Delete Selected")
+        self.delete_aoi_btn.clicked.connect(self.delete_selected_aois)
+        button_layout.addWidget(self.delete_aoi_btn)
+
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        # AOIs table
+        self.aois_table = QTableWidget()
+        self.aois_table.setColumnCount(3)
+        self.aois_table.setHorizontalHeaderLabels([
+            "Select", "Name", "Bounds (x, y, w, h)"
+        ])
+
+        # Set column resize modes
+        header = self.aois_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Select checkbox
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (editable)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Bounds (read-only)
+
+        self.aois_table.cellChanged.connect(self.on_aoi_cell_changed)
+
+        layout.addWidget(self.aois_table)
+        self.aois_tab.setLayout(layout)
+
+    def refresh_aois_table(self):
+        """Refresh the AOIs table"""
+        self.aois_table.blockSignals(True)
+        self.aois_table.setRowCount(0)
+
+        for row, aoi in enumerate(self.viewer.aois):
+            self.aois_table.insertRow(row)
+
+            # Select checkbox
+            select_checkbox = QCheckBox()
+            # Check if this AOI is selected (newly created AOIs start selected)
+            if hasattr(aoi, '_selected'):
+                select_checkbox.setChecked(aoi._selected)
+            else:
+                # Default to checked for backward compatibility
+                select_checkbox.setChecked(True)
+                aoi._selected = True
+
+            # Connect checkbox to update AOI selectability
+            select_checkbox.stateChanged.connect(
+                lambda state, a=aoi: self.on_aoi_checkbox_changed(a, state)
+            )
+
+            select_widget = QWidget()
+            select_layout = QHBoxLayout(select_widget)
+            select_layout.addWidget(select_checkbox)
+            select_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            select_layout.setContentsMargins(0, 0, 0, 0)
+            self.aois_table.setCellWidget(row, 0, select_widget)
+
+            # Name (editable)
+            name_item = QTableWidgetItem(aoi.name)
+            name_item.setData(Qt.ItemDataRole.UserRole, id(aoi))  # Store AOI ID
+            self.aois_table.setItem(row, 1, name_item)
+
+            # Bounds (read-only)
+            bounds_text = f"({aoi.x:.1f}, {aoi.y:.1f}, {aoi.width:.1f}, {aoi.height:.1f})"
+            bounds_item = QTableWidgetItem(bounds_text)
+            bounds_item.setFlags(bounds_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.aois_table.setItem(row, 2, bounds_item)
+
+        self.aois_table.blockSignals(False)
+
+    def on_aoi_checkbox_changed(self, aoi, state):
+        """Handle AOI checkbox state change"""
+        # Update the AOI's selected state
+        is_checked = (state == Qt.CheckState.Checked.value)
+        aoi._selected = is_checked
+
+        # Update the viewer to make it movable/resizable or not
+        self.viewer.set_aoi_selectable(aoi, is_checked)
+
+    def on_aoi_cell_changed(self, row, column):
+        """Handle AOI cell changes"""
+        if column == 1:  # Name column
+            item = self.aois_table.item(row, column)
+            if item:
+                aoi_id = item.data(Qt.ItemDataRole.UserRole)
+                new_name = item.text()
+
+                # Find the AOI and update its name
+                for aoi in self.viewer.aois:
+                    if id(aoi) == aoi_id:
+                        aoi.name = new_name
+                        self.viewer.update_aoi_display(aoi)
+                        break
+
+    def delete_selected_aois(self):
+        """Delete all selected AOIs"""
+        aois_to_delete = []
+
+        # Collect selected AOIs
+        for row in range(self.aois_table.rowCount()):
+            select_widget = self.aois_table.cellWidget(row, 0)
+            if select_widget:
+                checkbox = select_widget.findChild(QCheckBox)
+                if checkbox and checkbox.isChecked():
+                    name_item = self.aois_table.item(row, 1)
+                    if name_item:
+                        aoi_id = name_item.data(Qt.ItemDataRole.UserRole)
+                        # Find the AOI
+                        for aoi in self.viewer.aois:
+                            if id(aoi) == aoi_id:
+                                aois_to_delete.append(aoi)
+                                break
+
+        # Delete the AOIs
+        for aoi in aois_to_delete:
+            self.viewer.remove_aoi(aoi)
+
+        # Refresh table
+        self.refresh_aois_table()
 
 

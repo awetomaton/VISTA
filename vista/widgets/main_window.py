@@ -45,6 +45,7 @@ class VistaMainWindow(QMainWindow):
 
         # Create imagery viewer
         self.viewer = ImageryViewer()
+        self.viewer.aoi_updated.connect(self.on_aoi_updated)
         splitter.addWidget(self.viewer)
 
         # Create data manager panel as a dock widget
@@ -140,9 +141,45 @@ class VistaMainWindow(QMainWindow):
         self.geolocation_action.toggled.connect(self.on_geolocation_toggled)
         toolbar.addAction(self.geolocation_action)
 
+        # Draw AOI action
+        self.draw_roi_action = QAction(self.icons.draw_roi, "Draw AOI", self)
+        self.draw_roi_action.setCheckable(True)
+        self.draw_roi_action.setChecked(False)
+        self.draw_roi_action.setToolTip("Draw a Area of Interest (AOI)")
+        self.draw_roi_action.toggled.connect(self.on_draw_roi_toggled)
+        toolbar.addAction(self.draw_roi_action)
+
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
         self.viewer.set_geolocation_enabled(checked)
+
+    def on_draw_roi_toggled(self, checked):
+        """Handle Draw AOI toggle"""
+        if checked:
+            # Check if imagery is loaded
+            if self.viewer.imagery is None:
+                # No imagery, show warning and uncheck
+                QMessageBox.warning(
+                    self,
+                    "No Imagery",
+                    "Please load imagery before drawing ROIs.",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.draw_roi_action.setChecked(False)
+                return
+
+            # Start drawing ROI
+            self.viewer.start_draw_roi()
+            # Automatically uncheck after starting (since drawing completes automatically)
+            self.draw_roi_action.setChecked(False)
+        else:
+            # Cancel drawing mode
+            self.viewer.set_draw_roi_mode(False)
+
+    def on_aoi_updated(self):
+        """Handle AOI updates from viewer"""
+        # Refresh the data manager to show updated AOIs
+        self.data_manager.refresh()
 
     def load_imagery_file(self):
         """Load imagery from HDF5 file(s) using background thread"""
