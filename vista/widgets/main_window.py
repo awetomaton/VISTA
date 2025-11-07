@@ -170,6 +170,14 @@ class VistaMainWindow(QMainWindow):
         self.draw_roi_action.toggled.connect(self.on_draw_roi_toggled)
         toolbar.addAction(self.draw_roi_action)
 
+        # Create Track action
+        self.create_track_action = QAction("Create Track", self)
+        self.create_track_action.setCheckable(True)
+        self.create_track_action.setChecked(False)
+        self.create_track_action.setToolTip("Create a track by clicking on frames")
+        self.create_track_action.toggled.connect(self.on_create_track_toggled)
+        toolbar.addAction(self.create_track_action)
+
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
         self.viewer.set_geolocation_enabled(checked)
@@ -196,6 +204,39 @@ class VistaMainWindow(QMainWindow):
         else:
             # Cancel drawing mode
             self.viewer.set_draw_roi_mode(False)
+
+    def on_create_track_toggled(self, checked):
+        """Handle Create Track toggle"""
+        if checked:
+            # Check if imagery is loaded
+            if self.viewer.imagery is None:
+                # No imagery, show warning and uncheck
+                QMessageBox.warning(
+                    self,
+                    "No Imagery",
+                    "Please load imagery before creating tracks.",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.create_track_action.setChecked(False)
+                return
+
+            # Start track creation mode
+            self.viewer.start_track_creation()
+            self.statusBar().showMessage("Track creation mode: Click on frames to add track points. Uncheck 'Create Track' when finished.", 0)
+        else:
+            # Finish track creation and add to viewer
+            track = self.viewer.finish_track_creation()
+            if track is not None:
+                # Add track to a new tracker or existing tracker
+                # For now, create a new tracker for each track
+                from vista.tracks.tracker import Tracker
+                tracker_name = f"Manual Track {len(self.viewer.trackers) + 1}"
+                tracker = Tracker(name=tracker_name, tracks=[track])
+                self.viewer.add_tracker(tracker)
+                self.data_manager.refresh()
+                self.statusBar().showMessage(f"Track created: {track.name} with {len(track.frames)} points", 3000)
+            else:
+                self.statusBar().showMessage("Track creation cancelled (no points added)", 3000)
 
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""

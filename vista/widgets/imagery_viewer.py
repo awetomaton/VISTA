@@ -70,6 +70,13 @@ class ImageryViewer(QWidget):
         self.draw_roi_mode = False
         self.drawing_roi = None  # Temporary ROI being drawn
 
+        # Track creation/editing mode
+        self.track_creation_mode = False
+        self.track_editing_mode = False
+        self.current_track_data = {}  # frame_number -> (row, col) for track being created/edited
+        self.editing_track = None  # Track object being edited
+        self.temp_track_plot = None  # Temporary plot item for track being created/edited
+
         self.init_ui()
 
     def init_ui(self):
@@ -101,6 +108,9 @@ class ImageryViewer(QWidget):
 
         # Connect mouse hover signal
         self.plot_item.scene().sigMouseMoved.connect(self.on_mouse_moved)
+
+        # Connect mouse click signal for track creation/editing
+        self.plot_item.scene().sigMouseClicked.connect(self.on_mouse_clicked)
 
         # Keep default context menu enabled
         # We'll add to it in getContextMenus()
@@ -630,5 +640,140 @@ class ImageryViewer(QWidget):
 
         if aoi._text_item:
             aoi._text_item.setVisible(aoi.visible)
+
+    def start_track_creation(self):
+        """Start track creation mode"""
+        self.track_creation_mode = True
+        self.current_track_data = {}
+        self.temp_track_plot = None
+        # Change cursor to crosshair
+        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+
+    def start_track_editing(self, track):
+        """Start track editing mode for a specific track"""
+        self.track_editing_mode = True
+        self.editing_track = track
+        # Load existing track data
+        self.current_track_data = {}
+        for i in range(len(track.frames)):
+            self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
+        self.temp_track_plot = None
+        # Change cursor to crosshair
+        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update display to show current track being edited
+        self._update_temp_track_display()
+
+    def finish_track_creation(self):
+        """Finish track creation and return the Track object"""
+        self.track_creation_mode = False
+        # Restore cursor
+        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+
+        # Remove temporary plot
+        if self.temp_track_plot:
+            self.plot_item.removeItem(self.temp_track_plot)
+            self.temp_track_plot = None
+
+        # Create Track object if we have data
+        if len(self.current_track_data) > 0:
+            from vista.tracks.track import Track
+
+            # Sort by frame number
+            sorted_frames = sorted(self.current_track_data.keys())
+            frames = np.array(sorted_frames, dtype=np.int_)
+            rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
+            columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
+
+            track = Track(
+                name=f"Track {len([t for tracker in self.trackers for t in tracker.tracks]) + 1}",
+                frames=frames,
+                rows=rows,
+                columns=columns
+            )
+
+            self.current_track_data = {}
+            return track
+        else:
+            self.current_track_data = {}
+            return None
+
+    def finish_track_editing(self):
+        """Finish track editing and update the Track object"""
+        self.track_editing_mode = False
+        editing_track = self.editing_track
+        self.editing_track = None
+        # Restore cursor
+        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+
+        # Remove temporary plot
+        if self.temp_track_plot:
+            self.plot_item.removeItem(self.temp_track_plot)
+            self.temp_track_plot = None
+
+        # Update Track object with new data
+        if editing_track and len(self.current_track_data) > 0:
+            # Sort by frame number
+            sorted_frames = sorted(self.current_track_data.keys())
+            editing_track.frames = np.array(sorted_frames, dtype=np.int_)
+            editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
+            editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
+
+            self.current_track_data = {}
+            # Refresh track display
+            self.refresh_tracks()
+            return editing_track
+        else:
+            self.current_track_data = {}
+            return None
+
+    def on_mouse_clicked(self, event):
+        """Handle mouse click events for track creation/editing"""
+        # Only handle left clicks in track creation/editing mode
+        if not (self.track_creation_mode or self.track_editing_mode):
+            return
+
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+
+        # Get click position in scene coordinates
+        pos = event.scenePos()
+
+        # Check if click is within the plot item
+        if self.plot_item.sceneBoundingRect().contains(pos):
+            # Map to data coordinates
+            mouse_point = self.plot_item.vb.mapSceneToView(pos)
+            col = mouse_point.x()
+            row = mouse_point.y()
+
+            # Add or update track point for current frame
+            self.current_track_data[self.current_frame_number] = (row, col)
+
+            # Update temporary track display
+            self._update_temp_track_display()
+
+    def _update_temp_track_display(self):
+        """Update the temporary track plot during creation/editing"""
+        # Remove old temporary plot if it exists
+        if self.temp_track_plot:
+            self.plot_item.removeItem(self.temp_track_plot)
+
+        if len(self.current_track_data) == 0:
+            return
+
+        # Get frames and positions sorted by frame
+        sorted_frames = sorted(self.current_track_data.keys())
+        rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
+        cols = np.array([self.current_track_data[f][1] for f in sorted_frames])
+
+        # Create scatter plot for track points
+        self.temp_track_plot = pg.ScatterPlotItem(
+            x=cols,
+            y=rows,
+            pen=pg.mkPen('m', width=2),
+            brush=pg.mkBrush('m'),
+            size=10,
+            symbol='o'
+        )
+        self.plot_item.addItem(self.temp_track_plot)
 
 

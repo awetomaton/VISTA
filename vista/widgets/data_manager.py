@@ -228,6 +228,13 @@ class DataManagerPanel(QWidget):
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
         bulk_layout.addWidget(self.delete_selected_tracks_btn)
 
+        # Add edit track button
+        self.edit_track_btn = QPushButton("Edit Track")
+        self.edit_track_btn.setCheckable(True)
+        self.edit_track_btn.setEnabled(False)  # Disabled until single track selected
+        self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
+        bulk_layout.addWidget(self.edit_track_btn)
+
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
 
@@ -241,6 +248,9 @@ class DataManagerPanel(QWidget):
         # Enable row selection via vertical header
         self.tracks_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tracks_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+
+        # Connect selection changed signal to update Edit Track button state
+        self.tracks_table.itemSelectionChanged.connect(self.on_track_selection_changed)
 
         # Set column resize modes - only Tracker and Name should stretch
         header = self.tracks_table.horizontalHeader()
@@ -1457,5 +1467,78 @@ class DataManagerPanel(QWidget):
 
         # Refresh table
         self.refresh_aois_table()
+
+    def on_track_selection_changed(self):
+        """Handle track selection change to enable/disable Edit Track button"""
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+        # Enable Edit Track button only if exactly one track is selected
+        self.edit_track_btn.setEnabled(len(selected_rows) == 1)
+        # If button is checked but selection changed, uncheck it
+        if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
+            self.edit_track_btn.setChecked(False)
+
+    def on_edit_track_clicked(self, checked):
+        """Handle Edit Track button click"""
+        if checked:
+            # Get the selected track
+            selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
+            if len(selected_rows) != 1:
+                self.edit_track_btn.setChecked(False)
+                return
+
+            row = selected_rows[0]
+            tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+
+            if not tracker_item or not track_name_item:
+                self.edit_track_btn.setChecked(False)
+                return
+
+            # Find the track
+            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+            track = None
+            for tracker in self.viewer.trackers:
+                if id(tracker) == tracker_id:
+                    for t in tracker.tracks:
+                        if id(t) == track_id:
+                            track = t
+                            break
+                    break
+
+            if track is None:
+                self.edit_track_btn.setChecked(False)
+                return
+
+            # Start track editing mode
+            self.viewer.start_track_editing(track)
+            # Update main window status
+            if hasattr(self.parent(), 'parent'):
+                main_window = self.parent().parent()
+                if hasattr(main_window, 'statusBar'):
+                    main_window.statusBar().showMessage(
+                        f"Track editing mode: Click on frames to add/move track points for '{track.name}'. Uncheck 'Edit Track' when finished.",
+                        0
+                    )
+        else:
+            # Finish track editing
+            edited_track = self.viewer.finish_track_editing()
+            if edited_track:
+                self.refresh()
+                # Update main window status
+                if hasattr(self.parent(), 'parent'):
+                    main_window = self.parent().parent()
+                    if hasattr(main_window, 'statusBar'):
+                        main_window.statusBar().showMessage(
+                            f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points",
+                            3000
+                        )
+            else:
+                # Update main window status
+                if hasattr(self.parent(), 'parent'):
+                    main_window = self.parent().parent()
+                    if hasattr(main_window, 'statusBar'):
+                        main_window.statusBar().showMessage("Track editing cancelled", 3000)
 
 
