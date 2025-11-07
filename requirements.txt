@@ -4,3 +4,4 @@ pandas
 PyQt6
 pyqtgraph
 scikit-image
+darkdetect

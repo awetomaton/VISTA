@@ -1,4 +1,5 @@
 """Main window for the Vista application"""
+import darkdetect
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter,
@@ -163,7 +164,10 @@ class VistaMainWindow(QMainWindow):
         toolbar.addAction(self.geolocation_action)
 
         # Draw AOI action
-        self.draw_roi_action = QAction(self.icons.draw_roi, "Draw AOI", self)
+        if darkdetect.isDark():
+            self.draw_roi_action = QAction(self.icons.draw_roi_light, "Draw AOI", self)
+        else:
+            self.draw_roi_action = QAction(self.icons.draw_roi_dark, "Draw AOI", self)
         self.draw_roi_action.setCheckable(True)
         self.draw_roi_action.setChecked(False)
         self.draw_roi_action.setToolTip("Draw a Area of Interest (AOI)")
@@ -171,7 +175,10 @@ class VistaMainWindow(QMainWindow):
         toolbar.addAction(self.draw_roi_action)
 
         # Create Track action
-        self.create_track_action = QAction(self.icons.create_track, "Create Track", self)
+        if darkdetect.isDark():
+            self.create_track_action = QAction(self.icons.create_track_light, "Create Track", self)
+        else:
+            self.create_track_action = QAction(self.icons.create_track_dark, "Create Track", self)
         self.create_track_action.setCheckable(True)
         self.create_track_action.setChecked(False)
         self.create_track_action.setToolTip("Create a track by clicking on frames")

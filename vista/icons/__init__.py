@@ -10,5 +10,7 @@ class VistaIcons(object):
     def __init__(self):
         self.logo = QIcon(str(ICON_DIR / "logo.jpg"))
         self.geodetic_tooltip = QIcon(str(ICON_DIR / "geodetic_tooltip.png"))
-        self.draw_roi = QIcon(str(ICON_DIR / "draw_roi.png"))
-        self.create_track = QIcon(str(ICON_DIR / "create_track.png"))
+        self.draw_roi_light = QIcon(str(ICON_DIR / "draw_roi_light.png"))
+        self.create_track_light = QIcon(str(ICON_DIR / "create_track_light.png"))
+        self.draw_roi_dark = QIcon(str(ICON_DIR / "draw_roi_dark.png"))
+        self.create_track_dark = QIcon(str(ICON_DIR / "create_track_dark.png"))
