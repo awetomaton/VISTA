@@ -14,6 +14,7 @@ from .data_manager import DataManagerPanel
 from .data_loader import DataLoaderThread
 from .temporal_median_widget import TemporalMedianWidget
 from .simple_threshold_widget import SimpleThresholdWidget
+from .cfar_widget import CFARWidget
 
 
 class VistaMainWindow(QMainWindow):
@@ -135,6 +136,10 @@ class VistaMainWindow(QMainWindow):
         simple_threshold_action = QAction("Simple Threshold", self)
         simple_threshold_action.triggered.connect(self.open_simple_threshold_widget)
         detectors_menu.addAction(simple_threshold_action)
+
+        cfar_action = QAction("CFAR", self)
+        cfar_action.triggered.connect(self.open_cfar_widget)
+        detectors_menu.addAction(cfar_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -504,6 +509,51 @@ class VistaMainWindow(QMainWindow):
 
     def on_simple_threshold_complete(self, detector):
         """Handle completion of Simple Threshold detector processing"""
+        # Check for duplicate detector name
+        existing_names = [det.name for det in self.viewer.detectors]
+        if detector.name in existing_names:
+            QMessageBox.critical(
+                self,
+                "Duplicate Detector Name",
+                f"A detector with the name '{detector.name}' already exists.\n\n"
+                f"Please rename or remove the existing detector before processing.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Add the detector to the viewer
+        self.viewer.add_detector(detector)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
+
+    def open_cfar_widget(self):
+        """Open the CFAR detector configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running detector algorithms.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = CFARWidget(self, current_imagery, aois)
+        widget.detector_processed.connect(self.on_cfar_complete)
+        widget.exec()
+
+    def on_cfar_complete(self, detector):
+        """Handle completion of CFAR detector processing"""
         # Check for duplicate detector name
         existing_names = [det.name for det in self.viewer.detectors]
         if detector.name in existing_names:
