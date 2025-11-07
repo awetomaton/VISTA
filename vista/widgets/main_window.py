@@ -171,7 +171,7 @@ class VistaMainWindow(QMainWindow):
         toolbar.addAction(self.draw_roi_action)
 
         # Create Track action
-        self.create_track_action = QAction("Create Track", self)
+        self.create_track_action = QAction(self.icons.create_track, "Create Track", self)
         self.create_track_action.setCheckable(True)
         self.create_track_action.setChecked(False)
         self.create_track_action.setToolTip("Create a track by clicking on frames")

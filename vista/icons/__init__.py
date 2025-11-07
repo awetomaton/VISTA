@@ -11,3 +11,4 @@ class VistaIcons(object):
         self.logo = QIcon(str(ICON_DIR / "logo.jpg"))
         self.geodetic_tooltip = QIcon(str(ICON_DIR / "geodetic_tooltip.png"))
         self.draw_roi = QIcon(str(ICON_DIR / "draw_roi.png"))
+        self.create_track = QIcon(str(ICON_DIR / "create_track.png"))
