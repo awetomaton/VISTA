@@ -121,21 +121,32 @@ class DataManagerPanel(QWidget):
         """Initialize the imagery tab"""
         layout = QVBoxLayout()
 
+        # Button layout
+        button_layout = QHBoxLayout()
+        self.delete_imagery_btn = QPushButton("Delete Selected")
+        self.delete_imagery_btn.clicked.connect(self.delete_selected_imagery)
+        button_layout.addWidget(self.delete_imagery_btn)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
         # Imagery table
         self.imagery_table = QTableWidget()
-        self.imagery_table.setColumnCount(3)
+        self.imagery_table.setColumnCount(2)
         self.imagery_table.setHorizontalHeaderLabels([
-            "Selected", "Name", "Frames"
+            "Name", "Frames"
         ])
+
+        # Enable row selection via vertical header (single selection only)
+        self.imagery_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.imagery_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
 
         # Set column resize modes
         header = self.imagery_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Selected (radio button)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
 
+        self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
         self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
-        self.imagery_table.cellClicked.connect(self.on_imagery_cell_clicked)
 
         layout.addWidget(self.imagery_table)
         self.imagery_tab.setLayout(layout)
@@ -339,24 +350,24 @@ class DataManagerPanel(QWidget):
         for row, imagery in enumerate(self.viewer.imageries):
             self.imagery_table.insertRow(row)
 
-            # Selected (radio button behavior - only one can be selected)
-            selected_item = QTableWidgetItem()
-            selected_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-            is_selected = (imagery == self.viewer.imagery)
-            selected_item.setCheckState(Qt.CheckState.Checked if is_selected else Qt.CheckState.Unchecked)
-            self.imagery_table.setItem(row, 0, selected_item)
-
-            # Name (not editable)
+            # Name (editable)
             name_item = QTableWidgetItem(imagery.name)
-            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.imagery_table.setItem(row, 1, name_item)
+            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+            name_item.setData(Qt.ItemDataRole.UserRole, id(imagery))  # Store imagery ID
+            self.imagery_table.setItem(row, 0, name_item)
 
             # Frames (not editable)
             frames_item = QTableWidgetItem(str(len(imagery.frames)))
-            frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.imagery_table.setItem(row, 2, frames_item)
+            frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.imagery_table.setItem(row, 1, frames_item)
 
         self.imagery_table.blockSignals(False)
+
+        # Select the row for the currently active imagery
+        for row, imagery in enumerate(self.viewer.imageries):
+            if imagery == self.viewer.imagery:
+                self.imagery_table.selectRow(row)
+                break
 
     def refresh_tracks_table(self):
         """Refresh the tracks table with all trackers consolidated"""
@@ -869,34 +880,63 @@ class DataManagerPanel(QWidget):
             traceback.print_exc()
             self.detections_table.blockSignals(False)
 
-    def on_imagery_cell_changed(self, row, column):
-        """Handle imagery cell changes"""
-        if column == 0:  # Selected checkbox
-            if row >= len(self.viewer.imageries):
-                return
+    def on_imagery_selection_changed(self):
+        """Handle imagery selection changes from table"""
+        # Get selected rows (should only be one due to SingleSelection mode)
+        selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
 
-            item = self.imagery_table.item(row, column)
-            if item and item.checkState() == Qt.CheckState.Checked:
-                # User checked this imagery - select it
+        if selected_rows:
+            row = selected_rows[0]
+            if row < len(self.viewer.imageries):
+                # User selected this imagery
                 imagery = self.viewer.imageries[row]
                 self.viewer.select_imagery(imagery)
                 # Update frame range in main window
                 self.parent().parent().update_frame_range_from_imagery()
-                # Refresh to uncheck other rows
-                self.refresh_imagery_table()
                 self.data_changed.emit()
 
-    def on_imagery_cell_clicked(self, row, column):
-        """Handle imagery cell clicks"""
-        if column == 0:  # Selected column
-            if row >= len(self.viewer.imageries):
-                return
+    def on_imagery_cell_changed(self, row, column):
+        """Handle imagery cell changes"""
+        if column == 0:  # Name column
+            item = self.imagery_table.item(row, column)
+            if item:
+                imagery_id = item.data(Qt.ItemDataRole.UserRole)
+                new_name = item.text()
 
-            # Toggle selection by clicking
-            imagery = self.viewer.imageries[row]
-            self.viewer.select_imagery(imagery)
-            # Update frame range in main window
-            self.parent().parent().update_frame_range_from_imagery()
+                # Find the imagery and update its name
+                for imagery in self.viewer.imageries:
+                    if id(imagery) == imagery_id:
+                        imagery.name = new_name
+                        self.data_changed.emit()
+                        break
+
+    def delete_selected_imagery(self):
+        """Delete imagery that is selected in the table"""
+        # Get selected rows (should only be one due to SingleSelection mode)
+        selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
+
+        if not selected_rows:
+            return
+
+        row = selected_rows[0]
+        if row < len(self.viewer.imageries):
+            imagery_to_delete = self.viewer.imageries[row]
+
+            # Check if this is the currently displayed imagery
+            if imagery_to_delete == self.viewer.imagery:
+                # Clear the current imagery
+                self.viewer.imagery = None
+                self.viewer.image_item.clear()
+
+            # Remove from list
+            self.viewer.imageries.remove(imagery_to_delete)
+
+            # If there are still imageries and none is selected, select the first one
+            if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
+                self.viewer.select_imagery(self.viewer.imageries[0])
+                self.parent().parent().update_frame_range_from_imagery()
+
+            # Refresh table
             self.refresh_imagery_table()
             self.data_changed.emit()
 
