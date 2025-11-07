@@ -720,7 +720,7 @@ class ImageryViewer(QWidget):
 
             self.current_track_data = {}
             # Refresh track display
-            self.refresh_tracks()
+            self.update_overlays()
             return editing_track
         else:
             self.current_track_data = {}

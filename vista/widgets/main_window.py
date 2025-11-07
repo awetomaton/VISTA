@@ -222,7 +222,7 @@ class VistaMainWindow(QMainWindow):
 
             # Start track creation mode
             self.viewer.start_track_creation()
-            self.statusBar().showMessage("Track creation mode: Click on frames to add track points. Uncheck 'Create Track' when finished.", 0)
+            self.statusBar().showMessage("Track creation mode: Click on frames to add track points. Uncheck the track creation button when finished.", 0)
         else:
             # Finish track creation and add to viewer
             track = self.viewer.finish_track_creation()

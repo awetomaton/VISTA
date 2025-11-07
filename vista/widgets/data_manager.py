@@ -413,10 +413,13 @@ class DataManagerPanel(QWidget):
             # Tracker name (not editable)
             tracker_item = QTableWidgetItem(tracker.name)
             tracker_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            tracker_item.setData(Qt.ItemDataRole.UserRole, id(tracker))
             self.tracks_table.setItem(row, 1, tracker_item)
 
             # Track name
-            self.tracks_table.setItem(row, 2, QTableWidgetItem(track.name))
+            track_name_item = QTableWidgetItem(track.name)
+            track_name_item.setData(Qt.ItemDataRole.UserRole, id(track))
+            self.tracks_table.setItem(row, 2, track_name_item)
 
             # Length (not editable)
             length_item = QTableWidgetItem(f"{track.length:.2f}")
