@@ -211,7 +211,12 @@ class DataManagerPanel(QWidget):
         self.clear_filters_btn = QPushButton("Clear Filters")
         self.clear_filters_btn.clicked.connect(self.clear_track_filters)
         bulk_layout.addWidget(self.clear_filters_btn)
-        
+
+        # Add delete selected button
+        self.delete_selected_tracks_btn = QPushButton("Delete Selected")
+        self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
+        bulk_layout.addWidget(self.delete_selected_tracks_btn)
+
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
 
@@ -221,6 +226,10 @@ class DataManagerPanel(QWidget):
         self.tracks_table.setHorizontalHeaderLabels([
             "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length"
         ])
+
+        # Enable row selection via vertical header
+        self.tracks_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.tracks_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
         # Set column resize modes - only Tracker and Name should stretch
         header = self.tracks_table.horizontalHeader()
@@ -273,8 +282,11 @@ class DataManagerPanel(QWidget):
         self.show_all_detections_btn.clicked.connect(self.show_all_detections)
         self.hide_all_detections_btn = QPushButton("Hide All")
         self.hide_all_detections_btn.clicked.connect(self.hide_all_detections)
+        self.delete_selected_detections_btn = QPushButton("Delete Selected")
+        self.delete_selected_detections_btn.clicked.connect(self.delete_selected_detections)
         button_layout.addWidget(self.show_all_detections_btn)
         button_layout.addWidget(self.hide_all_detections_btn)
+        button_layout.addWidget(self.delete_selected_detections_btn)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -284,6 +296,10 @@ class DataManagerPanel(QWidget):
         self.detections_table.setHorizontalHeaderLabels([
             "Visible", "Name", "Color", "Marker", "Size"
         ])
+
+        # Enable row selection via vertical header
+        self.detections_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.detections_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
         # Set column resize modes - only Name should stretch
         header = self.detections_table.horizontalHeader()
@@ -820,7 +836,9 @@ class DataManagerPanel(QWidget):
                     self.detections_table.setItem(row, 0, visible_item)
 
                     # Name
-                    self.detections_table.setItem(row, 1, QTableWidgetItem(str(detector.name)))
+                    name_item = QTableWidgetItem(str(detector.name))
+                    name_item.setData(Qt.ItemDataRole.UserRole, id(detector))  # Store detector ID
+                    self.detections_table.setItem(row, 1, name_item)
 
                     # Color
                     color_item = QTableWidgetItem()
@@ -943,14 +961,31 @@ class DataManagerPanel(QWidget):
 
     def on_detection_cell_changed(self, row, column):
         """Handle detection cell changes"""
-        if row >= len(self.viewer.detectors):
+        # Get the detector ID from the name item
+        name_item = self.detections_table.item(row, 1)  # Name column
+        if not name_item:
             return
 
-        detector = self.viewer.detectors[row]
+        detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+        if not detector_id:
+            return
+
+        # Find the detector by ID
+        detector = None
+        for d in self.viewer.detectors:
+            if id(d) == detector_id:
+                detector = d
+                break
+
+        if not detector:
+            return
 
         if column == 0:  # Visible
             item = self.detections_table.item(row, column)
             detector.visible = item.checkState() == Qt.CheckState.Checked
+        elif column == 1:  # Name
+            item = self.detections_table.item(row, column)
+            detector.name = item.text()
         elif column == 2:  # Color
             item = self.detections_table.item(row, column)
             color = item.background().color()
@@ -1186,6 +1221,87 @@ class DataManagerPanel(QWidget):
         for detector in self.viewer.detectors:
             detector.visible = False
 
+        self.refresh_detections_table()
+        self.data_changed.emit()
+
+    def delete_selected_tracks(self):
+        """Delete tracks that are selected in the tracks table"""
+        tracks_to_delete = []
+
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        # Collect tracks from selected rows
+        for row in selected_rows:
+            # Get the track from this row
+            name_item = self.tracks_table.item(row, 2)  # Track name column
+            if name_item:
+                track_name = name_item.text()
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.name == track_name:
+                                tracks_to_delete.append((tracker, track))
+                                break
+
+        # Delete the tracks
+        for tracker, track in tracks_to_delete:
+            tracker.tracks.remove(track)
+
+            # Remove plot items from viewer
+            track_id = id(track)
+            if track_id in self.viewer.track_path_items:
+                self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
+                del self.viewer.track_path_items[track_id]
+            if track_id in self.viewer.track_marker_items:
+                self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
+                del self.viewer.track_marker_items[track_id]
+
+        # Remove empty trackers
+        self.viewer.trackers = [t for t in self.viewer.trackers if len(t.tracks) > 0]
+
+        # Refresh table
+        self.refresh_tracks_table()
+        self.data_changed.emit()
+
+    def delete_selected_detections(self):
+        """Delete detections that are selected in the detections table"""
+        detectors_to_delete = []
+
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        # Collect detectors from selected rows using ID-based lookup
+        for row in selected_rows:
+            # Get the detector ID from the name item
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    # Find the detector by ID
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            detectors_to_delete.append(detector)
+                            break
+
+        # Delete the detectors
+        detectors_to_delete_ids = set(id(d) for d in detectors_to_delete)
+
+        # Remove from viewer list (use id comparison to avoid numpy array comparison)
+        self.viewer.detectors = [d for d in self.viewer.detectors if id(d) not in detectors_to_delete_ids]
+
+        # Remove plot items from viewer
+        for detector in detectors_to_delete:
+            detector_id = id(detector)
+            if detector_id in self.viewer.detector_plot_items:
+                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_id])
+                del self.viewer.detector_plot_items[detector_id]
+
+        # Refresh table
         self.refresh_detections_table()
         self.data_changed.emit()
 

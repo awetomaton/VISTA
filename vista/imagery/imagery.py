@@ -18,11 +18,18 @@ class Imagery:
     name: str
     images: NDArray[np.float32]
     frames: NDArray[np.int_]
+    row_offset: int = None
+    column_offset: int = None
     times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
 
+    def __post_init__(self):
+        if self.row_offset is None:
+            self.row_offset = 0
+        if self.column_offset is None:
+            self.column_offset = 0
     def __len__(self):
         return self.images.shape[0]
     
@@ -80,6 +87,8 @@ class Imagery:
         file = pathlib.Path(file)
         with h5py.File(file, "w") as fid:
             fid.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
+            fid["images"].attrs["row_offset"] = self.row_offset
+            fid["images"].attrs["column_offset"] = self.column_offset_offset
             fid.create_dataset("frames", data=self.frames)
             if self.times is not None:
                 # Convert datetime64 to unix seconds + nanoseconds

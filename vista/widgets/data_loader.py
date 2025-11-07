@@ -68,6 +68,14 @@ class DataLoaderThread(QThread):
             images_dataset = f['images']
             frames = f['frames'][:]
 
+            # Load the row and columns offsets
+            row_offset = None
+            if "row_offset" in images_dataset.attrs:
+                row_offset = images_dataset.attrs["row_offset"]
+            column_offset = None
+            if "column_offset" in images_dataset.attrs:
+                column_offset = images_dataset.attrs["column_offset"]
+
             # Load time data
             times = None
             if 'unix_time' in f and 'unix_fine_time' in f:
@@ -113,6 +121,8 @@ class DataLoaderThread(QThread):
             name=Path(self.file_path).stem,
             images=images,
             frames=frames,
+            row_offset=row_offset,
+            column_offset=column_offset,
             times=times
         )
 
