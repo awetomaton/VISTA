@@ -125,7 +125,7 @@ class NetworkFlowTrackingDialog(QDialog):
         self.max_distance = QDoubleSpinBox()
         self.max_distance.setRange(1.0, 500.0)
         self.max_distance.setValue(50.0)
-        self.max_distance.setSingleStep(5.0)
+        self.max_distance.setSingleStep(1.0)
         self.max_distance.setDecimals(1)
         self.max_distance.setToolTip(
             "Maximum distance (in pixels per frame) for linking detections.\n"

@@ -1,23 +1,24 @@
-"""Dialog for configuring and running the Kalman Filter tracker"""
+"""Dialog for configuring and running trackers"""
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                               QComboBox, QPushButton, QGroupBox, QFormLayout,
                               QDoubleSpinBox, QListWidget, QMessageBox,
-                              QProgressDialog, QSpinBox)
+                              QProgressDialog, QSpinBox, QWidget)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
-from vista.algorithms.trackers import run_kalman_tracker
+from vista.algorithms.trackers import run_kalman_tracker, run_simple_tracker
 
 
-class KalmanTrackingWorker(QThread):
-    """Worker thread for running Kalman tracker in background"""
+class TrackingWorker(QThread):
+    """Worker thread for running tracker in background"""
 
     progress_updated = pyqtSignal(str, int, int)  # message, current, total
     tracking_complete = pyqtSignal(object)  # Emits Tracker object
     error_occurred = pyqtSignal(str)  # Error message
 
-    def __init__(self, detectors, tracker_config):
+    def __init__(self, detectors, tracker_config, algorithm):
         super().__init__()
         self.detectors = detectors
         self.config = tracker_config
+        self.algorithm = algorithm
         self._cancelled = False
 
     def cancel(self):
@@ -30,9 +31,13 @@ class KalmanTrackingWorker(QThread):
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Running Kalman tracker...", 20, 100)
+            self.progress_updated.emit("Running tracker...", 20, 100)
 
-            vista_tracker = run_kalman_tracker(self.detectors, self.config)
+            # Run the selected tracker
+            if self.algorithm == "Simple":
+                vista_tracker = run_simple_tracker(self.detectors, self.config)
+            else:  # Kalman
+                vista_tracker = run_kalman_tracker(self.detectors, self.config)
 
             if self._cancelled:
                 return
@@ -46,7 +51,7 @@ class KalmanTrackingWorker(QThread):
             self.error_occurred.emit(f"Tracking failed: {str(e)}\n\nTraceback:\n{tb_str}")
 
 
-class KalmanTrackingDialog(QDialog):
+class TrackingDialog(QDialog):
     """Dialog for configuring Kalman tracker parameters"""
 
     def __init__(self, viewer, parent=None):
@@ -54,9 +59,9 @@ class KalmanTrackingDialog(QDialog):
         self.viewer = viewer
         self.worker = None
         self.progress_dialog = None
-        self.settings = QSettings("VISTA", "KalmanTracker")
+        self.settings = QSettings("VISTA", "Tracker")
 
-        self.setWindowTitle("Kalman Filter Tracker")
+        self.setWindowTitle("Configure Tracker")
         self.setMinimumWidth(500)
 
         self.setup_ui()
@@ -66,21 +71,18 @@ class KalmanTrackingDialog(QDialog):
         """Setup the dialog UI"""
         layout = QVBoxLayout()
 
-        # Description
-        desc_label = QLabel(
-            "<b>Kalman Filter Tracker</b><br><br>"
-            "<b>How it works:</b> Uses a constant-velocity Kalman filter to predict object motion and "
-            "the Hungarian algorithm for optimal detection-to-track assignment. Each track maintains "
-            "a state estimate (position and velocity) with uncertainty covariance. Tracks are initiated "
-            "tentatively and confirmed after multiple consistent detections.<br><br>"
-            "<b>Best for:</b> Objects with smooth, predictable motion. Handles measurement noise well. "
-            "Good for tracking satellites, aircraft, or other objects with relatively constant velocity.<br><br>"
-            "<b>Advantages:</b> Optimal data association, uncertainty quantification, handles noise well.<br>"
-            "<b>Limitations:</b> Assumes constant velocity, requires manual parameter tuning, "
-            "computational cost increases with track/detection count."
+        # Algorithm selection
+        algo_layout = QHBoxLayout()
+        algo_layout.addWidget(QLabel("Algorithm:"))
+        self.algorithm_combo = QComboBox()
+        self.algorithm_combo.addItems(["Simple (Recommended)", "Kalman Filter"])
+        self.algorithm_combo.setToolTip(
+            "Simple: Robust nearest-neighbor tracker with auto-tuning (recommended)\n"
+            "Kalman Filter: Advanced tracker with full manual control"
         )
-        desc_label.setWordWrap(True)
-        layout.addWidget(desc_label)
+        self.algorithm_combo.currentIndexChanged.connect(self.on_algorithm_changed)
+        algo_layout.addWidget(self.algorithm_combo)
+        layout.addLayout(algo_layout)
 
         # Tracker name
         name_layout = QHBoxLayout()
@@ -107,8 +109,49 @@ class KalmanTrackingDialog(QDialog):
         detector_group.setLayout(detector_layout)
         layout.addWidget(detector_group)
 
+        # Simple tracker parameters
+        self.simple_params_group = QGroupBox("Simple Tracker Parameters")
+        simple_params_layout = QFormLayout()
+
+        self.min_track_length = QSpinBox()
+        self.min_track_length.setRange(2, 50)
+        self.min_track_length.setValue(5)
+        self.min_track_length.setToolTip(
+            "Minimum number of detections required for a valid track.\n"
+            "Tracks shorter than this will be filtered out.\n"
+            "Higher values reduce false tracks but may miss short-lived targets."
+        )
+        simple_params_layout.addRow("Min Track Length:", self.min_track_length)
+
+        self.max_search_radius = QDoubleSpinBox()
+        self.max_search_radius.setRange(0.0, 500.0)
+        self.max_search_radius.setValue(0.0)
+        self.max_search_radius.setSingleStep(1.0)
+        self.max_search_radius.setDecimals(1)
+        self.max_search_radius.setSpecialValueText("Auto")
+        self.max_search_radius.setToolTip(
+            "Maximum distance to search for detection associations (pixels).\n"
+            "Set to 0 (Auto) to automatically estimate from data.\n"
+            "Increase for fast-moving targets, decrease for dense scenarios."
+        )
+        simple_params_layout.addRow("Max Search Radius:", self.max_search_radius)
+
+        self.max_age = QSpinBox()
+        self.max_age.setRange(0, 20)
+        self.max_age.setValue(0)
+        self.max_age.setSpecialValueText("Auto")
+        self.max_age.setToolTip(
+            "Maximum frames a track can survive without detections.\n"
+            "Set to 0 (Auto) to automatically estimate from data.\n"
+            "Higher values allow tracks to persist through occlusions."
+        )
+        simple_params_layout.addRow("Max Age:", self.max_age)
+
+        self.simple_params_group.setLayout(simple_params_layout)
+        layout.addWidget(self.simple_params_group)
+
         # Kalman tracker parameters
-        params_group = QGroupBox("Tracker Parameters")
+        self.kalman_params_group = QGroupBox("Kalman Tracker Parameters")
         params_layout = QFormLayout()
 
         # Process noise
@@ -127,7 +170,7 @@ class KalmanTrackingDialog(QDialog):
         # Measurement noise
         self.measurement_noise = QDoubleSpinBox()
         self.measurement_noise.setRange(0.01, 100.0)
-        self.measurement_noise.setValue(1.0)
+        self.measurement_noise.setValue(5.0)
         self.measurement_noise.setSingleStep(0.1)
         self.measurement_noise.setDecimals(2)
         self.measurement_noise.setToolTip(
@@ -140,7 +183,7 @@ class KalmanTrackingDialog(QDialog):
         # Gating distance
         self.gating_distance = QDoubleSpinBox()
         self.gating_distance.setRange(1.0, 1000.0)
-        self.gating_distance.setValue(3.0)
+        self.gating_distance.setValue(50.0)
         self.gating_distance.setSingleStep(1.0)
         self.gating_distance.setDecimals(1)
         self.gating_distance.setToolTip(
@@ -164,8 +207,8 @@ class KalmanTrackingDialog(QDialog):
         # Delete threshold
         self.delete_threshold = QDoubleSpinBox()
         self.delete_threshold.setRange(1.0, 10000.0)
-        self.delete_threshold.setValue(100.0)
-        self.delete_threshold.setSingleStep(1.0)
+        self.delete_threshold.setValue(1000.0)
+        self.delete_threshold.setSingleStep(10.0)
         self.delete_threshold.setDecimals(1)
         self.delete_threshold.setToolTip(
             "Covariance trace threshold for deleting uncertain tracks.\n"
@@ -174,8 +217,8 @@ class KalmanTrackingDialog(QDialog):
         )
         params_layout.addRow("Delete Threshold:", self.delete_threshold)
 
-        params_group.setLayout(params_layout)
-        layout.addWidget(params_group)
+        self.kalman_params_group.setLayout(params_layout)
+        layout.addWidget(self.kalman_params_group)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -192,13 +235,32 @@ class KalmanTrackingDialog(QDialog):
 
         self.setLayout(layout)
 
+        # Initialize visibility based on default selection
+        self.on_algorithm_changed(0)
+
+    def on_algorithm_changed(self, index):
+        """Handle algorithm selection change"""
+        is_simple = (index == 0)
+        self.simple_params_group.setVisible(is_simple)
+        self.kalman_params_group.setVisible(not is_simple)
+
     def load_settings(self):
         """Load previously saved settings"""
+        # Algorithm selection
+        algorithm_index = self.settings.value("algorithm", 0, type=int)
+        self.algorithm_combo.setCurrentIndex(algorithm_index)
+
+        # Kalman parameters
         self.process_noise.setValue(self.settings.value("process_noise", 1.0, type=float))
         self.measurement_noise.setValue(self.settings.value("measurement_noise", 5.0, type=float))
         self.gating_distance.setValue(self.settings.value("gating_distance", 50.0, type=float))
         self.min_detections.setValue(self.settings.value("min_detections", 3, type=int))
         self.delete_threshold.setValue(self.settings.value("delete_threshold", 1000.0, type=float))
+
+        # Simple tracker parameters
+        self.min_track_length.setValue(self.settings.value("min_track_length", 5, type=int))
+        self.max_search_radius.setValue(self.settings.value("max_search_radius", 0.0, type=float))
+        self.max_age.setValue(self.settings.value("max_age", 0, type=int))
 
         # Restore tracker name if available
         last_name = self.settings.value("tracker_name", "")
@@ -207,11 +269,22 @@ class KalmanTrackingDialog(QDialog):
 
     def save_settings(self):
         """Save current settings for next time"""
+        # Algorithm selection
+        self.settings.setValue("algorithm", self.algorithm_combo.currentIndex())
+
+        # Kalman parameters
         self.settings.setValue("process_noise", self.process_noise.value())
         self.settings.setValue("measurement_noise", self.measurement_noise.value())
         self.settings.setValue("gating_distance", self.gating_distance.value())
         self.settings.setValue("min_detections", self.min_detections.value())
         self.settings.setValue("delete_threshold", self.delete_threshold.value())
+
+        # Simple tracker parameters
+        self.settings.setValue("min_track_length", self.min_track_length.value())
+        self.settings.setValue("max_search_radius", self.max_search_radius.value())
+        self.settings.setValue("max_age", self.max_age.value())
+
+        # Tracker name
         self.settings.setValue("tracker_name", self.name_input.currentText())
 
     def run_tracker(self):
@@ -232,28 +305,41 @@ class KalmanTrackingDialog(QDialog):
                     selected_detectors.append(detector)
                     break
 
-        # Build configuration
-        config = {
-            'tracker_name': self.name_input.currentText(),
-            'process_noise': self.process_noise.value(),
-            'measurement_noise': self.measurement_noise.value(),
-            'gating_distance': self.gating_distance.value(),
-            'min_detections': self.min_detections.value(),
-            'delete_threshold': self.delete_threshold.value()
-        }
+        # Determine algorithm
+        is_simple = self.algorithm_combo.currentIndex() == 0
+        algorithm = "Simple" if is_simple else "Kalman"
+
+        # Build configuration based on algorithm
+        config = {'tracker_name': self.name_input.currentText()}
+
+        if is_simple:
+            # Simple tracker config
+            config['min_track_length'] = self.min_track_length.value()
+            # Only include if not auto (0)
+            if self.max_search_radius.value() > 0:
+                config['max_search_radius'] = self.max_search_radius.value()
+            if self.max_age.value() > 0:
+                config['max_age'] = self.max_age.value()
+        else:
+            # Kalman tracker config
+            config['process_noise'] = self.process_noise.value()
+            config['measurement_noise'] = self.measurement_noise.value()
+            config['gating_distance'] = self.gating_distance.value()
+            config['min_detections'] = self.min_detections.value()
+            config['delete_threshold'] = self.delete_threshold.value()
 
         # Save settings for next time
         self.save_settings()
 
         # Create progress dialog
         self.progress_dialog = QProgressDialog("Initializing tracker...", "Cancel", 0, 100, self)
-        self.progress_dialog.setWindowTitle("Running Kalman Tracker")
+        self.progress_dialog.setWindowTitle("Running Tracker")
         self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.canceled.connect(self.cancel_tracking)
         self.progress_dialog.show()
 
         # Create and start worker thread
-        self.worker = KalmanTrackingWorker(selected_detectors, config)
+        self.worker = TrackingWorker(selected_detectors, config, algorithm)
         self.worker.progress_updated.connect(self.on_progress)
         self.worker.tracking_complete.connect(self.on_complete)
         self.worker.error_occurred.connect(self.on_error)
