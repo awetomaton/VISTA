@@ -17,6 +17,7 @@ from .temporal_median_widget import TemporalMedianWidget
 from .simple_threshold_widget import SimpleThresholdWidget
 from .cfar_widget import CFARWidget
 from .coaddition_widget import CoadditionWidget
+from .tracking_dialog import TrackingDialog
 
 
 class VistaMainWindow(QMainWindow):
@@ -149,6 +150,13 @@ class VistaMainWindow(QMainWindow):
         cfar_action = QAction("CFAR", self)
         cfar_action.triggered.connect(self.open_cfar_widget)
         detectors_menu.addAction(cfar_action)
+
+        # Tracking menu
+        tracking_menu = menubar.addMenu("Tracking")
+
+        run_tracker_action = QAction("Run Tracker...", self)
+        run_tracker_action.triggered.connect(self.open_tracking_dialog)
+        tracking_menu.addAction(run_tracker_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -697,6 +705,25 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
+
+    def open_tracking_dialog(self):
+        """Open the tracking configuration dialog"""
+        # Check if detectors are loaded
+        if not self.viewer.detectors:
+            QMessageBox.warning(
+                self,
+                "No Detections",
+                "Please load or generate detections before running the tracker.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create and show the dialog
+        dialog = TrackingDialog(self.viewer, self)
+        if dialog.exec():
+            # Refresh the data manager to show the new tracks
+            self.data_manager.refresh_tracks_table()
+            self.viewer.update_overlays()
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
