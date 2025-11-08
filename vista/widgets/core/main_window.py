@@ -410,6 +410,9 @@ class VistaMainWindow(QMainWindow):
 
     def load_tracks_file(self):
         """Load tracks from CSV file using background thread"""
+        import pandas as pd
+        from .imagery_selection_dialog import ImagerySelectionDialog
+
         # Get last used directory from settings
         last_dir = self.settings.value("last_tracks_dir", "")
 
@@ -421,6 +424,43 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_tracks_dir", str(Path(file_path).parent))
 
+            # Check if tracks have times but no frames - need imagery selection
+            selected_imagery = None
+            try:
+                # Quick peek at CSV to check columns
+                df_peek = pd.read_csv(file_path, nrows=1)
+                has_times = "Times" in df_peek.columns
+                has_frames = "Frames" in df_peek.columns
+
+                if has_times and not has_frames:
+                    # Need imagery for time-to-frame mapping
+                    if len(self.viewer.imageries) == 0:
+                        QMessageBox.critical(
+                            self,
+                            "No Imagery Loaded",
+                            "This track file contains times but no frame numbers.\n\n"
+                            "Please load imagery with time data before loading these tracks.",
+                            QMessageBox.StandardButton.Ok
+                        )
+                        return
+
+                    # Show imagery selection dialog
+                    dialog = ImagerySelectionDialog(self.viewer.imageries, self)
+                    if dialog.exec() == QDialog.DialogCode.Accepted:
+                        selected_imagery = dialog.get_selected_imagery()
+                        if selected_imagery is None:
+                            return  # User cancelled
+                    else:
+                        return  # User cancelled
+            except Exception as e:
+                QMessageBox.warning(
+                    self,
+                    "Error Reading File",
+                    f"Could not read track file:\n{str(e)}",
+                    QMessageBox.StandardButton.Ok
+                )
+                return
+
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading tracks...", "Cancel", 0, 100, self)
             self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
@@ -428,7 +468,7 @@ class VistaMainWindow(QMainWindow):
             self.progress_dialog.show()
 
             # Create and start loader thread
-            self.loader_thread = DataLoaderThread(file_path, 'tracks', 'csv')
+            self.loader_thread = DataLoaderThread(file_path, 'tracks', 'csv', imagery=selected_imagery)
             self.loader_thread.trackers_loaded.connect(self.on_trackers_loaded)
             self.loader_thread.error_occurred.connect(self.on_loading_error)
             self.loader_thread.progress_updated.connect(self.on_loading_progress)

@@ -23,7 +23,7 @@ class DataLoaderThread(QThread):
     error_occurred = pyqtSignal(str)  # Emits error message
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total)
 
-    def __init__(self, file_path, data_type, file_format='hdf5'):
+    def __init__(self, file_path, data_type, file_format='hdf5', imagery=None):
         """
         Initialize the data loader thread
 
@@ -31,11 +31,13 @@ class DataLoaderThread(QThread):
             file_path: Path to the file to load
             data_type: Type of data to load ('imagery', 'detections', 'tracks')
             file_format: Format of the file ('hdf5' or 'csv')
+            imagery: Optional Imagery object for time-to-frame mapping (for tracks with times)
         """
         super().__init__()
         self.file_path = file_path
         self.data_type = data_type
         self.file_format = file_format
+        self.imagery = imagery
         self._cancelled = False
 
     def cancel(self):
@@ -220,7 +222,7 @@ class DataLoaderThread(QThread):
                 for track_name, track_df in tracker_df.groupby('Track'):
                     if self._cancelled:
                         return  # Exit early if cancelled
-                    track = Track.from_dataframe(track_df, name=track_name)
+                    track = Track.from_dataframe(track_df, name=track_name, imagery=self.imagery)
                     tracks.append(track)
                 tracker = Tracker(name=tracker_name, tracks=tracks)
                 trackers.append(tracker)
@@ -234,7 +236,7 @@ class DataLoaderThread(QThread):
             for idx, (track_name, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                track = Track.from_dataframe(track_df, name=track_name)
+                track = Track.from_dataframe(track_df, name=track_name, imagery=self.imagery)
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
 
@@ -242,7 +244,7 @@ class DataLoaderThread(QThread):
             trackers.append(tracker)
         else:
             # Single track, single tracker
-            track = Track.from_dataframe(df, name="Track 1")
+            track = Track.from_dataframe(df, name="Track 1", imagery=self.imagery)
             tracker = Tracker(name=Path(self.file_path).stem, tracks=[track])
             trackers.append(tracker)
 

@@ -12,6 +12,7 @@ class Track:
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     length: int = field(init=False)
+    times: NDArray[np.datetime64] = None  # Optional times for each track point
     # Styling attributes
     color: str = 'g'  # Green by default
     marker: str = 'o'  # Circle by default
@@ -40,7 +41,21 @@ class Track:
         return s
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, name: str = None):
+    def from_dataframe(cls, df: pd.DataFrame, name: str = None, imagery=None):
+        """
+        Create Track from DataFrame
+
+        Args:
+            df: DataFrame with track data
+            name: Track name (if None, taken from df["Track"])
+            imagery: Optional Imagery object for time-to-frame mapping
+
+        Returns:
+            Track object
+
+        Raises:
+            ValueError: If neither Frames nor Times are present, or if Times present but no imagery provided
+        """
         if name is None:
             name = df["Track"][0]
         kwargs = {}
@@ -58,16 +73,38 @@ class Track:
             kwargs["visible"] = df["Visible"].iloc[0]
         if "Complete" in df.columns:
             kwargs["complete"] = df["Complete"].iloc[0]
+
+        # Handle times (optional)
+        times = None
+        if "Times" in df.columns:
+            # Parse times as datetime64
+            times = pd.to_datetime(df["Times"]).to_numpy()
+            kwargs["times"] = times
+
+        # Determine frames - priority: Frames column > time-to-frame mapping
+        if "Frames" in df.columns:
+            # Frames take precedence
+            frames = df["Frames"].to_numpy()
+        elif times is not None and imagery is not None:
+            # Map times to frames using imagery
+            from vista.utils.time_mapping import map_times_to_frames
+            frames = map_times_to_frames(times, imagery.times, imagery.frames)
+        elif times is not None:
+            # Times present but no imagery - raise error
+            raise ValueError(f"Track '{name}' has times but no frames. Imagery required for time-to-frame mapping.")
+        else:
+            raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
+
         return cls(
             name = name,
-            frames = df["Frames"].to_numpy(),
+            frames = frames,
             rows = df["Rows"].to_numpy(),
             columns = df["Columns"].to_numpy(),
             **kwargs
         )
     
     def to_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame({
+        data = {
             "Track": len(self)*[self.name],
             "Frames": self.frames,
             "Rows": self.rows,
@@ -79,5 +116,10 @@ class Track:
             "Tail Length": self.tail_length,
             "Visible": self.visible,
             "Complete": self.complete,
-        })
+        }
+        # Include times if available
+        if self.times is not None:
+            # Convert to ISO format strings
+            data["Times"] = pd.to_datetime(self.times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+        return pd.DataFrame(data)
     
