@@ -263,11 +263,11 @@ class RobustPCADialog(QDialog):
         added_items = []
 
         if self.add_background.isChecked():
-            self.viewer.imagery_list.append(result['background_imagery'])
+            self.viewer.imageries.append(result['background_imagery'])
             added_items.append("background")
 
         if self.add_foreground.isChecked():
-            self.viewer.imagery_list.append(result['foreground_imagery'])
+            self.viewer.imageries.append(result['foreground_imagery'])
             added_items.append("foreground")
 
         # Update viewer if anything was added
