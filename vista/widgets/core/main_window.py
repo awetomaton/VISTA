@@ -11,16 +11,16 @@ from PyQt6.QtGui import QAction
 from vista.icons import VistaIcons
 from .imagery_viewer import ImageryViewer
 from .playback_controls import PlaybackControls
-from .data_manager import DataManagerPanel
-from .data_loader import DataLoaderThread
-from .temporal_median_widget import TemporalMedianWidget
-from .simple_threshold_widget import SimpleThresholdWidget
-from .cfar_widget import CFARWidget
-from .coaddition_widget import CoadditionWidget
-from .simple_tracking_dialog import SimpleTrackingDialog
-from .kalman_tracking_dialog import KalmanTrackingDialog
-from .network_flow_tracking_dialog import NetworkFlowTrackingDialog
-from .robust_pca_dialog import RobustPCADialog
+from .data.data_manager import DataManagerPanel
+from .data.data_loader import DataLoaderThread
+from ..background_removal.temporal_median_widget import TemporalMedianWidget
+from ..detectors.simple_threshold_widget import SimpleThresholdWidget
+from ..detectors.cfar_widget import CFARWidget
+from ..enhancement.coaddition_widget import CoadditionWidget
+from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
+from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
+from ..trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
+from ..background_removal.robust_pca_dialog import RobustPCADialog
 
 
 class VistaMainWindow(QMainWindow):
