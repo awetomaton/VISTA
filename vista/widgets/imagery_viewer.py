@@ -119,6 +119,9 @@ class ImageryViewer(QWidget):
         self.pixel_value_text.setVisible(False)
         self.plot_item.addItem(self.pixel_value_text, ignoreBounds=True)
 
+        # Connect to view range changes to update text positions
+        self.plot_item.vb.sigRangeChanged.connect(self.update_text_positions)
+
         # Connect mouse hover signal
         self.plot_item.scene().sigMouseMoved.connect(self.on_mouse_moved)
 
@@ -262,6 +265,36 @@ class ImageryViewer(QWidget):
         self.user_histogram_bounds = self.histogram.getLevels()
         self.preserve_histogram_bounds = True
 
+    def update_text_positions(self):
+        """Update positions of text overlays to keep them in bottom-right corner"""
+        # Get the current view rectangle in data coordinates
+        view_rect = self.plot_item.viewRect()
+
+        # Position text items at bottom-right of viewport
+        # The anchor=(1,1) means the bottom-right corner of the text aligns with the position
+        if self.pixel_value_enabled and self.pixel_value_text.isVisible():
+            # Pixel value at the very bottom-right
+            self.pixel_value_text.setPos(view_rect.right(), view_rect.bottom())
+
+        if self.geolocation_enabled and self.geolocation_text.isVisible():
+            # If pixel value is also visible, offset geolocation above it
+            if self.pixel_value_enabled and self.pixel_value_text.isVisible():
+                # Calculate offset in data coordinates
+                # Get approximate height of one line of text in data coordinates
+                view_height = view_rect.height()
+                # Offset by ~20 pixels worth in view space
+                # Approximate: 20 pixels / viewport_height_pixels * view_height_data
+                viewport_height = self.plot_item.vb.height()
+                if viewport_height > 0:
+                    text_offset = (20 / viewport_height) * view_height
+                else:
+                    text_offset = view_height * 0.05  # Fallback to 5% of view height
+
+                self.geolocation_text.setPos(view_rect.right(), view_rect.bottom() - text_offset)
+            else:
+                # No pixel value, position at bottom-right
+                self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
+
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
         # Get current frame number
@@ -399,13 +432,18 @@ class ImageryViewer(QWidget):
         self.geolocation_enabled = enabled
         if not enabled:
             self.geolocation_text.setVisible(False)
+        else:
+            # Update positions when enabling
+            self.update_text_positions()
 
     def set_pixel_value_enabled(self, enabled):
-        """Enable or disable geolocation tooltip"""
+        """Enable or disable pixel value tooltip"""
         self.pixel_value_enabled = enabled
         if enabled:
             # Change cursor to crosshair
             self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+            # Update positions when enabling
+            self.update_text_positions()
         else:
             self.pixel_value_text.setVisible(False)
             self.pixel_value_text.setText("")
@@ -448,33 +486,28 @@ class ImageryViewer(QWidget):
 
                             # Check if coordinates are valid (not NaN)
                             if not (np.isnan(lat) or np.isnan(lon)):
-                                # Update text and position - make sure text occupies fixed character length
+                                # Update text content
                                 text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
                                 self.geolocation_text.setText(text)
-
-                                # Position in lower right corner of the view (in data coordinates)
-                                view_rect = self.plot_item.viewRect()
-                                self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
                                 self.geolocation_text.setVisible(True)
                             else:
                                 self.geolocation_text.setVisible(False)
                         else:
                             self.geolocation_text.setVisible(False)
-                    
+
                     if self.pixel_value_enabled:
                         # Extract pixel value from floored row, column coordinates
                         row_floor = int(np.floor(row))
                         col_floor = int(np.floor(col))
-                        pixel_value = self.imagery.images[frame, row_floor, col_floor]
+                        pixel_value = self.imagery.images[image_index, row_floor, col_floor]
 
-                        # Update text and position
+                        # Update text content
                         text = f"Pixel value: {pixel_value:.2f}"
                         self.pixel_value_text.setText(text)
-
-                        # Position in lower right corner of the view (in data coordinates)
-                        view_rect = self.plot_item.viewRect()
-                        self.pixel_value_text.setPos(view_rect.right(), view_rect.bottom())
                         self.pixel_value_text.setVisible(True)
+
+                    # Update positions of text items
+                    self.update_text_positions()
             else:
                 self.geolocation_text.setVisible(False)
                 self.pixel_value_text.setVisible(False)
