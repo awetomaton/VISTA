@@ -87,6 +87,20 @@ class DataLoaderThread(QThread):
                 total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
                 times = total_nanoseconds.astype('datetime64[ns]')
 
+            # Load polynomial coefficients for geodetic conversion
+            poly_row_col_to_lat = None
+            poly_row_col_to_lon = None
+            poly_lat_lon_to_row = None
+            poly_lat_lon_to_col = None
+            if 'poly_row_col_to_lat' in f:
+                poly_row_col_to_lat = f['poly_row_col_to_lat'][:]
+            if 'poly_row_col_to_lon' in f:
+                poly_row_col_to_lon = f['poly_row_col_to_lon'][:]
+            if 'poly_lat_lon_to_row' in f:
+                poly_lat_lon_to_row = f['poly_lat_lon_to_row'][:]
+            if 'poly_lat_lon_to_col' in f:
+                poly_lat_lon_to_col = f['poly_lat_lon_to_col'][:]
+
             # Check if dataset is chunked
             is_chunked = images_dataset.chunks is not None
             num_images = images_dataset.shape[0]
@@ -125,7 +139,11 @@ class DataLoaderThread(QThread):
             frames=frames,
             row_offset=row_offset,
             column_offset=column_offset,
-            times=times
+            times=times,
+            poly_row_col_to_lat=poly_row_col_to_lat,
+            poly_row_col_to_lon=poly_row_col_to_lon,
+            poly_lat_lon_to_row=poly_lat_lon_to_row,
+            poly_lat_lon_to_col=poly_lat_lon_to_col
         )
 
         # Pre-compute histograms with progress updates

@@ -3,7 +3,7 @@ import darkdetect
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QFileDialog, QMessageBox, QDockWidget, QProgressDialog
+    QFileDialog, QMessageBox, QDockWidget, QProgressDialog, QDialog
 )
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction
