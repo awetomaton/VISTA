@@ -2,19 +2,76 @@
 
 ![Logo](/vista/icons/logo.jpg)
 
-VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences.
+VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.x-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## Important Assumptions
+
+**Frame Synchronization Across Imagery Datasets:**
+
+VISTA assumes that all loaded imagery datasets are captured from the same sensor or are temporally synchronized. Specifically:
+
+- Frame numbers represent the same temporal moments across all loaded imagery
+- Frame 10 in one imagery dataset corresponds to the exact same time as frame 10 in any other loaded imagery
+- This assumption is critical for proper visualization and analysis when multiple imagery datasets are loaded simultaneously
+- When loading tracks with time-based mapping, the selected imagery's time-to-frame mapping is used as the reference
+
 ## Features
 
 ### Multi-Frame Imagery Viewer
-- Display full image sequences from HDF5 files
+- Display full image sequences from HDF5 files with optional time and geodetic metadata
 - Support for multiple simultaneous imagery datasets (must have unique names)
 - Interactive image histogram with dynamic range adjustment
 - Frame-by-frame navigation with keyboard shortcuts
+- Click-to-create manual tracks on imagery
+
+### Advanced Track Support
+- **Multiple coordinate systems**:
+  - Pixel coordinates (Row/Column)
+  - Geodetic coordinates (Latitude/Longitude/Altitude) with automatic conversion
+  - Time-based or frame-based indexing
+- **Automatic coordinate conversion**:
+  - Times → Frames using imagery timestamps
+  - Geodetic coordinates (Lat/Lon/Alt) → Pixel coordinates using 4th-order polynomials
+- **Priority system**: Row/Column takes precedence over geodetic; Frames takes precedence over times
+- **Manual track creation**: Click on imagery to create custom tracks with automatic frame tracking
+- Track path rendering with customizable colors and line widths
+- Current position markers with selectable styles
+- Tail length control (show full history or last N frames)
+- Complete track visualization (override current frame)
+- Track length calculation (cumulative distance)
+
+### Detection Overlay
+- Load detection CSV files with multiple detector support
+- Customizable markers (circle, square, triangle, diamond, plus, cross, star)
+- Adjustable colors, marker sizes, and line thickness
+- Show/hide individual detectors
+- Detection styling persistence across sessions
+
+### Built-in Detection Algorithms
+- **CFAR (Constant False Alarm Rate)**: Adaptive threshold detector with guard and background windows
+- **Simple Threshold**: Basic intensity-based detection with configurable threshold
+
+### Built-in Tracking Algorithms
+- **Simple Tracker**: Nearest-neighbor association with maximum distance threshold
+- **Kalman Filter Tracker**: State estimation with motion models and measurement uncertainty
+- **Network Flow Tracker**: Global optimization using min-cost flow for track assignment
+
+### Image Enhancement
+- **Coaddition**: Temporal averaging for noise reduction and signal enhancement
+  - Configurable frame window for averaging
+  - Creates enhanced imagery with improved SNR
+
+### Background Removal Algorithms
+- **Temporal Median**: Remove static backgrounds using median filtering
+  - Configurable temporal window and offset
+  - Preserves moving objects while removing static elements
+- **Robust PCA**: Principal component analysis for background/foreground separation
+  - Low-rank matrix decomposition
+  - Robust to outliers and sparse foreground
 
 ### Playback Controls
 - Play/Pause with adjustable FPS (-100 to +100 FPS for reverse playback)
@@ -23,39 +80,24 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 - Time display integration when image timestamps are available
 - Actual FPS tracking display
 
-### Detection Overlay
-- Load detection CSV files with multiple detector support
-- Customizable markers (circle, square, triangle, diamond, plus, cross, star)
-- Adjustable colors and marker sizes
-- Show/hide individual detectors
-
-### Track Visualization
-- Load tracking CSV files with support for multiple trackers and tracks
-- Track path rendering with customizable colors and line widths
-- Current position markers with selectable styles
-- Tail length control (show full history or last N frames)
-- Track length calculation (cumulative distance)
-
 ### Data Manager Panel
 - Tabbed interface for managing Imagery, Tracks, and Detections
-- Bulk property editing (visibility, colors, markers, sizes)
+- Bulk property editing (visibility, colors, markers, sizes, line thickness)
 - Column filtering and sorting for tracks and detections
 - Real-time updates synchronized with visualization
+- Track editing with complete track toggle
 
 ### Geolocation Support
-- Optional geodetic coordinate tooltip (latitude/longitude display)
-- Infrastructure for custom imagery implementations (via `Imagery` subclass)
-
-### Image Processing Algorithms
-- **Background Removal**: Temporal Median algorithm for removing static backgrounds
-- Configurable algorithm parameters via dedicated dialogs
-- Background processing with progress tracking and cancellation support
-- Automatic creation of new imagery datasets with processed results
-- Non-blocking execution preserves UI responsiveness
+- 4th-order polynomial geodetic coordinate conversion (Lat/Lon/Alt ↔ Row/Column)
+- Optional geodetic coordinate tooltip display
+- Automatic coordinate system detection in track files
+- Imagery selection dialog for tracks requiring conversion
 
 ### Robust Data Loading
 - Background threading for non-blocking file I/O
 - Progress dialogs with cancellation support
+- Automatic detection of coordinate systems and time formats
+- Intelligent imagery selection for coordinate/time conversion
 - Error handling and user-friendly error messages
 - Persistent file browser history via QSettings
 
@@ -66,7 +108,7 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 
 ### Dependencies
 ```bash
-pip install PyQt6 h5py pandas numpy pyqtgraph astropy
+pip install PyQt6 h5py pandas numpy pyqtgraph astropy darkdetect scikit-learn cvxpy
 ```
 
 Optional (for example scripts):
@@ -98,7 +140,7 @@ python vista/app.py
 
 ### Imagery Data (HDF5 Format)
 
-VISTA uses HDF5 files to store image sequences. The file must contain the following datasets:
+VISTA uses HDF5 files to store image sequences with optional time and geodetic metadata.
 
 #### Required Datasets
 
@@ -113,11 +155,19 @@ VISTA uses HDF5 files to store image sequences. The file must contain the follow
 - **Data type**: `int`
 - **Description**: Frame number or index for each image
 
-#### Optional Datasets (for Timestamps)
+#### Optional Datasets
 
-**New Format:**
+**Timestamps:**
 - **`unix_time`**: 1D array of `int64` (seconds since Unix epoch)
 - **`unix_fine_time`**: 1D array of `int64` (nanosecond offset for high-precision timing)
+
+**Geodetic Conversion Polynomials (4th-order, 15 coefficients each):**
+- **`poly_row_col_to_lat`**: Shape `(N_frames, 15)` - Convert pixel row/col to latitude
+- **`poly_row_col_to_lon`**: Shape `(N_frames, 15)` - Convert pixel row/col to longitude
+- **`poly_lat_lon_to_row`**: Shape `(N_frames, 15)` - Convert lat/lon to pixel row
+- **`poly_lat_lon_to_col`**: Shape `(N_frames, 15)` - Convert lat/lon to pixel column
+
+Polynomial format: `f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 + c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 + c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4`
 
 #### Example HDF5 Structure
 ```
@@ -132,9 +182,17 @@ imagery.h5
 ├── unix_time (Dataset) [optional]
 │   └── Shape: (100,)
 │   └── dtype: int64
-└── unix_fine_time (Dataset) [optional]
-    └── Shape: (100,)
-    └── dtype: int64
+├── unix_fine_time (Dataset) [optional]
+│   └── Shape: (100,)
+│   └── dtype: int64
+├── poly_row_col_to_lat (Dataset) [optional]
+│   └── Shape: (100, 15)
+├── poly_row_col_to_lon (Dataset) [optional]
+│   └── Shape: (100, 15)
+├── poly_lat_lon_to_row (Dataset) [optional]
+│   └── Shape: (100, 15)
+└── poly_lat_lon_to_col (Dataset) [optional]
+    └── Shape: (100, 15)
 ```
 
 #### Creating Imagery Files
@@ -155,23 +213,70 @@ with h5py.File("imagery.h5", "w") as f:
     f.create_dataset("frames", data=frames)
 
     # Optional: Add timestamps
-    unix_time = np.arange(1609459200, 1609459200 + n_frames)  # Starting from 2021-01-01
+    unix_time = np.arange(1609459200, 1609459200 + n_frames)
     f.create_dataset("unix_time", data=unix_time)
     f.create_dataset("unix_fine_time", data=np.zeros(n_frames, dtype=np.int64))
+
+    # Optional: Add geodetic conversion polynomials
+    # Example: Simple linear mapping for demonstration
+    poly_row_col_to_lat = np.zeros((n_frames, 15))
+    poly_row_col_to_lat[:, 0] = 40.0  # Base latitude
+    poly_row_col_to_lat[:, 1] = 0.0001  # Row scaling
+    f.create_dataset("poly_row_col_to_lat", data=poly_row_col_to_lat)
+
+    poly_row_col_to_lon = np.zeros((n_frames, 15))
+    poly_row_col_to_lon[:, 0] = -105.0  # Base longitude
+    poly_row_col_to_lon[:, 2] = 0.0001  # Column scaling
+    f.create_dataset("poly_row_col_to_lon", data=poly_row_col_to_lon)
+
+    # Inverse polynomials
+    poly_lat_lon_to_row = np.zeros((n_frames, 15))
+    poly_lat_lon_to_row[:, 0] = -40.0 / 0.0001
+    poly_lat_lon_to_row[:, 1] = 1.0 / 0.0001
+    f.create_dataset("poly_lat_lon_to_row", data=poly_lat_lon_to_row)
+
+    poly_lat_lon_to_col = np.zeros((n_frames, 15))
+    poly_lat_lon_to_col[:, 0] = 105.0 / 0.0001
+    poly_lat_lon_to_col[:, 2] = 1.0 / 0.0001
+    f.create_dataset("poly_lat_lon_to_col", data=poly_lat_lon_to_col)
 ```
 
 ### Track Data (CSV Format)
 
-Track files represent trajectories of moving objects over time.
+Track files represent trajectories of moving objects over time. VISTA supports multiple coordinate systems with automatic conversion.
 
-#### Required Columns
+#### Coordinate System Options
+
+**Option 1: Frame + Pixel Coordinates (Standard)**
+- Requires: `Frames`, `Rows`, `Columns`
+
+**Option 2: Time + Pixel Coordinates**
+- Requires: `Times`, `Rows`, `Columns`
+- Times automatically mapped to frames using imagery timestamps
+
+**Option 3: Frame + Geodetic Coordinates**
+- Requires: `Frames`, `Latitude`, `Longitude`, `Altitude`
+- Geodetic coordinates automatically converted to pixels using imagery polynomials
+
+**Option 4: Time + Geodetic Coordinates**
+- Requires: `Times`, `Latitude`, `Longitude`, `Altitude`
+- Both conversions performed automatically
+
+**Priority System:**
+- If both `Frames` and `Times` are present, `Frames` takes precedence
+- If both pixel (`Rows`/`Columns`) and geodetic (`Latitude`/`Longitude`/`Altitude`) coordinates are present, pixel takes precedence
+
+#### Required Columns (Choose One Coordinate System)
 
 | Column Name | Data Type | Description | Example |
 |------------|-----------|-------------|---------|
 | `Track` | string | Unique identifier for the track | "Tracker 0 - Track 0" |
+| **Temporal (choose one):** |
 | `Frames` | int | Frame number where this point appears | 15 |
-| `Rows` | float | Row position in image coordinates | 181.87 |
-| `Columns` | float | Column position in image coordinates | 79.08 |
+| `Times` | string (ISO 8601) | Timestamp for this point | "2024-01-01T12:00:00.000000" |
+| **Spatial (choose one):** |
+| `Rows` + `Columns` | float | Pixel coordinates in image | 181.87, 79.08 |
+| `Latitude` + `Longitude` + `Altitude` | float | Geodetic coordinates | 40.0128, -105.0156, 1500.0 |
 
 #### Optional Columns
 
@@ -181,27 +286,46 @@ Track files represent trajectories of moving objects over time.
 | `Marker` | string | 'o' | Current position marker style | 'o' (circle), 's' (square), 't' (triangle), 'd' (diamond), '+', 'x', 'star' |
 | `Line Width` | float | 2 | Width of track path line | Any positive number |
 | `Marker Size` | float | 12 | Size of position marker | Any positive number |
+| `Tail Length` | int | 0 | Number of recent frames to show (0 = all) | Any non-negative integer |
+| `Visible` | bool | True | Track visibility | True/False |
+| `Complete` | bool | False | Show complete track regardless of current frame | True/False |
 | `Tracker` | string | (none) | Name of tracker/algorithm | Any string |
 
-#### File Structure
+#### Example CSV Files
 
-Each row represents one point in a track's trajectory. Multiple rows with the same `Track` identifier form a continuous path.
-
-**Example CSV:**
+**Standard Format (Frames + Pixel Coordinates):**
 ```csv
 Track,Frames,Rows,Columns,Color,Marker,Line Width,Marker Size,Tracker
 "Tracker 0 - Track 0",15,181.87,79.08,g,o,2,12,"Tracker 0"
 "Tracker 0 - Track 0",16,183.67,77.35,g,o,2,12,"Tracker 0"
 "Tracker 0 - Track 0",17,185.23,75.89,g,o,2,12,"Tracker 0"
-"Tracker 1 - Track 5",10,245.12,150.34,b,s,3,15,"Tracker 1"
-"Tracker 1 - Track 5",11,247.89,152.01,b,s,3,15,"Tracker 1"
 ```
 
-#### Data Organization
-- **Single Tracker**: All tracks belong to one tracker
-- **Multiple Trackers**: Tracks are grouped by the `Tracker` column
-- **Hierarchy**: Tracker → Track → Points
-- Points do not need to be sequential or sorted in the file
+**Time-Based Format:**
+```csv
+Track,Times,Rows,Columns,Color,Marker,Line Width,Marker Size
+"Track 1",2024-01-01T12:00:00.000000,181.87,79.08,g,o,2,12
+"Track 1",2024-01-01T12:00:00.100000,183.67,77.35,g,o,2,12
+"Track 1",2024-01-01T12:00:00.200000,185.23,75.89,g,o,2,12
+```
+
+**Geodetic Format:**
+```csv
+Track,Frames,Latitude,Longitude,Altitude,Color
+"Track 1",0,40.0128,-105.0156,1500.0,g
+"Track 1",1,40.0129,-105.0157,1501.0,g
+"Track 1",2,40.0130,-105.0158,1502.0,g
+```
+
+**Time + Geodetic Format:**
+```csv
+Track,Times,Latitude,Longitude,Altitude
+"Track 1",2024-01-01T12:00:00.000000,40.0128,-105.0156,1500.0
+"Track 1",2024-01-01T12:00:00.100000,40.0129,-105.0157,1501.0
+"Track 1",2024-01-01T12:00:00.200000,40.0130,-105.0158,1502.0
+```
+
+When loading tracks that require conversion (time-to-frame or geodetic-to-pixel), VISTA will automatically prompt you to select an appropriate imagery dataset with the required metadata.
 
 ### Detection Data (CSV Format)
 
@@ -223,47 +347,16 @@ Detection files represent point clouds of detected objects at each frame.
 | `Color` | string | 'r' | Detection marker color | 'r', 'g', 'b', 'w', 'c', 'm', 'y', 'k' |
 | `Marker` | string | 'o' | Marker style | 'o', 's', 't', 'd', '+', 'x', 'star' |
 | `Marker Size` | float | 10 | Size of marker | Any positive number |
+| `Line Thickness` | int | 2 | Thickness of marker outline | Any positive integer |
+| `Visible` | bool | True | Detection visibility | True/False |
 
-#### File Structure
-
-Each row represents a single detection. Multiple detections can exist at the same frame, and detections are stateless (no history tracking).
-
-**Example CSV:**
+#### Example CSV
 ```csv
-Detector,Frames,Rows,Columns,Color,Marker,Marker Size
-"Detector 0",0.0,146.01,50.27,r,o,10
-"Detector 0",0.0,141.66,25.02,r,o,10
-"Detector 0",1.0,148.23,51.15,r,o,10
-"Detector 1",0.0,200.45,300.12,b,s,12
-```
-
-#### Data Organization
-- **Multiple Detectors**: Detections are grouped by the `Detector` column
-- **Point Cloud**: Each frame can have zero or more detections
-- Supports false alarms and sparse detection patterns
-
-### Alternative HDF5 Formats
-
-For advanced use cases, detections and tracks can also be loaded from HDF5 files:
-
-**Detections HDF5:**
-```
-detections.h5
-├── frames (Dataset)
-├── rows (Dataset)
-├── columns (Dataset)
-└── attributes: color, marker, marker_size
-```
-
-**Tracks HDF5:**
-```
-tracks.h5
-├── track_0 (Group)
-│   ├── frames (Dataset)
-│   ├── rows (Dataset)
-│   └── columns (Dataset)
-├── track_1 (Group)
-│   └── ...
+Detector,Frames,Rows,Columns,Color,Marker,Marker Size,Line Thickness
+"Detector 0",0.0,146.01,50.27,r,o,10,2
+"Detector 0",0.0,141.66,25.02,r,o,10,2
+"Detector 0",1.0,148.23,51.15,r,o,10,2
+"CFAR Detector",0.0,200.45,300.12,b,s,12,3
 ```
 
 ## Usage
@@ -283,11 +376,125 @@ python -m vista.app
 
 2. **Load Tracks**:
    - Menu: `File → Load Tracks` or Toolbar icon
-   - Select CSV or HDF5 file with track data
+   - Select CSV file with track data
+   - If tracks contain times or geodetic coordinates, select appropriate imagery for conversion
+   - System detects coordinate system automatically
 
 3. **Load Detections**:
    - Menu: `File → Load Detections` or Toolbar icon
-   - Select CSV or HDF5 file with detection data
+   - Select CSV file with detection data
+
+### Creating Manual Tracks
+
+1. **Enable Track Creation Mode**:
+   - Click the "Create Track" icon in the toolbar
+   - A track creation dialog will appear
+
+2. **Create Track Points**:
+   - Click on the imagery to add points to the current track
+   - Each click creates a new point at the current frame
+   - Points are automatically associated with the current frame
+
+3. **Navigate and Add Points**:
+   - Change frames using playback controls or arrow keys
+   - Continue clicking to add points at different frames
+   - The system tracks which frame each point belongs to
+
+4. **Finish Track**:
+   - Click "Finish Track" in the dialog to save
+   - The new track is added to the Data Manager
+   - Track is automatically saved when the dialog is closed
+
+### Detection Algorithms
+
+#### Running CFAR Detector
+
+**Menu Path:** `Detections → CFAR`
+
+**Parameters:**
+- **Detection Threshold**: SNR threshold for detections (default: 3.0)
+- **Guard Window Radius**: Size of guard region around test cell (default: 2)
+- **Background Window Radius**: Size of background estimation region (default: 5)
+
+**Output:** Creates a new detector with CFAR detections
+
+#### Running Simple Threshold Detector
+
+**Menu Path:** `Detections → Simple Threshold`
+
+**Parameters:**
+- **Threshold**: Minimum intensity value for detection (default: 5.0)
+
+**Output:** Creates a new detector with threshold-based detections
+
+### Tracking Algorithms
+
+All tracking algorithms take detections as input and produce tracks as output.
+
+#### Simple Tracker
+
+**Menu Path:** `Tracking → Simple Tracker`
+
+**Description:** Nearest-neighbor association with maximum distance threshold
+
+**Parameters:**
+- **Maximum Distance**: Maximum pixel distance for associating detections to tracks (default: 50.0)
+
+#### Kalman Filter Tracker
+
+**Menu Path:** `Tracking → Kalman Tracker`
+
+**Description:** State estimation with constant velocity motion model
+
+**Parameters:**
+- **Maximum Distance**: Maximum distance for data association (default: 50.0)
+- **Process Noise**: Motion model uncertainty (default: 1.0)
+- **Measurement Noise**: Detection position uncertainty (default: 5.0)
+
+#### Network Flow Tracker
+
+**Menu Path:** `Tracking → Network Flow Tracker`
+
+**Description:** Global optimization using min-cost flow
+
+**Parameters:**
+- **Maximum Distance**: Maximum distance for associations (default: 50.0)
+- **Miss Penalty**: Cost for missing detections (default: 10.0)
+- **False Alarm Penalty**: Cost for false alarm detections (default: 10.0)
+
+### Image Enhancement
+
+#### Coaddition
+
+**Menu Path:** `Image Processing → Enhancement → Coaddition`
+
+**Description:** Temporal averaging for noise reduction and SNR improvement
+
+**Parameters:**
+- **Number of Frames**: Number of frames to average (default: 5)
+
+**Output:** New imagery dataset with enhanced frames
+
+### Background Removal
+
+#### Temporal Median
+
+**Menu Path:** `Image Processing → Background Removal → Temporal Median`
+
+**Parameters:**
+- **Background Frames**: Number of frames on each side for median (default: 5)
+- **Temporal Offset**: Frames to skip around current frame (default: 2)
+
+**Output:** New imagery dataset with background removed
+
+#### Robust PCA
+
+**Menu Path:** `Image Processing → Background Removal → Robust PCA`
+
+**Parameters:**
+- **Regularization Parameter**: Controls background/foreground separation (default: 0.1)
+
+**Output:** New imagery dataset with background removed using low-rank decomposition
 
 ### Playback Controls
 
@@ -300,122 +507,122 @@ python -m vista.app
 | **Arrow Keys** | Previous/Next frame navigation |
 | **A/D Keys** | Previous/Next frame navigation (alternative) |
 
-### Data Manager
-
-The Data Manager panel provides tabs for managing:
-- **Imagery**: Visibility, histogram controls
-- **Tracks**: Filtering, sorting, bulk editing of colors/markers/sizes
-- **Detections**: Filtering, sorting, bulk editing of colors/markers/sizes
-
 ### Keyboard Shortcuts
 
 - **Left Arrow / A**: Previous frame
 - **Right Arrow / D**: Next frame
 - **Space**: Play/Pause (when playback controls have focus)
 
-### Image Processing
+## Generating Test Data
 
-VISTA includes built-in image processing algorithms that can be applied to loaded imagery.
+Use the simulation module to generate test datasets with various configurations:
 
-#### Running Image Processing Algorithms
+```python
+from vista.simulate.simulation import Simulation
+import numpy as np
 
-1. **Load Imagery**: Ensure imagery is loaded and selected
-2. **Open Algorithm Dialog**: Navigate to `Image Processing` menu and select the desired algorithm
-3. **Configure Parameters**: Adjust algorithm-specific parameters in the dialog
-4. **Run Processing**: Click "Run" to start processing
-5. **Monitor Progress**: Watch the progress bar and cancel if needed
-6. **View Results**: Processed imagery is automatically added and selected for viewing
+# Standard simulation
+sim = Simulation(
+    name="Test Simulation",
+    frames=50,
+    rows=256,
+    columns=256,
+    num_trackers=1
+)
+sim.simulate()
+sim.save("test_data")
 
-#### Background Removal - Temporal Median
+# Simulation with times and geodetic coordinates
+sim = Simulation(
+    name="Advanced Simulation",
+    frames=50,
+    enable_times=True,
+    frame_rate=10.0,
+    start_time=np.datetime64('2024-01-01T12:00:00', 'us'),
+    enable_geodetic=True,
+    center_lat=40.0,
+    center_lon=-105.0,
+    pixel_to_deg_scale=0.0001
+)
+sim.simulate()
 
-The Temporal Median algorithm removes static backgrounds by computing the median of nearby frames while excluding a temporal window around the current frame.
-
-**Menu Path:** `Image Processing → Background Removal → Temporal Median`
-
-**Parameters:**
-- **Background Frames** (default: 5): Number of frames on each side of the temporal window to use for median computation. Higher values provide more robust background estimates but require more memory.
-- **Temporal Offset** (default: 2): Number of frames to skip immediately before and after the current frame. This prevents the current frame from contaminating the background estimate, preserving moving objects.
-
-**Algorithm Behavior:**
-- For each frame `i`, the algorithm selects background frames from:
-  - Left window: frames `[i - offset - background : i - offset]`
-  - Right window: frames `[i + offset + 1 : i + offset + background + 1]`
-- Computes the median across all selected background frames
-- Returns the median background for frame `i`
-
-**Output:**
-- Creates a new Imagery dataset with name: `"{original_name} Temporal Median"`
-- Preserves frame numbers and timestamps from the original imagery
-- New imagery is automatically added to the Data Manager and selected for viewing
-
-**Use Cases:**
-- Removing static backgrounds from surveillance footage
-- Isolating moving objects in temporal sequences
-- Background estimation for change detection algorithms
-
-**Example:**
-If you have imagery named "my_imagery", running Temporal Median with default parameters will create a new imagery dataset named "my_imagery Temporal Median" containing the computed background for each frame.
-
-## Generating Example Data
-
-Use the provided simulation scripts to generate example datasets:
-
-```bash
-# Basic scenario with imagery, tracks, and detections
-python scripts/simulate_basic.py
-
-# Imagery with timestamps
-python scripts/simulate_timed_imagery.py
-
-# Many tracks for stress testing
-python scripts/simulate_many_tracks.py
-
-# Large imagery dataset (chunked HDF5)
-python scripts/large_imagery.py
-
-# Sub-sampled temporal data
-python scripts/simulate_sub_sampled_imagery.py
+# Save with different coordinate systems
+sim.save("time_based", save_times_only=True)  # Times only
+sim.save("geodetic", save_geodetic_tracks=True)  # Geodetic only
+sim.save("time_geodetic", save_geodetic_tracks=True, save_times_only=True)  # Both
 ```
 
-Example data will be saved to the `data/` directory.
+Use the example script to generate all test scenarios:
+```bash
+python scripts/example_geodetic_time.py
+```
+
+This creates 5 directories with different test configurations:
+- `sim_normal/` - Standard tracks (Frames + Rows/Columns)
+- `sim_times_only/` - Time-based tracks
+- `sim_geodetic_only/` - Geodetic tracks
+- `sim_times_geodetic/` - Time + Geodetic
+- `sim_all_features/` - All features combined
 
 ## Project Structure
 
 ```
 Vista/
 ├── vista/
-│   ├── app.py                    # Main application entry point
-│   ├── widgets/                  # UI components
-│   │   ├── main_window.py        # Main window with menu/toolbar
-│   │   ├── imagery_viewer.py     # Image display with pyqtgraph
-│   │   ├── data_manager.py       # Data panel with editing
-│   │   ├── data_loader.py        # Background loading thread
-│   │   ├── playback_controls.py  # Playback UI
-│   │   └── temporal_median_widget.py  # Temporal Median algorithm UI
-│   ├── imagery/                  # Image data models
-│   │   ├── imagery.py            # Base Imagery class
-│   │   └── geolocated_imagery.py # Extendable geolocation class
-│   ├── tracks/                   # Track data models
-│   │   ├── track.py              # Individual Track class
-│   │   └── tracker.py            # Tracker container
-│   ├── detections/               # Detection data models
-│   │   └── detector.py           # Detector class
-│   ├── algorithms/               # Image processing algorithms
-│   │   └── background_removal/   # Background removal algorithms
-│   │       └── temporal_median.py  # Temporal Median algorithm
-│   ├── simulate/                 # Data generation utilities
-│   │   └── simulation.py         # Synthetic data simulator
-│   ├── utils/                    # Utilities
-│   │   ├── color.py              # Color conversion helpers
-│   │   └── random_walk.py        # Random walk simulation
-│   └── icons/                    # Application icons
-├── scripts/                      # Example data generation scripts
-│   ├── simulate_basic.py
-│   ├── simulate_timed_imagery.py
-│   ├── simulate_many_tracks.py
-│   └── ...
-├── data/                         # Example datasets (gitignored)
-└── readme.md                     # This file
+│   ├── app.py                       # Main application entry point
+│   ├── widgets/
+│   │   ├── core/                    # Core UI components
+│   │   │   ├── main_window.py       # Main window with menu/toolbar
+│   │   │   ├── imagery_viewer.py    # Image display with pyqtgraph
+│   │   │   ├── playback_controls.py # Playback UI
+│   │   │   ├── imagery_selection_dialog.py  # Imagery picker for conversions
+│   │   │   └── data/
+│   │   │       ├── data_manager.py  # Data panel with editing
+│   │   │       └── data_loader.py   # Background loading thread
+│   │   ├── detectors/               # Detection algorithm widgets
+│   │   │   ├── cfar_widget.py       # CFAR detector UI
+│   │   │   └── simple_threshold_widget.py  # Threshold detector UI
+│   │   ├── trackers/                # Tracking algorithm widgets
+│   │   │   ├── simple_tracking_dialog.py
+│   │   │   ├── kalman_tracking_dialog.py
+│   │   │   └── network_flow_tracking_dialog.py
+│   │   ├── background_removal/      # Background removal widgets
+│   │   │   ├── temporal_median_widget.py
+│   │   │   └── robust_pca_dialog.py
+│   │   └── enhancement/             # Enhancement widgets
+│   │       └── coaddition_widget.py
+│   ├── imagery/                     # Image data models
+│   │   └── imagery.py               # Imagery class with geodetic support
+│   ├── tracks/                      # Track data models
+│   │   ├── track.py                 # Track class with coordinate conversion
+│   │   └── tracker.py               # Tracker container
+│   ├── detections/                  # Detection data models
+│   │   └── detector.py              # Detector class
+│   ├── algorithms/                  # Image processing algorithms
+│   │   ├── background_removal/
+│   │   │   ├── temporal_median.py
+│   │   │   └── robust_pca.py
+│   │   ├── detectors/
+│   │   │   ├── cfar.py
+│   │   │   └── simple_threshold.py
+│   │   ├── trackers/
+│   │   │   ├── simple_tracker.py
+│   │   │   ├── kalman_tracker.py
+│   │   │   └── network_flow_tracker.py
+│   │   └── enhancement/
+│   │       └── coaddition.py
+│   ├── utils/                       # Utilities
+│   │   ├── color.py                 # Color conversion helpers
+│   │   ├── random_walk.py           # Random walk simulation
+│   │   ├── time_mapping.py          # Time-to-frame conversion
+│   │   └── geodetic_mapping.py      # Geodetic-to-pixel conversion
+│   ├── simulate/                    # Data generation utilities
+│   │   └── simulation.py            # Synthetic data simulator
+│   └── icons/                       # Application icons
+├── scripts/                         # Example scripts
+│   └── example_geodetic_time.py     # Generate test data
+├── data/                            # Example datasets (gitignored)
+└── readme.md                        # This file
 ```
 
 ## Architecture
@@ -425,200 +632,64 @@ Vista/
 1. **Data-View Separation**: Imagery, Track, and Detector classes are independent data containers
 2. **Async Loading**: Background threads prevent UI freezing during file I/O
 3. **Signal-Slot Communication**: PyQt signals coordinate between components
-4. **Lazy Evaluation**: Histograms computed on-demand and cached
-5. **Extensibility**: `Imagery` base class for customization
+4. **Lazy Evaluation**: Histograms and conversions computed on-demand and cached
+5. **Automatic Conversion**: Transparent coordinate and time conversion with user prompts
+6. **Extensibility**: Modular algorithm framework for custom processing
 
 ### Key Classes
 
-- **`Imagery`**: Base class for image data (can be subclassed for custom formats)
-- **`Track`**: Single trajectory with styling attributes
+- **`Imagery`**: Image data with optional times and geodetic polynomials
+- **`Track`**: Single trajectory with automatic coordinate conversion
 - **`Tracker`**: Container for multiple tracks
-- **`Detector`**: Point cloud detection class
-- **`ImageryViewer`**: Widget for visualization
-- **`PlaybackControls`**: Widget for temporal control
-- **`DataManagerPanel`**: Widget for data editing
-
-## Advanced Usage
-
-### Programmatic Data Loading
-
-```python
-from vista.imagery.imagery import Imagery
-from vista.tracks.tracker import Tracker
-from vista.detections.detector import Detector
-
-# Load imagery programmatically
-# Note: Currently, imagery loading is primarily done through the UI
-# The Imagery class can be instantiated directly with numpy arrays
-
-import numpy as np
-import h5py
-
-# Load from HDF5 manually
-with h5py.File("imagery.h5", "r") as f:
-    images = f['images'][:]
-    frames = f['frames'][:]
-    imagery = Imagery(name="My Imagery", images=images, frames=frames)
-
-# Load tracks
-tracker = Tracker.from_csv("tracks.csv", name="My Tracker")
-
-# Load detections
-detector = Detector.from_csv("detections.csv", name="My Detector")
-```
-
-### Creating Custom Image Processing Algorithms
-
-You can extend VISTA with custom image processing algorithms by following the pattern established by TemporalMedian:
-
-#### 1. Create the Algorithm Class
-
-```python
-from dataclasses import dataclass, field
-import numpy as np
-from numpy.typing import NDArray
-from typing import Tuple
-from vista.imagery.imagery import Imagery
-
-
-@dataclass
-class MyCustomAlgorithm:
-    """Custom image processing algorithm"""
-
-    name: str = "My Custom Algorithm"
-    imagery: Imagery
-    parameter1: int = 10
-    parameter2: float = 0.5
-    _current_frame: int = field(init=False, default=-1)
-
-    def __call__(self) -> Tuple[int, NDArray]:
-        """
-        Process the next frame incrementally.
-
-        Returns:
-            Tuple of (frame_index, processed_frame)
-        """
-        self._current_frame += 1
-
-        # Your processing logic here
-        processed_frame = self.process_frame(self._current_frame)
-
-        return self._current_frame, processed_frame
-
-    def process_frame(self, frame_idx: int) -> NDArray:
-        """Process a single frame"""
-        # Implement your algorithm here
-        frame = self.imagery.images[frame_idx]
-        # ... processing ...
-        return processed_frame
-```
-
-#### 2. Create a Configuration Widget
-
-Create a widget following the pattern in [temporal_median_widget.py](vista/widgets/temporal_median_widget.py):
-
-```python
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QSpinBox, QPushButton
-from PyQt6.QtCore import QThread, pyqtSignal
-from vista.imagery.imagery import Imagery
-
-
-class MyAlgorithmProcessingThread(QThread):
-    """Worker thread for processing"""
-    progress_updated = pyqtSignal(int, int)
-    processing_complete = pyqtSignal(object)
-    error_occurred = pyqtSignal(str)
-
-    def __init__(self, imagery, param1, param2):
-        super().__init__()
-        self.imagery = imagery
-        self.param1 = param1
-        self.param2 = param2
-        self._cancelled = False
-
-    def run(self):
-        # Process imagery with your algorithm
-        # Emit progress_updated signals
-        # Emit processing_complete with new Imagery object
-        pass
-
-
-class MyAlgorithmWidget(QDialog):
-    """Configuration dialog for your algorithm"""
-    imagery_processed = pyqtSignal(object)
-
-    def __init__(self, parent=None, imagery=None):
-        super().__init__(parent)
-        self.imagery = imagery
-        self.init_ui()
-
-    def init_ui(self):
-        # Create UI with parameter controls
-        pass
-```
-
-#### 3. Integrate with Main Window
-
-Add your algorithm to the menu in [main_window.py](vista/widgets/main_window.py):
-
-```python
-# In create_menu_bar method
-my_algorithm_action = QAction("My Custom Algorithm", self)
-my_algorithm_action.triggered.connect(self.open_my_algorithm_widget)
-image_processing_menu.addAction(my_algorithm_action)
-
-# Add handler method
-def open_my_algorithm_widget(self):
-    if not self.viewer.imagery:
-        QMessageBox.warning(self, "No Imagery", "Please load imagery first.")
-        return
-
-    widget = MyAlgorithmWidget(self, self.viewer.imagery)
-    widget.imagery_processed.connect(self.on_algorithm_complete)
-    widget.exec()
-
-def on_algorithm_complete(self, processed_imagery):
-    # Add processed imagery to viewer
-    self.viewer.add_imagery(processed_imagery)
-    self.viewer.select_imagery(processed_imagery)
-    self.data_manager.refresh()
-```
-
-**Key Design Principles:**
-- Algorithms should be **callable** and return incremental results
-- Use **background threads** to prevent UI blocking
-- Emit **progress signals** for user feedback
-- Create **new Imagery objects** rather than modifying originals
-- Follow naming convention: `"{original_name} {algorithm_name}"`
+- **`Detector`**: Point cloud detection class with styling
+- **`ImageryViewer`**: Visualization widget with interactive tools
+- **`PlaybackControls`**: Temporal control widget
+- **`DataManagerPanel`**: Data editing and management widget
 
 ## Performance Considerations
 
 - **Chunked HDF5**: Use chunked storage for large imagery files to enable progressive loading
-- **Lazy Histograms**: Histograms are computed on-demand and cached
+- **Lazy Computations**: Histograms and coordinate conversions computed on-demand
 - **Efficient Playback**: Bounce mode uses efficient frame looping
-- **Background Loading**: All file I/O happens in background threads
-- **Image Processing**: Algorithms run in background threads with incremental progress updates
-- **Memory Usage**: Image processing algorithms may create full copies of imagery in memory. Monitor system memory when processing large datasets.
+- **Background Processing**: All file I/O and algorithms run in background threads
+- **Memory Management**: Large datasets may require significant memory for processing
+- **Frame Synchronization**: Assumes synchronized frame numbers across imagery datasets
 
 ## Troubleshooting
 
-### Duplicate Imagery Names
-If you see "An imagery dataset with this name already exists", ensure each loaded imagery dataset has a unique name.
+### Track Loading Issues
 
-### Slow Playback
+**"No imagery with times defined"**
+- Ensure imagery contains `unix_time` and `unix_fine_time` datasets
+- Load imagery before loading time-based tracks
+
+**"No imagery with geodetic conversion capability"**
+- Ensure imagery contains all four polynomial datasets
+- Check that polynomials have correct shape `(N_frames, 15)`
+
+**"Track has times but no frames"**
+- Imagery required for time-to-frame mapping
+- Verify imagery times overlap with track times
+
+### Coordinate Conversion Issues
+
+**Tracks appear in wrong location**
+- Verify polynomial coefficients are correct
+- Check that geodetic coordinates are within imagery coverage area
+- Ensure frame synchronization across imagery datasets
+
+### General Issues
+
+**Duplicate Imagery Names**
+- Each loaded imagery dataset must have a unique name
+
+**Slow Playback**
 - Reduce FPS slider value
-- Use smaller imagery datasets
-- Ensure HDF5 files use chunked storage
+- Use smaller imagery datasets or chunked HDF5
 
-### Missing Data
-- Verify CSV column names match exactly (case-sensitive)
-- Check that HDF5 files contain required datasets: `images` and `frames`
-- Ensure coordinate values (rows/columns) are within image bounds
-
-### Image Processing Issues
-- **Out of Memory**: Processing large imagery datasets may require significant memory. Try reducing the imagery size or closing other applications.
-- **Processing Cancelled**: If processing is cancelled, the partial results are discarded and no new imagery is created.
-- **Processing Errors**: Check the error message for details. Common issues include invalid parameter values or corrupted imagery data.
+**Out of Memory**
+- Close unused imagery datasets
+- Reduce algorithm parameter values (e.g., background frames)
 
 ## Contributing
 
@@ -628,10 +699,12 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 MIT License
 
-## Recent Updates
+## Acknowledgments
 
-- v1.0.0: Initial release with multi-imagery support, geodetic tooltips, enhanced track filtering, and image processing capabilities
-  - Added Image Processing menu with Background Removal algorithms
-  - Implemented Temporal Median algorithm for background removal
-  - Background processing with progress tracking and cancellation support
-  - Automatic creation and management of processed imagery datasets
+VISTA uses the following open-source libraries:
+- PyQt6 for the GUI framework
+- pyqtgraph for high-performance visualization
+- NumPy and pandas for data processing
+- astropy for geodetic coordinate handling
+- scikit-learn and cvxpy for advanced algorithms
+- h5py for HDF5 file support
