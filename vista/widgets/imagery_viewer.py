@@ -85,6 +85,9 @@ class ImageryViewer(QWidget):
         self.user_histogram_bounds = None  # (min, max) tuple - None means use auto levels
         self.preserve_histogram_bounds = False  # Set to True when user manually adjusts levels
 
+        # Last mouse position for updating tooltips on frame change
+        self.last_mouse_pos = None  # Store last mouse position in scene coordinates
+
         self.init_ui()
 
     def init_ui(self):
@@ -221,6 +224,10 @@ class ImageryViewer(QWidget):
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
+
+        # Update tooltips if mouse was previously hovering and tooltips are enabled
+        if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
+            self._update_tooltips_at_position(self.last_mouse_pos)
 
     def get_current_time(self):
         """Get the current time for the displayed frame (if available)"""
@@ -452,6 +459,14 @@ class ImageryViewer(QWidget):
 
     def on_mouse_moved(self, pos):
         """Handle mouse movement over the image"""
+        # Store the last mouse position for frame change updates
+        self.last_mouse_pos = pos
+
+        # Update tooltips for the current position
+        self._update_tooltips_at_position(pos)
+
+    def _update_tooltips_at_position(self, pos):
+        """Update geolocation and pixel value tooltips at a given scene position"""
         if not (self.geolocation_enabled or self.pixel_value_enabled) or self.imagery is None:
             return
 
@@ -508,8 +523,10 @@ class ImageryViewer(QWidget):
                     # Update positions of text items
                     self.update_text_positions()
             else:
-                self.geolocation_text.setVisible(False)
-                self.pixel_value_text.setVisible(False)
+                if self.geolocation_enabled:
+                    self.geolocation_text.setVisible(False)
+                if self.pixel_value_enabled:
+                    self.pixel_value_text.setVisible(False)
 
     def clear_overlays(self):
         """Clear all tracks and detections"""
