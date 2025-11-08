@@ -2,7 +2,7 @@
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QPointF, pyqtSignal
 
 from vista.imagery.imagery import Imagery
 from vista.detections.detector import Detector
@@ -66,6 +66,10 @@ class ImageryViewer(QWidget):
         self.geolocation_enabled = False
         self.geolocation_text = None  # TextItem for displaying lat/lon
 
+        # Pixel value tooltip
+        self.pixel_value_enabled = False
+        self.pixel_value_text = None  # TextItem for displaying pixel value
+
         # ROI drawing mode
         self.draw_roi_mode = False
         self.drawing_roi = None  # Temporary ROI being drawn
@@ -109,6 +113,11 @@ class ImageryViewer(QWidget):
         self.geolocation_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
         self.geolocation_text.setVisible(False)
         self.plot_item.addItem(self.geolocation_text, ignoreBounds=True)
+
+        # Create pixel value text overlay using TextItem positioned in scene coordinates
+        self.pixel_value_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
+        self.pixel_value_text.setVisible(False)
+        self.plot_item.addItem(self.pixel_value_text, ignoreBounds=True)
 
         # Connect mouse hover signal
         self.plot_item.scene().sigMouseMoved.connect(self.on_mouse_moved)
@@ -391,9 +400,21 @@ class ImageryViewer(QWidget):
         if not enabled:
             self.geolocation_text.setVisible(False)
 
+    def set_pixel_value_enabled(self, enabled):
+        """Enable or disable geolocation tooltip"""
+        self.pixel_value_enabled = enabled
+        if enabled:
+            # Change cursor to crosshair
+            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        else:
+            self.pixel_value_text.setVisible(False)
+            self.pixel_value_text.setText("")
+            # Restore cursor
+            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+
     def on_mouse_moved(self, pos):
         """Handle mouse movement over the image"""
-        if not self.geolocation_enabled or self.imagery is None:
+        if not (self.geolocation_enabled or self.pixel_value_enabled) or self.imagery is None:
             return
 
         # Map mouse position to image coordinates
@@ -411,35 +432,52 @@ class ImageryViewer(QWidget):
                     image_index = valid_indices[-1]
                     frame = self.imagery.frames[image_index]
 
-                    # Convert pixel to geodetic coordinates
-                    frames_array = np.array([frame])
-                    rows_array = np.array([row])
-                    cols_array = np.array([col])
+                    if self.geolocation_enabled:
+                        # Convert pixel to geodetic coordinates
+                        frames_array = np.array([frame])
+                        rows_array = np.array([row])
+                        cols_array = np.array([col])
 
-                    locations = self.imagery.pixel_to_geodetic(frames_array, rows_array, cols_array)
+                        locations = self.imagery.pixel_to_geodetic(frames_array, rows_array, cols_array)
 
-                    # Extract lat/lon from EarthLocation
-                    if locations is not None and len(locations) > 0:
-                        location = locations[0]
-                        lat = location.lat.deg
-                        lon = location.lon.deg
+                        # Extract lat/lon from EarthLocation
+                        if locations is not None and len(locations) > 0:
+                            location = locations[0]
+                            lat = location.lat.deg
+                            lon = location.lon.deg
 
-                        # Check if coordinates are valid (not NaN)
-                        if not (np.isnan(lat) or np.isnan(lon)):
-                            # Update text and position
-                            text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
-                            self.geolocation_text.setText(text)
+                            # Check if coordinates are valid (not NaN)
+                            if not (np.isnan(lat) or np.isnan(lon)):
+                                # Update text and position - make sure text occupies fixed character length
+                                text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
+                                self.geolocation_text.setText(text)
 
-                            # Position in lower right corner of the view (in data coordinates)
-                            view_rect = self.plot_item.viewRect()
-                            self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
-                            self.geolocation_text.setVisible(True)
+                                # Position in lower right corner of the view (in data coordinates)
+                                view_rect = self.plot_item.viewRect()
+                                self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
+                                self.geolocation_text.setVisible(True)
+                            else:
+                                self.geolocation_text.setVisible(False)
                         else:
                             self.geolocation_text.setVisible(False)
-                    else:
-                        self.geolocation_text.setVisible(False)
+                    
+                    if self.pixel_value_enabled:
+                        # Extract pixel value from floored row, column coordinates
+                        row_floor = int(np.floor(row))
+                        col_floor = int(np.floor(col))
+                        pixel_value = self.imagery.images[frame, row_floor, col_floor]
+
+                        # Update text and position
+                        text = f"Pixel value: {pixel_value:.2f}"
+                        self.pixel_value_text.setText(text)
+
+                        # Position in lower right corner of the view (in data coordinates)
+                        view_rect = self.plot_item.viewRect()
+                        self.pixel_value_text.setPos(view_rect.right(), view_rect.bottom())
+                        self.pixel_value_text.setVisible(True)
             else:
                 self.geolocation_text.setVisible(False)
+                self.pixel_value_text.setVisible(False)
 
     def clear_overlays(self):
         """Clear all tracks and detections"""
