@@ -1,6 +1,6 @@
 # VISTA - Visual Imagery Software Tool for Analysis
 
-![Logo](/vista/icons/logo.jpg)
+![Logo](/vista/icons/logo-small.jpg)
 
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems.
 
