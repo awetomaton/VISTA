@@ -21,7 +21,7 @@ class SimpleThresholdProcessingThread(QThread):
     processing_complete = pyqtSignal(object)  # Emits Detector object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, threshold, min_area, max_area, aoi=None):
+    def __init__(self, imagery, threshold, min_area, max_area, aoi=None, start_frame=0, end_frame=None):
         """
         Initialize the processing thread
 
@@ -31,6 +31,8 @@ class SimpleThresholdProcessingThread(QThread):
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
             aoi: Optional AOI object to process subset of imagery
+            start_frame: Starting frame index (default: 0)
+            end_frame: Ending frame index exclusive (default: None for all frames)
         """
         super().__init__()
         self.imagery = imagery
@@ -38,6 +40,8 @@ class SimpleThresholdProcessingThread(QThread):
         self.min_area = min_area
         self.max_area = max_area
         self.aoi = aoi
+        self.start_frame = start_frame
+        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
         self._cancelled = False
 
     def cancel(self):
@@ -47,6 +51,11 @@ class SimpleThresholdProcessingThread(QThread):
     def run(self):
         """Execute the simple threshold algorithm in background thread"""
         try:
+            # Apply frame range first
+            frame_images = self.imagery.images[self.start_frame:self.end_frame]
+            frame_frames = self.imagery.frames[self.start_frame:self.end_frame]
+            frame_times = self.imagery.times[self.start_frame:self.end_frame] if self.imagery.times is not None else None
+
             # Determine the region to process
             if self.aoi:
                 # Extract AOI bounds
@@ -56,22 +65,27 @@ class SimpleThresholdProcessingThread(QThread):
                 col_end = int(self.aoi.x + self.aoi.width) - self.imagery.column_offset
 
                 # Crop imagery to AOI
-                cropped_images = self.imagery.images[:, row_start:row_end, col_start:col_end]
+                cropped_images = frame_images[:, row_start:row_end, col_start:col_end]
 
                 # Create temporary imagery object for the cropped region
                 temp_imagery = Imagery(
                     name=self.imagery.name,
                     images=cropped_images,
-                    frames=self.imagery.frames,
-                    times=self.imagery.times
+                    frames=frame_frames,
+                    times=frame_times
                 )
 
                 # Store offsets for later use
                 row_offset = self.imagery.row_offset + row_start
                 column_offset = self.imagery.column_offset + col_start
             else:
-                # Process entire imagery
-                temp_imagery = self.imagery
+                # Process frame range of imagery
+                temp_imagery = Imagery(
+                    name=self.imagery.name,
+                    images=frame_images,
+                    frames=frame_frames,
+                    times=frame_times
+                )
                 row_offset = self.imagery.row_offset
                 column_offset = self.imagery.column_offset
 
@@ -257,6 +271,34 @@ class SimpleThresholdWidget(QDialog):
         max_area_layout.addStretch()
         layout.addLayout(max_area_layout)
 
+        # Frame range selection
+        start_frame_layout = QHBoxLayout()
+        start_frame_label = QLabel("Start Frame:")
+        start_frame_label.setToolTip("First frame to process (0-indexed)")
+        self.start_frame_spinbox = QSpinBox()
+        self.start_frame_spinbox.setMinimum(0)
+        self.start_frame_spinbox.setMaximum(999999)
+        self.start_frame_spinbox.setValue(0)
+        self.start_frame_spinbox.setToolTip(start_frame_label.toolTip())
+        start_frame_layout.addWidget(start_frame_label)
+        start_frame_layout.addWidget(self.start_frame_spinbox)
+        start_frame_layout.addStretch()
+        layout.addLayout(start_frame_layout)
+
+        end_frame_layout = QHBoxLayout()
+        end_frame_label = QLabel("End Frame:")
+        end_frame_label.setToolTip("Last frame to process (exclusive). Set to max for all frames.")
+        self.end_frame_spinbox = QSpinBox()
+        self.end_frame_spinbox.setMinimum(0)
+        self.end_frame_spinbox.setMaximum(999999)
+        self.end_frame_spinbox.setValue(999999)
+        self.end_frame_spinbox.setSpecialValueText("End")
+        self.end_frame_spinbox.setToolTip(end_frame_label.toolTip())
+        end_frame_layout.addWidget(end_frame_label)
+        end_frame_layout.addWidget(self.end_frame_spinbox)
+        end_frame_layout.addStretch()
+        layout.addLayout(end_frame_layout)
+
         # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
@@ -299,6 +341,8 @@ class SimpleThresholdWidget(QDialog):
         min_area = self.min_area_spinbox.value()
         max_area = self.max_area_spinbox.value()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
+        start_frame = self.start_frame_spinbox.value()
+        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
 
         # Validate parameters
         if min_area > max_area:
@@ -317,14 +361,16 @@ class SimpleThresholdWidget(QDialog):
         self.min_area_spinbox.setEnabled(False)
         self.max_area_spinbox.setEnabled(False)
         self.aoi_combo.setEnabled(False)
+        self.start_frame_spinbox.setEnabled(False)
+        self.end_frame_spinbox.setEnabled(False)
         self.cancel_button.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.progress_bar.setMaximum(len(self.imagery))
+        self.progress_bar.setMaximum(end_frame - start_frame)
 
         # Create and start processing thread
         self.processing_thread = SimpleThresholdProcessingThread(
-            self.imagery, threshold, min_area, max_area, selected_aoi
+            self.imagery, threshold, min_area, max_area, selected_aoi, start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -402,6 +448,8 @@ class SimpleThresholdWidget(QDialog):
         self.min_area_spinbox.setEnabled(True)
         self.max_area_spinbox.setEnabled(True)
         self.aoi_combo.setEnabled(True)
+        self.start_frame_spinbox.setEnabled(True)
+        self.end_frame_spinbox.setEnabled(True)
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")

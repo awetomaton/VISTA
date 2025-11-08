@@ -136,6 +136,26 @@ class RobustPCADialog(QDialog):
         params_group.setLayout(params_layout)
         layout.addWidget(params_group)
 
+        # Frame range selection
+        frame_group = QGroupBox("Frame Range")
+        frame_layout = QFormLayout()
+
+        self.start_frame = QSpinBox()
+        self.start_frame.setRange(0, 999999)
+        self.start_frame.setValue(0)
+        self.start_frame.setToolTip("First frame to process (0-indexed)")
+        frame_layout.addRow("Start Frame:", self.start_frame)
+
+        self.end_frame = QSpinBox()
+        self.end_frame.setRange(0, 999999)
+        self.end_frame.setValue(999999)
+        self.end_frame.setSpecialValueText("End")
+        self.end_frame.setToolTip("Last frame to process (exclusive). Set to max for all frames.")
+        frame_layout.addRow("End Frame:", self.end_frame)
+
+        frame_group.setLayout(frame_layout)
+        layout.addWidget(frame_group)
+
         # Output options
         output_group = QGroupBox("Output Options")
         output_layout = QVBoxLayout()
@@ -176,6 +196,8 @@ class RobustPCADialog(QDialog):
         self.lambda_param.setValue(self.settings.value("lambda_param", 0.1, type=float))
         self.tolerance.setValue(self.settings.value("tolerance", 1e-7, type=float))
         self.max_iter.setValue(self.settings.value("max_iter", 1000, type=int))
+        self.start_frame.setValue(self.settings.value("start_frame", 0, type=int))
+        self.end_frame.setValue(self.settings.value("end_frame", 999999, type=int))
         self.add_background.setChecked(self.settings.value("add_background", False, type=bool))
         self.add_foreground.setChecked(self.settings.value("add_foreground", True, type=bool))
 
@@ -185,6 +207,8 @@ class RobustPCADialog(QDialog):
         self.settings.setValue("lambda_param", self.lambda_param.value())
         self.settings.setValue("tolerance", self.tolerance.value())
         self.settings.setValue("max_iter", self.max_iter.value())
+        self.settings.setValue("start_frame", self.start_frame.value())
+        self.settings.setValue("end_frame", self.end_frame.value())
         self.settings.setValue("add_background", self.add_background.isChecked())
         self.settings.setValue("add_foreground", self.add_foreground.isChecked())
 
@@ -200,7 +224,9 @@ class RobustPCADialog(QDialog):
         config = {
             'lambda_param': None if self.auto_lambda.isChecked() else self.lambda_param.value(),
             'tol': self.tolerance.value(),
-            'max_iter': self.max_iter.value()
+            'max_iter': self.max_iter.value(),
+            'start_frame': self.start_frame.value(),
+            'end_frame': min(self.end_frame.value(), len(self.viewer.imagery.frames))
         }
 
         # Save settings for next time

@@ -111,6 +111,8 @@ def run_robust_pca(imagery, config):
             - lambda_param: Sparsity parameter (default: auto)
             - max_iter: Maximum iterations (default: 1000)
             - tol: Convergence tolerance (default: 1e-7)
+            - start_frame: Starting frame index (default: 0)
+            - end_frame: Ending frame index exclusive (default: all frames)
 
     Returns:
         Dictionary containing:
@@ -125,11 +127,20 @@ def run_robust_pca(imagery, config):
     lambda_param = config.get('lambda_param', None)
     max_iter = config.get('max_iter', 1000)
     tol = config.get('tol', 1e-7)
+    start_frame = config.get('start_frame', 0)
+    end_frame = config.get('end_frame', None)
 
     # Get image data
     images = imagery.images
     if images is None or len(images) == 0:
         raise ValueError("No images in imagery")
+
+    # Apply frame range
+    if end_frame is None:
+        end_frame = len(images)
+    images = images[start_frame:end_frame]
+    frames_subset = imagery.frames[start_frame:end_frame]
+    times_subset = imagery.times[start_frame:end_frame] if imagery.times is not None else None
 
     # Get dimensions
     num_frames, height, width = images.shape
@@ -154,21 +165,21 @@ def run_robust_pca(imagery, config):
     background_imagery = Imagery(
         name=f"{imagery.name} - Background",
         images=background_images,
-        frames=imagery.frames.copy(),
+        frames=frames_subset.copy(),
         row_offset=imagery.row_offset,
         column_offset=imagery.column_offset,
-        times=imagery.times.copy() if imagery.times is not None else None,
-        description=f"Low-rank background component from Robust PCA"
+        times=times_subset.copy() if times_subset is not None else None,
+        description=f"Low-rank background component from Robust PCA (frames {start_frame}-{end_frame})"
     )
 
     foreground_imagery = Imagery(
         name=f"{imagery.name} - Foreground (RPCA)",
         images=foreground_images,
-        frames=imagery.frames.copy(),
+        frames=frames_subset.copy(),
         row_offset=imagery.row_offset,
         column_offset=imagery.column_offset,
-        times=imagery.times.copy() if imagery.times is not None else None,
-        description=f"Sparse foreground component from Robust PCA"
+        times=times_subset.copy() if times_subset is not None else None,
+        description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})"
     )
 
     return {
