@@ -19,6 +19,7 @@ from .cfar_widget import CFARWidget
 from .coaddition_widget import CoadditionWidget
 from .simple_tracking_dialog import SimpleTrackingDialog
 from .kalman_tracking_dialog import KalmanTrackingDialog
+from .network_flow_tracking_dialog import NetworkFlowTrackingDialog
 
 
 class VistaMainWindow(QMainWindow):
@@ -162,6 +163,10 @@ class VistaMainWindow(QMainWindow):
         kalman_tracker_action = QAction("Kalman Filter Tracker", self)
         kalman_tracker_action.triggered.connect(self.open_kalman_tracking_dialog)
         tracking_menu.addAction(kalman_tracker_action)
+
+        network_flow_tracker_action = QAction("Network Flow Tracker", self)
+        network_flow_tracker_action.triggered.connect(self.open_network_flow_tracking_dialog)
+        tracking_menu.addAction(network_flow_tracker_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -744,6 +749,25 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the dialog
         dialog = KalmanTrackingDialog(self.viewer, self)
+        if dialog.exec():
+            # Refresh the data manager to show the new tracks
+            self.data_manager.refresh_tracks_table()
+            self.viewer.update_overlays()
+
+    def open_network_flow_tracking_dialog(self):
+        """Open the Network Flow tracker configuration dialog"""
+        # Check if detectors are loaded
+        if not self.viewer.detectors:
+            QMessageBox.warning(
+                self,
+                "No Detections",
+                "Please load or generate detections before running the tracker.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create and show the dialog
+        dialog = NetworkFlowTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
             self.data_manager.refresh_tracks_table()

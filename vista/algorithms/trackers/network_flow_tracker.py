@@ -1,0 +1,317 @@
+"""Network flow optimization tracker for VISTA"""
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+from collections import defaultdict
+
+
+def run_network_flow_tracker(detectors, config):
+    """
+    Run network flow optimization tracker on detections.
+
+    This tracker formulates multi-object tracking as a minimum-cost flow problem
+    on a graph where nodes are detections and edges represent possible associations.
+    The algorithm finds the globally optimal set of tracks by solving for the
+    minimum-cost flow from source to sink.
+
+    Args:
+        detectors: List of Detector objects to use as input
+        config: Dictionary containing tracker configuration:
+            - tracker_name: Name for the resulting tracker
+            - max_gap: Maximum frame gap to search for associations (default: 5)
+            - max_distance: Maximum spatial distance for associations (default: 50.0)
+            - entrance_cost: Cost for starting a new track (default: 10.0)
+            - exit_cost: Cost for ending a track (default: 10.0)
+            - min_track_length: Minimum detections required for valid track (default: 3)
+
+    Returns:
+        Tracker object containing the generated tracks
+    """
+    from vista.tracks.tracker import Tracker
+    from vista.tracks.track import Track
+
+    # Extract configuration with defaults
+    tracker_name = config.get('tracker_name', 'Network Flow Tracker')
+    max_gap = config.get('max_gap', 5)
+    max_distance = config.get('max_distance', 50.0)
+    entrance_cost = config.get('entrance_cost', 50.0)
+    exit_cost = config.get('exit_cost', 50.0)
+    min_track_length = config.get('min_track_length', 3)
+
+    # Collect all detections with unique IDs
+    all_detections = []
+    detection_id = 0
+
+    for detector in detectors:
+        for i, frame in enumerate(detector.frames):
+            all_detections.append({
+                'id': detection_id,
+                'frame': frame,
+                'position': np.array([detector.columns[i], detector.rows[i]]),
+                'row': detector.rows[i],
+                'column': detector.columns[i]
+            })
+            detection_id += 1
+
+    # Sort by frame
+    all_detections.sort(key=lambda x: x['frame'])
+
+    if len(all_detections) == 0:
+        # No detections, return empty tracker
+        return Tracker(name=tracker_name, tracks=[])
+
+    # Build detection index by frame for fast lookup
+    detections_by_frame = defaultdict(list)
+    for det in all_detections:
+        detections_by_frame[det['frame']].append(det)
+
+    frames = sorted(detections_by_frame.keys())
+
+    # Build graph edges with costs
+    # Edge types: (1) detection-to-detection, (2) source-to-detection, (3) detection-to-sink
+    edges = []
+
+    # 1. Detection-to-detection edges (temporal associations)
+    for i, det_i in enumerate(all_detections):
+        for j, det_j in enumerate(all_detections):
+            if i >= j:
+                continue
+
+            frame_gap = det_j['frame'] - det_i['frame']
+
+            # Only consider forward temporal associations within max_gap
+            if frame_gap <= 0 or frame_gap > max_gap:
+                continue
+
+            # Compute spatial distance
+            distance = np.linalg.norm(det_j['position'] - det_i['position'])
+
+            # Skip if too far (likely not same object)
+            if distance > max_distance * frame_gap:
+                continue
+
+            # Link cost = NEGATIVE (benefit) for linking, plus distance/gap penalties
+            # We want linking to be beneficial, so base link value is negative
+            # This incentivizes creating longer tracks
+            link_benefit = (entrance_cost + exit_cost) * 0.8  # Benefit of linking (avoid starting new track)
+            distance_penalty = distance
+            gap_penalty = (frame_gap - 1) * 5.0
+            cost = -link_benefit + distance_penalty + gap_penalty
+
+            edges.append({
+                'from': det_i['id'],
+                'to': det_j['id'],
+                'cost': cost,
+                'type': 'link'
+            })
+
+    # 2. Source-to-detection edges (track initiation)
+    # Use entrance_cost as-is (positive)
+    # The cost should be large enough that linking is preferred over starting new tracks
+    for det in all_detections:
+        edges.append({
+            'from': 'source',
+            'to': det['id'],
+            'cost': entrance_cost,
+            'type': 'entrance'
+        })
+
+    # 3. Detection-to-sink edges (track termination)
+    # Use exit_cost as-is (positive)
+    for det in all_detections:
+        edges.append({
+            'from': det['id'],
+            'to': 'sink',
+            'cost': exit_cost,
+            'type': 'exit'
+        })
+
+    # Debug: Print graph statistics
+    print(f"Network Flow Tracker: {len(all_detections)} detections, {len(edges)} edges")
+    link_edges = [e for e in edges if e['type'] == 'link']
+    print(f"  - {len(link_edges)} detection-to-detection links")
+    if len(link_edges) > 0:
+        link_costs = [e['cost'] for e in link_edges]
+        print(f"    Link costs: min={min(link_costs):.1f}, max={max(link_costs):.1f}, avg={np.mean(link_costs):.1f}")
+        negative_links = sum(1 for c in link_costs if c < 0)
+        print(f"    {negative_links} links have negative cost (beneficial)")
+    print(f"  - {len(all_detections)} entrance edges (cost={entrance_cost}), {len(all_detections)} exit edges (cost={exit_cost})")
+    print(f"  - Cost structure: entrance+exit={entrance_cost+exit_cost}, link_benefit={(entrance_cost+exit_cost)*0.8:.1f}")
+
+    # Solve minimum-cost flow using successive shortest path
+    # Each detection can only be used once (flow capacity = 1)
+    tracks = solve_min_cost_flow(all_detections, edges)
+
+    # Debug: Show track length distribution
+    track_lengths = [len(t) for t in tracks]
+    if track_lengths:
+        print(f"  - Found {len(tracks)} tracks")
+        print(f"    Track lengths: min={min(track_lengths)}, max={max(track_lengths)}, avg={np.mean(track_lengths):.1f}")
+    else:
+        print(f"  - Found 0 tracks")
+
+    # Convert to VISTA Track objects
+    vista_tracks = []
+    for track_detections in tracks:
+        if len(track_detections) < min_track_length:
+            continue
+
+        # Sort by frame
+        track_detections.sort(key=lambda x: x['frame'])
+
+        # Extract positions and frames
+        frames_array = np.array([d['frame'] for d in track_detections], dtype=np.int_)
+        rows = np.array([d['row'] for d in track_detections])
+        columns = np.array([d['column'] for d in track_detections])
+
+        vista_track = Track(
+            name=f"Track {len(vista_tracks) + 1}",
+            frames=frames_array,
+            rows=rows,
+            columns=columns,
+            color='r',  # Red for network flow tracks
+            marker='o',  # Circle marker
+            line_width=2,
+            marker_size=10,
+            visible=True
+        )
+        vista_tracks.append(vista_track)
+
+    # Create VISTA Tracker object
+    vista_tracker = Tracker(
+        name=tracker_name,
+        tracks=vista_tracks
+    )
+
+    return vista_tracker
+
+
+def solve_min_cost_flow(detections, edges):
+    """
+    Solve minimum-cost flow problem using successive shortest path with Bellman-Ford.
+
+    Key insight: Use NEGATIVE link costs to represent the benefit of linking detections.
+    This makes longer tracks cheaper than many short tracks. For example:
+    - Single detection track: entrance + exit = 100 + 100 = 200
+    - Two detection track: entrance + (-80) + exit = 100 - 80 + 100 = 120 (cheaper!)
+    - Ten detection track: entrance + 9×(-80) + exit = 100 - 720 + 100 = -520 (much cheaper!)
+
+    Uses Bellman-Ford instead of Dijkstra because we have negative edge weights.
+    No negative cycles exist because:
+    1. Used detections are removed (no loops back)
+    2. Time flows forward only (frame_i → frame_j where j > i)
+    3. Sink has no outgoing edges
+
+    Args:
+        detections: List of detection dictionaries
+        edges: List of edge dictionaries with 'from', 'to', 'cost'
+
+    Returns:
+        List of tracks, where each track is a list of detection dictionaries
+    """
+    # Build adjacency list for efficient shortest path search
+    detection_ids = {d['id'] for d in detections}
+    used_detections = set()
+    tracks = []
+
+    # Repeatedly find shortest paths until no more valid paths exist
+    max_iterations = len(detections)  # Safety limit
+
+    for iteration in range(max_iterations):
+        # Find shortest path from source to sink
+        path = find_shortest_path(edges, used_detections, detection_ids)
+
+        if path is None:
+            print(f"  - No more paths found after {iteration} iterations")
+            break
+
+        # Extract detections from path (exclude source and sink)
+        track_detection_ids = [node for node in path if node not in ['source', 'sink']]
+
+        # Debug first few paths
+        if iteration < 5:
+            print(f"    Path {iteration}: {len(track_detection_ids)} detections")
+
+        # Skip empty paths (shouldn't happen but safety check)
+        if len(track_detection_ids) == 0:
+            print(f"    WARNING: Empty path found at iteration {iteration}")
+            continue
+
+        # Mark detections as used
+        used_detections.update(track_detection_ids)
+
+        # Build track from detection IDs
+        track_detections = [d for d in detections if d['id'] in track_detection_ids]
+        if len(track_detections) > 0:
+            tracks.append(track_detections)
+
+    return tracks
+
+
+def find_shortest_path(edges, used_detections, all_detection_ids):
+    """
+    Find shortest path from source to sink using Bellman-Ford algorithm.
+
+    Bellman-Ford handles negative edge weights (unlike Dijkstra).
+    This is necessary because link costs are negative to incentivize longer tracks.
+
+    Args:
+        edges: List of edge dictionaries
+        used_detections: Set of detection IDs already used in tracks
+        all_detection_ids: Set of all valid detection IDs
+
+    Returns:
+        List of node IDs representing path from source to sink, or None if no path exists
+    """
+    # Build edge list excluding used detections
+    valid_edges = []
+    nodes = {'source', 'sink'}
+
+    for edge in edges:
+        from_node = edge['from']
+        to_node = edge['to']
+        cost = edge['cost']
+
+        # Skip edges involving used detections (but not source/sink)
+        if from_node in used_detections or to_node in used_detections:
+            continue
+
+        valid_edges.append((from_node, to_node, cost))
+        nodes.add(from_node)
+        nodes.add(to_node)
+
+    if len(valid_edges) == 0:
+        return None
+
+    # Bellman-Ford algorithm
+    distances = {node: float('inf') for node in nodes}
+    distances['source'] = 0.0
+    previous = {}
+
+    # Relax edges V-1 times (where V = number of nodes)
+    for _ in range(len(nodes) - 1):
+        updated = False
+        for from_node, to_node, cost in valid_edges:
+            if distances[from_node] != float('inf'):
+                new_dist = distances[from_node] + cost
+                if new_dist < distances[to_node]:
+                    distances[to_node] = new_dist
+                    previous[to_node] = from_node
+                    updated = True
+
+        # Early termination if no updates
+        if not updated:
+            break
+
+    # Check if sink is reachable
+    if distances['sink'] == float('inf'):
+        return None
+
+    # Reconstruct path
+    path = []
+    node = 'sink'
+    while node in previous:
+        path.append(node)
+        node = previous[node]
+    path.append('source')
+    path.reverse()
+    return path
