@@ -11,7 +11,12 @@ def run_network_flow_tracker(detectors, config):
     This tracker formulates multi-object tracking as a minimum-cost flow problem
     on a graph where nodes are detections and edges represent possible associations.
     The algorithm finds the globally optimal set of tracks by solving for the
-    minimum-cost flow from source to sink.
+    minimum-cost flow from source to sink using Bellman-Ford successive shortest paths.
+
+    Key features:
+    - Negative link costs incentivize longer tracks over many short tracks
+    - Smoothness penalty encourages constant-velocity, straight-line paths
+    - Global optimization finds better solutions than greedy local association
 
     Args:
         detectors: List of Detector objects to use as input
@@ -19,8 +24,8 @@ def run_network_flow_tracker(detectors, config):
             - tracker_name: Name for the resulting tracker
             - max_gap: Maximum frame gap to search for associations (default: 5)
             - max_distance: Maximum spatial distance for associations (default: 50.0)
-            - entrance_cost: Cost for starting a new track (default: 10.0)
-            - exit_cost: Cost for ending a track (default: 10.0)
+            - entrance_cost: Cost for starting a new track (default: 50.0)
+            - exit_cost: Cost for ending a track (default: 50.0)
             - min_track_length: Minimum detections required for valid track (default: 3)
 
     Returns:
@@ -95,7 +100,40 @@ def run_network_flow_tracker(detectors, config):
             link_benefit = (entrance_cost + exit_cost) * 0.8  # Benefit of linking (avoid starting new track)
             distance_penalty = distance
             gap_penalty = (frame_gap - 1) * 5.0
-            cost = -link_benefit + distance_penalty + gap_penalty
+
+            # Smoothness penalty: penalize velocity changes (encourages straight paths)
+            # Compute velocity from det_i to det_j
+            velocity_ij = (det_j['position'] - det_i['position']) / frame_gap
+
+            # Look for detections before det_i to check velocity consistency
+            min_velocity_change = None
+            for k, det_k in enumerate(all_detections):
+                if det_k['frame'] >= det_i['frame']:
+                    continue  # Only look at earlier frames
+
+                frame_gap_ki = det_i['frame'] - det_k['frame']
+                if frame_gap_ki > max_gap or frame_gap_ki == 0:
+                    continue
+
+                # Check if det_k could be part of the same track as det_i
+                distance_ki = np.linalg.norm(det_i['position'] - det_k['position'])
+                if distance_ki > max_distance * frame_gap_ki:
+                    continue
+
+                # Compute velocity from det_k to det_i
+                velocity_ki = (det_i['position'] - det_k['position']) / frame_gap_ki
+
+                # Compute velocity change (acceleration)
+                velocity_change = np.linalg.norm(velocity_ij - velocity_ki)
+
+                # Track minimum velocity change (best alignment)
+                if min_velocity_change is None or velocity_change < min_velocity_change:
+                    min_velocity_change = velocity_change
+
+            # Add smoothness penalty (0 if no prior detections found)
+            smoothness_penalty = min_velocity_change if min_velocity_change is not None else 0.0
+
+            cost = -link_benefit + distance_penalty + gap_penalty + smoothness_penalty
 
             edges.append({
                 'from': det_i['id'],
@@ -136,6 +174,7 @@ def run_network_flow_tracker(detectors, config):
         print(f"    {negative_links} links have negative cost (beneficial)")
     print(f"  - {len(all_detections)} entrance edges (cost={entrance_cost}), {len(all_detections)} exit edges (cost={exit_cost})")
     print(f"  - Cost structure: entrance+exit={entrance_cost+exit_cost}, link_benefit={(entrance_cost+exit_cost)*0.8:.1f}")
+    print(f"  - Smoothness penalty enabled: links prioritize constant-velocity paths")
 
     # Solve minimum-cost flow using successive shortest path
     # Each detection can only be used once (flow capacity = 1)
