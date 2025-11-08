@@ -152,9 +152,9 @@ class VistaMainWindow(QMainWindow):
         detectors_menu.addAction(cfar_action)
 
         # Tracking menu
-        tracking_menu = menubar.addMenu("Tracking")
+        tracking_menu = image_processing_menu.addMenu("Tracking")
 
-        run_tracker_action = QAction("Run Tracker...", self)
+        run_tracker_action = QAction("Kalman Tracker", self)
         run_tracker_action.triggered.connect(self.open_tracking_dialog)
         tracking_menu.addAction(run_tracker_action)
 
