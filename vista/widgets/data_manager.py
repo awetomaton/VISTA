@@ -259,7 +259,8 @@ class DataManagerPanel(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Length (numeric)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        #header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        self.tracks_table.setColumnWidth(5, 80)  # Set reasonably large width to accomodate delegate 
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
         header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
@@ -328,7 +329,8 @@ class DataManagerPanel(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        #header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        self.tracks_table.setColumnWidth(3, 80)  # Set reasonably large width to accomodate delegate 
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Size (numeric)
 
         self.detections_table.cellChanged.connect(self.on_detection_cell_changed)
