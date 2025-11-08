@@ -424,28 +424,43 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_tracks_dir", str(Path(file_path).parent))
 
-            # Check if tracks have times but no frames - need imagery selection
+            # Check if tracks need imagery for conversion (times or geodetic coordinates)
             selected_imagery = None
             try:
                 # Quick peek at CSV to check columns
                 df_peek = pd.read_csv(file_path, nrows=1)
                 has_times = "Times" in df_peek.columns
                 has_frames = "Frames" in df_peek.columns
+                has_rows_cols = "Rows" in df_peek.columns and "Columns" in df_peek.columns
+                has_geodetic = "Latitude" in df_peek.columns and "Longitude" in df_peek.columns and "Altitude" in df_peek.columns
 
-                if has_times and not has_frames:
-                    # Need imagery for time-to-frame mapping
+                needs_time_mapping = has_times and not has_frames
+                needs_geodetic_mapping = has_geodetic and not has_rows_cols
+
+                if needs_time_mapping or needs_geodetic_mapping:
+                    # Need imagery for time-to-frame and/or geodetic-to-pixel mapping
                     if len(self.viewer.imageries) == 0:
+                        # Build error message based on what's needed
+                        reasons = []
+                        if needs_time_mapping:
+                            reasons.append("times but no frame numbers")
+                        if needs_geodetic_mapping:
+                            reasons.append("geodetic coordinates (Lat/Lon/Alt) but no pixel coordinates (Row/Column)")
+
+                        reason_text = " and ".join(reasons)
                         QMessageBox.critical(
                             self,
                             "No Imagery Loaded",
-                            "This track file contains times but no frame numbers.\n\n"
-                            "Please load imagery with time data before loading these tracks.",
+                            f"This track file contains {reason_text}.\n\n"
+                            "Please load imagery before loading these tracks.",
                             QMessageBox.StandardButton.Ok
                         )
                         return
 
                     # Show imagery selection dialog
-                    dialog = ImagerySelectionDialog(self.viewer.imageries, self)
+                    dialog = ImagerySelectionDialog(self.viewer.imageries, self,
+                                                   needs_time_mapping=needs_time_mapping,
+                                                   needs_geodetic_mapping=needs_geodetic_mapping)
                     if dialog.exec() == QDialog.DialogCode.Accepted:
                         selected_imagery = dialog.get_selected_imagery()
                         if selected_imagery is None:

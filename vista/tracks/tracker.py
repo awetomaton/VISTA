@@ -18,12 +18,13 @@ class Tracker:
         return f"{self.__class__.__name__}({self.name}, {len(self.tracks)} Tracks)"
     
     @classmethod
-    def from_dataframe(cls, name: str, df: pd.DataFrame):
+    def from_dataframe(cls, name: str, df: pd.DataFrame, imagery=None):
         tracks = []
         for track_name, track_df in df.groupby(["Track Name"]):
             tracks.append(Track.from_dataframe(
                 name = track_name,
-                df = track_df
+                df = track_df,
+                imagery = imagery
             ))
         return cls(name=name, tracks=tracks)
     

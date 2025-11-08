@@ -48,13 +48,13 @@ class Track:
         Args:
             df: DataFrame with track data
             name: Track name (if None, taken from df["Track"])
-            imagery: Optional Imagery object for time-to-frame mapping
+            imagery: Optional Imagery object for time-to-frame and/or geodetic-to-pixel mapping
 
         Returns:
             Track object
 
         Raises:
-            ValueError: If neither Frames nor Times are present, or if Times present but no imagery provided
+            ValueError: If required columns are missing or imagery is required but not provided
         """
         if name is None:
             name = df["Track"][0]
@@ -95,11 +95,38 @@ class Track:
         else:
             raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
 
+        # Determine rows/columns - priority: Rows/Columns > geodetic-to-pixel mapping
+        if "Rows" in df.columns and "Columns" in df.columns:
+            # Row/Column take precedence
+            rows = df["Rows"].to_numpy()
+            columns = df["Columns"].to_numpy()
+        elif "Latitude" in df.columns and "Longitude" in df.columns and "Altitude" in df.columns:
+            # Need geodetic-to-pixel conversion
+            if imagery is None:
+                raise ValueError(
+                    f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no row/column. "
+                    "Imagery required for geodetic-to-pixel mapping."
+                )
+            # Map geodetic to pixel using imagery
+            from vista.utils.geodetic_mapping import map_geodetic_to_pixel
+            rows, columns = map_geodetic_to_pixel(
+                df["Latitude"].to_numpy(),
+                df["Longitude"].to_numpy(),
+                df["Altitude"].to_numpy(),
+                frames,
+                imagery
+            )
+        else:
+            raise ValueError(
+                f"Track '{name}' must have either 'Rows' and 'Columns' columns, "
+                "or 'Latitude', 'Longitude', and 'Altitude' columns"
+            )
+
         return cls(
             name = name,
             frames = frames,
-            rows = df["Rows"].to_numpy(),
-            columns = df["Columns"].to_numpy(),
+            rows = rows,
+            columns = columns,
             **kwargs
         )
     
