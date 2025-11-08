@@ -19,6 +19,7 @@ class Track:
     marker_size: int = 12
     visible: bool = True
     tail_length: int = 0  # 0 means show all history, >0 means show only last N frames
+    complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
 
     def __post_init__(self):
         if len(self.rows) < 2:
@@ -51,6 +52,8 @@ class Track:
             kwargs["line_width"] = df["Line Width"].iloc[0]
         if "Marker Size" in df.columns:
             kwargs["marker_size"] = df["Marker Size"].iloc[0]
+        if "Complete" in df.columns:
+            kwargs["complete"] = df["Complete"].iloc[0]
         return cls(
             name = name,
             frames = df["Frames"].to_numpy(),
@@ -69,5 +72,6 @@ class Track:
             "Marker": self.marker,
             "Line Width": self.line_width,
             "Marker Size": self.marker_size,
+            "Complete": self.complete,
         })
     

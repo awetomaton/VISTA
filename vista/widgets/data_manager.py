@@ -240,9 +240,9 @@ class DataManagerPanel(QWidget):
 
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
-        self.tracks_table.setColumnCount(9)  # Added Tracker and Length columns
+        self.tracks_table.setColumnCount(10)  # Added Tracker, Length, and Complete columns
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length"
+            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete"
         ])
 
         # Enable row selection via vertical header
@@ -263,6 +263,7 @@ class DataManagerPanel(QWidget):
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
         header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
+        header.setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
 
         self.tracks_table.cellChanged.connect(self.on_track_cell_changed)
 
@@ -448,6 +449,12 @@ class DataManagerPanel(QWidget):
             tail_item = QTableWidgetItem(str(track.tail_length))
             self.tracks_table.setItem(row, 8, tail_item)
 
+            # Complete checkbox
+            complete_item = QTableWidgetItem()
+            complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            complete_item.setCheckState(Qt.CheckState.Checked if track.complete else Qt.CheckState.Unchecked)
+            self.tracks_table.setItem(row, 9, complete_item)
+
         self.tracks_table.blockSignals(False)
 
     def _update_track_header_icons(self):
@@ -495,6 +502,8 @@ class DataManagerPanel(QWidget):
                     value = track.name
                 elif col_idx == 3:
                     value = track.length
+                elif col_idx == 9:
+                    value = "True" if track.complete else "False"
                 else:
                     continue
 
@@ -553,6 +562,8 @@ class DataManagerPanel(QWidget):
                 return track.name
             elif column == 3:
                 return track.length
+            elif column == 9:
+                return track.complete
             return ""
 
         reverse = (order == Qt.SortOrder.DescendingOrder)
@@ -563,8 +574,8 @@ class DataManagerPanel(QWidget):
         header = self.tracks_table.horizontalHeader()
         column = header.logicalIndexAt(pos)
 
-        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3)
-        if column not in [0, 1, 2, 3]:
+        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3), Complete (9)
+        if column not in [0, 1, 2, 3, 9]:
             return
 
         menu = QMenu(self)
@@ -608,7 +619,7 @@ class DataManagerPanel(QWidget):
         # Column 3 (Length) uses numeric filter
         elif column == 3:
             self._show_numeric_filter_dialog(column, column_name)
-        # Columns 0 (Visible) and 1 (Tracker) use set filter
+        # Columns 0 (Visible), 1 (Tracker), and 9 (Complete) use set filter
         else:
             self._show_set_filter_dialog(column, column_name)
 
@@ -764,6 +775,8 @@ class DataManagerPanel(QWidget):
                     unique_values.add("True" if track.visible else "False")
                 elif column == 1:
                     unique_values.add(tracker.name)
+                elif column == 9:
+                    unique_values.add("True" if track.complete else "False")
 
         # Create dialog with checkboxes for each unique value
         dialog = QDialog(self)
@@ -1009,6 +1022,9 @@ class DataManagerPanel(QWidget):
                 track.tail_length = int(item.text())
             except ValueError:
                 pass
+        elif column == 9:  # Complete
+            item = self.tracks_table.item(row, column)
+            track.complete = item.checkState() == Qt.CheckState.Checked
 
         self.data_changed.emit()
 

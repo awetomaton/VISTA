@@ -287,27 +287,19 @@ class ImageryViewer(QWidget):
                     marker.setData(x=[], y=[])
                     continue
 
-                # Show track history up to current frame
-                mask = track.frames <= frame_num
-                if np.any(mask):
-                    rows = track.rows[mask]
-                    cols = track.columns[mask]
-                    frames = track.frames[mask]
+                # If track is marked as complete, show entire track regardless of current frame
+                if track.complete:
+                    rows = track.rows
+                    cols = track.columns
+                    frames = track.frames
 
-                    # Apply tail length if specified
-                    if track.tail_length > 0 and len(rows) > track.tail_length:
-                        # Only show the last N points
-                        rows = rows[-track.tail_length:]
-                        cols = cols[-track.tail_length:]
-                        frames = frames[-track.tail_length:]
-
-                    # Update track path
+                    # Update track path with entire track
                     path.setData(
                         x=cols, y=rows,
                         pen=pg.mkPen(color=track.color, width=track.line_width)
                     )
 
-                    # Update current position marker
+                    # Update current position marker (show marker at current frame if it exists)
                     if frame_num in track.frames:
                         idx = np.where(frames == frame_num)[0][0]
                         marker.setData(
@@ -320,9 +312,42 @@ class ImageryViewer(QWidget):
                     else:
                         marker.setData(x=[], y=[])  # No current position
                 else:
-                    # Track hasn't started yet
-                    path.setData(x=[], y=[])
-                    marker.setData(x=[], y=[])
+                    # Show track history up to current frame
+                    mask = track.frames <= frame_num
+                    if np.any(mask):
+                        rows = track.rows[mask]
+                        cols = track.columns[mask]
+                        frames = track.frames[mask]
+
+                        # Apply tail length if specified
+                        if track.tail_length > 0 and len(rows) > track.tail_length:
+                            # Only show the last N points
+                            rows = rows[-track.tail_length:]
+                            cols = cols[-track.tail_length:]
+                            frames = frames[-track.tail_length:]
+
+                        # Update track path
+                        path.setData(
+                            x=cols, y=rows,
+                            pen=pg.mkPen(color=track.color, width=track.line_width)
+                        )
+
+                        # Update current position marker
+                        if frame_num in track.frames:
+                            idx = np.where(frames == frame_num)[0][0]
+                            marker.setData(
+                                x=[cols[idx]], y=[rows[idx]],
+                                pen=pg.mkPen(color=track.color, width=2),
+                                brush=pg.mkBrush(color=track.color),
+                                size=track.marker_size,
+                                symbol=track.marker
+                            )
+                        else:
+                            marker.setData(x=[], y=[])  # No current position
+                    else:
+                        # Track hasn't started yet
+                        path.setData(x=[], y=[])
+                        marker.setData(x=[], y=[])
 
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
