@@ -20,6 +20,7 @@ from .coaddition_widget import CoadditionWidget
 from .simple_tracking_dialog import SimpleTrackingDialog
 from .kalman_tracking_dialog import KalmanTrackingDialog
 from .network_flow_tracking_dialog import NetworkFlowTrackingDialog
+from .robust_pca_dialog import RobustPCADialog
 
 
 class VistaMainWindow(QMainWindow):
@@ -134,6 +135,10 @@ class VistaMainWindow(QMainWindow):
         temporal_median_action = QAction("Temporal Median", self)
         temporal_median_action.triggered.connect(self.open_temporal_median_widget)
         background_removal_menu.addAction(temporal_median_action)
+
+        robust_pca_action = QAction("Robust PCA", self)
+        robust_pca_action.triggered.connect(self.open_robust_pca_dialog)
+        background_removal_menu.addAction(robust_pca_action)
 
         # Enhancement submenu
         enhancement_menu = image_processing_menu.addMenu("Enhancement")
@@ -572,6 +577,24 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Added processed imagery: {processed_imagery.name}", 3000)
+
+    def open_robust_pca_dialog(self):
+        """Open the Robust PCA background removal dialog"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running Robust PCA.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create and show the dialog
+        dialog = RobustPCADialog(self.viewer, self)
+        if dialog.exec():
+            # Refresh the data manager to show the new imagery
+            self.data_manager.refresh()
 
     def open_coaddition_widget(self):
         """Open the Coaddition enhancement configuration widget"""

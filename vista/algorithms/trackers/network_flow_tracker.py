@@ -1,6 +1,5 @@
 """Network flow optimization tracker for VISTA"""
 import numpy as np
-from scipy.optimize import linear_sum_assignment
 from collections import defaultdict
 
 
@@ -163,30 +162,9 @@ def run_network_flow_tracker(detectors, config):
             'type': 'exit'
         })
 
-    # Debug: Print graph statistics
-    print(f"Network Flow Tracker: {len(all_detections)} detections, {len(edges)} edges")
-    link_edges = [e for e in edges if e['type'] == 'link']
-    print(f"  - {len(link_edges)} detection-to-detection links")
-    if len(link_edges) > 0:
-        link_costs = [e['cost'] for e in link_edges]
-        print(f"    Link costs: min={min(link_costs):.1f}, max={max(link_costs):.1f}, avg={np.mean(link_costs):.1f}")
-        negative_links = sum(1 for c in link_costs if c < 0)
-        print(f"    {negative_links} links have negative cost (beneficial)")
-    print(f"  - {len(all_detections)} entrance edges (cost={entrance_cost}), {len(all_detections)} exit edges (cost={exit_cost})")
-    print(f"  - Cost structure: entrance+exit={entrance_cost+exit_cost}, link_benefit={(entrance_cost+exit_cost)*0.8:.1f}")
-    print(f"  - Smoothness penalty enabled: links prioritize constant-velocity paths")
-
     # Solve minimum-cost flow using successive shortest path
     # Each detection can only be used once (flow capacity = 1)
     tracks = solve_min_cost_flow(all_detections, edges)
-
-    # Debug: Show track length distribution
-    track_lengths = [len(t) for t in tracks]
-    if track_lengths:
-        print(f"  - Found {len(tracks)} tracks")
-        print(f"    Track lengths: min={min(track_lengths)}, max={max(track_lengths)}, avg={np.mean(track_lengths):.1f}")
-    else:
-        print(f"  - Found 0 tracks")
 
     # Convert to VISTA Track objects
     vista_tracks = []
@@ -247,32 +225,22 @@ def solve_min_cost_flow(detections, edges):
     Returns:
         List of tracks, where each track is a list of detection dictionaries
     """
-    # Build adjacency list for efficient shortest path search
-    detection_ids = {d['id'] for d in detections}
     used_detections = set()
     tracks = []
 
     # Repeatedly find shortest paths until no more valid paths exist
-    max_iterations = len(detections)  # Safety limit
-
-    for iteration in range(max_iterations):
+    while True:
         # Find shortest path from source to sink
-        path = find_shortest_path(edges, used_detections, detection_ids)
+        path = find_shortest_path(edges, used_detections)
 
         if path is None:
-            print(f"  - No more paths found after {iteration} iterations")
             break
 
         # Extract detections from path (exclude source and sink)
         track_detection_ids = [node for node in path if node not in ['source', 'sink']]
 
-        # Debug first few paths
-        if iteration < 5:
-            print(f"    Path {iteration}: {len(track_detection_ids)} detections")
-
         # Skip empty paths (shouldn't happen but safety check)
         if len(track_detection_ids) == 0:
-            print(f"    WARNING: Empty path found at iteration {iteration}")
             continue
 
         # Mark detections as used
@@ -286,7 +254,7 @@ def solve_min_cost_flow(detections, edges):
     return tracks
 
 
-def find_shortest_path(edges, used_detections, all_detection_ids):
+def find_shortest_path(edges, used_detections):
     """
     Find shortest path from source to sink using Bellman-Ford algorithm.
 
@@ -296,7 +264,6 @@ def find_shortest_path(edges, used_detections, all_detection_ids):
     Args:
         edges: List of edge dictionaries
         used_detections: Set of detection IDs already used in tracks
-        all_detection_ids: Set of all valid detection IDs
 
     Returns:
         List of node IDs representing path from source to sink, or None if no path exists
