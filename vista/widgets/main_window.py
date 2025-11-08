@@ -17,7 +17,8 @@ from .temporal_median_widget import TemporalMedianWidget
 from .simple_threshold_widget import SimpleThresholdWidget
 from .cfar_widget import CFARWidget
 from .coaddition_widget import CoadditionWidget
-from .tracking_dialog import TrackingDialog
+from .simple_tracking_dialog import SimpleTrackingDialog
+from .kalman_tracking_dialog import KalmanTrackingDialog
 
 
 class VistaMainWindow(QMainWindow):
@@ -154,9 +155,13 @@ class VistaMainWindow(QMainWindow):
         # Tracking menu
         tracking_menu = image_processing_menu.addMenu("Tracking")
 
-        run_tracker_action = QAction("Kalman Tracker", self)
-        run_tracker_action.triggered.connect(self.open_tracking_dialog)
-        tracking_menu.addAction(run_tracker_action)
+        simple_tracker_action = QAction("Simple Tracker", self)
+        simple_tracker_action.triggered.connect(self.open_simple_tracking_dialog)
+        tracking_menu.addAction(simple_tracker_action)
+
+        kalman_tracker_action = QAction("Kalman Filter Tracker", self)
+        kalman_tracker_action.triggered.connect(self.open_kalman_tracking_dialog)
+        tracking_menu.addAction(kalman_tracker_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -706,8 +711,8 @@ class VistaMainWindow(QMainWindow):
 
         self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
 
-    def open_tracking_dialog(self):
-        """Open the tracking configuration dialog"""
+    def open_simple_tracking_dialog(self):
+        """Open the Simple tracker configuration dialog"""
         # Check if detectors are loaded
         if not self.viewer.detectors:
             QMessageBox.warning(
@@ -719,7 +724,26 @@ class VistaMainWindow(QMainWindow):
             return
 
         # Create and show the dialog
-        dialog = TrackingDialog(self.viewer, self)
+        dialog = SimpleTrackingDialog(self.viewer, self)
+        if dialog.exec():
+            # Refresh the data manager to show the new tracks
+            self.data_manager.refresh_tracks_table()
+            self.viewer.update_overlays()
+
+    def open_kalman_tracking_dialog(self):
+        """Open the Kalman Filter tracker configuration dialog"""
+        # Check if detectors are loaded
+        if not self.viewer.detectors:
+            QMessageBox.warning(
+                self,
+                "No Detections",
+                "Please load or generate detections before running the tracker.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create and show the dialog
+        dialog = KalmanTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
             self.data_manager.refresh_tracks_table()
