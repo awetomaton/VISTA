@@ -42,7 +42,7 @@ class Track:
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, name: str = None):
         if name is None:
-            name = df["Detector"][0]
+            name = df["Track"][0]
         kwargs = {}
         if "Color" in df.columns:
             kwargs["color"] = df["Color"].iloc[0]

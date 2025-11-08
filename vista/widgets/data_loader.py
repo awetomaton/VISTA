@@ -155,22 +155,12 @@ class DataLoaderThread(QThread):
             for idx, (detector_name, group_df) in enumerate(detector_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                detector = Detector(
-                    name=detector_name,
-                    frames=group_df['Frames'].to_numpy(),
-                    rows=group_df['Rows'].to_numpy(),
-                    columns=group_df['Columns'].to_numpy()
-                )
+                detector = Detector.from_dataframe(group_df, name=detector_name)
                 detectors.append(detector)
                 self.progress_updated.emit("Loading detections...", idx + 1, len(detector_groups))
         else:
             # Single detector
-            detector = Detector(
-                name=Path(self.file_path).stem,
-                frames=df['Frames'].to_numpy(),
-                rows=df['Rows'].to_numpy(),
-                columns=df['Columns'].to_numpy()
-            )
+            detector = Detector.from_dataframe(df, name=Path(self.file_path).stem)
             detectors.append(detector)
 
         if self._cancelled:
@@ -230,12 +220,7 @@ class DataLoaderThread(QThread):
                 for track_name, track_df in tracker_df.groupby('Track'):
                     if self._cancelled:
                         return  # Exit early if cancelled
-                    track = Track(
-                        name=track_name,
-                        frames=track_df['Frames'].to_numpy(),
-                        rows=track_df['Rows'].to_numpy(),
-                        columns=track_df['Columns'].to_numpy()
-                    )
+                    track = Track.from_dataframe(track_df, name=track_name)
                     tracks.append(track)
                 tracker = Tracker(name=tracker_name, tracks=tracks)
                 trackers.append(tracker)
@@ -249,12 +234,7 @@ class DataLoaderThread(QThread):
             for idx, (track_name, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                track = Track(
-                    name=track_name,
-                    frames=track_df['Frames'].to_numpy(),
-                    rows=track_df['Rows'].to_numpy(),
-                    columns=track_df['Columns'].to_numpy()
-                )
+                track = Track.from_dataframe(track_df, name=track_name)
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
 
@@ -262,12 +242,7 @@ class DataLoaderThread(QThread):
             trackers.append(tracker)
         else:
             # Single track, single tracker
-            track = Track(
-                name="Track 1",
-                frames=df['Frames'].to_numpy(),
-                rows=df['Rows'].to_numpy(),
-                columns=df['Columns'].to_numpy()
-            )
+            track = Track.from_dataframe(df, name="Track 1")
             tracker = Tracker(name=Path(self.file_path).stem, tracks=[track])
             trackers.append(tracker)
 
