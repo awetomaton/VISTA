@@ -87,7 +87,6 @@ class KalmanTrack:
     def mark_missed(self, frame):
         """Mark that no detection was associated this frame"""
         self.misses += 1
-        self.age += 1
 
         # Add predicted position to history
         pred_pos = np.array([self.state[0, 0], self.state[2, 0]])
@@ -163,6 +162,7 @@ def run_kalman_tracker(detectors, config):
 
     # Track management
     active_tracks = []  # List of KalmanTrack objects
+    finished_tracks = []  # Tracks that were deleted but may still be valid
     next_track_id = 1
     tentative_tracks = []  # Tracks waiting for confirmation
 
@@ -170,7 +170,7 @@ def run_kalman_tracker(detectors, config):
     for frame in frames:
         detections = detections_by_frame[frame]
 
-        # Predict all active tracks
+        # Predict all active tracks and increment age
         for track in active_tracks + tentative_tracks:
             track.predict()
             track.age += 1
@@ -247,6 +247,9 @@ def run_kalman_tracker(detectors, config):
 
         for track in tracks_to_delete:
             active_tracks.remove(track)
+            # Save deleted tracks that have enough detections
+            if track.hits >= min_detections:
+                finished_tracks.append(track)
 
         # Delete tentative tracks that haven't been confirmed quickly enough
         tentative_to_delete = []
@@ -257,9 +260,11 @@ def run_kalman_tracker(detectors, config):
         for track in tentative_to_delete:
             tentative_tracks.remove(track)
 
-    # Convert active tracks to VISTA Track objects
+    # Convert tracks to VISTA Track objects (include both active and finished)
+    all_valid_tracks = active_tracks + finished_tracks
+
     vista_tracks = []
-    for track in active_tracks:
+    for track in all_valid_tracks:
         if len(track.frames) < 2:
             continue
 
