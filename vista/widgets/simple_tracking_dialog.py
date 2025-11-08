@@ -66,6 +66,21 @@ class SimpleTrackingDialog(QDialog):
         """Setup the dialog UI"""
         layout = QVBoxLayout()
 
+        # Description
+        desc_label = QLabel(
+            "<b>Simple Tracker</b><br><br>"
+            "<b>How it works:</b> Uses nearest-neighbor data association with adaptive velocity prediction. "
+            "For each new detection, finds the closest existing track within a search radius, "
+            "accounting for predicted motion. Automatically tunes search radius and track lifespan "
+            "based on detection statistics.<br><br>"
+            "<b>Best for:</b> Fast-moving objects with relatively smooth motion. Good for real-time tracking "
+            "and scenarios where computational efficiency is important.<br><br>"
+            "<b>Advantages:</b> Fast, automatic parameter tuning, handles moderate occlusions.<br>"
+            "<b>Limitations:</b> Greedy nearest-neighbor can fail with dense detections or crossing paths."
+        )
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+
         # Tracker name
         name_layout = QHBoxLayout()
         name_layout.addWidget(QLabel("Tracker Name:"))

@@ -259,9 +259,16 @@ class CFARWidget(QDialog):
 
         # Information label
         info_label = QLabel(
-            "Configure the CFAR (Constant False Alarm Rate) detector parameters.\n\n"
-            "The detector finds bright blobs by comparing each pixel to the local\n"
-            "standard deviation in an annular neighborhood around it."
+            "<b>CFAR (Constant False Alarm Rate) Detector</b><br><br>"
+            "<b>How it works:</b> For each pixel, computes the local mean and standard deviation "
+            "in an annular neighborhood (ring shape). Detects pixels that exceed the local background "
+            "by a specified number of standard deviations. Connected pixels above threshold are grouped "
+            "into detections and filtered by area.<br><br>"
+            "<b>Best for:</b> Point sources and small objects in varying background (stars, satellites, aircraft). "
+            "Adapts to local background variations automatically.<br><br>"
+            "<b>Advantages:</b> Locally adaptive, maintains constant false alarm rate across image, "
+            "handles non-uniform backgrounds.<br>"
+            "<b>Limitations:</b> Computationally expensive, requires parameter tuning, can miss extended objects."
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)

@@ -68,9 +68,16 @@ class RobustPCADialog(QDialog):
 
         # Description
         desc_label = QLabel(
-            "Robust PCA decomposes imagery into low-rank (background) and "
-            "sparse (foreground) components using Principal Component Pursuit.\\n\\n"
-            "Best for: Fixed camera, static background, sparse moving objects."
+            "<b>Robust Principal Component Analysis (RPCA)</b><br><br>"
+            "Decomposes imagery into two components:<br>"
+            "• <b>Low-rank (background):</b> Static, unchanging scene elements<br>"
+            "• <b>Sparse (foreground):</b> Moving objects and transient events<br><br>"
+            "<b>How it works:</b> Solves an optimization problem using Principal Component Pursuit "
+            "to find the best separation between persistent background structure and sparse anomalies.<br><br>"
+            "<b>Best for:</b> Fixed camera imagery with static backgrounds and sparse moving objects "
+            "(satellites, aircraft, meteors). Excellent for astronomical imaging.<br><br>"
+            "<b>Advantages:</b> Globally optimal solution, no manual threshold tuning, robust to outliers.<br>"
+            "<b>Limitations:</b> Computationally intensive, assumes background is low-rank and objects are sparse."
         )
         desc_label.setWordWrap(True)
         layout.addWidget(desc_label)

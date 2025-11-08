@@ -66,6 +66,22 @@ class KalmanTrackingDialog(QDialog):
         """Setup the dialog UI"""
         layout = QVBoxLayout()
 
+        # Description
+        desc_label = QLabel(
+            "<b>Kalman Filter Tracker</b><br><br>"
+            "<b>How it works:</b> Uses a constant-velocity Kalman filter to predict object motion and "
+            "the Hungarian algorithm for optimal detection-to-track assignment. Each track maintains "
+            "a state estimate (position and velocity) with uncertainty covariance. Tracks are initiated "
+            "tentatively and confirmed after multiple consistent detections.<br><br>"
+            "<b>Best for:</b> Objects with smooth, predictable motion. Handles measurement noise well. "
+            "Good for tracking satellites, aircraft, or other objects with relatively constant velocity.<br><br>"
+            "<b>Advantages:</b> Optimal data association, uncertainty quantification, handles noise well.<br>"
+            "<b>Limitations:</b> Assumes constant velocity, requires manual parameter tuning, "
+            "computational cost increases with track/detection count."
+        )
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+
         # Tracker name
         name_layout = QHBoxLayout()
         name_layout.addWidget(QLabel("Tracker Name:"))

@@ -66,6 +66,23 @@ class NetworkFlowTrackingDialog(QDialog):
         """Setup the dialog UI"""
         layout = QVBoxLayout()
 
+        # Description
+        desc_label = QLabel(
+            "<b>Network Flow Tracker</b><br><br>"
+            "<b>How it works:</b> Formulates tracking as a minimum-cost flow problem on a graph where "
+            "nodes are detections and edges represent possible associations. Uses Bellman-Ford algorithm "
+            "to find globally optimal tracks by minimizing total cost. Link costs are negative (beneficial) "
+            "to encourage longer tracks, with penalties for distance, frame gaps, and velocity changes "
+            "(smoothness penalty).<br><br>"
+            "<b>Best for:</b> Complex scenarios with dense detections, crossing paths, or occlusions. "
+            "Excellent for astronomical tracking where objects follow smooth, predictable trajectories.<br><br>"
+            "<b>Advantages:</b> Global optimization finds better solutions than greedy methods, "
+            "smoothness penalty encourages physically plausible tracks, handles complex scenarios well.<br>"
+            "<b>Limitations:</b> Computationally expensive for large datasets, assumes objects move smoothly."
+        )
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+
         # Tracker name
         name_layout = QHBoxLayout()
         name_layout.addWidget(QLabel("Tracker Name:"))

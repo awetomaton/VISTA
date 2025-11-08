@@ -175,9 +175,15 @@ class SimpleThresholdWidget(QDialog):
 
         # Information label
         info_label = QLabel(
-            "Configure the Simple Threshold detector parameters.\n\n"
-            "The detector finds bright blobs by thresholding the image\n"
-            "and identifying connected regions within the size limits."
+            "<b>Simple Threshold Detector</b><br><br>"
+            "<b>How it works:</b> Applies a global threshold to the imagery - pixels above the threshold "
+            "are marked as foreground. Connected foreground pixels are grouped into blobs and filtered "
+            "by area (min/max size). The centroid of each blob becomes a detection.<br><br>"
+            "<b>Best for:</b> High contrast objects in uniform backgrounds. Works well after background "
+            "removal when objects are significantly brighter than the residual background.<br><br>"
+            "<b>Advantages:</b> Extremely fast, simple to understand, no parameters to tune beyond threshold.<br>"
+            "<b>Limitations:</b> Global threshold doesn't adapt to varying backgrounds, sensitive to noise, "
+            "requires good background removal first."
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
