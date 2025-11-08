@@ -42,6 +42,8 @@ class Detector:
             kwargs["marker"] = df["Marker"].iloc[0]
         if "Marker Size" in df.columns:
             kwargs["marker_size"] = df["Marker Size"].iloc[0]
+        if "Visible" in df.columns:
+            kwargs["visible"] = df["Visible"].iloc[0]
         return cls(
             name = name,
             frames = df["Frames"].to_numpy(),
@@ -62,4 +64,5 @@ class Detector:
             "Color": self.color,
             "Marker": self.marker,
             "Marker Size": self.marker_size,
+            "Visible": self.visible,
         })

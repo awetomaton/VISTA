@@ -2,10 +2,12 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QComboBox, QColorDialog,
-    QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox, QCheckBox, QMenu
+    QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox, QCheckBox, QMenu,
+    QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QBrush, QAction
+import pathlib
 
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 
@@ -123,6 +125,9 @@ class DataManagerPanel(QWidget):
 
         # Button layout
         button_layout = QHBoxLayout()
+        self.export_imagery_btn = QPushButton("Export Selected")
+        self.export_imagery_btn.clicked.connect(self.export_selected_imagery)
+        button_layout.addWidget(self.export_imagery_btn)
         self.delete_imagery_btn = QPushButton("Delete Selected")
         self.delete_imagery_btn.clicked.connect(self.delete_selected_imagery)
         button_layout.addWidget(self.delete_imagery_btn)
@@ -223,6 +228,11 @@ class DataManagerPanel(QWidget):
         self.clear_filters_btn.clicked.connect(self.clear_track_filters)
         bulk_layout.addWidget(self.clear_filters_btn)
 
+        # Add export tracks button
+        self.export_tracks_btn = QPushButton("Export Tracks")
+        self.export_tracks_btn.clicked.connect(self.export_tracks)
+        bulk_layout.addWidget(self.export_tracks_btn)
+
         # Add delete selected button
         self.delete_selected_tracks_btn = QPushButton("Delete Selected")
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
@@ -305,10 +315,13 @@ class DataManagerPanel(QWidget):
         self.show_all_detections_btn.clicked.connect(self.show_all_detections)
         self.hide_all_detections_btn = QPushButton("Hide All")
         self.hide_all_detections_btn.clicked.connect(self.hide_all_detections)
+        self.export_detections_btn = QPushButton("Export Detections")
+        self.export_detections_btn.clicked.connect(self.export_detections)
         self.delete_selected_detections_btn = QPushButton("Delete Selected")
         self.delete_selected_detections_btn.clicked.connect(self.delete_selected_detections)
         button_layout.addWidget(self.show_all_detections_btn)
         button_layout.addWidget(self.hide_all_detections_btn)
+        button_layout.addWidget(self.export_detections_btn)
         button_layout.addWidget(self.delete_selected_detections_btn)
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -1561,5 +1574,133 @@ class DataManagerPanel(QWidget):
                     main_window = self.parent().parent()
                     if hasattr(main_window, 'statusBar'):
                         main_window.statusBar().showMessage("Track editing cancelled", 3000)
+
+    def export_selected_imagery(self):
+        """Export the selected imagery to HDF5 file"""
+        # Get selected imagery
+        selected_rows = self.imagery_table.selectedIndexes()
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select an imagery to export.")
+            return
+
+        row = selected_rows[0].row()
+        name_item = self.imagery_table.item(row, 0)
+        imagery_id = name_item.data(Qt.ItemDataRole.UserRole)
+
+        # Find the imagery object
+        imagery = None
+        for img in self.viewer.imageries:
+            if id(img) == imagery_id:
+                imagery = img
+                break
+
+        if imagery is None:
+            QMessageBox.warning(self, "Error", "Could not find selected imagery.")
+            return
+
+        # Open file dialog
+        default_filename = f"{imagery.name}.h5"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Imagery",
+            default_filename,
+            "HDF5 Files (*.h5 *.hdf5);;All Files (*)"
+        )
+
+        if file_path:
+            try:
+                imagery.to_hdf5(file_path)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Imagery exported successfully to:\n{file_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Export Error",
+                    f"Failed to export imagery:\n{str(e)}"
+                )
+
+    def export_tracks(self):
+        """Export all tracks to CSV file"""
+        if not self.viewer.trackers or all(len(t.tracks) == 0 for t in self.viewer.trackers):
+            QMessageBox.warning(self, "No Tracks", "There are no tracks to export.")
+            return
+
+        # Open file dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Tracks",
+            "tracks.csv",
+            "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if file_path:
+            try:
+                # Combine all trackers' data
+                import pandas as pd
+                all_tracks_df = pd.DataFrame()
+
+                for tracker in self.viewer.trackers:
+                    if len(tracker.tracks) > 0:
+                        tracker_df = tracker.to_dataframe()
+                        all_tracks_df = pd.concat([all_tracks_df, tracker_df], ignore_index=True)
+
+                # Save to CSV
+                all_tracks_df.to_csv(file_path, index=False)
+
+                num_tracks = sum(len(t.tracks) for t in self.viewer.trackers)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Exported {num_tracks} track(s) to:\n{file_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Export Error",
+                    f"Failed to export tracks:\n{str(e)}"
+                )
+
+    def export_detections(self):
+        """Export all detections to CSV file"""
+        if not self.viewer.detectors:
+            QMessageBox.warning(self, "No Detections", "There are no detections to export.")
+            return
+
+        # Open file dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Detections",
+            "detections.csv",
+            "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if file_path:
+            try:
+                # Combine all detectors' data
+                import pandas as pd
+                all_detections_df = pd.DataFrame()
+
+                for detector in self.viewer.detectors:
+                    detector_df = detector.to_dataframe()
+                    all_detections_df = pd.concat([all_detections_df, detector_df], ignore_index=True)
+
+                # Save to CSV
+                all_detections_df.to_csv(file_path, index=False)
+
+                num_detections = sum(len(d.frames) for d in self.viewer.detectors)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Exported {num_detections} detection(s) to:\n{file_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Export Error",
+                    f"Failed to export detections:\n{str(e)}"
+                )
 
 

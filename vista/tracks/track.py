@@ -52,6 +52,10 @@ class Track:
             kwargs["line_width"] = df["Line Width"].iloc[0]
         if "Marker Size" in df.columns:
             kwargs["marker_size"] = df["Marker Size"].iloc[0]
+        if "Tail Length" in df.columns:
+            kwargs["tail_length"] = df["Tail Length"].iloc[0]
+        if "Visible" in df.columns:
+            kwargs["visible"] = df["Visible"].iloc[0]
         if "Complete" in df.columns:
             kwargs["complete"] = df["Complete"].iloc[0]
         return cls(
@@ -72,6 +76,8 @@ class Track:
             "Marker": self.marker,
             "Line Width": self.line_width,
             "Marker Size": self.marker_size,
+            "Tail Length": self.tail_length,
+            "Visible": self.visible,
             "Complete": self.complete,
         })
     
