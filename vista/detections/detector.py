@@ -17,6 +17,7 @@ class Detector:
     color: str = 'r'  # Red by default
     marker: str = 'o'  # Circle by default
     marker_size: int = 10
+    line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
 
     def __len__(self):
@@ -42,6 +43,8 @@ class Detector:
             kwargs["marker"] = df["Marker"].iloc[0]
         if "Marker Size" in df.columns:
             kwargs["marker_size"] = df["Marker Size"].iloc[0]
+        if "Line Thickness" in df.columns:
+            kwargs["line_thickness"] = df["Line Thickness"].iloc[0]
         if "Visible" in df.columns:
             kwargs["visible"] = df["Visible"].iloc[0]
         return cls(
@@ -64,5 +67,6 @@ class Detector:
             "Color": self.color,
             "Marker": self.marker,
             "Marker Size": self.marker_size,
+            "Line Thickness": self.line_thickness,
             "Visible": self.visible,
         })

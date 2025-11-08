@@ -80,6 +80,28 @@ class MarkerDelegate(QStyledItemDelegate):
         model.setData(index, marker_symbol, Qt.ItemDataRole.EditRole)
 
 
+class LineThicknessDelegate(QStyledItemDelegate):
+    """Delegate for line thickness spinbox"""
+
+    def createEditor(self, parent, option, index):
+        spinbox = QSpinBox(parent)
+        spinbox.setMinimum(1)
+        spinbox.setMaximum(10)
+        spinbox.setSingleStep(1)
+        return spinbox
+
+    def setEditorData(self, editor, index):
+        value = index.data(Qt.ItemDataRole.DisplayRole)
+        try:
+            editor.setValue(int(value))
+        except (ValueError, TypeError):
+            editor.setValue(2)  # Default value
+
+    def setModelData(self, editor, model, index):
+        value = editor.value()
+        model.setData(index, value, Qt.ItemDataRole.EditRole)
+
+
 class DataManagerPanel(QWidget):
     """Panel for managing tracks and detections"""
 
@@ -328,9 +350,9 @@ class DataManagerPanel(QWidget):
 
         # Detections table
         self.detections_table = QTableWidget()
-        self.detections_table.setColumnCount(5)
+        self.detections_table.setColumnCount(6)
         self.detections_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Color", "Marker", "Size"
+            "Visible", "Name", "Color", "Marker", "Size", "Line"
         ])
 
         # Enable row selection via vertical header
@@ -343,16 +365,19 @@ class DataManagerPanel(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
         #header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
-        self.tracks_table.setColumnWidth(3, 80)  # Set reasonably large width to accomodate delegate 
+        self.detections_table.setColumnWidth(3, 80)  # Set reasonably large width to accomodate delegate
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Size (numeric)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Line thickness (numeric)
 
         self.detections_table.cellChanged.connect(self.on_detection_cell_changed)
 
         # Set delegates for special columns (keep references to prevent garbage collection)
         # self.detections_color_delegate = ColorDelegate(self.detections_table)
         self.detections_marker_delegate = MarkerDelegate(self.detections_table)
+        self.detections_line_thickness_delegate = LineThicknessDelegate(self.detections_table)
         # self.detections_table.setItemDelegateForColumn(2, self.detections_color_delegate)  # Color
         self.detections_table.setItemDelegateForColumn(3, self.detections_marker_delegate)  # Marker
+        self.detections_table.setItemDelegateForColumn(5, self.detections_line_thickness_delegate)  # Line thickness
 
         # Handle color cell clicks manually
         self.detections_table.cellClicked.connect(self.on_detections_cell_clicked)
@@ -909,6 +934,10 @@ class DataManagerPanel(QWidget):
                     size_item = QTableWidgetItem(str(detector.marker_size))
                     self.detections_table.setItem(row, 4, size_item)
 
+                    # Line thickness
+                    line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
+                    self.detections_table.setItem(row, 5, line_thickness_item)
+
                 except Exception as e:
                     print(f"Error adding detector '{detector.name}' to table at row {row}: {e}")
                     import traceback
@@ -1080,6 +1109,12 @@ class DataManagerPanel(QWidget):
             item = self.detections_table.item(row, column)
             try:
                 detector.marker_size = int(item.text())
+            except ValueError:
+                pass
+        elif column == 5:  # Line thickness
+            item = self.detections_table.item(row, column)
+            try:
+                detector.line_thickness = int(item.text())
             except ValueError:
                 pass
 

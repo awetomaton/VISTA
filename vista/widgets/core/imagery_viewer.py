@@ -330,7 +330,7 @@ class ImageryViewer(QWidget):
                 cols = detector.columns[mask]
                 scatter.setData(
                     x=cols, y=rows,
-                    pen=pg.mkPen(color=detector.color, width=2),
+                    pen=pg.mkPen(color=detector.color, width=detector.line_thickness),
                     brush=None,
                     size=detector.marker_size,
                     symbol=detector.marker
