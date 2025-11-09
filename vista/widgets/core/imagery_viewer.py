@@ -429,6 +429,12 @@ class ImageryViewer(QWidget):
                         path.setData(x=[], y=[])
                         marker.setData(x=[], y=[])
 
+        # Update temporary displays if in creation/editing mode
+        if self.track_creation_mode or self.track_editing_mode:
+            self._update_temp_track_display()
+        if self.detection_creation_mode or self.detection_editing_mode:
+            self._update_temp_detection_display()
+
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
         self.detectors.append(detector)
@@ -814,7 +820,11 @@ class ImageryViewer(QWidget):
 
         # Remove temporary plot
         if self.temp_track_plot:
-            self.plot_item.removeItem(self.temp_track_plot)
+            if isinstance(self.temp_track_plot, list):
+                for plot in self.temp_track_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_track_plot)
             self.temp_track_plot = None
 
         # Create Track object if we have data
@@ -850,7 +860,11 @@ class ImageryViewer(QWidget):
 
         # Remove temporary plot
         if self.temp_track_plot:
-            self.plot_item.removeItem(self.temp_track_plot)
+            if isinstance(self.temp_track_plot, list):
+                for plot in self.temp_track_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_track_plot)
             self.temp_track_plot = None
 
         # Update Track object with new data
@@ -902,7 +916,11 @@ class ImageryViewer(QWidget):
 
         # Remove temporary plot
         if self.temp_detection_plot:
-            self.plot_item.removeItem(self.temp_detection_plot)
+            if isinstance(self.temp_detection_plot, list):
+                for plot in self.temp_detection_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_detection_plot)
             self.temp_detection_plot = None
 
         # Create Detector object if we have data
@@ -943,7 +961,11 @@ class ImageryViewer(QWidget):
 
         # Remove temporary plot
         if self.temp_detection_plot:
-            self.plot_item.removeItem(self.temp_detection_plot)
+            if isinstance(self.temp_detection_plot, list):
+                for plot in self.temp_detection_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_detection_plot)
             self.temp_detection_plot = None
 
         # Update Detector object with new data
@@ -1048,56 +1070,120 @@ class ImageryViewer(QWidget):
         """Update the temporary track plot during creation/editing"""
         # Remove old temporary plot if it exists
         if self.temp_track_plot:
-            self.plot_item.removeItem(self.temp_track_plot)
+            if isinstance(self.temp_track_plot, list):
+                for plot in self.temp_track_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_track_plot)
 
         if len(self.current_track_data) == 0:
+            self.temp_track_plot = None
             return
 
-        # Get frames and positions sorted by frame
-        sorted_frames = sorted(self.current_track_data.keys())
-        rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
-        cols = np.array([self.current_track_data[f][1] for f in sorted_frames])
+        # Separate points into current frame and other frames
+        current_frame_rows = []
+        current_frame_cols = []
+        other_frame_rows = []
+        other_frame_cols = []
 
-        # Create scatter plot for track points
-        self.temp_track_plot = pg.ScatterPlotItem(
-            x=cols,
-            y=rows,
-            pen=pg.mkPen('m', width=2),
-            brush=pg.mkBrush('m'),
-            size=10,
-            symbol='o'
-        )
-        self.plot_item.addItem(self.temp_track_plot)
+        for frame in sorted(self.current_track_data.keys()):
+            row, col = self.current_track_data[frame]
+            if frame == self.current_frame_number:
+                current_frame_rows.append(row)
+                current_frame_cols.append(col)
+            else:
+                other_frame_rows.append(row)
+                other_frame_cols.append(col)
+
+        # Create scatter plots with different sizes
+        plots = []
+
+        # Draw other frames with smaller points
+        if len(other_frame_rows) > 0:
+            other_plot = pg.ScatterPlotItem(
+                x=np.array(other_frame_cols),
+                y=np.array(other_frame_rows),
+                pen=pg.mkPen('m', width=1),
+                brush=pg.mkBrush('m'),
+                size=6,  # Smaller size for other frames
+                symbol='o'
+            )
+            self.plot_item.addItem(other_plot)
+            plots.append(other_plot)
+
+        # Draw current frame with larger points
+        if len(current_frame_rows) > 0:
+            current_plot = pg.ScatterPlotItem(
+                x=np.array(current_frame_cols),
+                y=np.array(current_frame_rows),
+                pen=pg.mkPen('m', width=2),
+                brush=pg.mkBrush('m'),
+                size=14,  # Larger size for current frame
+                symbol='o'
+            )
+            self.plot_item.addItem(current_plot)
+            plots.append(current_plot)
+
+        self.temp_track_plot = plots if len(plots) > 0 else None
 
     def _update_temp_detection_display(self):
         """Update the temporary detection plot during creation/editing"""
         # Remove old temporary plot if it exists
         if self.temp_detection_plot:
-            self.plot_item.removeItem(self.temp_detection_plot)
+            if isinstance(self.temp_detection_plot, list):
+                for plot in self.temp_detection_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_detection_plot)
 
         if len(self.current_detection_data) == 0:
+            self.temp_detection_plot = None
             return
 
-        # Flatten all detection points into arrays
-        all_rows = []
-        all_cols = []
+        # Separate points into current frame and other frames
+        current_frame_rows = []
+        current_frame_cols = []
+        other_frame_rows = []
+        other_frame_cols = []
+
         for frame, detections in self.current_detection_data.items():
             for row, col in detections:
-                all_rows.append(row)
-                all_cols.append(col)
+                if frame == self.current_frame_number:
+                    current_frame_rows.append(row)
+                    current_frame_cols.append(col)
+                else:
+                    other_frame_rows.append(row)
+                    other_frame_cols.append(col)
 
-        if len(all_rows) == 0:
-            return
+        # Create scatter plots with different sizes
+        plots = []
 
-        # Create scatter plot for detection points
-        self.temp_detection_plot = pg.ScatterPlotItem(
-            x=np.array(all_cols),
-            y=np.array(all_rows),
-            pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
-            brush=pg.mkBrush('c'),
-            size=10,
-            symbol='o'
-        )
-        self.plot_item.addItem(self.temp_detection_plot)
+        # Draw other frames with smaller points
+        if len(other_frame_rows) > 0:
+            other_plot = pg.ScatterPlotItem(
+                x=np.array(other_frame_cols),
+                y=np.array(other_frame_rows),
+                pen=pg.mkPen('c', width=1),  # Cyan color to distinguish from tracks
+                brush=pg.mkBrush('c'),
+                size=6,  # Smaller size for other frames
+                symbol='o'
+            )
+            self.plot_item.addItem(other_plot)
+            plots.append(other_plot)
+
+        # Draw current frame with larger points
+        if len(current_frame_rows) > 0:
+            current_plot = pg.ScatterPlotItem(
+                x=np.array(current_frame_cols),
+                y=np.array(current_frame_rows),
+                pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
+                brush=pg.mkBrush('c'),
+                size=14,  # Larger size for current frame
+                symbol='o'
+            )
+            self.plot_item.addItem(current_plot)
+            plots.append(current_plot)
+
+        self.temp_detection_plot = plots if len(plots) > 0 else None
 
 
