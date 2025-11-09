@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QBrush, QAction
 import pathlib
+import numpy as np
 
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 
@@ -345,6 +346,14 @@ class DataManagerPanel(QWidget):
         button_layout.addWidget(self.hide_all_detections_btn)
         button_layout.addWidget(self.export_detections_btn)
         button_layout.addWidget(self.delete_selected_detections_btn)
+
+        # Add edit detector button
+        self.edit_detector_btn = QPushButton("Edit Detector")
+        self.edit_detector_btn.setCheckable(True)
+        self.edit_detector_btn.setEnabled(False)  # Disabled until single detector selected
+        self.edit_detector_btn.clicked.connect(self.on_edit_detector_clicked)
+        button_layout.addWidget(self.edit_detector_btn)
+
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -358,6 +367,9 @@ class DataManagerPanel(QWidget):
         # Enable row selection via vertical header
         self.detections_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.detections_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+
+        # Connect selection changed signal to update Edit Detector button state
+        self.detections_table.itemSelectionChanged.connect(self.on_detector_selection_changed)
 
         # Set column resize modes - only Name should stretch
         header = self.detections_table.horizontalHeader()
@@ -1608,6 +1620,76 @@ class DataManagerPanel(QWidget):
                     main_window = self.parent().parent()
                     if hasattr(main_window, 'statusBar'):
                         main_window.statusBar().showMessage("Track editing cancelled", 3000)
+
+    def on_detector_selection_changed(self):
+        """Handle detector selection change to enable/disable Edit Detector button"""
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+        # Enable Edit Detector button only if exactly one detector is selected
+        self.edit_detector_btn.setEnabled(len(selected_rows) == 1)
+        # If button is checked but selection changed, uncheck it
+        if self.edit_detector_btn.isChecked() and len(selected_rows) != 1:
+            self.edit_detector_btn.setChecked(False)
+
+    def on_edit_detector_clicked(self, checked):
+        """Handle Edit Detector button click"""
+        if checked:
+            # Get the selected detector
+            selected_rows = list(set(index.row() for index in self.detections_table.selectedIndexes()))
+            if len(selected_rows) != 1:
+                self.edit_detector_btn.setChecked(False)
+                return
+
+            row = selected_rows[0]
+            detector_name_item = self.detections_table.item(row, 1)  # Name column
+
+            if not detector_name_item:
+                self.edit_detector_btn.setChecked(False)
+                return
+
+            # Find the detector
+            detector_id = detector_name_item.data(Qt.ItemDataRole.UserRole)
+
+            detector = None
+            for d in self.viewer.detectors:
+                if id(d) == detector_id:
+                    detector = d
+                    break
+
+            if detector is None:
+                self.edit_detector_btn.setChecked(False)
+                return
+
+            # Start detector editing mode
+            self.viewer.start_detection_editing(detector)
+            # Update main window status
+            if hasattr(self.parent(), 'parent'):
+                main_window = self.parent().parent()
+                if hasattr(main_window, 'statusBar'):
+                    main_window.statusBar().showMessage(
+                        f"Detector editing mode: Click on frames to add/remove detection points for '{detector.name}' (multiple per frame allowed). Uncheck 'Edit Detector' when finished.",
+                        0
+                    )
+        else:
+            # Finish detector editing
+            edited_detector = self.viewer.finish_detection_editing()
+            if edited_detector:
+                self.refresh()
+                # Update main window status
+                if hasattr(self.parent(), 'parent'):
+                    main_window = self.parent().parent()
+                    if hasattr(main_window, 'statusBar'):
+                        total_detections = len(edited_detector.frames)
+                        unique_frames = len(np.unique(edited_detector.frames))
+                        main_window.statusBar().showMessage(
+                            f"Detector '{edited_detector.name}' updated with {total_detections} detections across {unique_frames} frames",
+                            3000
+                        )
+            else:
+                # Update main window status
+                if hasattr(self.parent(), 'parent'):
+                    main_window = self.parent().parent()
+                    if hasattr(main_window, 'statusBar'):
+                        main_window.statusBar().showMessage("Detector editing cancelled", 3000)
 
     def export_selected_imagery(self):
         """Export the selected imagery to HDF5 file"""

@@ -1,5 +1,6 @@
 """Main window for the Vista application"""
 import darkdetect
+import numpy as np
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter,
@@ -219,6 +220,17 @@ class VistaMainWindow(QMainWindow):
         self.create_track_action.toggled.connect(self.on_create_track_toggled)
         toolbar.addAction(self.create_track_action)
 
+        # Create Detection action
+        if darkdetect.isDark():
+            self.create_detection_action = QAction(self.icons.create_detection_light, "Create Detection", self)
+        else:
+            self.create_detection_action = QAction(self.icons.create_detection_dark, "Create Detection", self)
+        self.create_detection_action.setCheckable(True)
+        self.create_detection_action.setChecked(False)
+        self.create_detection_action.setToolTip("Create detections by clicking on frames (multiple per frame)")
+        self.create_detection_action.toggled.connect(self.on_create_detection_toggled)
+        toolbar.addAction(self.create_detection_action)
+
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
         self.viewer.set_geolocation_enabled(checked)
@@ -282,6 +294,37 @@ class VistaMainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Track created: {track.name} with {len(track.frames)} points", 3000)
             else:
                 self.statusBar().showMessage("Track creation cancelled (no points added)", 3000)
+
+    def on_create_detection_toggled(self, checked):
+        """Handle Create Detection toggle"""
+        if checked:
+            # Check if imagery is loaded
+            if self.viewer.imagery is None:
+                # No imagery, show warning and uncheck
+                QMessageBox.warning(
+                    self,
+                    "No Imagery",
+                    "Please load imagery before creating detections.",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.create_detection_action.setChecked(False)
+                return
+
+            # Start detection creation mode
+            self.viewer.start_detection_creation()
+            self.statusBar().showMessage("Detection creation mode: Click on frames to add detection points (multiple per frame allowed). Uncheck the detection creation button when finished.", 0)
+        else:
+            # Finish detection creation and add to viewer
+            detector = self.viewer.finish_detection_creation()
+            if detector is not None:
+                # Add detector to viewer
+                self.viewer.add_detector(detector)
+                self.data_manager.refresh()
+                total_detections = len(detector.frames)
+                unique_frames = len(np.unique(detector.frames))
+                self.statusBar().showMessage(f"Detector created: {detector.name} with {total_detections} detections across {unique_frames} frames", 3000)
+            else:
+                self.statusBar().showMessage("Detection creation cancelled (no points added)", 3000)
 
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""

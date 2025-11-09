@@ -81,6 +81,13 @@ class ImageryViewer(QWidget):
         self.editing_track = None  # Track object being edited
         self.temp_track_plot = None  # Temporary plot item for track being created/edited
 
+        # Detection creation/editing mode
+        self.detection_creation_mode = False
+        self.detection_editing_mode = False
+        self.current_detection_data = {}  # frame_number -> [(row, col), ...] for detections being created/edited
+        self.editing_detector = None  # Detector object being edited
+        self.temp_detection_plot = None  # Temporary plot item for detections being created/edited
+
         # Histogram bounds persistence
         self.user_histogram_bounds = None  # (min, max) tuple - None means use auto levels
         self.preserve_histogram_bounds = False  # Set to True when user manually adjusts levels
@@ -862,10 +869,113 @@ class ImageryViewer(QWidget):
             self.current_track_data = {}
             return None
 
+    def start_detection_creation(self):
+        """Start detection creation mode"""
+        self.detection_creation_mode = True
+        self.current_detection_data = {}
+        self.temp_detection_plot = None
+        # Change cursor to crosshair
+        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+
+    def start_detection_editing(self, detector):
+        """Start detection editing mode for a specific detector"""
+        self.detection_editing_mode = True
+        self.editing_detector = detector
+        # Load existing detection data
+        self.current_detection_data = {}
+        for i in range(len(detector.frames)):
+            frame = detector.frames[i]
+            if frame not in self.current_detection_data:
+                self.current_detection_data[frame] = []
+            self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
+        self.temp_detection_plot = None
+        # Change cursor to crosshair
+        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update display to show current detections being edited
+        self._update_temp_detection_display()
+
+    def finish_detection_creation(self):
+        """Finish detection creation and return the Detector object"""
+        self.detection_creation_mode = False
+        # Restore cursor
+        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+
+        # Remove temporary plot
+        if self.temp_detection_plot:
+            self.plot_item.removeItem(self.temp_detection_plot)
+            self.temp_detection_plot = None
+
+        # Create Detector object if we have data
+        if len(self.current_detection_data) > 0:
+            from vista.detections.detector import Detector
+
+            # Flatten the detection data into arrays
+            frames_list = []
+            rows_list = []
+            columns_list = []
+
+            for frame, detections in sorted(self.current_detection_data.items()):
+                for row, col in detections:
+                    frames_list.append(frame)
+                    rows_list.append(row)
+                    columns_list.append(col)
+
+            detector = Detector(
+                name=f"Detector {len(self.detectors) + 1}",
+                frames=np.array(frames_list, dtype=np.int_),
+                rows=np.array(rows_list),
+                columns=np.array(columns_list)
+            )
+
+            self.current_detection_data = {}
+            return detector
+        else:
+            self.current_detection_data = {}
+            return None
+
+    def finish_detection_editing(self):
+        """Finish detection editing and update the Detector object"""
+        self.detection_editing_mode = False
+        editing_detector = self.editing_detector
+        self.editing_detector = None
+        # Restore cursor
+        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+
+        # Remove temporary plot
+        if self.temp_detection_plot:
+            self.plot_item.removeItem(self.temp_detection_plot)
+            self.temp_detection_plot = None
+
+        # Update Detector object with new data
+        if editing_detector and len(self.current_detection_data) > 0:
+            # Flatten the detection data into arrays
+            frames_list = []
+            rows_list = []
+            columns_list = []
+
+            for frame, detections in sorted(self.current_detection_data.items()):
+                for row, col in detections:
+                    frames_list.append(frame)
+                    rows_list.append(row)
+                    columns_list.append(col)
+
+            editing_detector.frames = np.array(frames_list, dtype=np.int_)
+            editing_detector.rows = np.array(rows_list)
+            editing_detector.columns = np.array(columns_list)
+
+            self.current_detection_data = {}
+            # Refresh detection display
+            self.update_overlays()
+            return editing_detector
+        else:
+            self.current_detection_data = {}
+            return None
+
     def on_mouse_clicked(self, event):
-        """Handle mouse click events for track creation/editing"""
-        # Only handle left clicks in track creation/editing mode
-        if not (self.track_creation_mode or self.track_editing_mode):
+        """Handle mouse click events for track/detection creation/editing"""
+        # Only handle left clicks in creation/editing mode
+        if not (self.track_creation_mode or self.track_editing_mode or
+                self.detection_creation_mode or self.detection_editing_mode):
             return
 
         if event.button() != Qt.MouseButton.LeftButton:
@@ -881,29 +991,58 @@ class ImageryViewer(QWidget):
             col = mouse_point.x()
             row = mouse_point.y()
 
-            # Check if there's already a track point at the current frame
-            if self.current_frame_number in self.current_track_data:
-                existing_row, existing_col = self.current_track_data[self.current_frame_number]
+            # Calculate tolerance for point selection
+            view_rect = self.plot_item.vb.viewRect()
+            tolerance = max(view_rect.width(), view_rect.height()) * 0.02
 
-                # Calculate distance in data coordinates
-                distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+            # Handle track creation/editing
+            if self.track_creation_mode or self.track_editing_mode:
+                # Check if there's already a track point at the current frame
+                if self.current_frame_number in self.current_track_data:
+                    existing_row, existing_col = self.current_track_data[self.current_frame_number]
 
-                # Use a tolerance based on the visible range (about 1% of visible width)
-                view_rect = self.plot_item.vb.viewRect()
-                tolerance = max(view_rect.width(), view_rect.height()) * 0.02
+                    # Calculate distance in data coordinates
+                    distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
 
-                # If click is near the existing point, remove it
-                if distance < tolerance:
-                    del self.current_track_data[self.current_frame_number]
-                    # Update temporary track display
-                    self._update_temp_track_display()
-                    return
+                    # If click is near the existing point, remove it
+                    if distance < tolerance:
+                        del self.current_track_data[self.current_frame_number]
+                        # Update temporary track display
+                        self._update_temp_track_display()
+                        return
 
-            # Add or update track point for current frame
-            self.current_track_data[self.current_frame_number] = (row, col)
+                # Add or update track point for current frame
+                self.current_track_data[self.current_frame_number] = (row, col)
 
-            # Update temporary track display
-            self._update_temp_track_display()
+                # Update temporary track display
+                self._update_temp_track_display()
+
+            # Handle detection creation/editing
+            elif self.detection_creation_mode or self.detection_editing_mode:
+                # Initialize list for this frame if needed
+                if self.current_frame_number not in self.current_detection_data:
+                    self.current_detection_data[self.current_frame_number] = []
+
+                # Check if click is near an existing detection point on this frame
+                detection_list = self.current_detection_data[self.current_frame_number]
+                for i, (existing_row, existing_col) in enumerate(detection_list):
+                    distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+
+                    # If click is near an existing point, remove it
+                    if distance < tolerance:
+                        detection_list.pop(i)
+                        # Clean up empty frame entries
+                        if len(detection_list) == 0:
+                            del self.current_detection_data[self.current_frame_number]
+                        # Update temporary detection display
+                        self._update_temp_detection_display()
+                        return
+
+                # Add new detection point for current frame
+                self.current_detection_data[self.current_frame_number].append((row, col))
+
+                # Update temporary detection display
+                self._update_temp_detection_display()
 
     def _update_temp_track_display(self):
         """Update the temporary track plot during creation/editing"""
@@ -929,5 +1068,36 @@ class ImageryViewer(QWidget):
             symbol='o'
         )
         self.plot_item.addItem(self.temp_track_plot)
+
+    def _update_temp_detection_display(self):
+        """Update the temporary detection plot during creation/editing"""
+        # Remove old temporary plot if it exists
+        if self.temp_detection_plot:
+            self.plot_item.removeItem(self.temp_detection_plot)
+
+        if len(self.current_detection_data) == 0:
+            return
+
+        # Flatten all detection points into arrays
+        all_rows = []
+        all_cols = []
+        for frame, detections in self.current_detection_data.items():
+            for row, col in detections:
+                all_rows.append(row)
+                all_cols.append(col)
+
+        if len(all_rows) == 0:
+            return
+
+        # Create scatter plot for detection points
+        self.temp_detection_plot = pg.ScatterPlotItem(
+            x=np.array(all_cols),
+            y=np.array(all_rows),
+            pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
+            brush=pg.mkBrush('c'),
+            size=10,
+            symbol='o'
+        )
+        self.plot_item.addItem(self.temp_detection_plot)
 
 
