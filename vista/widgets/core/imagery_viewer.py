@@ -881,6 +881,24 @@ class ImageryViewer(QWidget):
             col = mouse_point.x()
             row = mouse_point.y()
 
+            # Check if there's already a track point at the current frame
+            if self.current_frame_number in self.current_track_data:
+                existing_row, existing_col = self.current_track_data[self.current_frame_number]
+
+                # Calculate distance in data coordinates
+                distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+
+                # Use a tolerance based on the visible range (about 1% of visible width)
+                view_rect = self.plot_item.vb.viewRect()
+                tolerance = max(view_rect.width(), view_rect.height()) * 0.02
+
+                # If click is near the existing point, remove it
+                if distance < tolerance:
+                    del self.current_track_data[self.current_frame_number]
+                    # Update temporary track display
+                    self._update_temp_track_display()
+                    return
+
             # Add or update track point for current frame
             self.current_track_data[self.current_frame_number] = (row, col)
 
