@@ -3,7 +3,6 @@ import h5py
 import numpy as np
 import pathlib
 from vista.simulate.simulation import Simulation
-import plotly.express as px
 
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
