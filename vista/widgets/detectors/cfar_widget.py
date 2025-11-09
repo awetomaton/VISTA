@@ -21,6 +21,7 @@ class NeighborhoodVisualization(QLabel):
         super().__init__(parent)
         self.background_radius = 10
         self.ignore_radius = 3
+        self.annulus_shape = 'circular'
         self.setMinimumSize(200, 200)
         self.setMaximumSize(200, 200)
 
@@ -28,6 +29,11 @@ class NeighborhoodVisualization(QLabel):
         """Update the radii and repaint"""
         self.background_radius = background_radius
         self.ignore_radius = ignore_radius
+        self.update()
+
+    def set_shape(self, annulus_shape):
+        """Update the annulus shape and repaint"""
+        self.annulus_shape = annulus_shape
         self.update()
 
     def paintEvent(self, event):
@@ -48,27 +54,45 @@ class NeighborhoodVisualization(QLabel):
         # Draw background
         painter.fillRect(0, 0, width, height, QColor(240, 240, 240))
 
-        # Draw background circle (outer radius)
-        background_diameter = int(2 * self.background_radius * scale)
+        # Draw background region (outer radius)
+        background_size = int(2 * self.background_radius * scale)
         painter.setPen(QPen(QColor(100, 100, 200), 2))
         painter.setBrush(QColor(150, 150, 255, 100))
-        painter.drawEllipse(
-            center_x - background_diameter // 2,
-            center_y - background_diameter // 2,
-            background_diameter,
-            background_diameter
-        )
 
-        # Draw ignore circle (inner radius)
-        ignore_diameter = int(2 * self.ignore_radius * scale)
+        if self.annulus_shape == 'square':
+            painter.drawRect(
+                center_x - background_size // 2,
+                center_y - background_size // 2,
+                background_size,
+                background_size
+            )
+        else:  # circular
+            painter.drawEllipse(
+                center_x - background_size // 2,
+                center_y - background_size // 2,
+                background_size,
+                background_size
+            )
+
+        # Draw ignore region (inner radius)
+        ignore_size = int(2 * self.ignore_radius * scale)
         painter.setPen(QPen(QColor(200, 100, 100), 2))
         painter.setBrush(QColor(240, 240, 240))
-        painter.drawEllipse(
-            center_x - ignore_diameter // 2,
-            center_y - ignore_diameter // 2,
-            ignore_diameter,
-            ignore_diameter
-        )
+
+        if self.annulus_shape == 'square':
+            painter.drawRect(
+                center_x - ignore_size // 2,
+                center_y - ignore_size // 2,
+                ignore_size,
+                ignore_size
+            )
+        else:  # circular
+            painter.drawEllipse(
+                center_x - ignore_size // 2,
+                center_y - ignore_size // 2,
+                ignore_size,
+                ignore_size
+            )
 
         # Draw center pixel
         pixel_size = int(scale)
@@ -99,7 +123,7 @@ class CFARProcessingThread(QThread):
     error_occurred = pyqtSignal(str)  # Emits error message
 
     def __init__(self, imagery, background_radius, ignore_radius, threshold_deviation,
-                 min_area, max_area, aoi=None, start_frame=0, end_frame=None):
+                 min_area, max_area, annulus_shape='circular', aoi=None, start_frame=0, end_frame=None):
         """
         Initialize the processing thread
 
@@ -110,6 +134,7 @@ class CFARProcessingThread(QThread):
             threshold_deviation: Number of standard deviations for threshold
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
+            annulus_shape: Shape of the annulus ('circular' or 'square')
             aoi: Optional AOI object to process subset of imagery
             start_frame: Starting frame index (default: 0)
             end_frame: Ending frame index exclusive (default: None for all frames)
@@ -121,6 +146,7 @@ class CFARProcessingThread(QThread):
         self.threshold_deviation = threshold_deviation
         self.min_area = min_area
         self.max_area = max_area
+        self.annulus_shape = annulus_shape
         self.aoi = aoi
         self.start_frame = start_frame
         self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
@@ -178,7 +204,8 @@ class CFARProcessingThread(QThread):
                 ignore_radius=self.ignore_radius,
                 threshold_deviation=self.threshold_deviation,
                 min_area=self.min_area,
-                max_area=self.max_area
+                max_area=self.max_area,
+                annulus_shape=self.annulus_shape
             )
 
             # Process all frames
@@ -332,6 +359,24 @@ class CFARWidget(QDialog):
         aoi_layout.addWidget(self.aoi_combo)
         aoi_layout.addStretch()
         params_layout.addLayout(aoi_layout)
+
+        # Annulus shape selection
+        shape_layout = QHBoxLayout()
+        shape_label = QLabel("Annulus Shape:")
+        shape_label.setToolTip(
+            "Shape of the neighborhood region.\n"
+            "Circular: Uses Euclidean distance (traditional CFAR)\n"
+            "Square: Uses Chebyshev distance (faster, simpler)"
+        )
+        self.shape_combo = QComboBox()
+        self.shape_combo.addItem("Circular", "circular")
+        self.shape_combo.addItem("Square", "square")
+        self.shape_combo.setToolTip(shape_label.toolTip())
+        self.shape_combo.currentIndexChanged.connect(self.update_visualization)
+        shape_layout.addWidget(shape_label)
+        shape_layout.addWidget(self.shape_combo)
+        shape_layout.addStretch()
+        params_layout.addLayout(shape_layout)
 
         # Background radius parameter
         background_layout = QHBoxLayout()
@@ -501,6 +546,9 @@ class CFARWidget(QDialog):
             self.background_spinbox.value(),
             self.ignore_spinbox.value()
         )
+        self.neighborhood_viz.set_shape(
+            self.shape_combo.currentData()
+        )
 
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
@@ -530,6 +578,7 @@ class CFARWidget(QDialog):
         threshold_deviation = self.threshold_spinbox.value()
         min_area = self.min_area_spinbox.value()
         max_area = self.max_area_spinbox.value()
+        annulus_shape = self.shape_combo.currentData()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
         end_frame = min(self.end_frame_spinbox.value(), len(selected_imagery.frames))
@@ -562,6 +611,7 @@ class CFARWidget(QDialog):
         self.threshold_spinbox.setEnabled(False)
         self.min_area_spinbox.setEnabled(False)
         self.max_area_spinbox.setEnabled(False)
+        self.shape_combo.setEnabled(False)
         self.aoi_combo.setEnabled(False)
         self.start_frame_spinbox.setEnabled(False)
         self.end_frame_spinbox.setEnabled(False)
@@ -573,7 +623,7 @@ class CFARWidget(QDialog):
         # Create and start processing thread
         self.processing_thread = CFARProcessingThread(
             selected_imagery, background_radius, ignore_radius, threshold_deviation,
-            min_area, max_area, selected_aoi, start_frame, end_frame
+            min_area, max_area, annulus_shape, selected_aoi, start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -653,6 +703,7 @@ class CFARWidget(QDialog):
         self.threshold_spinbox.setEnabled(True)
         self.min_area_spinbox.setEnabled(True)
         self.max_area_spinbox.setEnabled(True)
+        self.shape_combo.setEnabled(True)
         self.aoi_combo.setEnabled(True)
         self.start_frame_spinbox.setEnabled(True)
         self.end_frame_spinbox.setEnabled(True)

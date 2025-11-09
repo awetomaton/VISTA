@@ -19,7 +19,8 @@ class CFAR:
     name = "Constant False Alarm Rate"
 
     def __init__(self, imagery: Imagery, background_radius: int, ignore_radius: int,
-                 threshold_deviation: float, min_area: int = 1, max_area: int = 1000):
+                 threshold_deviation: float, min_area: int = 1, max_area: int = 1000,
+                 annulus_shape: str = 'circular'):
         """
         Initialize the CFAR detector.
 
@@ -30,6 +31,7 @@ class CFAR:
             threshold_deviation: Number of standard deviations for threshold
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
+            annulus_shape: Shape of the annulus ('circular' or 'square')
         """
         self.imagery = imagery
         self.background_radius = background_radius
@@ -37,6 +39,7 @@ class CFAR:
         self.threshold_deviation = threshold_deviation
         self.min_area = min_area
         self.max_area = max_area
+        self.annulus_shape = annulus_shape
         self.current_frame_idx = 0
 
         # Pre-compute kernel for efficiency
@@ -55,6 +58,18 @@ class CFAR:
         Returns:
             2D array with 1s in the annular region, 0s elsewhere
         """
+        if self.annulus_shape == 'square':
+            return self._create_square_annular_kernel()
+        else:  # circular
+            return self._create_circular_annular_kernel()
+
+    def _create_circular_annular_kernel(self):
+        """
+        Create a circular annular kernel (ring) for neighborhood calculation.
+
+        Returns:
+            2D array with 1s in the annular region, 0s elsewhere
+        """
         size = 2 * self.background_radius + 1
         kernel = np.zeros((size, size), dtype=np.float32)
 
@@ -66,6 +81,29 @@ class CFAR:
         distances = np.sqrt((x - center)**2 + (y - center)**2)
 
         # Create annular mask: within background_radius but outside ignore_radius
+        kernel[(distances <= self.background_radius) & (distances > self.ignore_radius)] = 1
+
+        return kernel
+
+    def _create_square_annular_kernel(self):
+        """
+        Create a square annular kernel for neighborhood calculation.
+
+        Returns:
+            2D array with 1s in the square annular region, 0s elsewhere
+        """
+        size = 2 * self.background_radius + 1
+        kernel = np.zeros((size, size), dtype=np.float32)
+
+        # Create coordinate grids centered at kernel center
+        center = self.background_radius
+        y, x = np.ogrid[:size, :size]
+
+        # Calculate Chebyshev distance (max of abs differences) from center
+        # This creates a square shape
+        distances = np.maximum(np.abs(x - center), np.abs(y - center))
+
+        # Create square annular mask: within background_radius but outside ignore_radius
         kernel[(distances <= self.background_radius) & (distances > self.ignore_radius)] = 1
 
         return kernel
