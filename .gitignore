@@ -158,3 +158,12 @@ _templates
 
 tests/data/*
 data/**
+
+# Mac nonsense
+.DS_Store
+
+# vscode folder
+.vscode/*
+
+# claude folder
+.claude/*
