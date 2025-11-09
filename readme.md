@@ -649,7 +649,7 @@ Vista/
 ## Performance Considerations
 
 - **Chunked HDF5**: Use chunked storage for large imagery files to enable progressive loading
-- **Lazy Computations**: Histograms and coordinate conversions computed on-demand
+- **Lazy Computations**: Coordinate conversions computed on-demand
 - **Efficient Playback**: Bounce mode uses efficient frame looping
 - **Background Processing**: All file I/O and algorithms run in background threads
 - **Memory Management**: Large datasets may require significant memory for processing
