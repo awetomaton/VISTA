@@ -263,22 +263,18 @@ class RobustPCADialog(QDialog):
         added_items = []
 
         if self.add_background.isChecked():
-            self.viewer.imageries.append(result['background_imagery'])
+            self.viewer.add_imagery(result['background_imagery'])
             added_items.append("background")
 
         if self.add_foreground.isChecked():
-            self.viewer.imageries.append(result['foreground_imagery'])
+            self.viewer.add_imagery(result['foreground_imagery'])
             added_items.append("foreground")
-
-        # Update viewer if anything was added
-        if added_items:
-            self.viewer.update_imagery_display()
 
         # Show success message
         QMessageBox.information(
             self,
             "Processing Complete",
-            f"Robust PCA decomposition complete.\\nAdded: {', '.join(added_items)}"
+            f"Robust PCA decomposition complete.\nAdded: {', '.join(added_items)}"
         )
 
         # Accept dialog

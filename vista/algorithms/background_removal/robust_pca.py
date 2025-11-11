@@ -182,6 +182,13 @@ def run_robust_pca(imagery, config):
         description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})"
     )
 
+    # Pre-compute histograms for performance
+    for i in range(len(background_imagery.images)):
+        background_imagery.get_histogram(i)  # Lazy computation and caching
+
+    for i in range(len(foreground_imagery.images)):
+        foreground_imagery.get_histogram(i)  # Lazy computation and caching
+
     return {
         'background': background_images,
         'foreground': foreground_images,

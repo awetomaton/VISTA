@@ -127,6 +127,17 @@ class TemporalMedianProcessingThread(QThread):
                 description=f"Processed with {algorithm.name} (background={self.background}, offset={self.offset})"
             )
 
+            # Pre-compute histograms for performance
+            for i in range(len(processed_imagery.images)):
+                if self._cancelled:
+                    return  # Exit early if cancelled
+                processed_imagery.get_histogram(i)  # Lazy computation and caching
+                # Update progress: processing + histogram computation
+                self.progress_updated.emit(num_frames + i + 1, num_frames + len(processed_imagery.images))
+
+            if self._cancelled:
+                return  # Exit early if cancelled
+
             # Emit the processed imagery
             self.processing_complete.emit(processed_imagery)
 
@@ -310,7 +321,8 @@ class TemporalMedianWidget(QDialog):
         self.cancel_button.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.progress_bar.setMaximum(end_frame - start_frame)
+        # Set max to include both processing and histogram computation
+        self.progress_bar.setMaximum(2 * (end_frame - start_frame))
 
         # Create and start processing thread
         self.processing_thread = TemporalMedianProcessingThread(
