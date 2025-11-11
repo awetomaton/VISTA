@@ -21,6 +21,8 @@ class Track:
     visible: bool = True
     tail_length: int = 0  # 0 means show all history, >0 means show only last N frames
     complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
+    show_line: bool = True  # If True, show line connecting track points
+    line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
 
     def __post_init__(self):
         if len(self.rows) < 2:
@@ -73,6 +75,10 @@ class Track:
             kwargs["visible"] = df["Visible"].iloc[0]
         if "Complete" in df.columns:
             kwargs["complete"] = df["Complete"].iloc[0]
+        if "Show Line" in df.columns:
+            kwargs["show_line"] = df["Show Line"].iloc[0]
+        if "Line Style" in df.columns:
+            kwargs["line_style"] = df["Line Style"].iloc[0]
 
         # Handle times (optional)
         times = None
@@ -143,6 +149,8 @@ class Track:
             "Tail Length": self.tail_length,
             "Visible": self.visible,
             "Complete": self.complete,
+            "Show Line": self.show_line,
+            "Line Style": self.line_style,
         }
         # Include times if available
         if self.times is not None:

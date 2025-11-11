@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox, QCheckBox, QMenu,
     QFileDialog, QMessageBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QColor, QBrush, QAction
 import pathlib
 import numpy as np
@@ -81,6 +81,36 @@ class MarkerDelegate(QStyledItemDelegate):
         model.setData(index, marker_symbol, Qt.ItemDataRole.EditRole)
 
 
+class LineStyleDelegate(QStyledItemDelegate):
+    """Delegate for line style selection"""
+
+    LINE_STYLES = {
+        'Solid': 'SolidLine',
+        'Dash': 'DashLine',
+        'Dot': 'DotLine',
+        'Dash-Dot': 'DashDotLine',
+        'Dash-Dot-Dot': 'DashDotDotLine'
+    }
+
+    def createEditor(self, parent, option, index):
+        combo = QComboBox(parent)
+        combo.addItems(list(self.LINE_STYLES.keys()))
+        return combo
+
+    def setEditorData(self, editor, index):
+        value = index.data(Qt.ItemDataRole.DisplayRole)
+        # Find the key for this line style
+        for name, style in self.LINE_STYLES.items():
+            if style == value:
+                editor.setCurrentText(name)
+                break
+
+    def setModelData(self, editor, model, index):
+        style_name = editor.currentText()
+        style_value = self.LINE_STYLES[style_name]
+        model.setData(index, style_value, Qt.ItemDataRole.EditRole)
+
+
 class LineThicknessDelegate(QStyledItemDelegate):
     """Delegate for line thickness spinbox"""
 
@@ -111,6 +141,7 @@ class DataManagerPanel(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
+        self.settings = QSettings("VISTA", "DataManager")
         self.init_ui()
 
     def init_ui(self):
@@ -271,11 +302,31 @@ class DataManagerPanel(QWidget):
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
 
+        # Track column visibility (all columns visible by default except what we decide to hide)
+        # Column 0 (Visible) is always shown and cannot be hidden
+        self.track_column_visibility = {
+            0: True,   # Visible - always shown
+            1: True,   # Tracker
+            2: True,   # Name
+            3: True,   # Length
+            4: True,   # Color
+            5: True,   # Marker
+            6: True,   # Line Width
+            7: True,   # Marker Size
+            8: True,   # Tail Length
+            9: True,   # Complete
+            10: True,  # Show Line
+            11: True   # Line Style
+        }
+
+        # Load saved column visibility settings
+        self.load_track_column_visibility()
+
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
-        self.tracks_table.setColumnCount(10)  # Added Tracker, Length, and Complete columns
+        self.tracks_table.setColumnCount(12)  # Added Show Line and Line Style columns
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete"
+            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"
         ])
 
         # Enable row selection via vertical header
@@ -293,11 +344,23 @@ class DataManagerPanel(QWidget):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Length (numeric)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
         #header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
-        self.tracks_table.setColumnWidth(5, 80)  # Set reasonably large width to accomodate delegate 
+        self.tracks_table.setColumnWidth(5, 80)  # Set reasonably large width to accommodate delegate
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
         header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
         header.setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
+        header.setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
+        #header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Line Style (dropdown)
+        self.tracks_table.setColumnWidth(11, 120)  # Set reasonably large width to accommodate delegate
+
+        # Set minimum widths for Tracker and Name columns to ensure headers are never truncated
+        # Calculate minimum width based on header text plus padding
+        font_metrics = header.fontMetrics()
+        tracker_header_width = font_metrics.horizontalAdvance("Tracker") + 20  # Add padding
+        name_header_width = font_metrics.horizontalAdvance("Name") + 20  # Add padding
+        header.setMinimumSectionSize(max(tracker_header_width, name_header_width, 80))  # Set global minimum
+        self.tracks_table.setColumnWidth(1, max(tracker_header_width, 100))  # Ensure Tracker starts at reasonable width
+        self.tracks_table.setColumnWidth(2, max(name_header_width, 100))  # Ensure Name starts at reasonable width
 
         self.tracks_table.cellChanged.connect(self.on_track_cell_changed)
 
@@ -317,6 +380,9 @@ class DataManagerPanel(QWidget):
         # Set delegates for special columns (keep references to prevent garbage collection)
         self.tracks_marker_delegate = MarkerDelegate(self.tracks_table)
         self.tracks_table.setItemDelegateForColumn(5, self.tracks_marker_delegate)  # Marker
+
+        self.tracks_line_style_delegate = LineStyleDelegate(self.tracks_table)
+        self.tracks_table.setItemDelegateForColumn(11, self.tracks_line_style_delegate)  # Line Style
 
         # Handle color cell clicks manually
         self.tracks_table.cellClicked.connect(self.on_tracks_cell_clicked)
@@ -507,12 +573,29 @@ class DataManagerPanel(QWidget):
             complete_item.setCheckState(Qt.CheckState.Checked if track.complete else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 9, complete_item)
 
+            # Show Line checkbox
+            show_line_item = QTableWidgetItem()
+            show_line_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            show_line_item.setCheckState(Qt.CheckState.Checked if track.show_line else Qt.CheckState.Unchecked)
+            self.tracks_table.setItem(row, 10, show_line_item)
+
+            # Line Style
+            self.tracks_table.setItem(row, 11, QTableWidgetItem(track.line_style))
+
+        # Apply column visibility
+        self._apply_track_column_visibility()
+
         self.tracks_table.blockSignals(False)
+
+    def _apply_track_column_visibility(self):
+        """Apply column visibility settings to tracks table"""
+        for col_idx, visible in self.track_column_visibility.items():
+            self.tracks_table.setColumnHidden(col_idx, not visible)
 
     def _update_track_header_icons(self):
         """Update header labels to show filter and sort indicators"""
         # Base column names
-        base_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length"]
+        base_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -556,6 +639,8 @@ class DataManagerPanel(QWidget):
                     value = track.length
                 elif col_idx == 9:
                     value = "True" if track.complete else "False"
+                elif col_idx == 10:
+                    value = "True" if track.show_line else "False"
                 else:
                     continue
 
@@ -616,6 +701,8 @@ class DataManagerPanel(QWidget):
                 return track.length
             elif column == 9:
                 return track.complete
+            elif column == 10:
+                return track.show_line
             return ""
 
         reverse = (order == Qt.SortOrder.DescendingOrder)
@@ -626,34 +713,119 @@ class DataManagerPanel(QWidget):
         header = self.tracks_table.horizontalHeader()
         column = header.logicalIndexAt(pos)
 
-        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3), Complete (9)
-        if column not in [0, 1, 2, 3, 9]:
-            return
-
         menu = QMenu(self)
 
-        # Sort options
-        sort_asc_action = QAction("Sort Ascending", self)
-        sort_asc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.AscendingOrder))
-        menu.addAction(sort_asc_action)
+        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3), Complete (9), Show Line (10)
+        if column in [0, 1, 2, 3, 9, 10]:
+            # Sort options
+            sort_asc_action = QAction("Sort Ascending", self)
+            sort_asc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.AscendingOrder))
+            menu.addAction(sort_asc_action)
 
-        sort_desc_action = QAction("Sort Descending", self)
-        sort_desc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.DescendingOrder))
-        menu.addAction(sort_desc_action)
+            sort_desc_action = QAction("Sort Descending", self)
+            sort_desc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.DescendingOrder))
+            menu.addAction(sort_desc_action)
 
-        menu.addSeparator()
+            menu.addSeparator()
 
-        # Filter options
-        filter_action = QAction("Filter...", self)
-        filter_action.triggered.connect(lambda: self.show_track_filter_dialog(column))
-        menu.addAction(filter_action)
+            # Filter options
+            filter_action = QAction("Filter...", self)
+            filter_action.triggered.connect(lambda: self.show_track_filter_dialog(column))
+            menu.addAction(filter_action)
 
-        clear_filter_action = QAction("Clear Filter", self)
-        clear_filter_action.triggered.connect(lambda: self.clear_track_column_filter(column))
-        clear_filter_action.setEnabled(column in self.track_column_filters and bool(self.track_column_filters[column]))
-        menu.addAction(clear_filter_action)
+            clear_filter_action = QAction("Clear Filter", self)
+            clear_filter_action.triggered.connect(lambda: self.clear_track_column_filter(column))
+            clear_filter_action.setEnabled(column in self.track_column_filters and bool(self.track_column_filters[column]))
+            menu.addAction(clear_filter_action)
+
+            menu.addSeparator()
+
+        # Column visibility submenu (always available)
+        column_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
+        columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
+
+        for col_idx in range(len(column_names)):
+            # Column 0 (Visible) cannot be hidden
+            if col_idx == 0:
+                continue
+
+            action = QAction(column_names[col_idx], columns_menu)  # Make columns_menu the parent
+            action.setCheckable(True)
+            action.setChecked(self.track_column_visibility.get(col_idx, True))
+            # Use a more explicit connection to avoid lambda issues
+            action.setData(col_idx)  # Store the column index in the action's data
+            action.triggered.connect(self._on_column_visibility_toggled)
+            columns_menu.addAction(action)
+
+        menu.addMenu(columns_menu)
 
         menu.exec(header.mapToGlobal(pos))
+
+    def _on_column_visibility_toggled(self, checked):
+        """Handle column visibility toggle from context menu"""
+        # Get the action that triggered this slot
+        action = self.sender()
+        if action is None:
+            return
+
+        # Get the column index from the action's data
+        column_idx = action.data()
+        if column_idx is None:
+            return
+
+        # Toggle the column visibility
+        self.toggle_track_column_visibility(column_idx, checked)
+
+    def load_track_column_visibility(self):
+        """Load track column visibility settings from QSettings"""
+        # Load each column's visibility (skip column 0 which is always visible)
+        for col_idx in range(1, 12):
+            key = f"track_column_{col_idx}_visible"
+            saved_value = self.settings.value(key, True, type=bool)
+            self.track_column_visibility[col_idx] = saved_value
+
+    def save_track_column_visibility(self):
+        """Save track column visibility settings to QSettings"""
+        # Save each column's visibility (skip column 0 which is always visible)
+        for col_idx in range(1, 12):
+            key = f"track_column_{col_idx}_visible"
+            self.settings.setValue(key, self.track_column_visibility[col_idx])
+
+    def toggle_track_column_visibility(self, column_idx, visible):
+        """Toggle visibility of a track table column"""
+        self.track_column_visibility[column_idx] = visible
+        self.tracks_table.setColumnHidden(column_idx, not visible)
+
+        # Save the updated visibility settings
+        self.save_track_column_visibility()
+
+        # If showing the column, resize it appropriately
+        if visible:
+            self._resize_track_column(column_idx)
+
+    def _resize_track_column(self, column_idx):
+        """Resize a track column based on its index"""
+        header = self.tracks_table.horizontalHeader()
+
+        # Apply the appropriate resize mode based on column type
+        if column_idx == 1:  # Tracker
+            header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.Stretch)
+            # Ensure minimum width based on header text
+            font_metrics = header.fontMetrics()
+            min_width = font_metrics.horizontalAdvance("Tracker") + 20
+            self.tracks_table.setColumnWidth(column_idx, max(min_width, 100))
+        elif column_idx == 2:  # Name
+            header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.Stretch)
+            # Ensure minimum width based on header text
+            font_metrics = header.fontMetrics()
+            min_width = font_metrics.horizontalAdvance("Name") + 20
+            self.tracks_table.setColumnWidth(column_idx, max(min_width, 100))
+        elif column_idx == 5:  # Marker (dropdown)
+            self.tracks_table.setColumnWidth(column_idx, 80)
+        elif column_idx == 11:  # Line Style (dropdown)
+            self.tracks_table.setColumnWidth(column_idx, 120)
+        else:  # All other columns
+            header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.ResizeToContents)
 
     def sort_tracks_column(self, column, order):
         """Sort tracks by column"""
@@ -671,7 +843,7 @@ class DataManagerPanel(QWidget):
         # Column 3 (Length) uses numeric filter
         elif column == 3:
             self._show_numeric_filter_dialog(column, column_name)
-        # Columns 0 (Visible), 1 (Tracker), and 9 (Complete) use set filter
+        # Columns 0 (Visible), 1 (Tracker), 9 (Complete), and 10 (Show Line) use set filter
         else:
             self._show_set_filter_dialog(column, column_name)
 
@@ -829,6 +1001,8 @@ class DataManagerPanel(QWidget):
                     unique_values.add(tracker.name)
                 elif column == 9:
                     unique_values.add("True" if track.complete else "False")
+                elif column == 10:
+                    unique_values.add("True" if track.show_line else "False")
 
         # Create dialog with checkboxes for each unique value
         dialog = QDialog(self)
@@ -1080,6 +1254,12 @@ class DataManagerPanel(QWidget):
         elif column == 9:  # Complete
             item = self.tracks_table.item(row, column)
             track.complete = item.checkState() == Qt.CheckState.Checked
+        elif column == 10:  # Show Line
+            item = self.tracks_table.item(row, column)
+            track.show_line = item.checkState() == Qt.CheckState.Checked
+        elif column == 11:  # Line Style
+            item = self.tracks_table.item(row, column)
+            track.line_style = item.text()
 
         self.data_changed.emit()
 
