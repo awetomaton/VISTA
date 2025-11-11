@@ -259,14 +259,21 @@ class RobustPCADialog(QDialog):
 
         # Add imagery to viewer based on options
         added_items = []
+        last_added_imagery = None
 
         if self.add_background.isChecked():
             self.viewer.add_imagery(result['background_imagery'])
             added_items.append("background")
+            last_added_imagery = result['background_imagery']
 
         if self.add_foreground.isChecked():
             self.viewer.add_imagery(result['foreground_imagery'])
             added_items.append("foreground")
+            last_added_imagery = result['foreground_imagery']
+
+        # Select the last added imagery (foreground if both were added)
+        if last_added_imagery is not None:
+            self.viewer.select_imagery(last_added_imagery)
 
         # Show success message
         QMessageBox.information(
