@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QDoubleSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
 from PyQt6.QtGui import QPainter, QColor, QPen
 import numpy as np
 import traceback
@@ -294,12 +294,14 @@ class CFARWidget(QDialog):
             self.imagery_list = []
         self.aois = aois if aois is not None else []
         self.processing_thread = None
+        self.settings = QSettings("VISTA", "CFAR")
 
         self.setWindowTitle("CFAR Detector")
         self.setModal(True)
         self.setMinimumWidth(500)
 
         self.init_ui()
+        self.load_settings()
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -550,6 +552,34 @@ class CFARWidget(QDialog):
             self.shape_combo.currentData()
         )
 
+    def load_settings(self):
+        """Load previously saved settings"""
+        self.background_spinbox.setValue(self.settings.value("background_radius", 10, type=int))
+        self.ignore_spinbox.setValue(self.settings.value("ignore_radius", 3, type=int))
+        self.threshold_spinbox.setValue(self.settings.value("threshold_deviation", 3.0, type=float))
+        self.min_area_spinbox.setValue(self.settings.value("min_area", 1, type=int))
+        self.max_area_spinbox.setValue(self.settings.value("max_area", 1000, type=int))
+        self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
+        self.end_frame_spinbox.setValue(self.settings.value("end_frame", 999999, type=int))
+
+        # Restore annulus shape
+        saved_shape = self.settings.value("annulus_shape", "circular")
+        for i in range(self.shape_combo.count()):
+            if self.shape_combo.itemData(i) == saved_shape:
+                self.shape_combo.setCurrentIndex(i)
+                break
+
+    def save_settings(self):
+        """Save current settings for next time"""
+        self.settings.setValue("background_radius", self.background_spinbox.value())
+        self.settings.setValue("ignore_radius", self.ignore_spinbox.value())
+        self.settings.setValue("threshold_deviation", self.threshold_spinbox.value())
+        self.settings.setValue("min_area", self.min_area_spinbox.value())
+        self.settings.setValue("max_area", self.max_area_spinbox.value())
+        self.settings.setValue("start_frame", self.start_frame_spinbox.value())
+        self.settings.setValue("end_frame", self.end_frame_spinbox.value())
+        self.settings.setValue("annulus_shape", self.shape_combo.currentData())
+
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
         # Get selected imagery
@@ -582,6 +612,9 @@ class CFARWidget(QDialog):
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
         end_frame = min(self.end_frame_spinbox.value(), len(selected_imagery.frames))
+
+        # Save settings for next time
+        self.save_settings()
 
         # Validate parameters
         if ignore_radius >= background_radius:

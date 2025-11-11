@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QDoubleSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
 import numpy as np
 import traceback
 
@@ -183,12 +183,14 @@ class SimpleThresholdWidget(QDialog):
             self.imagery_list = []
         self.aois = aois if aois is not None else []
         self.processing_thread = None
+        self.settings = QSettings("VISTA", "SimpleThreshold")
 
         self.setWindowTitle("Simple Threshold Detector")
         self.setModal(True)
         self.setMinimumWidth(400)
 
         self.init_ui()
+        self.load_settings()
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -348,6 +350,22 @@ class SimpleThresholdWidget(QDialog):
 
         self.setLayout(layout)
 
+    def load_settings(self):
+        """Load previously saved settings"""
+        self.threshold_spinbox.setValue(self.settings.value("threshold", 100.0, type=float))
+        self.min_area_spinbox.setValue(self.settings.value("min_area", 1, type=int))
+        self.max_area_spinbox.setValue(self.settings.value("max_area", 1000, type=int))
+        self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
+        self.end_frame_spinbox.setValue(self.settings.value("end_frame", 999999, type=int))
+
+    def save_settings(self):
+        """Save current settings for next time"""
+        self.settings.setValue("threshold", self.threshold_spinbox.value())
+        self.settings.setValue("min_area", self.min_area_spinbox.value())
+        self.settings.setValue("max_area", self.max_area_spinbox.value())
+        self.settings.setValue("start_frame", self.start_frame_spinbox.value())
+        self.settings.setValue("end_frame", self.end_frame_spinbox.value())
+
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
         # Get selected imagery
@@ -377,6 +395,9 @@ class SimpleThresholdWidget(QDialog):
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
         end_frame = min(self.end_frame_spinbox.value(), len(selected_imagery.frames))
+
+        # Save settings for next time
+        self.save_settings()
 
         # Validate parameters
         if min_area > max_area:

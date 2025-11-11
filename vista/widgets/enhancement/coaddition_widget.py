@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal, QSettings
 import numpy as np
 import traceback
 
@@ -149,12 +149,14 @@ class CoadditionWidget(QDialog):
         self.imagery = imagery
         self.aois = aois if aois is not None else []
         self.processing_thread = None
+        self.settings = QSettings("VISTA", "Coaddition")
 
         self.setWindowTitle("Coaddition Enhancement")
         self.setModal(True)
         self.setMinimumWidth(400)
 
         self.init_ui()
+        self.load_settings()
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -229,6 +231,14 @@ class CoadditionWidget(QDialog):
 
         self.setLayout(layout)
 
+    def load_settings(self):
+        """Load previously saved settings"""
+        self.window_spinbox.setValue(self.settings.value("window_size", 5, type=int))
+
+    def save_settings(self):
+        """Save current settings for next time"""
+        self.settings.setValue("window_size", self.window_spinbox.value())
+
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
         if self.imagery is None:
@@ -243,6 +253,9 @@ class CoadditionWidget(QDialog):
         # Get parameter values
         window_size = self.window_spinbox.value()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
+
+        # Save settings for next time
+        self.save_settings()
 
         # Validate parameters
         if window_size > len(self.imagery):

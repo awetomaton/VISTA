@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
 import numpy as np
 import traceback
 
@@ -167,12 +167,14 @@ class TemporalMedianWidget(QDialog):
         self.imagery = imagery
         self.aois = aois if aois is not None else []
         self.processing_thread = None
+        self.settings = QSettings("VISTA", "TemporalMedian")
 
         self.setWindowTitle("Temporal Median Background Removal")
         self.setModal(True)
         self.setMinimumWidth(400)
 
         self.init_ui()
+        self.load_settings()
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -292,6 +294,20 @@ class TemporalMedianWidget(QDialog):
 
         self.setLayout(layout)
 
+    def load_settings(self):
+        """Load previously saved settings"""
+        self.background_spinbox.setValue(self.settings.value("background", 5, type=int))
+        self.offset_spinbox.setValue(self.settings.value("offset", 2, type=int))
+        self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
+        self.end_frame_spinbox.setValue(self.settings.value("end_frame", 999999, type=int))
+
+    def save_settings(self):
+        """Save current settings for next time"""
+        self.settings.setValue("background", self.background_spinbox.value())
+        self.settings.setValue("offset", self.offset_spinbox.value())
+        self.settings.setValue("start_frame", self.start_frame_spinbox.value())
+        self.settings.setValue("end_frame", self.end_frame_spinbox.value())
+
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
         if self.imagery is None:
@@ -309,6 +325,9 @@ class TemporalMedianWidget(QDialog):
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
         end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
+
+        # Save settings for next time
+        self.save_settings()
 
         # Update UI for processing state
         self.run_button.setEnabled(False)
