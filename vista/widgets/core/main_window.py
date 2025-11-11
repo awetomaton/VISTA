@@ -32,10 +32,12 @@ class VistaMainWindow(QMainWindow):
         self.setWindowTitle("VISTA - 1.0.0")
         self.icons = VistaIcons()
         self.setWindowIcon(self.icons.logo)
-        self.setGeometry(100, 100, 1200, 800)
 
         # Initialize settings for persistent storage
         self.settings = QSettings("Vista", "VistaApp")
+
+        # Restore window geometry (position and size) from settings
+        self.restore_window_geometry()
 
         # Track active loading threads
         self.loader_thread = None
@@ -987,6 +989,23 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.refresh_tracks_table()
             self.viewer.update_overlays()
+
+    def restore_window_geometry(self):
+        """Restore window position and size from settings"""
+        geometry = self.settings.value("window_geometry")
+        if geometry:
+            # Restore saved geometry
+            self.restoreGeometry(geometry)
+        else:
+            # Use default geometry if no saved settings
+            self.setGeometry(100, 100, 1200, 800)
+
+    def closeEvent(self, event):
+        """Handle window close event - save window geometry"""
+        # Save window geometry (position and size)
+        self.settings.setValue("window_geometry", self.saveGeometry())
+        # Accept the close event
+        event.accept()
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
