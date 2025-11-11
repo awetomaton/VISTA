@@ -1017,6 +1017,9 @@ class VistaMainWindow(QMainWindow):
         elif (key == Qt.Key.Key_Right) or (key == Qt.Key.Key_D):
             # Right arrow - next frame
             self.controls.next_frame()
+        elif key == Qt.Key.Key_Space:
+            # Spacebar - toggle play/pause
+            self.controls.toggle_play()
         else:
             # Pass other keys to parent class
             super().keyPressEvent(event)
