@@ -232,8 +232,8 @@ class RobustPCADialog(QDialog):
         # Save settings for next time
         self.save_settings()
 
-        # Create progress dialog
-        self.progress_dialog = QProgressDialog("Initializing Robust PCA...", "Cancel", 0, 100, self)
+        # Create progress dialog with indeterminate progress
+        self.progress_dialog = QProgressDialog("Initializing Robust PCA...", "Cancel", 0, 0, self)
         self.progress_dialog.setWindowTitle("Running Robust PCA")
         self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.canceled.connect(self.cancel_processing)
@@ -250,8 +250,6 @@ class RobustPCADialog(QDialog):
         """Update progress dialog"""
         if self.progress_dialog:
             self.progress_dialog.setLabelText(message)
-            self.progress_dialog.setValue(current)
-            self.progress_dialog.setMaximum(total)
 
     def on_complete(self, result):
         """Handle processing completion"""
