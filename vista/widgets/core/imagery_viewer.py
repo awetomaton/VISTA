@@ -372,17 +372,30 @@ class ImageryViewer(QWidget):
                     marker.setData(x=[], y=[])
                     continue
 
+                # Map line style string to Qt.PenStyle
+                line_style_map = {
+                    'SolidLine': Qt.PenStyle.SolidLine,
+                    'DashLine': Qt.PenStyle.DashLine,
+                    'DotLine': Qt.PenStyle.DotLine,
+                    'DashDotLine': Qt.PenStyle.DashDotLine,
+                    'DashDotDotLine': Qt.PenStyle.DashDotDotLine
+                }
+                pen_style = line_style_map.get(track.line_style, Qt.PenStyle.SolidLine)
+
                 # If track is marked as complete, show entire track regardless of current frame
                 if track.complete:
                     rows = track.rows
                     cols = track.columns
                     frames = track.frames
 
-                    # Update track path with entire track
-                    path.setData(
-                        x=cols, y=rows,
-                        pen=pg.mkPen(color=track.color, width=track.line_width)
-                    )
+                    # Update track path with entire track (only if show_line is True)
+                    if track.show_line:
+                        path.setData(
+                            x=cols, y=rows,
+                            pen=pg.mkPen(color=track.color, width=track.line_width, style=pen_style)
+                        )
+                    else:
+                        path.setData(x=[], y=[])  # Hide line
 
                     # Update current position marker (show marker at current frame if it exists)
                     if frame_num in track.frames:
@@ -411,11 +424,14 @@ class ImageryViewer(QWidget):
                             cols = cols[-track.tail_length:]
                             frames = frames[-track.tail_length:]
 
-                        # Update track path
-                        path.setData(
-                            x=cols, y=rows,
-                            pen=pg.mkPen(color=track.color, width=track.line_width)
-                        )
+                        # Update track path (only if show_line is True)
+                        if track.show_line:
+                            path.setData(
+                                x=cols, y=rows,
+                                pen=pg.mkPen(color=track.color, width=track.line_width, style=pen_style)
+                            )
+                        else:
+                            path.setData(x=[], y=[])  # Hide line
 
                         # Update current position marker
                         if frame_num in track.frames:
