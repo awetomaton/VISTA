@@ -329,7 +329,7 @@ class VistaMainWindow(QMainWindow):
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""
         # Refresh the data manager to show updated AOIs
-        self.data_manager.refresh()
+        self.data_manager.refresh_aois_table()
 
     def load_imagery_file(self):
         """Load imagery from HDF5 file(s) using background thread"""

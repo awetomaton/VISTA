@@ -222,12 +222,17 @@ class ImageryViewer(QWidget):
                     # Reconnect the signal
                     self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
                 else:
+                    # Save user's histogram bounds before setImage which will reset them
+                    user_histogram_bounds = None
+                    if self.preserve_histogram_bounds and self.user_histogram_bounds is not None:
+                        user_histogram_bounds = self.user_histogram_bounds
+                    
                     # Let HistogramLUTItem compute histogram automatically
                     self.image_item.setImage(self.imagery.images[image_index])
 
                     # Restore user's histogram bounds if they were manually set
-                    if self.preserve_histogram_bounds and self.user_histogram_bounds is not None:
-                        self.histogram.setLevels(*self.user_histogram_bounds)
+                    if user_histogram_bounds is not None:
+                        self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
