@@ -191,14 +191,14 @@ class VistaMainWindow(QMainWindow):
 
         # Pixel value tooltip toggle
         if darkdetect.isDark():
-            self.geolocation_action = QAction(self.icons.pixel_value_tooltip_light, "Pixel Value Tooltip", self)
+            self.pixel_value_action = QAction(self.icons.pixel_value_tooltip_light, "Pixel Value Tooltip", self)
         else:
-            self.geolocation_action = QAction(self.icons.pixel_value_tooltip_dark, "Pixel Value Tooltip", self)
-        self.geolocation_action.setCheckable(True)
-        self.geolocation_action.setChecked(False)
-        self.geolocation_action.setToolTip("Show pixel value on hover")
-        self.geolocation_action.toggled.connect(self.on_pixel_value_toggled)
-        toolbar.addAction(self.geolocation_action)
+            self.pixel_value_action = QAction(self.icons.pixel_value_tooltip_dark, "Pixel Value Tooltip", self)
+        self.pixel_value_action.setCheckable(True)
+        self.pixel_value_action.setChecked(False)
+        self.pixel_value_action.setToolTip("Show pixel value on hover")
+        self.pixel_value_action.toggled.connect(self.on_pixel_value_toggled)
+        toolbar.addAction(self.pixel_value_action)
 
         # Draw AOI action
         if darkdetect.isDark():

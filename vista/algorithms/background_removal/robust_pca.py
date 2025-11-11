@@ -142,6 +142,12 @@ def run_robust_pca(imagery, config):
     frames_subset = imagery.frames[start_frame:end_frame]
     times_subset = imagery.times[start_frame:end_frame] if imagery.times is not None else None
 
+    # Subset polynomial coefficients if they exist
+    poly_row_col_to_lat_subset = imagery.poly_row_col_to_lat[start_frame:end_frame] if imagery.poly_row_col_to_lat is not None else None
+    poly_row_col_to_lon_subset = imagery.poly_row_col_to_lon[start_frame:end_frame] if imagery.poly_row_col_to_lon is not None else None
+    poly_lat_lon_to_row_subset = imagery.poly_lat_lon_to_row[start_frame:end_frame] if imagery.poly_lat_lon_to_row is not None else None
+    poly_lat_lon_to_col_subset = imagery.poly_lat_lon_to_col[start_frame:end_frame] if imagery.poly_lat_lon_to_col is not None else None
+
     # Get dimensions
     num_frames, height, width = images.shape
 
@@ -169,7 +175,11 @@ def run_robust_pca(imagery, config):
         row_offset=imagery.row_offset,
         column_offset=imagery.column_offset,
         times=times_subset.copy() if times_subset is not None else None,
-        description=f"Low-rank background component from Robust PCA (frames {start_frame}-{end_frame})"
+        description=f"Low-rank background component from Robust PCA (frames {start_frame}-{end_frame})",
+        poly_row_col_to_lat=poly_row_col_to_lat_subset.copy() if poly_row_col_to_lat_subset is not None else None,
+        poly_row_col_to_lon=poly_row_col_to_lon_subset.copy() if poly_row_col_to_lon_subset is not None else None,
+        poly_lat_lon_to_row=poly_lat_lon_to_row_subset.copy() if poly_lat_lon_to_row_subset is not None else None,
+        poly_lat_lon_to_col=poly_lat_lon_to_col_subset.copy() if poly_lat_lon_to_col_subset is not None else None
     )
 
     foreground_imagery = Imagery(
@@ -179,7 +189,11 @@ def run_robust_pca(imagery, config):
         row_offset=imagery.row_offset,
         column_offset=imagery.column_offset,
         times=times_subset.copy() if times_subset is not None else None,
-        description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})"
+        description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})",
+        poly_row_col_to_lat=poly_row_col_to_lat_subset.copy() if poly_row_col_to_lat_subset is not None else None,
+        poly_row_col_to_lon=poly_row_col_to_lon_subset.copy() if poly_row_col_to_lon_subset is not None else None,
+        poly_lat_lon_to_row=poly_lat_lon_to_row_subset.copy() if poly_lat_lon_to_row_subset is not None else None,
+        poly_lat_lon_to_col=poly_lat_lon_to_col_subset.copy() if poly_lat_lon_to_col_subset is not None else None
     )
 
     # Pre-compute histograms for performance

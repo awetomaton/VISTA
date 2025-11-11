@@ -106,7 +106,11 @@ class CoadditionProcessingThread(QThread):
                 row_offset=row_offset,
                 column_offset=column_offset,
                 times=temp_imagery.times.copy() if temp_imagery.times is not None else None,
-                description=f"Processed with {algorithm.name} (window_size={self.window_size})"
+                description=f"Processed with {algorithm.name} (window_size={self.window_size})",
+                poly_row_col_to_lat=temp_imagery.poly_row_col_to_lat.copy() if temp_imagery.poly_row_col_to_lat is not None else None,
+                poly_row_col_to_lon=temp_imagery.poly_row_col_to_lon.copy() if temp_imagery.poly_row_col_to_lon is not None else None,
+                poly_lat_lon_to_row=temp_imagery.poly_lat_lon_to_row.copy() if temp_imagery.poly_lat_lon_to_row is not None else None,
+                poly_lat_lon_to_col=temp_imagery.poly_lat_lon_to_col.copy() if temp_imagery.poly_lat_lon_to_col is not None else None
             )
 
             # Pre-compute histograms for performance

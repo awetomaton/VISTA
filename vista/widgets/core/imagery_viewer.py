@@ -504,15 +504,19 @@ class ImageryViewer(QWidget):
         if not (self.geolocation_enabled or self.pixel_value_enabled) or self.imagery is None:
             return
 
-        # Map mouse position to image coordinates
+        # Map mouse position to image coordinates (scene coordinates)
         mouse_point = self.plot_item.vb.mapSceneToView(pos)
         col = mouse_point.x()
         row = mouse_point.y()
 
-        # Check if position is within image bounds
+        # Convert scene coordinates to imagery-relative coordinates
+        imagery_row = row - self.imagery.row_offset
+        imagery_col = col - self.imagery.column_offset
+
+        # Check if position is within image bounds (using imagery-relative coordinates)
         if self.imagery.images is not None and len(self.imagery.images) > 0:
             img_shape = self.imagery.images[0].shape
-            if 0 <= row < img_shape[0] and 0 <= col < img_shape[1]:
+            if 0 <= imagery_row < img_shape[0] and 0 <= imagery_col < img_shape[1]:
                 # Get current frame index
                 valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
                 if len(valid_indices) > 0:
@@ -520,9 +524,9 @@ class ImageryViewer(QWidget):
                     frame = self.imagery.frames[image_index]
 
                     if self.geolocation_enabled:
-                        # Convert pixel to geodetic coordinates
-                        rows_array = np.array([row])
-                        cols_array = np.array([col])
+                        # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
+                        rows_array = np.array([imagery_row])
+                        cols_array = np.array([imagery_col])
 
                         locations = self.imagery.pixel_to_geodetic(frame, rows_array, cols_array)
 
@@ -544,9 +548,9 @@ class ImageryViewer(QWidget):
                             self.geolocation_text.setVisible(False)
 
                     if self.pixel_value_enabled:
-                        # Extract pixel value from floored row, column coordinates
-                        row_floor = int(np.floor(row))
-                        col_floor = int(np.floor(col))
+                        # Extract pixel value from floored imagery-relative coordinates
+                        row_floor = int(np.floor(imagery_row))
+                        col_floor = int(np.floor(imagery_col))
                         pixel_value = self.imagery.images[image_index, row_floor, col_floor]
 
                         # Update text content
