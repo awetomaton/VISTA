@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: VISTA
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Stephen
+    family-names: Hartzell
+    email: hartzell.stephen@gmail.com
+identifiers:
+repository-code: 'https://github.com/hartzell-stephen-me/vista'
+url: 'https://github.com/hartzell-stephen-me/vista'
+abstract: >-
+  VISTA is a PyQt6-based desktop application for viewing, analyzing, and 
+  managing multi-frame imagery datasets along with associated detection 
+  and track overlays.
+keywords:
+  - VISTA
+  - tracking
+  - detection
+license: MIT
