@@ -6,15 +6,16 @@ from vista.imagery.imagery import Imagery
 
 class SimpleThreshold:
     """
-    Detector that uses a fixed threshold to find bright blobs.
+    Detector that uses a fixed threshold to find blobs.
 
-    Uses regionprops to identify connected regions above threshold,
-    filtered by area, and returns weighted centroids as detections.
+    Uses regionprops to identify connected regions above or below threshold,
+    or both, filtered by area, and returns weighted centroids as detections.
     """
 
     name = "Simple Threshold"
 
-    def __init__(self, imagery: Imagery, threshold: float, min_area: int = 1, max_area: int = 1000):
+    def __init__(self, imagery: Imagery, threshold: float, min_area: int = 1, max_area: int = 1000,
+                 detection_mode: str = 'above'):
         """
         Initialize the Simple Threshold detector.
 
@@ -23,11 +24,16 @@ class SimpleThreshold:
             threshold: Intensity threshold for detection
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
+            detection_mode: Detection mode - 'above', 'below', or 'both'
+                'above': Detect pixels > threshold (default)
+                'below': Detect pixels < -threshold (negative values)
+                'both': Detect pixels where |pixel| > threshold (absolute value)
         """
         self.imagery = imagery
         self.threshold = threshold
         self.min_area = min_area
         self.max_area = max_area
+        self.detection_mode = detection_mode
         self.current_frame_idx = 0
 
     def __call__(self):
@@ -45,8 +51,19 @@ class SimpleThreshold:
         image = self.imagery.images[self.current_frame_idx]
         frame_number = self.imagery.frames[self.current_frame_idx]
 
-        # Apply threshold
-        binary = image > self.threshold
+        # Apply threshold based on detection mode
+        if self.detection_mode == 'above':
+            # Detect pixels brighter than threshold
+            binary = image > self.threshold
+        elif self.detection_mode == 'below':
+            # Detect pixels darker than threshold (for negative values)
+            binary = image < -self.threshold
+        elif self.detection_mode == 'both':
+            # Detect pixels with large absolute values (far from zero in either direction)
+            binary = np.abs(image) > self.threshold
+        else:
+            raise ValueError(f"Invalid detection_mode: {self.detection_mode}. "
+                           f"Must be 'above', 'below', or 'both'.")
 
         # Label connected components
         labeled = label(binary)
@@ -60,10 +77,10 @@ class SimpleThreshold:
 
         for region in regions:
             if self.min_area <= region.area <= self.max_area:
-                # Use weighted centroid (intensity-weighted)
+                # Use weighted centroid (intensity-weighted) and account for center of pixel being at 0.5, 0.5
                 centroid = region.weighted_centroid
-                rows.append(centroid[0])
-                columns.append(centroid[1])
+                rows.append(centroid[0] + 0.5)
+                columns.append(centroid[1] + 0.5)
 
         # Convert to numpy arrays
         rows = np.array(rows)

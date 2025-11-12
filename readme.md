@@ -162,10 +162,10 @@ VISTA uses HDF5 files to store image sequences with optional time and geodetic m
 - **`unix_fine_time`**: 1D array of `int64` (nanosecond offset for high-precision timing)
 
 **Geodetic Conversion Polynomials (4th-order, 15 coefficients each):**
-- **`poly_row_col_to_lat`**: Shape `(N_frames, 15)` - Convert pixel row/col to latitude
-- **`poly_row_col_to_lon`**: Shape `(N_frames, 15)` - Convert pixel row/col to longitude
-- **`poly_lat_lon_to_row`**: Shape `(N_frames, 15)` - Convert lat/lon to pixel row
-- **`poly_lat_lon_to_col`**: Shape `(N_frames, 15)` - Convert lat/lon to pixel column
+- **`poly_row_col_to_lat`**: Shape `(N_frames, 15)` - Convert pixel col/row to latitude
+- **`poly_row_col_to_lon`**: Shape `(N_frames, 15)` - Convert pixel col/row to longitude
+- **`poly_lat_lon_to_row`**: Shape `(N_frames, 15)` - Convert lon/lat to pixel row
+- **`poly_lat_lon_to_col`**: Shape `(N_frames, 15)` - Convert lon/lat to pixel column
 
 Polynomial format: `f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 + c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 + c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4`
 

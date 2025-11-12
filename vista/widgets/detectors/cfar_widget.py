@@ -123,7 +123,8 @@ class CFARProcessingThread(QThread):
     error_occurred = pyqtSignal(str)  # Emits error message
 
     def __init__(self, imagery, background_radius, ignore_radius, threshold_deviation,
-                 min_area, max_area, annulus_shape='circular', aoi=None, start_frame=0, end_frame=None):
+                 min_area, max_area, annulus_shape='circular', detection_mode='above',
+                 aoi=None, start_frame=0, end_frame=None):
         """
         Initialize the processing thread
 
@@ -135,6 +136,7 @@ class CFARProcessingThread(QThread):
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
             annulus_shape: Shape of the annulus ('circular' or 'square')
+            detection_mode: Detection mode ('above', 'below', or 'both')
             aoi: Optional AOI object to process subset of imagery
             start_frame: Starting frame index (default: 0)
             end_frame: Ending frame index exclusive (default: None for all frames)
@@ -147,6 +149,7 @@ class CFARProcessingThread(QThread):
         self.min_area = min_area
         self.max_area = max_area
         self.annulus_shape = annulus_shape
+        self.detection_mode = detection_mode
         self.aoi = aoi
         self.start_frame = start_frame
         self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
@@ -205,7 +208,8 @@ class CFARProcessingThread(QThread):
                 threshold_deviation=self.threshold_deviation,
                 min_area=self.min_area,
                 max_area=self.max_area,
-                annulus_shape=self.annulus_shape
+                annulus_shape=self.annulus_shape,
+                detection_mode=self.detection_mode
             )
 
             # Process all frames
@@ -311,13 +315,14 @@ class CFARWidget(QDialog):
         info_label = QLabel(
             "<b>CFAR (Constant False Alarm Rate) Detector</b><br><br>"
             "<b>How it works:</b> For each pixel, computes the local mean and standard deviation "
-            "in an annular neighborhood (ring shape). Detects pixels that exceed the local background "
-            "by a specified number of standard deviations. Connected pixels above threshold are grouped "
-            "into detections and filtered by area.<br><br>"
-            "<b>Best for:</b> Point sources and small objects in varying background (stars, satellites, aircraft). "
+            "in an annular neighborhood (ring shape). Detects pixels that deviate from the local background "
+            "by a specified number of standard deviations. Can find bright pixels (above threshold), "
+            "dark pixels (below threshold), or both. Connected pixels are grouped into detections and filtered by area.<br><br>"
+            "<b>Best for:</b> Point sources and small objects in varying background. Bright mode for stars, satellites, aircraft. "
+            "Dark mode for shadows, cold spots. Both mode for any significant deviation. "
             "Adapts to local background variations automatically.<br><br>"
             "<b>Advantages:</b> Locally adaptive, maintains constant false alarm rate across image, "
-            "handles non-uniform backgrounds.<br>"
+            "handles non-uniform backgrounds, flexible detection modes.<br>"
             "<b>Limitations:</b> Computationally expensive, requires parameter tuning, can miss extended objects."
         )
         info_label.setWordWrap(True)
@@ -380,6 +385,25 @@ class CFARWidget(QDialog):
         shape_layout.addStretch()
         params_layout.addLayout(shape_layout)
 
+        # Detection mode selection
+        mode_layout = QHBoxLayout()
+        mode_label = QLabel("Detection Mode:")
+        mode_label.setToolTip(
+            "Type of pixels to detect.\n"
+            "Above: Detect bright pixels (exceeding local mean + threshold)\n"
+            "Below: Detect dark pixels (below local mean - threshold)\n"
+            "Both: Detect pixels deviating in either direction"
+        )
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem("Above Threshold (Bright)", "above")
+        self.mode_combo.addItem("Below Threshold (Dark)", "below")
+        self.mode_combo.addItem("Both (Absolute Deviation)", "both")
+        self.mode_combo.setToolTip(mode_label.toolTip())
+        mode_layout.addWidget(mode_label)
+        mode_layout.addWidget(self.mode_combo)
+        mode_layout.addStretch()
+        params_layout.addLayout(mode_layout)
+
         # Background radius parameter
         background_layout = QHBoxLayout()
         background_label = QLabel("Background Radius:")
@@ -421,7 +445,9 @@ class CFARWidget(QDialog):
         threshold_label = QLabel("Threshold Deviation:")
         threshold_label.setToolTip(
             "Number of standard deviations for threshold.\n"
-            "Pixels exceeding mean + (this value * std) are detected."
+            "Above mode: Detect pixels > mean + (this value × std)\n"
+            "Below mode: Detect pixels < mean - (this value × std)\n"
+            "Both mode: Detect pixels where |pixel - mean| > (this value × std)"
         )
         self.threshold_spinbox = QDoubleSpinBox()
         self.threshold_spinbox.setMinimum(0.1)
@@ -569,6 +595,13 @@ class CFARWidget(QDialog):
                 self.shape_combo.setCurrentIndex(i)
                 break
 
+        # Restore detection mode
+        saved_mode = self.settings.value("detection_mode", "above")
+        for i in range(self.mode_combo.count()):
+            if self.mode_combo.itemData(i) == saved_mode:
+                self.mode_combo.setCurrentIndex(i)
+                break
+
     def save_settings(self):
         """Save current settings for next time"""
         self.settings.setValue("background_radius", self.background_spinbox.value())
@@ -579,6 +612,7 @@ class CFARWidget(QDialog):
         self.settings.setValue("start_frame", self.start_frame_spinbox.value())
         self.settings.setValue("end_frame", self.end_frame_spinbox.value())
         self.settings.setValue("annulus_shape", self.shape_combo.currentData())
+        self.settings.setValue("detection_mode", self.mode_combo.currentData())
 
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
@@ -609,6 +643,7 @@ class CFARWidget(QDialog):
         min_area = self.min_area_spinbox.value()
         max_area = self.max_area_spinbox.value()
         annulus_shape = self.shape_combo.currentData()
+        detection_mode = self.mode_combo.currentData()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
         end_frame = min(self.end_frame_spinbox.value(), len(selected_imagery.frames))
@@ -645,6 +680,7 @@ class CFARWidget(QDialog):
         self.min_area_spinbox.setEnabled(False)
         self.max_area_spinbox.setEnabled(False)
         self.shape_combo.setEnabled(False)
+        self.mode_combo.setEnabled(False)
         self.aoi_combo.setEnabled(False)
         self.start_frame_spinbox.setEnabled(False)
         self.end_frame_spinbox.setEnabled(False)
@@ -656,7 +692,7 @@ class CFARWidget(QDialog):
         # Create and start processing thread
         self.processing_thread = CFARProcessingThread(
             selected_imagery, background_radius, ignore_radius, threshold_deviation,
-            min_area, max_area, annulus_shape, selected_aoi, start_frame, end_frame
+            min_area, max_area, annulus_shape, detection_mode, selected_aoi, start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -737,6 +773,7 @@ class CFARWidget(QDialog):
         self.min_area_spinbox.setEnabled(True)
         self.max_area_spinbox.setEnabled(True)
         self.shape_combo.setEnabled(True)
+        self.mode_combo.setEnabled(True)
         self.aoi_combo.setEnabled(True)
         self.start_frame_spinbox.setEnabled(True)
         self.end_frame_spinbox.setEnabled(True)

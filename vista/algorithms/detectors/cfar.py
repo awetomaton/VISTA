@@ -7,11 +7,13 @@ from vista.imagery.imagery import Imagery
 
 class CFAR:
     """
-    Detector that uses local standard deviation-based thresholding to find bright blobs.
+    Detector that uses local standard deviation-based thresholding to find blobs.
 
     Uses CFAR (Constant False Alarm Rate) approach where each pixel is compared to
     a multiple of the standard deviation in its neighborhood. The neighborhood is
     defined as an annular ring (background radius excluding ignore radius).
+
+    Can detect pixels above threshold, below threshold, or both (absolute deviation).
 
     Uses FFT-based convolution for efficient computation.
     """
@@ -20,7 +22,7 @@ class CFAR:
 
     def __init__(self, imagery: Imagery, background_radius: int, ignore_radius: int,
                  threshold_deviation: float, min_area: int = 1, max_area: int = 1000,
-                 annulus_shape: str = 'circular'):
+                 annulus_shape: str = 'circular', detection_mode: str = 'above'):
         """
         Initialize the CFAR detector.
 
@@ -32,6 +34,10 @@ class CFAR:
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
             annulus_shape: Shape of the annulus ('circular' or 'square')
+            detection_mode: Detection mode - 'above', 'below', or 'both'
+                'above': Detect pixels brighter than threshold (default)
+                'below': Detect pixels darker than threshold
+                'both': Detect pixels deviating from mean in either direction
         """
         self.imagery = imagery
         self.background_radius = background_radius
@@ -40,6 +46,7 @@ class CFAR:
         self.min_area = min_area
         self.max_area = max_area
         self.annulus_shape = annulus_shape
+        self.detection_mode = detection_mode
         self.current_frame_idx = 0
 
         # Pre-compute kernel for efficiency
@@ -182,11 +189,23 @@ class CFAR:
         local_mean = local_mean[pad_size:-pad_size, pad_size:-pad_size]
         local_std = local_std[pad_size:-pad_size, pad_size:-pad_size]
 
-        # Calculate threshold for each pixel
-        threshold = local_mean + self.threshold_deviation * local_std
-
-        # Apply threshold
-        binary = image > threshold
+        # Apply threshold based on detection mode
+        if self.detection_mode == 'above':
+            # Detect pixels brighter than threshold
+            threshold = local_mean + self.threshold_deviation * local_std
+            binary = image > threshold
+        elif self.detection_mode == 'below':
+            # Detect pixels darker than threshold
+            threshold = local_mean - self.threshold_deviation * local_std
+            binary = image < threshold
+        elif self.detection_mode == 'both':
+            # Detect pixels deviating from mean in either direction
+            deviation = np.abs(image - local_mean)
+            threshold = self.threshold_deviation * local_std
+            binary = deviation > threshold
+        else:
+            raise ValueError(f"Invalid detection_mode: {self.detection_mode}. "
+                           f"Must be 'above', 'below', or 'both'.")
 
         # Label connected components
         labeled = label(binary)
@@ -200,10 +219,10 @@ class CFAR:
 
         for region in regions:
             if self.min_area <= region.area <= self.max_area:
-                # Use weighted centroid (intensity-weighted)
+                # Use weighted centroid (intensity-weighted) and account for center of pixel being at 0.5, 0.5
                 centroid = region.weighted_centroid
-                rows.append(centroid[0])
-                columns.append(centroid[1])
+                rows.append(centroid[0] + 0.5)
+                columns.append(centroid[1] + 0.5)
 
         # Convert to numpy arrays
         rows = np.array(rows)

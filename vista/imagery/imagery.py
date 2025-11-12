@@ -134,8 +134,8 @@ class Imagery:
         lon_coeffs = self.poly_row_col_to_lon[frame_idx]
 
         # Evaluate polynomials
-        latitudes = self._eval_polynomial_2d_order4(rows, columns, lat_coeffs)
-        longitudes = self._eval_polynomial_2d_order4(rows, columns, lon_coeffs)
+        latitudes = self._eval_polynomial_2d_order4(columns, rows, lat_coeffs)
+        longitudes = self._eval_polynomial_2d_order4(columns, rows, lon_coeffs)
 
         # Convert to EarthLocation using geodetic coordinates
         return EarthLocation.from_geodetic(lon=longitudes * units.deg,
@@ -176,8 +176,8 @@ class Imagery:
         longitudes = loc.lon.deg
 
         # Evaluate polynomials
-        rows = self._eval_polynomial_2d_order4(latitudes, longitudes, row_coeffs)
-        columns = self._eval_polynomial_2d_order4(latitudes, longitudes, col_coeffs)
+        rows = self._eval_polynomial_2d_order4(longitudes, latitudes, row_coeffs)
+        columns = self._eval_polynomial_2d_order4(longitudes, latitudes, col_coeffs)
 
         return rows, columns
     

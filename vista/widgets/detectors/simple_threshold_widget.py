@@ -21,7 +21,8 @@ class SimpleThresholdProcessingThread(QThread):
     processing_complete = pyqtSignal(object)  # Emits Detector object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, threshold, min_area, max_area, aoi=None, start_frame=0, end_frame=None):
+    def __init__(self, imagery, threshold, min_area, max_area, detection_mode='above',
+                 aoi=None, start_frame=0, end_frame=None):
         """
         Initialize the processing thread
 
@@ -30,6 +31,7 @@ class SimpleThresholdProcessingThread(QThread):
             threshold: Intensity threshold for detection
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
+            detection_mode: Detection mode ('above', 'below', or 'both')
             aoi: Optional AOI object to process subset of imagery
             start_frame: Starting frame index (default: 0)
             end_frame: Ending frame index exclusive (default: None for all frames)
@@ -39,6 +41,7 @@ class SimpleThresholdProcessingThread(QThread):
         self.threshold = threshold
         self.min_area = min_area
         self.max_area = max_area
+        self.detection_mode = detection_mode
         self.aoi = aoi
         self.start_frame = start_frame
         self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
@@ -94,7 +97,8 @@ class SimpleThresholdProcessingThread(QThread):
                 imagery=temp_imagery,
                 threshold=self.threshold,
                 min_area=self.min_area,
-                max_area=self.max_area
+                max_area=self.max_area,
+                detection_mode=self.detection_mode
             )
 
             # Process all frames
@@ -199,12 +203,12 @@ class SimpleThresholdWidget(QDialog):
         # Information label
         info_label = QLabel(
             "<b>Simple Threshold Detector</b><br><br>"
-            "<b>How it works:</b> Applies a global threshold to the imagery - pixels above the threshold "
-            "are marked as foreground. Connected foreground pixels are grouped into blobs and filtered "
-            "by area (min/max size). The centroid of each blob becomes a detection.<br><br>"
+            "<b>How it works:</b> Applies a global threshold to the imagery. Can detect pixels above threshold "
+            "(positive values), below threshold (negative values), or both (absolute value). Connected pixels "
+            "are grouped into blobs and filtered by area (min/max size). The centroid of each blob becomes a detection.<br><br>"
             "<b>Best for:</b> High contrast objects in uniform backgrounds. Works well after background "
-            "removal when objects are significantly brighter than the residual background.<br><br>"
-            "<b>Advantages:</b> Extremely fast, simple to understand, no parameters to tune beyond threshold.<br>"
+            "removal. Above mode for bright objects, below mode for dark objects, both mode for any significant deviation.<br><br>"
+            "<b>Advantages:</b> Extremely fast, simple to understand, flexible detection modes.<br>"
             "<b>Limitations:</b> Global threshold doesn't adapt to varying backgrounds, sensitive to noise, "
             "requires good background removal first."
         )
@@ -244,12 +248,33 @@ class SimpleThresholdWidget(QDialog):
         aoi_layout.addStretch()
         layout.addLayout(aoi_layout)
 
+        # Detection mode selection
+        mode_layout = QHBoxLayout()
+        mode_label = QLabel("Detection Mode:")
+        mode_label.setToolTip(
+            "Type of pixels to detect.\n"
+            "Above: Detect pixels > threshold (bright pixels)\n"
+            "Below: Detect pixels < -threshold (negative/dark pixels)\n"
+            "Both: Detect pixels where |pixel| > threshold (absolute value)"
+        )
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem("Above Threshold (Positive)", "above")
+        self.mode_combo.addItem("Below Threshold (Negative)", "below")
+        self.mode_combo.addItem("Both (Absolute Value)", "both")
+        self.mode_combo.setToolTip(mode_label.toolTip())
+        mode_layout.addWidget(mode_label)
+        mode_layout.addWidget(self.mode_combo)
+        mode_layout.addStretch()
+        layout.addLayout(mode_layout)
+
         # Threshold parameter
         threshold_layout = QHBoxLayout()
         threshold_label = QLabel("Threshold:")
         threshold_label.setToolTip(
             "Intensity threshold for detection.\n"
-            "Pixels above this value are considered potential detections."
+            "Above mode: Detect pixels > threshold\n"
+            "Below mode: Detect pixels < -threshold\n"
+            "Both mode: Detect pixels where |pixel| > threshold"
         )
         self.threshold_spinbox = QDoubleSpinBox()
         self.threshold_spinbox.setMinimum(0)
@@ -358,6 +383,13 @@ class SimpleThresholdWidget(QDialog):
         self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
         self.end_frame_spinbox.setValue(self.settings.value("end_frame", 999999, type=int))
 
+        # Restore detection mode
+        saved_mode = self.settings.value("detection_mode", "above")
+        for i in range(self.mode_combo.count()):
+            if self.mode_combo.itemData(i) == saved_mode:
+                self.mode_combo.setCurrentIndex(i)
+                break
+
     def save_settings(self):
         """Save current settings for next time"""
         self.settings.setValue("threshold", self.threshold_spinbox.value())
@@ -365,6 +397,7 @@ class SimpleThresholdWidget(QDialog):
         self.settings.setValue("max_area", self.max_area_spinbox.value())
         self.settings.setValue("start_frame", self.start_frame_spinbox.value())
         self.settings.setValue("end_frame", self.end_frame_spinbox.value())
+        self.settings.setValue("detection_mode", self.mode_combo.currentData())
 
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
@@ -392,6 +425,7 @@ class SimpleThresholdWidget(QDialog):
         threshold = self.threshold_spinbox.value()
         min_area = self.min_area_spinbox.value()
         max_area = self.max_area_spinbox.value()
+        detection_mode = self.mode_combo.currentData()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
         end_frame = min(self.end_frame_spinbox.value(), len(selected_imagery.frames))
@@ -416,6 +450,7 @@ class SimpleThresholdWidget(QDialog):
         self.threshold_spinbox.setEnabled(False)
         self.min_area_spinbox.setEnabled(False)
         self.max_area_spinbox.setEnabled(False)
+        self.mode_combo.setEnabled(False)
         self.aoi_combo.setEnabled(False)
         self.start_frame_spinbox.setEnabled(False)
         self.end_frame_spinbox.setEnabled(False)
@@ -426,7 +461,7 @@ class SimpleThresholdWidget(QDialog):
 
         # Create and start processing thread
         self.processing_thread = SimpleThresholdProcessingThread(
-            selected_imagery, threshold, min_area, max_area, selected_aoi, start_frame, end_frame
+            selected_imagery, threshold, min_area, max_area, detection_mode, selected_aoi, start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -504,6 +539,7 @@ class SimpleThresholdWidget(QDialog):
         self.threshold_spinbox.setEnabled(True)
         self.min_area_spinbox.setEnabled(True)
         self.max_area_spinbox.setEnabled(True)
+        self.mode_combo.setEnabled(True)
         self.aoi_combo.setEnabled(True)
         self.start_frame_spinbox.setEnabled(True)
         self.end_frame_spinbox.setEnabled(True)
