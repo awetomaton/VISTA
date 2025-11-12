@@ -510,13 +510,13 @@ class ImageryViewer(QWidget):
         row = mouse_point.y()
 
         # Convert scene coordinates to imagery-relative coordinates
-        imagery_row = row - self.imagery.row_offset
-        imagery_col = col - self.imagery.column_offset
+        imagery_relative_row = row - self.imagery.row_offset
+        imagery_relative_col = col - self.imagery.column_offset
 
         # Check if position is within image bounds (using imagery-relative coordinates)
         if self.imagery.images is not None and len(self.imagery.images) > 0:
             img_shape = self.imagery.images[0].shape
-            if 0 <= imagery_row < img_shape[0] and 0 <= imagery_col < img_shape[1]:
+            if 0 <= imagery_relative_row < img_shape[0] and 0 <= imagery_relative_col < img_shape[1]:
                 # Get current frame index
                 valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
                 if len(valid_indices) > 0:
@@ -525,8 +525,8 @@ class ImageryViewer(QWidget):
 
                     if self.geolocation_enabled:
                         # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
-                        rows_array = np.array([imagery_row])
-                        cols_array = np.array([imagery_col])
+                        rows_array = np.array([row])
+                        cols_array = np.array([col])
 
                         locations = self.imagery.pixel_to_geodetic(frame, rows_array, cols_array)
 
@@ -549,8 +549,8 @@ class ImageryViewer(QWidget):
 
                     if self.pixel_value_enabled:
                         # Extract pixel value from floored imagery-relative coordinates
-                        row_floor = int(np.floor(imagery_row))
-                        col_floor = int(np.floor(imagery_col))
+                        row_floor = int(np.floor(imagery_relative_row))
+                        col_floor = int(np.floor(imagery_relative_col))
                         pixel_value = self.imagery.images[image_index, row_floor, col_floor]
 
                         # Update text content
