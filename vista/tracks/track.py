@@ -136,7 +136,21 @@ class Track:
             **kwargs
         )
     
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self, imagery=None, include_geolocation=False, include_time=False) -> pd.DataFrame:
+        """
+        Convert track to DataFrame.
+
+        Args:
+            imagery: Optional Imagery object for coordinate/time conversion
+            include_geolocation: If True, add Latitude, Longitude, Altitude columns (requires imagery)
+            include_time: If True, add Times column using imagery times (requires imagery)
+
+        Returns:
+            DataFrame with track data
+
+        Raises:
+            ValueError: If geolocation/time requested but imagery is missing required data
+        """
         data = {
             "Track": len(self)*[self.name],
             "Frames": self.frames,
@@ -152,9 +166,56 @@ class Track:
             "Show Line": self.show_line,
             "Line Style": self.line_style,
         }
-        # Include times if available
-        if self.times is not None:
-            # Convert to ISO format strings
+
+        # Include geolocation if requested
+        if include_geolocation:
+            if imagery is None:
+                raise ValueError("Imagery required for geolocation conversion")
+            if imagery.poly_row_col_to_lat is None or imagery.poly_row_col_to_lon is None:
+                raise ValueError("Imagery does not have geodetic conversion polynomials")
+
+            # Convert pixel coordinates to geodetic for each frame
+            latitudes = []
+            longitudes = []
+            altitudes = []
+
+            for i, frame in enumerate(self.frames):
+                # Convert single point
+                locations = imagery.pixel_to_geodetic(frame, np.array([self.rows[i]]), np.array([self.columns[i]]))
+                latitudes.append(locations.lat.deg[0])
+                longitudes.append(locations.lon.deg[0])
+                altitudes.append(locations.height.to('m').value[0])
+
+            data["Latitude"] = latitudes
+            data["Longitude"] = longitudes
+            data["Altitude"] = altitudes
+
+        # Include times if requested or if track already has times
+        if include_time:
+            if self.times is not None:
+                # Use track's own times if available
+                data["Times"] = pd.to_datetime(self.times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+            elif imagery is not None and imagery.times is not None:
+                # Map frames to times using imagery
+                # Find the time for each frame in the track
+                track_times = []
+                for frame in self.frames:
+                    # Find the index of this frame in imagery
+                    frame_mask = imagery.frames == frame
+                    if np.any(frame_mask):
+                        frame_idx = np.where(frame_mask)[0][0]
+                        track_times.append(imagery.times[frame_idx])
+                    else:
+                        # Frame not found in imagery, use NaT (Not a Time)
+                        track_times.append(np.datetime64('NaT'))
+
+                track_times = np.array(track_times)
+                data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+            else:
+                raise ValueError("Cannot include times: track has no times and imagery has no times")
+        elif self.times is not None:
+            # Include times if track already has them (backward compatibility)
             data["Times"] = pd.to_datetime(self.times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+
         return pd.DataFrame(data)
     

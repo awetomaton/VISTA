@@ -31,10 +31,25 @@ class Tracker:
     def to_csv(self, file: Union[str, pathlib.Path]):
         self.to_dataframe().to_csv(file, index=None)
     
-    def to_dataframe(self):
+    def to_dataframe(self, imagery=None, include_geolocation=False, include_time=False):
+        """
+        Convert all tracks to a DataFrame.
+
+        Args:
+            imagery: Optional Imagery object for coordinate/time conversion
+            include_geolocation: If True, add Latitude, Longitude, Altitude columns
+            include_time: If True, add Times column
+
+        Returns:
+            DataFrame with all tracks' data
+        """
         df = pd.DataFrame()
         for track in self.tracks:
-            track_df = track.to_dataframe()
+            track_df = track.to_dataframe(
+                imagery=imagery,
+                include_geolocation=include_geolocation,
+                include_time=include_time
+            )
             track_df["Tracker"] = len(track_df)*[self.name]
             df = pd.concat((df, track_df))
         return df

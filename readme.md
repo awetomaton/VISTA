@@ -31,7 +31,7 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 ### Advanced Track Support
 - **Multiple coordinate systems**:
   - Pixel coordinates (Row/Column)
-  - Geodetic coordinates (Latitude/Longitude/Altitude) with automatic conversion
+  - Geodetic coordinates (Latitude/Longitude/Altitude) with automatic conversion. Note that at this time this software assumes the altitude is always zero (tracks are already projected to ground)
   - Time-based or frame-based indexing
 - **Automatic coordinate conversion**:
   - Times → Frames using imagery timestamps
@@ -255,16 +255,16 @@ Track files represent trajectories of moving objects over time. VISTA supports m
 - Times automatically mapped to frames using imagery timestamps
 
 **Option 3: Frame + Geodetic Coordinates**
-- Requires: `Frames`, `Latitude`, `Longitude`, `Altitude`
+- Requires: `Frames`, `Latitude`, `Longitude`
 - Geodetic coordinates automatically converted to pixels using imagery polynomials
 
 **Option 4: Time + Geodetic Coordinates**
-- Requires: `Times`, `Latitude`, `Longitude`, `Altitude`
+- Requires: `Times`, `Latitude`, `Longitude`
 - Both conversions performed automatically
 
 **Priority System:**
 - If both `Frames` and `Times` are present, `Frames` takes precedence
-- If both pixel (`Rows`/`Columns`) and geodetic (`Latitude`/`Longitude`/`Altitude`) coordinates are present, pixel takes precedence
+- If both pixel (`Rows`/`Columns`) and geodetic (`Latitude`/`Longitude`) coordinates are present, pixel takes precedence
 
 #### Required Columns (Choose One Coordinate System)
 
@@ -312,17 +312,17 @@ Track,Times,Rows,Columns,Color,Marker,Line Width,Marker Size
 **Geodetic Format:**
 ```csv
 Track,Frames,Latitude,Longitude,Altitude,Color
-"Track 1",0,40.0128,-105.0156,1500.0,g
-"Track 1",1,40.0129,-105.0157,1501.0,g
-"Track 1",2,40.0130,-105.0158,1502.0,g
+"Track 1",0,40.0128,-105.0156,0.0,g
+"Track 1",1,40.0129,-105.0157,0.0,g
+"Track 1",2,40.0130,-105.0158,0.0,g
 ```
 
 **Time + Geodetic Format:**
 ```csv
 Track,Times,Latitude,Longitude,Altitude
-"Track 1",2024-01-01T12:00:00.000000,40.0128,-105.0156,1500.0
-"Track 1",2024-01-01T12:00:00.100000,40.0129,-105.0157,1501.0
-"Track 1",2024-01-01T12:00:00.200000,40.0130,-105.0158,1502.0
+"Track 1",2024-01-01T12:00:00.000000,40.0128,-105.0156,0.0
+"Track 1",2024-01-01T12:00:00.100000,40.0129,-105.0157,0.0
+"Track 1",2024-01-01T12:00:00.200000,40.0130,-105.0158,0.0
 ```
 
 When loading tracks that require conversion (time-to-frame or geodetic-to-pixel), VISTA will automatically prompt you to select an appropriate imagery dataset with the required metadata.
