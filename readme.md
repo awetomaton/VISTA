@@ -384,6 +384,100 @@ python -m vista.app
    - Menu: `File → Load Detections` or Toolbar icon
    - Select CSV file with detection data
 
+### Programmatic Usage
+
+VISTA can be used programmatically to visualize data created in memory, which is useful for debugging workflows, interactive analysis, and Jupyter notebooks.
+
+#### Basic Usage
+
+```python
+from vista.app import VistaApp
+from vista.imagery.imagery import Imagery
+import numpy as np
+
+# Create imagery in memory
+images = np.random.rand(10, 256, 256).astype(np.float32)
+frames = np.arange(10)
+imagery = Imagery(name="Debug Data", images=images, frames=frames)
+
+# Launch VISTA with the imagery
+app = VistaApp(imagery=imagery)
+app.exec()
+```
+
+#### Loading Multiple Data Types
+
+```python
+from vista.app import VistaApp
+from vista.imagery.imagery import Imagery
+from vista.detections.detector import Detector
+from vista.tracks.tracker import Tracker
+from vista.tracks.track import Track
+import numpy as np
+
+# Create imagery
+images = np.random.rand(50, 256, 256).astype(np.float32)
+imagery = Imagery(name="Example", images=images, frames=np.arange(50))
+
+# Create detections
+detector = Detector(
+    name="My Detections",
+    frames=np.array([0, 1, 2, 5, 10]),
+    rows=np.array([128.5, 130.2, 132.1, 135.0, 140.5]),
+    columns=np.array([100.5, 102.3, 104.1, 106.5, 110.2]),
+    color='r',
+    marker='o',
+    visible=True
+)
+
+# Create tracks
+track = Track(
+    name="Track 1",
+    frames=np.array([0, 1, 2, 3, 4]),
+    rows=np.array([128.5, 130.0, 131.5, 133.0, 134.5]),
+    columns=np.array([100.5, 101.5, 102.5, 103.5, 104.5]),
+    color='g',
+    marker='s'
+)
+tracker = Tracker(name="My Tracker", tracks=[track])
+
+# Launch VISTA with all data
+app = VistaApp(imagery=imagery, detections=detector, tracks=tracker)
+app.exec()
+```
+
+#### Loading Multiple Objects
+
+You can pass lists of imagery, detections, or tracks:
+
+```python
+app = VistaApp(
+    imagery=[imagery1, imagery2],
+    detections=[detector1, detector2],
+    tracks=[tracker1, tracker2]
+)
+app.exec()
+```
+
+#### Jupyter Notebook Usage
+
+In Jupyter notebooks, you may need to handle the event loop differently depending on your environment. The basic usage works in most cases:
+
+```python
+# In a Jupyter notebook cell
+from vista.app import VistaApp
+import numpy as np
+from vista.imagery.imagery import Imagery
+
+images = np.random.rand(10, 256, 256).astype(np.float32)
+imagery = Imagery(name="Notebook Data", images=images, frames=np.arange(10))
+
+app = VistaApp(imagery=imagery)
+app.exec()  # Window will open; close it to continue notebook execution
+```
+
+**Example Script:** See `scripts/example_programmatic_loading.py` for a complete working example that creates synthetic imagery with a moving bright spot, detections, and tracks.
+
 ### Creating Manual Tracks
 
 1. **Enable Track Creation Mode**:
@@ -632,7 +726,7 @@ Vista/
 1. **Data-View Separation**: Imagery, Track, and Detector classes are independent data containers
 2. **Async Loading**: Background threads prevent UI freezing during file I/O
 3. **Signal-Slot Communication**: PyQt signals coordinate between components
-4. **Lazy Evaluation**: Histograms and conversions computed on-demand and cached
+4. **Pre-Compute Expensive Operations for Speed**: Image histograms are computed for all images rather than computed on the fly. 
 5. **Automatic Conversion**: Transparent coordinate and time conversion with user prompts
 6. **Extensibility**: Modular algorithm framework for custom processing
 
@@ -706,5 +800,5 @@ VISTA uses the following open-source libraries:
 - pyqtgraph for high-performance visualization
 - NumPy and pandas for data processing
 - astropy for geodetic coordinate handling
-- scikit-learn and cvxpy for advanced algorithms
+- scikit-image for advanced algorithms
 - h5py for HDF5 file support

@@ -27,7 +27,15 @@ from ..background_removal.robust_pca_dialog import RobustPCADialog
 class VistaMainWindow(QMainWindow):
     """Main application window"""
 
-    def __init__(self):
+    def __init__(self, imagery=None, tracks=None, detections=None):
+        """
+        Initialize the Vista main window.
+
+        Args:
+            imagery: Optional Imagery object or list of Imagery objects to load at startup
+            tracks: Optional Tracker object or list of Tracker objects to load at startup
+            detections: Optional Detector object or list of Detector objects to load at startup
+        """
         super().__init__()
         self.setWindowTitle("VISTA - 1.2.0")
         self.icons = VistaIcons()
@@ -44,6 +52,10 @@ class VistaMainWindow(QMainWindow):
         self.progress_dialog = None
 
         self.init_ui()
+
+        # Load any provided data programmatically
+        if imagery is not None or tracks is not None or detections is not None:
+            self.load_data_programmatically(imagery, tracks, detections)
 
     def init_ui(self):
         # Create main widget and layout
@@ -989,6 +1001,69 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.refresh_tracks_table()
             self.viewer.update_overlays()
+
+    def load_data_programmatically(self, imagery=None, tracks=None, detections=None):
+        """
+        Load data programmatically without file dialogs.
+
+        Args:
+            imagery: Imagery object or list of Imagery objects
+            tracks: Tracker object or list of Tracker objects
+            detections: Detector object or list of Detector objects
+        """
+        from vista.imagery.imagery import Imagery
+        from vista.tracks.tracker import Tracker
+        from vista.detections.detector import Detector
+
+        # Load imagery
+        if imagery is not None:
+            # Convert single item to list
+            imagery_list = [imagery] if isinstance(imagery, Imagery) else imagery
+
+            for img in imagery_list:
+                self.viewer.add_imagery(img)
+                # Select the first imagery for viewing
+                if img == imagery_list[0]:
+                    self.viewer.select_imagery(img)
+
+        # Load detections
+        if detections is not None:
+            # Convert single item to list
+            detections_list = [detections] if isinstance(detections, Detector) else detections
+
+            for detector in detections_list:
+                self.viewer.add_detector(detector)
+
+        # Load tracks
+        if tracks is not None:
+            # Convert single item to list
+            tracks_list = [tracks] if isinstance(tracks, Tracker) else tracks
+
+            for tracker in tracks_list:
+                self.viewer.add_tracker(tracker)
+
+        # Update playback controls with new frame range
+        min_frame, max_frame = self.viewer.get_frame_range()
+        if max_frame > 0:
+            self.controls.set_frame_range(min_frame, max_frame)
+
+        # Refresh data manager to show loaded data
+        self.data_manager.refresh()
+
+        # Update status bar
+        status_parts = []
+        if imagery is not None:
+            count = len(imagery_list) if isinstance(imagery_list, list) else 1
+            status_parts.append(f"{count} imagery dataset(s)")
+        if detections is not None:
+            count = len(detections_list) if isinstance(detections_list, list) else 1
+            status_parts.append(f"{count} detector(s)")
+        if tracks is not None:
+            count = len(tracks_list) if isinstance(tracks_list, list) else 1
+            status_parts.append(f"{count} tracker(s)")
+
+        if status_parts:
+            self.statusBar().showMessage(f"Loaded: {', '.join(status_parts)}", 5000)
 
     def restore_window_geometry(self):
         """Restore window position and size from settings"""
