@@ -29,7 +29,7 @@ class VistaMainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("VISTA - 1.1.0")
+        self.setWindowTitle("VISTA - 1.2.0")
         self.icons = VistaIcons()
         self.setWindowIcon(self.icons.logo)
 
