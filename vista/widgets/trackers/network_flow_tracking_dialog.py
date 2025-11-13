@@ -10,7 +10,7 @@ from vista.algorithms.trackers import run_network_flow_tracker
 class NetworkFlowTrackingWorker(QThread):
     """Worker thread for running Network Flow tracker in background"""
 
-    progress_updated = pyqtSignal(str, int, int)  # message, current, total
+    progress_updated = pyqtSignal(str)  # message
     tracking_complete = pyqtSignal(object)  # Emits Tracker object
     error_occurred = pyqtSignal(str)  # Error message
 
@@ -30,14 +30,14 @@ class NetworkFlowTrackingWorker(QThread):
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Running network flow optimization...", 20, 100)
+            self.progress_updated.emit("Running network flow optimization...")
 
             vista_tracker = run_network_flow_tracker(self.detectors, self.config)
 
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Complete!", 100, 100)
+            self.progress_updated.emit("Complete!")
             self.tracking_complete.emit(vista_tracker)
 
         except Exception as e:
@@ -255,7 +255,7 @@ class NetworkFlowTrackingDialog(QDialog):
         self.worker.error_occurred.connect(self.on_error)
         self.worker.start()
 
-    def on_progress(self, message, current, total):
+    def on_progress(self, message):
         """Update progress dialog"""
         if self.progress_dialog:
             self.progress_dialog.setLabelText(message)

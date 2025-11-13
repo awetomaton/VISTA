@@ -10,7 +10,7 @@ from vista.algorithms.trackers import run_simple_tracker
 class SimpleTrackingWorker(QThread):
     """Worker thread for running Simple tracker in background"""
 
-    progress_updated = pyqtSignal(str, int, int)  # message, current, total
+    progress_updated = pyqtSignal(str)  # message
     tracking_complete = pyqtSignal(object)  # Emits Tracker object
     error_occurred = pyqtSignal(str)  # Error message
 
@@ -30,14 +30,14 @@ class SimpleTrackingWorker(QThread):
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Running Simple tracker...", 20, 100)
+            self.progress_updated.emit("Running Simple tracker...")
 
             vista_tracker = run_simple_tracker(self.detectors, self.config)
 
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Complete!", 100, 100)
+            self.progress_updated.emit("Complete!")
             self.tracking_complete.emit(vista_tracker)
 
         except Exception as e:
@@ -211,8 +211,8 @@ class SimpleTrackingDialog(QDialog):
         # Save settings for next time
         self.save_settings()
 
-        # Create progress dialog
-        self.progress_dialog = QProgressDialog("Initializing tracker...", "Cancel", 0, 100, self)
+        # Create progress dialog (indeterminate mode)
+        self.progress_dialog = QProgressDialog("Initializing tracker...", "Cancel", 0, 0, self)
         self.progress_dialog.setWindowTitle("Running Simple Tracker")
         self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.canceled.connect(self.cancel_tracking)
@@ -225,12 +225,10 @@ class SimpleTrackingDialog(QDialog):
         self.worker.error_occurred.connect(self.on_error)
         self.worker.start()
 
-    def on_progress(self, message, current, total):
+    def on_progress(self, message):
         """Update progress dialog"""
         if self.progress_dialog:
             self.progress_dialog.setLabelText(message)
-            self.progress_dialog.setValue(current)
-            self.progress_dialog.setMaximum(total)
 
     def on_complete(self, tracker):
         """Handle tracking completion"""
