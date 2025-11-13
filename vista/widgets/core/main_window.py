@@ -21,6 +21,7 @@ from ..enhancement.coaddition_widget import CoadditionWidget
 from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
 from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
 from ..trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
+from ..trackers.tracklet_tracking_dialog import TrackletTrackingDialog
 from ..background_removal.robust_pca_dialog import RobustPCADialog
 
 
@@ -187,6 +188,10 @@ class VistaMainWindow(QMainWindow):
         network_flow_tracker_action = QAction("Network Flow Tracker", self)
         network_flow_tracker_action.triggered.connect(self.open_network_flow_tracking_dialog)
         tracking_menu.addAction(network_flow_tracker_action)
+
+        tracklet_tracker_action = QAction("Tracklet Tracker", self)
+        tracklet_tracker_action.triggered.connect(self.open_tracklet_tracking_dialog)
+        tracking_menu.addAction(tracklet_tracker_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -997,6 +1002,25 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the dialog
         dialog = NetworkFlowTrackingDialog(self.viewer, self)
+        if dialog.exec():
+            # Refresh the data manager to show the new tracks
+            self.data_manager.refresh_tracks_table()
+            self.viewer.update_overlays()
+
+    def open_tracklet_tracking_dialog(self):
+        """Open the Tracklet tracker configuration dialog"""
+        # Check if detectors are loaded
+        if not self.viewer.detectors:
+            QMessageBox.warning(
+                self,
+                "No Detections",
+                "Please load or generate detections before running the tracker.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create and show the dialog
+        dialog = TrackletTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
             self.data_manager.refresh_tracks_table()
