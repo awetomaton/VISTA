@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QComboBox, QColorDialog,
     QHeaderView, QLabel, QTabWidget, QStyledItemDelegate, QSpinBox, QCheckBox, QMenu,
-    QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QGroupBox
+    QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QGroupBox, QStyle
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QColor, QBrush, QAction
@@ -43,10 +43,26 @@ class ColorDelegate(QStyledItemDelegate):
         return None  # Don't create an editor widget
 
     def paint(self, painter, option, index):
-        """Paint the color cell - just use default painting"""
-        # Let the default delegate handle the painting
-        # The background color is set on the item itself
-        super().paint(painter, option, index)
+        """Paint the color cell with border for selection instead of fill"""
+        # Get the color from the item's background
+        color = index.data(Qt.ItemDataRole.BackgroundRole)
+        if color and isinstance(color, QBrush):
+            color = color.color()
+        elif not color:
+            color = QColor('white')
+
+        # Fill the entire cell with the actual color
+        painter.fillRect(option.rect, color)
+
+        # If selected, draw a thick border instead of filling with selection color
+        if option.state & QStyle.StateFlag.State_Selected:
+            painter.save()
+            pen = painter.pen()
+            pen.setColor(option.palette.highlight().color())
+            pen.setWidth(3)
+            painter.setPen(pen)
+            painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
+            painter.restore()
 
 
 class MarkerDelegate(QStyledItemDelegate):
@@ -80,6 +96,11 @@ class MarkerDelegate(QStyledItemDelegate):
         marker_symbol = self.MARKERS[marker_name]
         model.setData(index, marker_symbol, Qt.ItemDataRole.EditRole)
 
+    def paint(self, painter, option, index):
+        """Paint with proper selection highlighting"""
+        # Use default painting which handles selection highlighting
+        super().paint(painter, option, index)
+
 
 class LineStyleDelegate(QStyledItemDelegate):
     """Delegate for line style selection"""
@@ -109,6 +130,11 @@ class LineStyleDelegate(QStyledItemDelegate):
         style_name = editor.currentText()
         style_value = self.LINE_STYLES[style_name]
         model.setData(index, style_value, Qt.ItemDataRole.EditRole)
+
+    def paint(self, painter, option, index):
+        """Paint with proper selection highlighting"""
+        # Use default painting which handles selection highlighting
+        super().paint(painter, option, index)
 
 
 class LineThicknessDelegate(QStyledItemDelegate):
@@ -540,6 +566,9 @@ class DataManagerPanel(QWidget):
         self.track_sort_order = Qt.SortOrder.AscendingOrder
 
         # Set delegates for special columns (keep references to prevent garbage collection)
+        self.tracks_color_delegate = ColorDelegate(self.tracks_table)
+        self.tracks_table.setItemDelegateForColumn(4, self.tracks_color_delegate)  # Color
+
         self.tracks_marker_delegate = MarkerDelegate(self.tracks_table)
         self.tracks_table.setItemDelegateForColumn(5, self.tracks_marker_delegate)  # Marker
 
@@ -612,11 +641,13 @@ class DataManagerPanel(QWidget):
         self.detections_table.cellChanged.connect(self.on_detection_cell_changed)
 
         # Set delegates for special columns (keep references to prevent garbage collection)
-        # self.detections_color_delegate = ColorDelegate(self.detections_table)
+        self.detections_color_delegate = ColorDelegate(self.detections_table)
+        self.detections_table.setItemDelegateForColumn(2, self.detections_color_delegate)  # Color
+
         self.detections_marker_delegate = MarkerDelegate(self.detections_table)
-        self.detections_line_thickness_delegate = LineThicknessDelegate(self.detections_table)
-        # self.detections_table.setItemDelegateForColumn(2, self.detections_color_delegate)  # Color
         self.detections_table.setItemDelegateForColumn(3, self.detections_marker_delegate)  # Marker
+
+        self.detections_line_thickness_delegate = LineThicknessDelegate(self.detections_table)
         self.detections_table.setItemDelegateForColumn(5, self.detections_line_thickness_delegate)  # Line thickness
 
         # Handle color cell clicks manually
@@ -687,13 +718,13 @@ class DataManagerPanel(QWidget):
 
             # Visible checkbox
             visible_item = QTableWidgetItem()
-            visible_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            visible_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             visible_item.setCheckState(Qt.CheckState.Checked if track.visible else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 0, visible_item)
 
             # Tracker name (not editable)
             tracker_item = QTableWidgetItem(tracker.name)
-            tracker_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            tracker_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             tracker_item.setData(Qt.ItemDataRole.UserRole, id(tracker))
             self.tracks_table.setItem(row, 1, tracker_item)
 
@@ -704,11 +735,12 @@ class DataManagerPanel(QWidget):
 
             # Length (not editable)
             length_item = QTableWidgetItem(f"{track.length:.2f}")
-            length_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            length_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.tracks_table.setItem(row, 3, length_item)
 
             # Color
             color_item = QTableWidgetItem()
+            color_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             color = pg_color_to_qcolor(track.color)
             color_item.setBackground(QBrush(color))
             color_item.setData(Qt.ItemDataRole.UserRole, track.color)
@@ -731,13 +763,13 @@ class DataManagerPanel(QWidget):
 
             # Complete checkbox
             complete_item = QTableWidgetItem()
-            complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             complete_item.setCheckState(Qt.CheckState.Checked if track.complete else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 9, complete_item)
 
             # Show Line checkbox
             show_line_item = QTableWidgetItem()
-            show_line_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            show_line_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             show_line_item.setCheckState(Qt.CheckState.Checked if track.show_line else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 10, show_line_item)
 
@@ -1262,7 +1294,7 @@ class DataManagerPanel(QWidget):
 
                     # Visible checkbox
                     visible_item = QTableWidgetItem()
-                    visible_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+                    visible_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
                     visible_item.setCheckState(Qt.CheckState.Checked if detector.visible else Qt.CheckState.Unchecked)
                     self.detections_table.setItem(row, 0, visible_item)
 
@@ -1273,6 +1305,7 @@ class DataManagerPanel(QWidget):
 
                     # Color
                     color_item = QTableWidgetItem()
+                    color_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
                     color = pg_color_to_qcolor(detector.color)
                     if not color.isValid():
                         print(f"Warning: Invalid color '{detector.color}' for detector '{detector.name}', using red")
