@@ -482,6 +482,12 @@ class DataManagerPanel(QWidget):
         self.merge_selected_tracks_btn.clicked.connect(self.merge_selected_tracks)
         tracks_actions_layout.addWidget(self.merge_selected_tracks_btn)
 
+        # Add split track button
+        self.split_track_btn = QPushButton("Split Track")
+        self.split_track_btn.setEnabled(False)  # Disabled until single track selected
+        self.split_track_btn.clicked.connect(self.split_selected_track)
+        tracks_actions_layout.addWidget(self.split_track_btn)
+
         # Add delete selected button
         self.delete_selected_tracks_btn = QPushButton("Delete Selected")
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
@@ -1867,6 +1873,152 @@ class DataManagerPanel(QWidget):
             f"Successfully merged {len(tracks_to_merge)} tracks into '{merged_name}'."
         )
 
+    def split_selected_track(self):
+        """Split selected track at the current frame"""
+        from vista.tracks.track import Track
+
+        # Get selected row from the table
+        selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
+
+        if len(selected_rows) != 1:
+            QMessageBox.warning(
+                self,
+                "Cannot Split",
+                "Please select exactly one track to split."
+            )
+            return
+
+        row = selected_rows[0]
+
+        # Get the track from this row
+        name_item = self.tracks_table.item(row, 2)  # Track name column
+        if not name_item:
+            return
+
+        track_name = name_item.text()
+        tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+        tracker_name = tracker_item.text() if tracker_item else None
+
+        # Find the track in the viewer
+        track_to_split = None
+        parent_tracker = None
+
+        for tracker in self.viewer.trackers:
+            if tracker_name is None or tracker.name == tracker_name:
+                for track in tracker.tracks:
+                    if track.name == track_name:
+                        track_to_split = track
+                        parent_tracker = tracker
+                        break
+                if track_to_split:
+                    break
+
+        if not track_to_split:
+            QMessageBox.warning(
+                self,
+                "Cannot Split",
+                "Could not find the selected track."
+            )
+            return
+
+        # Get current frame from viewer
+        current_frame = self.viewer.current_frame_number
+
+        # Check if the current frame is within the track's range
+        if current_frame < track_to_split.frames[0] or current_frame >= track_to_split.frames[-1]:
+            QMessageBox.warning(
+                self,
+                "Cannot Split",
+                f"Current frame ({current_frame}) is not within the track's frame range "
+                f"({track_to_split.frames[0]} - {track_to_split.frames[-1]}). "
+                "Please navigate to a frame within the track to split it."
+            )
+            return
+
+        # Split the track data
+        # First track: frames <= current_frame
+        mask_first = track_to_split.frames <= current_frame
+        # Second track: frames > current_frame
+        mask_second = track_to_split.frames > current_frame
+
+        # Check if split would create valid tracks
+        if not np.any(mask_first) or not np.any(mask_second):
+            QMessageBox.warning(
+                self,
+                "Cannot Split",
+                "Split would result in an empty track. Please choose a different frame."
+            )
+            return
+
+        # Create first track (before and at current frame)
+        first_name = f"{track_to_split.name}_1"
+        first_track = Track(
+            name=first_name,
+            frames=track_to_split.frames[mask_first],
+            rows=track_to_split.rows[mask_first],
+            columns=track_to_split.columns[mask_first],
+            times=track_to_split.times[mask_first] if track_to_split.times is not None else None,
+            color=track_to_split.color,
+            marker=track_to_split.marker,
+            line_width=track_to_split.line_width,
+            marker_size=track_to_split.marker_size,
+            visible=track_to_split.visible,
+            tail_length=track_to_split.tail_length,
+            complete=track_to_split.complete,
+            show_line=track_to_split.show_line,
+            line_style=track_to_split.line_style
+        )
+
+        # Create second track (after current frame)
+        second_name = f"{track_to_split.name}_2"
+        second_track = Track(
+            name=second_name,
+            frames=track_to_split.frames[mask_second],
+            rows=track_to_split.rows[mask_second],
+            columns=track_to_split.columns[mask_second],
+            times=track_to_split.times[mask_second] if track_to_split.times is not None else None,
+            color=track_to_split.color,
+            marker=track_to_split.marker,
+            line_width=track_to_split.line_width,
+            marker_size=track_to_split.marker_size,
+            visible=track_to_split.visible,
+            tail_length=track_to_split.tail_length,
+            complete=track_to_split.complete,
+            show_line=track_to_split.show_line,
+            line_style=track_to_split.line_style
+        )
+
+        # Remove the original track
+        parent_tracker.tracks.remove(track_to_split)
+
+        # Remove plot items from viewer
+        track_id = id(track_to_split)
+        if track_id in self.viewer.track_path_items:
+            self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
+            del self.viewer.track_path_items[track_id]
+        if track_id in self.viewer.track_marker_items:
+            self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
+            del self.viewer.track_marker_items[track_id]
+
+        # Add the new tracks
+        parent_tracker.tracks.append(first_track)
+        parent_tracker.tracks.append(second_track)
+
+        # Update the viewer to create plot items for the new tracks
+        self.viewer.update_overlays()
+
+        # Refresh table
+        self.refresh_tracks_table()
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self,
+            "Split Complete",
+            f"Track '{track_to_split.name}' has been split at frame {current_frame} into:\n"
+            f"  - '{first_name}' (frames {first_track.frames[0]} to {first_track.frames[-1]})\n"
+            f"  - '{second_name}' (frames {second_track.frames[0]} to {second_track.frames[-1]})"
+        )
+
     def delete_selected_tracks(self):
         """Delete tracks that are selected in the tracks table"""
         tracks_to_delete = []
@@ -2064,8 +2216,9 @@ class DataManagerPanel(QWidget):
     def on_track_selection_changed(self):
         """Handle track selection change to enable/disable Edit Track button and highlight tracks"""
         selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
-        # Enable Edit Track button only if exactly one track is selected
+        # Enable Edit Track and Split Track buttons only if exactly one track is selected
         self.edit_track_btn.setEnabled(len(selected_rows) == 1)
+        self.split_track_btn.setEnabled(len(selected_rows) == 1)
         # If button is checked but selection changed, uncheck it
         if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
             self.edit_track_btn.setChecked(False)
