@@ -71,10 +71,13 @@ class TrackletTrackingDialog(QDialog):
             "<b>Tracklet-Based Hierarchical Tracker</b><br><br>"
             "<b>How it works:</b> Uses a two-stage approach optimized for high false alarm scenarios. "
             "Stage 1 forms high-confidence tracklets using strict association criteria (small search radius, "
-            "velocity consistency). Stage 2 links these tracklets using velocity extrapolation and smoothness scoring.<br><br>"
+            "velocity consistency) with an 'M out of N' approach that allows small detection gaps. "
+            "Stage 2 links these tracklets using velocity extrapolation and smoothness scoring.<br><br>"
             "<b>Best for:</b> High false alarm scenarios (100:1 or higher false-to-real ratio) where real tracks "
-            "move smoothly with consistent velocity. Ideal for smooth targets with lots of clutter.<br><br>"
-            "<b>Advantages:</b> Filters false alarms early, fast (O(N_tracklets²)), leverages smoothness constraint.<br>"
+            "move smoothly with consistent velocity. Robust to occasional missed detections. "
+            "Ideal for smooth targets with lots of clutter.<br><br>"
+            "<b>Advantages:</b> Filters false alarms early, fast (O(N_tracklets²)), leverages smoothness constraint, "
+            "handles detection gaps.<br>"
             "<b>Limitations:</b> Requires relatively smooth motion. May struggle with highly maneuvering targets."
         )
         desc_label.setWordWrap(True)
@@ -138,11 +141,35 @@ class TrackletTrackingDialog(QDialog):
         self.min_tracklet_length.setRange(2, 20)
         self.min_tracklet_length.setValue(3)
         self.min_tracklet_length.setToolTip(
-            "Minimum consecutive detections required to form a tracklet.\n"
+            "Minimum actual detections (hits) required to save a tracklet.\n"
             "Higher values = fewer false tracklets but may miss short tracks.\n"
             "Typical values: 3-5 detections."
         )
         stage1_layout.addRow("Min Tracklet Length:", self.min_tracklet_length)
+
+        self.max_consecutive_misses = QSpinBox()
+        self.max_consecutive_misses.setRange(1, 10)
+        self.max_consecutive_misses.setValue(2)
+        self.max_consecutive_misses.setToolTip(
+            "Maximum consecutive frames without detection before ending tracklet.\n"
+            "Allows tracklets to survive small detection gaps ('M out of N' approach).\n"
+            "Higher values = more robust to gaps but may extend false tracklets.\n"
+            "Typical values: 1-3 frames."
+        )
+        stage1_layout.addRow("Max Consecutive Misses:", self.max_consecutive_misses)
+
+        self.min_detection_rate = QDoubleSpinBox()
+        self.min_detection_rate.setRange(0.0, 1.0)
+        self.min_detection_rate.setValue(0.6)
+        self.min_detection_rate.setSingleStep(0.05)
+        self.min_detection_rate.setDecimals(2)
+        self.min_detection_rate.setToolTip(
+            "Minimum ratio of hits to age (detection rate) for valid tracklets.\n"
+            "0.6 means tracklet must have detections in at least 60% of frames.\n"
+            "Higher values = stricter quality requirement.\n"
+            "Typical values: 0.5-0.8."
+        )
+        stage1_layout.addRow("Min Detection Rate:", self.min_detection_rate)
 
         stage1_group.setLayout(stage1_layout)
         layout.addWidget(stage1_group)
@@ -229,6 +256,10 @@ class TrackletTrackingDialog(QDialog):
             self.settings.value("max_velocity_change", 5.0, type=float))
         self.min_tracklet_length.setValue(
             self.settings.value("min_tracklet_length", 3, type=int))
+        self.max_consecutive_misses.setValue(
+            self.settings.value("max_consecutive_misses", 2, type=int))
+        self.min_detection_rate.setValue(
+            self.settings.value("min_detection_rate", 0.6, type=float))
         self.max_linking_gap.setValue(
             self.settings.value("max_linking_gap", 10, type=int))
         self.linking_search_radius.setValue(
@@ -248,6 +279,8 @@ class TrackletTrackingDialog(QDialog):
         self.settings.setValue("initial_search_radius", self.initial_search_radius.value())
         self.settings.setValue("max_velocity_change", self.max_velocity_change.value())
         self.settings.setValue("min_tracklet_length", self.min_tracklet_length.value())
+        self.settings.setValue("max_consecutive_misses", self.max_consecutive_misses.value())
+        self.settings.setValue("min_detection_rate", self.min_detection_rate.value())
         self.settings.setValue("max_linking_gap", self.max_linking_gap.value())
         self.settings.setValue("linking_search_radius", self.linking_search_radius.value())
         self.settings.setValue("smoothness_weight", self.smoothness_weight.value())
@@ -278,6 +311,8 @@ class TrackletTrackingDialog(QDialog):
             'initial_search_radius': self.initial_search_radius.value(),
             'max_velocity_change': self.max_velocity_change.value(),
             'min_tracklet_length': self.min_tracklet_length.value(),
+            'max_consecutive_misses': self.max_consecutive_misses.value(),
+            'min_detection_rate': self.min_detection_rate.value(),
             'max_linking_gap': self.max_linking_gap.value(),
             'linking_search_radius': self.linking_search_radius.value(),
             'smoothness_weight': self.smoothness_weight.value(),

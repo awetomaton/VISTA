@@ -146,13 +146,15 @@ def test_tracklet_tracker():
     # Configure tracklet tracker with reasonable defaults
     config = {
         'tracker_name': 'Tracklet Tracker Test',
-        'initial_search_radius': 10.0,  # Strict initial association
-        'max_velocity_change': 5.0,      # Allow smooth velocity changes
-        'min_tracklet_length': 3,        # Require 3+ consecutive detections
-        'max_linking_gap': 10,           # Link tracklets across gaps
-        'linking_search_radius': 30.0,   # Broader search for linking
-        'smoothness_weight': 1.0,        # Weight smoothness equally with distance
-        'min_track_length': 10           # Require 10+ total detections
+        'initial_search_radius': 10.0,      # Strict initial association
+        'max_velocity_change': 5.0,          # Allow smooth velocity changes
+        'min_tracklet_length': 3,            # Require 3+ hits
+        'max_consecutive_misses': 2,         # Allow up to 2 consecutive missed detections
+        'min_detection_rate': 0.6,           # Require 60% detection rate
+        'max_linking_gap': 10,               # Link tracklets across gaps
+        'linking_search_radius': 30.0,       # Broader search for linking
+        'smoothness_weight': 1.0,            # Weight smoothness equally with distance
+        'min_track_length': 10               # Require 10+ total detections
     }
 
     print("\nRunning tracklet tracker...")

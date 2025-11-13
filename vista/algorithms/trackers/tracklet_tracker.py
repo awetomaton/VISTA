@@ -20,10 +20,17 @@ class Tracklet:
         self.frames = [frame]
         self.velocity = None  # Will be computed when we have 2+ detections
 
+        # Track quality metrics for "m out of n" logic
+        self.hits = 1  # Number of actual detections
+        self.age = 1   # Total frames since creation
+        self.consecutive_misses = 0  # Consecutive frames without detection
+
     def add_detection(self, detection_pos, frame):
         """Add detection to tracklet and update velocity estimate"""
         self.positions.append(detection_pos.copy())
         self.frames.append(frame)
+        self.hits += 1
+        self.consecutive_misses = 0  # Reset consecutive misses
 
         # Update velocity estimate using last 3 positions if available
         if len(self.positions) >= 2:
@@ -41,6 +48,23 @@ class Tracklet:
                     self.velocity = np.zeros(2)
             else:
                 self.velocity = np.zeros(2)
+
+    def mark_missed(self, frame):
+        """Mark that no detection was associated this frame"""
+        self.consecutive_misses += 1
+        self.age += 1
+
+        # Add predicted position to history to maintain continuity
+        pred_pos = self.predict_position(frame)
+        if pred_pos is not None:
+            self.positions.append(pred_pos)
+            self.frames.append(frame)
+
+    def detection_rate(self):
+        """Compute detection rate (hits / age)"""
+        if self.age == 0:
+            return 0.0
+        return self.hits / self.age
 
     def predict_position(self, target_frame):
         """Predict position at target frame using velocity"""
@@ -112,7 +136,7 @@ def run_tracklet_tracker(detectors, config):
     Stage 1: Form high-confidence tracklets with strict association criteria
     - Small search radius for initial associations
     - Velocity consistency checking
-    - Require multiple consecutive detections
+    - "M out of N" approach: allows small detection gaps
 
     Stage 2: Link tracklets using global optimization
     - Velocity extrapolation for gap filling
@@ -126,6 +150,8 @@ def run_tracklet_tracker(detectors, config):
             - initial_search_radius: Max distance for tracklet formation (default: 10.0)
             - max_velocity_change: Max velocity change for tracklet formation (default: 5.0)
             - min_tracklet_length: Minimum detections for valid tracklet (default: 3)
+            - max_consecutive_misses: Max consecutive missed detections in Stage 1 (default: 2)
+            - min_detection_rate: Minimum detection rate (hits/age) for tracklets (default: 0.6)
             - max_linking_gap: Maximum frame gap to link tracklets (default: 10)
             - linking_search_radius: Max distance for tracklet linking (default: 30.0)
             - smoothness_weight: Weight for smoothness in linking cost (default: 1.0)
@@ -142,6 +168,8 @@ def run_tracklet_tracker(detectors, config):
     initial_search_radius = config.get('initial_search_radius', 10.0)
     max_velocity_change = config.get('max_velocity_change', 5.0)
     min_tracklet_length = config.get('min_tracklet_length', 3)
+    max_consecutive_misses = config.get('max_consecutive_misses', 2)
+    min_detection_rate = config.get('min_detection_rate', 0.6)
     max_linking_gap = config.get('max_linking_gap', 10)
     linking_search_radius = config.get('linking_search_radius', 30.0)
     smoothness_weight = config.get('smoothness_weight', 1.0)
@@ -178,9 +206,10 @@ def run_tracklet_tracker(detectors, config):
 
             for i, tracklet in enumerate(active_tracklets):
                 for j, detection in enumerate(detections):
-                    # Only consider if last frame was recent
+                    # Only consider if tracklet hasn't been missed too many times
+                    # Allow associations within max_consecutive_misses + 1
                     frame_gap = frame - tracklet.frames[-1]
-                    if frame_gap > 3:  # Strict: must be within 3 frames
+                    if frame_gap > max_consecutive_misses + 1:
                         continue
 
                     # Check distance
@@ -207,14 +236,25 @@ def run_tracklet_tracker(detectors, config):
                     assigned_detections.add(det_idx)
                     assigned_tracklets.add(tracklet_idx)
 
-            # Finish tracklets that weren't assigned (end of tracklet)
-            tracklets_to_remove = []
+            # Mark unassigned tracklets as missed (don't remove immediately)
             for i, tracklet in enumerate(active_tracklets):
                 if i not in assigned_tracklets:
-                    # End this tracklet if it has enough detections
-                    if len(tracklet.positions) >= min_tracklet_length:
+                    tracklet.mark_missed(frame)
+
+            # Remove tracklets that exceed thresholds ("m out of n" filtering)
+            tracklets_to_remove = []
+            for tracklet in active_tracklets:
+                # Remove if too many consecutive misses
+                if tracklet.consecutive_misses > max_consecutive_misses:
+                    # Save if it has enough detections
+                    if tracklet.hits >= min_tracklet_length:
                         finished_tracklets.append(tracklet)
                     tracklets_to_remove.append(tracklet)
+                # Remove if detection rate is too low (after minimum age)
+                elif tracklet.age >= min_tracklet_length * 2:
+                    if tracklet.detection_rate() < min_detection_rate:
+                        # Don't save - poor quality tracklet
+                        tracklets_to_remove.append(tracklet)
 
             for tracklet in tracklets_to_remove:
                 active_tracklets.remove(tracklet)
@@ -233,9 +273,28 @@ def run_tracklet_tracker(detectors, config):
                 active_tracklets.append(new_tracklet)
                 next_tracklet_id += 1
 
+        else:
+            # No detections this frame - mark all tracklets as missed
+            for tracklet in active_tracklets:
+                tracklet.mark_missed(frame)
+
+            # Remove tracklets that exceed thresholds
+            tracklets_to_remove = []
+            for tracklet in active_tracklets:
+                if tracklet.consecutive_misses > max_consecutive_misses:
+                    if tracklet.hits >= min_tracklet_length:
+                        finished_tracklets.append(tracklet)
+                    tracklets_to_remove.append(tracklet)
+                elif tracklet.age >= min_tracklet_length * 2:
+                    if tracklet.detection_rate() < min_detection_rate:
+                        tracklets_to_remove.append(tracklet)
+
+            for tracklet in tracklets_to_remove:
+                active_tracklets.remove(tracklet)
+
     # Finish remaining active tracklets
     for tracklet in active_tracklets:
-        if len(tracklet.positions) >= min_tracklet_length:
+        if tracklet.hits >= min_tracklet_length:
             finished_tracklets.append(tracklet)
 
     # ========================================================================
