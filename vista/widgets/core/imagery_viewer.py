@@ -62,6 +62,9 @@ class ImageryViewer(QWidget):
         self.track_path_items = {}  # id(track) -> PlotCurveItem (for track path)
         self.track_marker_items = {}  # id(track) -> ScatterPlotItem (for current position)
 
+        # Set of selected track IDs for highlighting
+        self.selected_track_ids = set()
+
         # Geolocation tooltip
         self.geolocation_enabled = False
         self.geolocation_text = None  # TextItem for displaying lat/lon
@@ -382,6 +385,11 @@ class ImageryViewer(QWidget):
                 }
                 pen_style = line_style_map.get(track.line_style, Qt.PenStyle.SolidLine)
 
+                # Check if track is selected for highlighting
+                is_selected = track_id in self.selected_track_ids
+                line_width = track.line_width + 5 if is_selected else track.line_width
+                marker_size = track.marker_size + 5 if is_selected else track.marker_size
+
                 # If track is marked as complete, show entire track regardless of current frame
                 if track.complete:
                     rows = track.rows
@@ -392,7 +400,7 @@ class ImageryViewer(QWidget):
                     if track.show_line:
                         path.setData(
                             x=cols, y=rows,
-                            pen=pg.mkPen(color=track.color, width=track.line_width, style=pen_style)
+                            pen=pg.mkPen(color=track.color, width=line_width, style=pen_style)
                         )
                     else:
                         path.setData(x=[], y=[])  # Hide line
@@ -404,7 +412,7 @@ class ImageryViewer(QWidget):
                             x=[cols[idx]], y=[rows[idx]],
                             pen=pg.mkPen(color=track.color, width=2),
                             brush=pg.mkBrush(color=track.color),
-                            size=track.marker_size,
+                            size=marker_size,
                             symbol=track.marker
                         )
                     else:
@@ -428,7 +436,7 @@ class ImageryViewer(QWidget):
                         if track.show_line:
                             path.setData(
                                 x=cols, y=rows,
-                                pen=pg.mkPen(color=track.color, width=track.line_width, style=pen_style)
+                                pen=pg.mkPen(color=track.color, width=line_width, style=pen_style)
                             )
                         else:
                             path.setData(x=[], y=[])  # Hide line
@@ -440,7 +448,7 @@ class ImageryViewer(QWidget):
                                 x=[cols[idx]], y=[rows[idx]],
                                 pen=pg.mkPen(color=track.color, width=2),
                                 brush=pg.mkBrush(color=track.color),
-                                size=track.marker_size,
+                                size=marker_size,
                                 symbol=track.marker
                             )
                         else:
@@ -467,6 +475,16 @@ class ImageryViewer(QWidget):
         self.trackers.append(tracker)
         self.update_overlays()
         return self.get_frame_range()  # Return updated frame range
+
+    def set_selected_tracks(self, track_ids):
+        """
+        Set which tracks are selected for highlighting.
+
+        Args:
+            track_ids: Set of track IDs (id(track)) to highlight
+        """
+        self.selected_track_ids = track_ids
+        self.update_overlays()
 
     def set_geolocation_enabled(self, enabled):
         """Enable or disable geolocation tooltip"""

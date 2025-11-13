@@ -2062,13 +2062,34 @@ class DataManagerPanel(QWidget):
         self.refresh_aois_table()
 
     def on_track_selection_changed(self):
-        """Handle track selection change to enable/disable Edit Track button"""
+        """Handle track selection change to enable/disable Edit Track button and highlight tracks"""
         selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
         # Enable Edit Track button only if exactly one track is selected
         self.edit_track_btn.setEnabled(len(selected_rows) == 1)
         # If button is checked but selection changed, uncheck it
         if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
             self.edit_track_btn.setChecked(False)
+
+        # Collect selected track IDs for highlighting in the viewer
+        selected_track_ids = set()
+        for row in selected_rows:
+            # Get the track from this row
+            name_item = self.tracks_table.item(row, 2)  # Track name column
+            if name_item:
+                track_name = name_item.text()
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.name == track_name:
+                                selected_track_ids.add(id(track))
+                                break
+
+        # Update viewer with selected tracks
+        self.viewer.set_selected_tracks(selected_track_ids)
 
     def on_edit_track_clicked(self, checked):
         """Handle Edit Track button click"""
