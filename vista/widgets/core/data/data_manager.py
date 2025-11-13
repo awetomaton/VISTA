@@ -439,31 +439,30 @@ class DataManagerPanel(QWidget):
         self.bulk_apply_btn = QPushButton("Apply to Visible")
         self.bulk_apply_btn.clicked.connect(self.apply_bulk_action)
         bulk_layout.addWidget(self.bulk_apply_btn)
-        
-        # Add clear filters button
-        self.clear_filters_btn = QPushButton("Clear Filters")
-        self.clear_filters_btn.clicked.connect(self.clear_track_filters)
-        bulk_layout.addWidget(self.clear_filters_btn)
+        bulk_layout.addStretch()
+        layout.addLayout(bulk_layout)
+
+        # Track actions section
+        tracks_actions_layout = QHBoxLayout()
 
         # Add export tracks button
         self.export_tracks_btn = QPushButton("Export Tracks")
         self.export_tracks_btn.clicked.connect(self.export_tracks)
-        bulk_layout.addWidget(self.export_tracks_btn)
+        tracks_actions_layout.addWidget(self.export_tracks_btn)
 
         # Add delete selected button
         self.delete_selected_tracks_btn = QPushButton("Delete Selected")
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
-        bulk_layout.addWidget(self.delete_selected_tracks_btn)
+        tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
 
         # Add edit track button
         self.edit_track_btn = QPushButton("Edit Track")
         self.edit_track_btn.setCheckable(True)
         self.edit_track_btn.setEnabled(False)  # Disabled until single track selected
         self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
-        bulk_layout.addWidget(self.edit_track_btn)
-
-        bulk_layout.addStretch()
-        layout.addLayout(bulk_layout)
+        tracks_actions_layout.addWidget(self.edit_track_btn)
+        tracks_actions_layout.addStretch()
+        layout.addLayout(tracks_actions_layout)
 
         # Track column visibility (all columns visible by default except what we decide to hide)
         # Column 0 (Visible) is always shown and cannot be hidden
@@ -901,7 +900,13 @@ class DataManagerPanel(QWidget):
             clear_filter_action.setEnabled(column in self.track_column_filters and bool(self.track_column_filters[column]))
             menu.addAction(clear_filter_action)
 
-            menu.addSeparator()
+        # Clear all filters option (always available, shown for all columns)
+        clear_all_filters_action = QAction("Clear All Filters", self)
+        clear_all_filters_action.triggered.connect(self.clear_track_filters)
+        clear_all_filters_action.setEnabled(bool(self.track_column_filters))
+        menu.addAction(clear_all_filters_action)
+
+        menu.addSeparator()
 
         # Column visibility submenu (always available)
         column_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
