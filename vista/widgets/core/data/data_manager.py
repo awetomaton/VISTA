@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QColor, QBrush, QAction
 import pathlib
 import numpy as np
+import pandas as pd
 
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 
@@ -475,6 +476,11 @@ class DataManagerPanel(QWidget):
         self.export_tracks_btn = QPushButton("Export Tracks")
         self.export_tracks_btn.clicked.connect(self.export_tracks)
         tracks_actions_layout.addWidget(self.export_tracks_btn)
+
+        # Add merge selected button
+        self.merge_selected_tracks_btn = QPushButton("Merge Selected")
+        self.merge_selected_tracks_btn.clicked.connect(self.merge_selected_tracks)
+        tracks_actions_layout.addWidget(self.merge_selected_tracks_btn)
 
         # Add delete selected button
         self.delete_selected_tracks_btn = QPushButton("Delete Selected")
@@ -1734,6 +1740,132 @@ class DataManagerPanel(QWidget):
 
         self.refresh_detections_table()
         self.data_changed.emit()
+
+    def merge_selected_tracks(self):
+        """Merge selected tracks into a single track"""
+        from vista.tracks.track import Track
+
+        # Get selected rows from the table
+        selected_rows = sorted(set(index.row() for index in self.tracks_table.selectedIndexes()))
+
+        if len(selected_rows) < 2:
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Please select at least 2 tracks to merge."
+            )
+            return
+
+        # Collect tracks from selected rows
+        tracks_to_merge = []
+        tracker_map = {}  # Map track to its tracker
+
+        for row in selected_rows:
+            # Get the track from this row
+            name_item = self.tracks_table.item(row, 2)  # Track name column
+            if name_item:
+                track_name = name_item.text()
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.name == track_name:
+                                tracks_to_merge.append(track)
+                                tracker_map[id(track)] = tracker
+                                break
+
+        if len(tracks_to_merge) < 2:
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Could not find enough valid tracks to merge."
+            )
+            return
+
+        # Convert each track to DataFrame
+        track_dfs = []
+        for track in tracks_to_merge:
+            df = track.to_dataframe()
+            track_dfs.append(df)
+
+        # Combine all DataFrames
+        combined_df = pd.concat(track_dfs, ignore_index=True)
+
+        # Sort by frame to handle overlapping times
+        combined_df = combined_df.sort_values('Frames').reset_index(drop=True)
+
+        # Remove duplicate frames (keep first occurrence)
+        combined_df = combined_df.drop_duplicates(subset=['Frames'], keep='first')
+
+        # Use styling from the first track
+        first_track = tracks_to_merge[0]
+        merged_name = f"Merged_{first_track.name}"
+
+        # Make sure the merged name is unique
+        existing_names = {track.name for tracker in self.viewer.trackers for track in tracker.tracks}
+        counter = 1
+        base_name = merged_name
+        while merged_name in existing_names:
+            merged_name = f"{base_name}_{counter}"
+            counter += 1
+
+        # Update the Track column in the DataFrame to the merged name
+        combined_df['Track'] = merged_name
+
+        # Create the merged track from the combined DataFrame
+        merged_track = Track(
+            name=merged_name,
+            frames=combined_df['Frames'].to_numpy().astype(np.int_),
+            rows=combined_df['Rows'].to_numpy(),
+            columns=combined_df['Columns'].to_numpy(),
+            times=pd.to_datetime(combined_df['Times']).to_numpy() if 'Times' in combined_df.columns else None,
+            color=first_track.color,
+            marker=first_track.marker,
+            line_width=first_track.line_width,
+            marker_size=first_track.marker_size,
+            visible=first_track.visible,
+            tail_length=first_track.tail_length,
+            complete=first_track.complete,
+            show_line=first_track.show_line,
+            line_style=first_track.line_style
+        )
+
+        # Add merged track to the tracker of the first track
+        first_tracker = tracker_map[id(first_track)]
+        first_tracker.tracks.append(merged_track)
+
+        # Delete the original tracks
+        for track in tracks_to_merge:
+            tracker = tracker_map[id(track)]
+            tracker.tracks.remove(track)
+
+            # Remove plot items from viewer
+            track_id = id(track)
+            if track_id in self.viewer.track_path_items:
+                self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
+                del self.viewer.track_path_items[track_id]
+            if track_id in self.viewer.track_marker_items:
+                self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
+                del self.viewer.track_marker_items[track_id]
+
+        # Remove empty trackers
+        self.viewer.trackers = [t for t in self.viewer.trackers if len(t.tracks) > 0]
+
+        # Update the viewer to create plot items for the new merged track
+        self.viewer.update_overlays()
+
+        # Refresh table
+        self.refresh_tracks_table()
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self,
+            "Merge Complete",
+            f"Successfully merged {len(tracks_to_merge)} tracks into '{merged_name}'."
+        )
 
     def delete_selected_tracks(self):
         """Delete tracks that are selected in the tracks table"""
