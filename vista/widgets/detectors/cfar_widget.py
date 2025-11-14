@@ -278,24 +278,17 @@ class CFARWidget(QDialog):
     # Signal emitted when processing is complete
     detector_processed = pyqtSignal(object)  # Emits Detector object
 
-    def __init__(self, parent=None, imagery=None, imagery_list=None, aois=None):
+    def __init__(self, parent=None, imagery=None, aois=None):
         """
         Initialize the CFAR configuration widget
 
         Args:
             parent: Parent widget
-            imagery: Imagery object to process (deprecated, use imagery_list)
-            imagery_list: List of Imagery objects to choose from (optional)
+            imagery: Imagery object to process
             aois: List of AOI objects to choose from (optional)
         """
         super().__init__(parent)
-        # Support both old single imagery and new imagery_list parameters
-        if imagery_list is not None:
-            self.imagery_list = imagery_list
-        elif imagery is not None:
-            self.imagery_list = [imagery]
-        else:
-            self.imagery_list = []
+        self.imagery = imagery
         self.aois = aois if aois is not None else []
         self.processing_thread = None
         self.settings = QSettings("VISTA", "CFAR")
@@ -333,22 +326,6 @@ class CFARWidget(QDialog):
 
         # Left side: parameters
         params_layout = QVBoxLayout()
-
-        # Imagery selection
-        imagery_layout = QHBoxLayout()
-        imagery_label = QLabel("Input Imagery:")
-        imagery_label.setToolTip(
-            "Select which imagery to process.\n"
-            "Background-removed imagery often works best for detection."
-        )
-        self.imagery_combo = QComboBox()
-        for img in self.imagery_list:
-            self.imagery_combo.addItem(img.name, img)
-        self.imagery_combo.setToolTip(imagery_label.toolTip())
-        imagery_layout.addWidget(imagery_label)
-        imagery_layout.addWidget(self.imagery_combo)
-        imagery_layout.addStretch()
-        params_layout.addLayout(imagery_layout)
 
         # AOI selection
         aoi_layout = QHBoxLayout()
@@ -616,25 +593,6 @@ class CFARWidget(QDialog):
 
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
-        # Get selected imagery
-        if len(self.imagery_list) == 0:
-            QMessageBox.warning(
-                self,
-                "No Imagery",
-                "No imagery is currently loaded. Please load imagery first.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
-
-        selected_imagery = self.imagery_combo.currentData()
-        if selected_imagery is None:
-            QMessageBox.warning(
-                self,
-                "No Imagery Selected",
-                "Please select an imagery to process.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
 
         # Get parameter values
         background_radius = self.background_spinbox.value()
@@ -646,7 +604,7 @@ class CFARWidget(QDialog):
         detection_mode = self.mode_combo.currentData()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
-        end_frame = min(self.end_frame_spinbox.value(), len(selected_imagery.frames))
+        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
 
         # Save settings for next time
         self.save_settings()
@@ -673,7 +631,6 @@ class CFARWidget(QDialog):
         # Update UI for processing state
         self.run_button.setEnabled(False)
         self.close_button.setEnabled(False)
-        self.imagery_combo.setEnabled(False)
         self.background_spinbox.setEnabled(False)
         self.ignore_spinbox.setEnabled(False)
         self.threshold_spinbox.setEnabled(False)
@@ -691,7 +648,7 @@ class CFARWidget(QDialog):
 
         # Create and start processing thread
         self.processing_thread = CFARProcessingThread(
-            selected_imagery, background_radius, ignore_radius, threshold_deviation,
+            self.imagery, background_radius, ignore_radius, threshold_deviation,
             min_area, max_area, annulus_shape, detection_mode, selected_aoi, start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
@@ -766,7 +723,6 @@ class CFARWidget(QDialog):
         """Reset UI to initial state"""
         self.run_button.setEnabled(True)
         self.close_button.setEnabled(True)
-        self.imagery_combo.setEnabled(True)
         self.background_spinbox.setEnabled(True)
         self.ignore_spinbox.setEnabled(True)
         self.threshold_spinbox.setEnabled(True)

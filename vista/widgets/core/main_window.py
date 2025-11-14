@@ -897,14 +897,11 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        # Get the list of all imagery from the viewer
-        imagery_list = self.viewer.imageries
-
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = SimpleThresholdWidget(self, imagery_list=imagery_list, aois=aois)
+        widget = SimpleThresholdWidget(self, imagery=self.viewer.imagery, aois=aois)
         widget.detector_processed.connect(self.on_simple_threshold_complete)
         widget.exec()
 
@@ -942,14 +939,11 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        # Get the list of all imagery from the viewer
-        imagery_list = self.viewer.imageries
-
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = CFARWidget(self, imagery_list=imagery_list, aois=aois)
+        widget = CFARWidget(self, imagery=self.viewer.imagery, aois=aois)
         widget.detector_processed.connect(self.on_cfar_complete)
         widget.exec()
 
