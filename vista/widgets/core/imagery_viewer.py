@@ -98,8 +98,10 @@ class ImageryViewer(QWidget):
         self.track_selection_mode = False
 
         # Histogram bounds persistence
-        self.user_histogram_bounds = None  # (min, max) tuple - None means use auto levels
-        self.preserve_histogram_bounds = False  # Set to True when user manually adjusts levels
+        self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
+
+        # Imagery selection
+        self.setting_imagery = False
 
         # Last mouse position for updating tooltips on frame change
         self.last_mouse_pos = None  # Store last mouse position in scene coordinates
@@ -183,13 +185,15 @@ class ImageryViewer(QWidget):
         if imagery in self.imageries:
             self.imagery = imagery
             self.current_frame_number = imagery.frames[0] if len(imagery.frames) > 0 else 0
-            # Reset histogram bounds when switching imagery
-            self.user_histogram_bounds = None
-            self.preserve_histogram_bounds = False
+            
             # Display the first frame
+            self.setting_imagery = True
             self.image_item.setImage(imagery.images[0])
+            self.setting_imagery = False
+            
             # Apply imagery offsets for positioning
             self.image_item.setPos(imagery.column_offset, imagery.row_offset)
+            
             # Refresh the current frame display
             self.set_frame_number(self.current_frame_number)
 
@@ -212,36 +216,32 @@ class ImageryViewer(QWidget):
                 # Get the index of the closest frame that is <= frame_number
                 image_index = valid_indices[-1]
 
+                # Get user histogram limits if set
+                user_histogram_bounds = None
+                if self.imagery.uuid in self.user_histogram_bounds:
+                    user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
+
+                # Block signals to prevent histogram recomputation
+                self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+
                 # Use cached histogram if available
                 if self.imagery.has_cached_histograms():
-                    # Block signals to prevent histogram recomputation
-                    self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
-
                     # Update the image without auto-levels
                     self.image_item.setImage(self.imagery.images[image_index], autoLevels=False)
 
                     # Manually update histogram with cached data
                     hist_y, hist_x = self.imagery.get_histogram(image_index)
                     self.histogram.plot.setData(hist_x, hist_y)
-
-                    # Restore user's histogram bounds if they were manually set
-                    if self.preserve_histogram_bounds and self.user_histogram_bounds is not None:
-                        self.histogram.setLevels(*self.user_histogram_bounds)
-
-                    # Reconnect the signal
-                    self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
-                else:
-                    # Save user's histogram bounds before setImage which will reset them
-                    user_histogram_bounds = None
-                    if self.preserve_histogram_bounds and self.user_histogram_bounds is not None:
-                        user_histogram_bounds = self.user_histogram_bounds
-                    
+                else:                    
                     # Let HistogramLUTItem compute histogram automatically
                     self.image_item.setImage(self.imagery.images[image_index])
 
-                    # Restore user's histogram bounds if they were manually set
-                    if user_histogram_bounds is not None:
-                        self.histogram.setLevels(*user_histogram_bounds)
+                # Reconnect the histogram image changed signal
+                self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
+
+                # Restore user's histogram bounds if they were manually set
+                if user_histogram_bounds is not None:
+                    self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
@@ -290,8 +290,9 @@ class ImageryViewer(QWidget):
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
         # Store the user's selected bounds
-        self.user_histogram_bounds = self.histogram.getLevels()
-        self.preserve_histogram_bounds = True
+        if self.setting_imagery:
+            return
+        self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""

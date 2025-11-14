@@ -5,12 +5,13 @@ file readers and pixel-to-geodetic conversions
 """
 from astropy.coordinates import EarthLocation
 from astropy import units
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import h5py
 import numpy as np
 from numpy.typing import NDArray
 import pathlib
 from typing import Tuple, Union, Optional
+import uuid
 
 
 @dataclass
@@ -30,12 +31,15 @@ class Imagery:
     poly_row_col_to_lon: Optional[NDArray[np.float64]] = None  # Row, Column -> Longitude
     poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Row
     poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Column
+    uuid: float = field(init=None, default=None)
 
     def __post_init__(self):
         if self.row_offset is None:
             self.row_offset = 0
         if self.column_offset is None:
             self.column_offset = 0
+        self.uuid = uuid.uuid4()
+    
     def __len__(self):
         return self.images.shape[0]
     

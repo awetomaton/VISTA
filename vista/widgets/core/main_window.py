@@ -1147,5 +1147,3 @@ class VistaMainWindow(QMainWindow):
         else:
             # Pass other keys to parent class
             super().keyPressEvent(event)
-
-
