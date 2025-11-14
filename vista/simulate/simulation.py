@@ -3,11 +3,13 @@ import pandas as pd
 import pathlib
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, List
+from PIL import Image
 from vista.utils.random_walk import RandomWalk
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
+from vista.simulate.data import EARTH_IMAGE
 
 
 @dataclass
@@ -23,7 +25,7 @@ class Simulation:
     num_trackers: int = 1
     tracker_std: float = 1.0
     num_tracks_range: Tuple[int, int] = (5, 8)
-    track_intensity_range: Tuple[float, float] = (1.0, 7.0)
+    track_intensity_range: Tuple[float, float] = (30.0, 45.0)
     track_intensity_sigma_range: Tuple[float, float] = (0.5, 2.0)
     track_speed_range: Tuple[float, float] = (1.5, 2.5)
     track_speed_std: float = 1.0
@@ -48,6 +50,13 @@ class Simulation:
     enable_bad_pixel_masks: bool = False  # If True, generate bad pixel masks
     num_bad_pixel_masks: int = 2  # Number of bad pixel masks to generate
     bad_pixel_fraction: float = 0.01  # Fraction of pixels that are bad (0-1)
+    enable_radiometric_gain: bool = False  # If True, generate radiometric gain values (one per frame)
+    radiometric_gain_mean: float = 1.0  # Mean radiometric gain value
+    radiometric_gain_std: float = 0.05  # Standard deviation of radiometric gain across frames
+    # Earth image background parameters
+    enable_earth_background: bool = False  # If True, use Earth image as background
+    earth_jitter_std: float = 1.0  # Standard deviation of random jitter per frame (pixels)
+    earth_scale: float = 1.0  # Scale factor for earth image intensity
     start: Optional[any] = None
     imagery: Optional[Imagery] = None
     detectors: Optional[List[Detector]] = None
@@ -245,6 +254,28 @@ class Simulation:
 
         return bad_pixel_masks, bad_pixel_mask_frames
 
+    def _generate_radiometric_gains(self) -> np.ndarray:
+        """
+        Generate synthetic radiometric gain values (converts counts to physical units).
+
+        One value per frame with Gaussian variation around the mean.
+
+        Returns:
+            radiometric_gains: 1D array of gain values (one per frame)
+        """
+        # Generate radiometric gain values (one per frame)
+        # Use Gaussian distribution around the mean with specified std
+        radiometric_gains = np.random.normal(
+            self.radiometric_gain_mean,
+            self.radiometric_gain_std,
+            size=self.frames
+        ).astype(np.float32)
+
+        # Ensure all gains are positive
+        radiometric_gains = np.abs(radiometric_gains)
+
+        return radiometric_gains
+
     def save(self, dir = Union[str, pathlib.Path], save_geodetic_tracks=False, save_times_only=False):
         """
         Save simulation data to directory
@@ -330,7 +361,61 @@ class Simulation:
         self.imagery.to_hdf5(dir / "imagery.h5")
 
     def simulate(self):
-        images = np.random.randn(self.frames, self.rows, self.columns)
+        # Initialize images with earth background if enabled
+        if self.enable_earth_background:
+            # Load earth image from file path and convert to grayscale
+            earth_img = Image.open(EARTH_IMAGE).convert('L')  # 'L' mode is grayscale
+            earth_array = np.array(earth_img, dtype=np.float32)
+
+            # Get earth image dimensions
+            earth_height, earth_width = earth_array.shape
+
+            # Initialize images array
+            images = np.zeros((self.frames, self.rows, self.columns), dtype=np.float32)
+
+            # Pick ONE random base position for the entire sequence
+            # Add margin for jitter (3 sigma should cover ~99.7% of jitter)
+            jitter_margin = int(3 * self.earth_jitter_std)
+            max_base_row = max(0, earth_height - self.rows - 2 * jitter_margin)
+            max_base_col = max(0, earth_width - self.columns - 2 * jitter_margin)
+
+            if max_base_row > 0 and max_base_col > 0:
+                base_row = np.random.randint(0, max_base_row) + jitter_margin
+                base_col = np.random.randint(0, max_base_col) + jitter_margin
+            else:
+                # Fallback if image is too small
+                base_row = jitter_margin
+                base_col = jitter_margin
+
+            # Generate random jitter for each frame relative to base position
+            for f in range(self.frames):
+                # Random jitter offsets (Gaussian distributed)
+                jitter_row = int(np.random.randn() * self.earth_jitter_std)
+                jitter_col = int(np.random.randn() * self.earth_jitter_std)
+
+                # Calculate actual position for this frame (base + jitter)
+                start_row = base_row + jitter_row
+                start_col = base_col + jitter_col
+
+                # Ensure we don't go out of bounds
+                start_row = max(0, min(start_row, earth_height - self.rows))
+                start_col = max(0, min(start_col, earth_width - self.columns))
+
+                # Extract window from earth image
+                earth_window = earth_array[
+                    start_row:start_row + self.rows,
+                    start_col:start_col + self.columns
+                ]
+
+                # Handle edge cases where window might be smaller
+                actual_rows, actual_cols = earth_window.shape
+                images[f, :actual_rows, :actual_cols] = earth_window * self.earth_scale
+
+                # Add noise on top of earth image
+                images[f] += np.random.randn(self.rows, self.columns)
+        else:
+            # Original behavior: just random noise
+            images = np.random.randn(self.frames, self.rows, self.columns)
 
         # Initialize all the detectors with spurious detections
         self.detectors = []
@@ -455,6 +540,11 @@ class Simulation:
                     bad_pixel_masks, bad_pixel_mask_frames = self._generate_bad_pixel_masks()
                     imagery_kwargs['bad_pixel_masks'] = bad_pixel_masks
                     imagery_kwargs['bad_pixel_mask_frames'] = bad_pixel_mask_frames
+
+                # Add radiometric gain if enabled
+                if self.enable_radiometric_gain:
+                    radiometric_gain = self._generate_radiometric_gains()
+                    imagery_kwargs['radiometric_gain'] = radiometric_gain
 
                 self.imagery = Imagery(**imagery_kwargs)
 

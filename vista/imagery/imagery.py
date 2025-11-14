@@ -418,7 +418,7 @@ class Imagery:
 
             # Save radiometric gain if present
             if self.radiometric_gain is not None:
-                fid.create_dataset("radiometric_gain", data=self.radiometric_gainbias_images)
+                fid.create_dataset("radiometric_gain", data=self.radiometric_gain)
 
             # Save bias images if present
             if self.bias_images is not None:

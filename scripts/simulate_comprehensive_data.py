@@ -1,10 +1,15 @@
-"""Example script showing how to create simulations with times and geodetic coordinates
+"""Example script showing how to create comprehensive simulations with all VISTA features
 
 This script demonstrates creating test data for the following scenarios:
-1. Tracks with Times + Geodetic coordinates (no Frames, no Row/Column)
+1. Normal simulation (Frames + Row/Column)
 2. Tracks with Times only (no Frames, but has Row/Column)
 3. Tracks with Geodetic only (has Frames, no Row/Column)
-4. Normal tracks (Frames + Row/Column)
+4. Tracks with Times + Geodetic coordinates (no Frames, no Row/Column)
+5. Full-featured simulation with ALL imagery capabilities:
+   - Temporal metadata (times)
+   - Geodetic conversion polynomials
+   - Sensor calibration data (bias, uniformity gain, bad pixels, radiometric gain)
+   - Earth image background with realistic jittering
 """
 import numpy as np
 import pathlib
@@ -105,35 +110,60 @@ def create_times_and_geodetic_simulation(output_dir="sim_times_geodetic"):
 
 
 def create_all_features_simulation(output_dir="sim_all_features"):
-    """Create simulation with times and geodetic, but keep frames and pixel coords"""
-    print("Creating full-featured simulation...")
+    """Create simulation with ALL imagery features enabled"""
+    print("Creating comprehensive simulation with ALL features...")
     sim = Simulation(
         name="Full Featured Simulation",
-        frames=50,
+        frames=100,
         rows=256,
         columns=256,
         num_trackers=1,
         num_tracks_range=(3, 5),
+        # Temporal and geodetic metadata
         enable_times=True,
         frame_rate=10.0,
         start_time=np.datetime64('2024-01-01T12:00:00', 'us'),
         enable_geodetic=True,
         center_lat=40.0,
         center_lon=-105.0,
-        pixel_to_deg_scale=0.0001
+        pixel_to_deg_scale=0.0001,
+        # Sensor calibration data
+        enable_bias_images=True,
+        num_bias_images=2,
+        bias_value_range=(0.5, 2.0),
+        bias_pattern_scale=0.3,
+        enable_uniformity_gain=True,
+        num_uniformity_gains=2,
+        gain_variation_range=(0.9, 1.1),
+        enable_bad_pixel_masks=True,
+        num_bad_pixel_masks=2,
+        bad_pixel_fraction=0.01,
+        enable_radiometric_gain=True,
+        radiometric_gain_mean=1.0,
+        radiometric_gain_std=0.05,
+        # Earth background
+        enable_earth_background=True,
+        earth_jitter_std=2.0,
+        earth_scale=1.0
     )
     sim.simulate()
     sim.save(output_dir)  # Don't remove any columns
     print(f"Saved to {output_dir}/")
     print(f"  - Tracks have: Frames, Times, Rows, Columns")
-    print(f"  - Imagery has: times and geodetic conversion polynomials")
+    print(f"  - Imagery has:")
+    print(f"    * times and geodetic conversion polynomials")
+    print(f"    * bias_images (2 bias frames)")
+    print(f"    * uniformity_gain_images (2 gain corrections)")
+    print(f"    * bad_pixel_masks (2 masks)")
+    print(f"    * radiometric_gain (100 values, one per frame)")
+    print(f"    * Earth image background with jittering")
     print(f"  - Note: Frames take priority over Times, Rows/Columns take priority over Lat/Lon/Alt")
     print()
 
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("Creating Test Simulations for Times and Geodetic Coordinate Support")
+    print("Creating Comprehensive Test Simulations with All VISTA Features")
     print("=" * 70)
     print()
 
@@ -156,3 +186,12 @@ if __name__ == "__main__":
     print("2. Load tracks from each simulation's trackers.csv file")
     print("3. Verify that the imagery selection dialog appears when needed")
     print("4. Verify that coordinates are converted correctly")
+    print()
+    print("The 'sim_all_features' dataset includes:")
+    print("  - Temporal metadata (times)")
+    print("  - Geodetic conversion polynomials")
+    print("  - Bias/dark frames (2 bias images)")
+    print("  - Uniformity gain corrections (2 gain images)")
+    print("  - Bad pixel masks (2 masks)")
+    print("  - Radiometric gain values (per-frame calibration)")
+    print("  - Earth image background with realistic jittering")

@@ -2,9 +2,9 @@
 
 ![Logo](/vista/icons/logo-small.jpg)
 
-VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems.
+VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
-![Version](https://img.shields.io/badge/version1.4.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Python](https://img.shields.io/badge/python-3.x-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -24,6 +24,7 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 ### Multi-Frame Imagery Viewer
 - Display full image sequences from HDF5 files with optional time and geodetic metadata
 - Support for multiple simultaneous imagery datasets (must have unique names)
+- **Sensor calibration data support**: bias/dark frames, uniformity gain corrections, bad pixel masks, and radiometric gain values
 - Interactive image histogram with dynamic range adjustment
 - Frame-by-frame navigation with keyboard shortcuts
 - Click-to-create manual tracks on imagery
@@ -53,7 +54,9 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 
 ### Built-in Detection Algorithms
 - **CFAR (Constant False Alarm Rate)**: Adaptive threshold detector with guard and background windows
+  - Supports three detection modes: 'above' (bright objects), 'below' (dark objects), 'both' (absolute deviation)
 - **Simple Threshold**: Basic intensity-based detection with configurable threshold
+  - Supports three detection modes: 'above' (positive values), 'below' (negative values), 'both' (absolute value)
 
 ### Built-in Tracking Algorithms
 - **Simple Tracker**: Nearest-neighbor association with maximum distance threshold
@@ -69,9 +72,12 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 - **Temporal Median**: Remove static backgrounds using median filtering
   - Configurable temporal window and offset
   - Preserves moving objects while removing static elements
+  - Supports AOI (Area of Interest) processing
 - **Robust PCA**: Principal component analysis for background/foreground separation
   - Low-rank matrix decomposition
   - Robust to outliers and sparse foreground
+  - Supports AOI (Area of Interest) processing
+  - Separates imagery into background and foreground components
 
 ### Playback Controls
 - Play/Pause with adjustable FPS (-100 to +100 FPS for reverse playback)
@@ -108,13 +114,15 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 
 ### Dependencies
 ```bash
-pip install PyQt6 h5py pandas numpy pyqtgraph astropy darkdetect scikit-learn cvxpy
+pip install PyQt6 h5py pandas numpy pyqtgraph astropy darkdetect scikit-learn cvxpy Pillow
 ```
 
 Optional (for example scripts):
 ```bash
 pip install plotly
 ```
+
+**Note:** Pillow is required for Earth background simulation feature.
 
 ### Setup
 1. Clone the repository:
@@ -169,6 +177,20 @@ VISTA uses HDF5 files to store image sequences with optional time and geodetic m
 
 Polynomial format: `f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 + c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 + c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4`
 
+**Sensor Calibration Data:**
+
+These datasets support sensor calibration and radiometric correction workflows. Each calibration dataset has a corresponding frames array that indicates when each calibration becomes applicable.
+
+- **`bias_images`**: Shape `(N_bias, height, width)` - Dark/bias frames for dark current correction
+- **`bias_image_frames`**: Shape `(N_bias,)` - Frame numbers where each bias image becomes applicable
+- **`uniformity_gain_images`**: Shape `(N_gain, height, width)` - Flat-field/gain correction images
+- **`uniformity_gain_image_frames`**: Shape `(N_gain,)` - Frame numbers where each gain image becomes applicable
+- **`bad_pixel_masks`**: Shape `(N_masks, height, width)` - Bad pixel masks (1=bad, 0=good)
+- **`bad_pixel_mask_frames`**: Shape `(N_masks,)` - Frame numbers where each mask becomes applicable
+- **`radiometric_gain`**: Shape `(N_frames,)` - Per-frame radiometric gain values (converts counts to physical units)
+
+**Calibration Frame Semantics**: Frame N in a calibration frames array applies to all frames >= N until the next calibration frame. For example, if `bias_image_frames = [0, 100]`, then `bias_images[0]` applies to frames 0-99 and `bias_images[1]` applies to frames 100+.
+
 #### Example HDF5 Structure
 ```
 imagery.h5
@@ -191,8 +213,22 @@ imagery.h5
 │   └── Shape: (100, 15)
 ├── poly_lat_lon_to_row (Dataset) [optional]
 │   └── Shape: (100, 15)
-└── poly_lat_lon_to_col (Dataset) [optional]
-    └── Shape: (100, 15)
+├── poly_lat_lon_to_col (Dataset) [optional]
+│   └── Shape: (100, 15)
+├── bias_images (Dataset) [optional]
+│   └── Shape: (2, 512, 512)
+├── bias_image_frames (Dataset) [optional]
+│   └── Shape: (2,)
+├── uniformity_gain_images (Dataset) [optional]
+│   └── Shape: (2, 512, 512)
+├── uniformity_gain_image_frames (Dataset) [optional]
+│   └── Shape: (2,)
+├── bad_pixel_masks (Dataset) [optional]
+│   └── Shape: (2, 512, 512)
+├── bad_pixel_mask_frames (Dataset) [optional]
+│   └── Shape: (2,)
+└── radiometric_gain (Dataset) [optional]
+    └── Shape: (100,)
 ```
 
 #### Creating Imagery Files
@@ -509,6 +545,10 @@ app.exec()  # Window will open; close it to continue notebook execution
 - **Detection Threshold**: SNR threshold for detections (default: 3.0)
 - **Guard Window Radius**: Size of guard region around test cell (default: 2)
 - **Background Window Radius**: Size of background estimation region (default: 5)
+- **Detection Mode**: Controls what type of objects to detect (default: 'above')
+  - **'above'**: Detect bright objects (pixel > mean + threshold × std)
+  - **'below'**: Detect dark objects (pixel < mean - threshold × std)
+  - **'both'**: Detect absolute deviations (|pixel - mean| > threshold × std)
 
 **Output:** Creates a new detector with CFAR detections
 
@@ -517,7 +557,11 @@ app.exec()  # Window will open; close it to continue notebook execution
 **Menu Path:** `Detections → Simple Threshold`
 
 **Parameters:**
-- **Threshold**: Minimum intensity value for detection (default: 5.0)
+- **Threshold**: Intensity threshold value (default: 5.0)
+- **Detection Mode**: Controls what type of objects to detect (default: 'above')
+  - **'above'**: Detect positive values (pixel > threshold)
+  - **'below'**: Detect negative values (pixel < -threshold, useful for background-removed imagery)
+  - **'both'**: Detect absolute values (|pixel| > threshold)
 
 **Output:** Creates a new detector with threshold-based detections
 
@@ -578,6 +622,8 @@ All tracking algorithms take detections as input and produce tracks as output.
 **Parameters:**
 - **Background Frames**: Number of frames on each side for median (default: 5)
 - **Temporal Offset**: Frames to skip around current frame (default: 2)
+- **Start Frame / End Frame**: Frame range to process
+- **AOI Selection**: Optional area of interest to process (default: Full Image)
 
 **Output:** New imagery dataset with background removed
 
@@ -585,10 +631,18 @@ All tracking algorithms take detections as input and produce tracks as output.
 
 **Menu Path:** `Image Processing → Background Removal → Robust PCA`
 
-**Parameters:**
-- **Regularization Parameter**: Controls background/foreground separation (default: 0.1)
+**Description:** Decomposes imagery into low-rank (background) and sparse (foreground) components using Principal Component Pursuit (PCP).
 
-**Output:** New imagery dataset with background removed using low-rank decomposition
+**Parameters:**
+- **Lambda Parameter**: Sparsity parameter controlling background/foreground separation (default: auto-calculated as 1/sqrt(max(m,n)))
+- **Tolerance**: Convergence tolerance (default: 1e-7)
+- **Max Iterations**: Maximum optimization iterations (default: 1000)
+- **Start Frame / End Frame**: Frame range to process
+- **AOI Selection**: Optional area of interest to process (default: Full Image)
+- **Add Background**: Option to add background component to data manager
+- **Add Foreground**: Option to add foreground component to data manager
+
+**Output:** Two new imagery datasets - low-rank background and sparse foreground components
 
 ### Playback Controls
 
@@ -640,13 +694,52 @@ sim = Simulation(
 )
 sim.simulate()
 
+# Simulation with sensor calibration data
+sim = Simulation(
+    name="Calibrated Simulation",
+    frames=100,
+    rows=256,
+    columns=256,
+    # Enable sensor calibration features
+    enable_bias_images=True,
+    num_bias_images=2,
+    bias_value_range=(0.5, 2.0),
+    enable_uniformity_gain=True,
+    num_uniformity_gains=2,
+    enable_bad_pixel_masks=True,
+    num_bad_pixel_masks=2,
+    bad_pixel_fraction=0.01,
+    enable_radiometric_gain=True,
+    radiometric_gain_mean=1.0,
+    radiometric_gain_std=0.05
+)
+sim.simulate()
+sim.save("calibrated_data")
+
+# Simulation with Earth background
+sim = Simulation(
+    name="Earth Background Simulation",
+    frames=50,
+    rows=256,
+    columns=256,
+    enable_earth_background=True,
+    earth_jitter_std=2.0,  # Platform jitter in pixels
+    earth_scale=1.0  # Scale factor for Earth image intensity
+)
+sim.simulate()
+sim.save("earth_sim")
+
 # Save with different coordinate systems
 sim.save("time_based", save_times_only=True)  # Times only
 sim.save("geodetic", save_geodetic_tracks=True)  # Geodetic only
 sim.save("time_geodetic", save_geodetic_tracks=True, save_times_only=True)  # Both
 ```
 
-Use the example script to generate all test scenarios:
+### Pre-configured Test Scenarios
+
+Use the example scripts to generate comprehensive test data:
+
+**Generate all coordinate system variations:**
 ```bash
 python scripts/example_geodetic_time.py
 ```
@@ -657,6 +750,18 @@ This creates 5 directories with different test configurations:
 - `sim_geodetic_only/` - Geodetic tracks
 - `sim_times_geodetic/` - Time + Geodetic
 - `sim_all_features/` - All features combined
+
+**Generate comprehensive test data with all features:**
+```bash
+python scripts/create_comprehensive_data.py
+```
+
+This creates 5 directories demonstrating different feature sets:
+- `sim_basic/` - Basic simulation with minimal features
+- `sim_with_times/` - Time-based metadata
+- `sim_with_geodetic/` - Geodetic coordinate conversion
+- `sim_with_calibration/` - Sensor calibration data (bias, gain, bad pixels, radiometric gain)
+- `sim_all_features/` - Complete feature set including Earth background, calibration data, times, and geodetic support
 
 ## Project Structure
 
@@ -711,10 +816,13 @@ Vista/
 │   │   ├── time_mapping.py          # Time-to-frame conversion
 │   │   └── geodetic_mapping.py      # Geodetic-to-pixel conversion
 │   ├── simulate/                    # Data generation utilities
-│   │   └── simulation.py            # Synthetic data simulator
+│   │   ├── simulation.py            # Synthetic data simulator
+│   │   └── data.py                  # Earth image and other simulation data
 │   └── icons/                       # Application icons
 ├── scripts/                         # Example scripts
-│   └── example_geodetic_time.py     # Generate test data
+│   ├── example_geodetic_time.py     # Generate coordinate system test data
+│   ├── create_comprehensive_data.py # Generate comprehensive test data with all features
+│   └── example_programmatic_loading.py  # Programmatic API usage example
 ├── data/                            # Example datasets (gitignored)
 └── readme.md                        # This file
 ```
@@ -800,5 +908,7 @@ VISTA uses the following open-source libraries:
 - pyqtgraph for high-performance visualization
 - NumPy and pandas for data processing
 - astropy for geodetic coordinate handling
-- scikit-image for advanced algorithms
+- scikit-learn for machine learning algorithms
+- cvxpy for optimization (Network Flow Tracker)
 - h5py for HDF5 file support
+- Pillow for image processing (Earth background simulation)
