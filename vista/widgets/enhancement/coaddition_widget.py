@@ -43,31 +43,10 @@ class CoadditionProcessingThread(QThread):
         try:
             # Determine the region to process
             if self.aoi:
-                # Extract AOI bounds
-                row_start = int(self.aoi.y) - self.imagery.row_offset
-                row_end = int(self.aoi.y + self.aoi.height) - self.imagery.row_offset
-                col_start = int(self.aoi.x) - self.imagery.column_offset
-                col_end = int(self.aoi.x + self.aoi.width) - self.imagery.column_offset
-
-                # Crop imagery to AOI
-                cropped_images = self.imagery.images[:, row_start:row_end, col_start:col_end]
-
-                # Create temporary imagery object for the cropped region
-                temp_imagery = Imagery(
-                    name=self.imagery.name,
-                    images=cropped_images,
-                    frames=self.imagery.frames,
-                    times=self.imagery.times
-                )
-
-                # Store offsets for later use
-                row_offset = self.imagery.row_offset + row_start
-                column_offset = self.imagery.column_offset + col_start
+                temp_imagery = self.imagery.get_aoi(self.aoi)
             else:
                 # Process entire imagery
                 temp_imagery = self.imagery
-                row_offset = self.imagery.row_offset
-                column_offset = self.imagery.column_offset
 
             # Create the algorithm instance
             algorithm = Coaddition(
@@ -98,20 +77,11 @@ class CoadditionProcessingThread(QThread):
             new_name = f"{self.imagery.name} {algorithm.name}"
             if self.aoi:
                 new_name += f" (AOI: {self.aoi.name})"
-
-            processed_imagery = Imagery(
-                name=new_name,
-                images=processed_images,
-                frames=temp_imagery.frames.copy(),
-                row_offset=row_offset,
-                column_offset=column_offset,
-                times=temp_imagery.times.copy() if temp_imagery.times is not None else None,
-                description=f"Processed with {algorithm.name} (window_size={self.window_size})",
-                poly_row_col_to_lat=self.imagery.poly_row_col_to_lat.copy() if self.imagery.poly_row_col_to_lat is not None else None,
-                poly_row_col_to_lon=self.imagery.poly_row_col_to_lon.copy() if self.imagery.poly_row_col_to_lon is not None else None,
-                poly_lat_lon_to_row=self.imagery.poly_lat_lon_to_row.copy() if self.imagery.poly_lat_lon_to_row is not None else None,
-                poly_lat_lon_to_col=self.imagery.poly_lat_lon_to_col.copy() if self.imagery.poly_lat_lon_to_col is not None else None
-            )
+            
+            processed_imagery = temp_imagery.copy()
+            processed_imagery.images = processed_images
+            processed_imagery.name = new_name
+            processed_imagery.description = f"Processed with {algorithm.name} (window_size={self.window_size})",
 
             # Pre-compute histograms for performance
             for i in range(len(processed_imagery.images)):

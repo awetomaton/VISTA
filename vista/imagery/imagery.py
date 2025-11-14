@@ -12,6 +12,7 @@ from numpy.typing import NDArray
 import pathlib
 from typing import Tuple, Union, Optional
 import uuid
+from vista.aoi import AOI
 
 
 @dataclass
@@ -31,7 +32,7 @@ class Imagery:
     poly_row_col_to_lon: Optional[NDArray[np.float64]] = None  # Row, Column -> Longitude
     poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Row
     poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Column
-    uuid: float = field(init=None, default=None)
+    uuid: str = field(init=None, default=None)
 
     def __post_init__(self):
         if self.row_offset is None:
@@ -40,6 +41,21 @@ class Imagery:
             self.column_offset = 0
         self.uuid = uuid.uuid4()
     
+    def __getitem__(self, s):
+        if isinstance(s, slice):
+            # Handle slice objects
+            imagery_slice = self.copy()
+            imagery_slice.images = imagery_slice.images[s]
+            imagery_slice.frames = imagery_slice.frames[s]
+            imagery_slice.times = imagery_slice.times[s] if imagery_slice.times is not None else None
+            imagery_slice.poly_row_col_to_lat = imagery_slice.poly_row_col_to_lat[s] if imagery_slice.poly_row_col_to_lat is not None else None
+            imagery_slice.poly_row_col_to_lon = imagery_slice.poly_row_col_to_lon[s] if imagery_slice.poly_row_col_to_lon is not None else None
+            imagery_slice.poly_lat_lon_to_row = imagery_slice.poly_lat_lon_to_row[s] if imagery_slice.poly_lat_lon_to_row is not None else None
+            imagery_slice.poly_lat_lon_to_col = imagery_slice.poly_lat_lon_to_col[s] if imagery_slice.poly_lat_lon_to_col is not None else None
+            return imagery_slice
+        else:
+            raise TypeError("Invalid index or slice type.")
+        
     def __len__(self):
         return self.images.shape[0]
     
@@ -49,6 +65,22 @@ class Imagery:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name}, {self.images.shape})"
 
+    def copy(self):
+        """Create a (soft) copy of this imagery"""
+        return self.__class__(
+            name = self.name + f" (copy)",
+            images = self.images,
+            frames = self.frames,
+            row_offset = self.row_offset,
+            column_offset = self.column_offset, 
+            times = self.times,
+            description = self.description,
+            poly_row_col_to_lat = self.poly_row_col_to_lat,
+            poly_row_col_to_lon = self.poly_row_col_to_lon,
+            poly_lat_lon_to_row = self.poly_lat_lon_to_row,
+            poly_lat_lon_to_col = self.poly_lat_lon_to_col
+        )
+    
     def compute_histograms(self, bins=256):
         """Pre-compute histograms for all frames (lazy caching)"""
         if self._histograms is None:
@@ -100,12 +132,14 @@ class Imagery:
         Returns:
             Evaluated polynomial values
         """
-        return (coeffs[0] +
-                coeffs[1] * x + coeffs[2] * y +
-                coeffs[3] * x**2 + coeffs[4] * x * y + coeffs[5] * y**2 +
-                coeffs[6] * x**3 + coeffs[7] * x**2 * y + coeffs[8] * x * y**2 + coeffs[9] * y**3 +
-                coeffs[10] * x**4 + coeffs[11] * x**3 * y + coeffs[12] * x**2 * y**2 +
-                coeffs[13] * x * y**3 + coeffs[14] * y**4)
+        return (
+            coeffs[0] +
+            coeffs[1] * x + coeffs[2] * y +
+            coeffs[3] * x**2 + coeffs[4] * x * y + coeffs[5] * y**2 +
+            coeffs[6] * x**3 + coeffs[7] * x**2 * y + coeffs[8] * x * y**2 + coeffs[9] * y**3 +
+            coeffs[10] * x**4 + coeffs[11] * x**3 * y + coeffs[12] * x**2 * y**2 +
+            coeffs[13] * x * y**3 + coeffs[14] * y**4
+        )
 
     def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
         """
@@ -142,9 +176,30 @@ class Imagery:
         longitudes = self._eval_polynomial_2d_order4(columns, rows, lon_coeffs)
 
         # Convert to EarthLocation using geodetic coordinates
-        return EarthLocation.from_geodetic(lon=longitudes * units.deg,
-                                          lat=latitudes * units.deg,
-                                          height=0 * units.m)
+        return EarthLocation.from_geodetic(
+            lon=longitudes * units.deg,
+            lat=latitudes * units.deg,
+            height=0 * units.m
+        )
+
+    def get_aoi(self, aoi: AOI) -> "Imagery":
+        # Extract AOI bounds
+        row_start = int(aoi.y) - self.row_offset
+        row_end = int(aoi.y + aoi.height) - self.row_offset
+        col_start = int(aoi.x) - self.column_offset
+        col_end = int(aoi.x + aoi.width) - self.column_offset
+
+        # Crop imagery to AOI
+        cropped_images = self.images[:, row_start:row_end, col_start:col_end]
+        
+        # Create imagery AOI from a copy of this imagery
+        imagery_aoi = self.copy()
+        imagery_aoi.name = self.name + f" (AOI: {aoi.name})"
+        imagery_aoi.images = cropped_images
+        imagery_aoi.row_offset = self.row_offset + row_start
+        imagery_aoi.column_offset = self.column_offset + col_start
+
+        return imagery_aoi
 
     def geodetic_to_pixel(self, frame: int, loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
         """

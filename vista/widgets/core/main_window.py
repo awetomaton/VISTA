@@ -38,7 +38,7 @@ class VistaMainWindow(QMainWindow):
             detections: Optional Detector object or list of Detector objects to load at startup
         """
         super().__init__()
-        self.setWindowTitle("VISTA - 1.3.0")
+        self.setWindowTitle("VISTA - 1.4.0")
         self.icons = VistaIcons()
         self.setWindowIcon(self.icons.logo)
 

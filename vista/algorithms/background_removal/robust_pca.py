@@ -121,7 +121,6 @@ def run_robust_pca(imagery, config):
             - background_imagery: Imagery object with background
             - foreground_imagery: Imagery object with foreground
     """
-    from vista.imagery.imagery import Imagery
 
     # Extract parameters
     lambda_param = config.get('lambda_param', None)
@@ -130,23 +129,13 @@ def run_robust_pca(imagery, config):
     start_frame = config.get('start_frame', 0)
     end_frame = config.get('end_frame', None)
 
-    # Get image data
-    images = imagery.images
-    if images is None or len(images) == 0:
-        raise ValueError("No images in imagery")
-
     # Apply frame range
     if end_frame is None:
-        end_frame = len(images)
-    images = images[start_frame:end_frame]
-    frames_subset = imagery.frames[start_frame:end_frame]
-    times_subset = imagery.times[start_frame:end_frame] if imagery.times is not None else None
+        end_frame = len(imagery)
 
-    # Subset polynomial coefficients if they exist
-    poly_row_col_to_lat_subset = imagery.poly_row_col_to_lat[start_frame:end_frame] if imagery.poly_row_col_to_lat is not None else None
-    poly_row_col_to_lon_subset = imagery.poly_row_col_to_lon[start_frame:end_frame] if imagery.poly_row_col_to_lon is not None else None
-    poly_lat_lon_to_row_subset = imagery.poly_lat_lon_to_row[start_frame:end_frame] if imagery.poly_lat_lon_to_row is not None else None
-    poly_lat_lon_to_col_subset = imagery.poly_lat_lon_to_col[start_frame:end_frame] if imagery.poly_lat_lon_to_col is not None else None
+    # Get the imagery subset corresponding to the selected frame range
+    imagery_subset = imagery[start_frame:end_frame]
+    images = imagery_subset.images
 
     # Get dimensions
     num_frames, height, width = images.shape
@@ -168,33 +157,15 @@ def run_robust_pca(imagery, config):
     foreground_images = S.T.reshape(num_frames, height, width).astype(np.float32)
 
     # Create new Imagery objects
-    background_imagery = Imagery(
-        name=f"{imagery.name} - Background",
-        images=background_images,
-        frames=frames_subset.copy(),
-        row_offset=imagery.row_offset,
-        column_offset=imagery.column_offset,
-        times=times_subset.copy() if times_subset is not None else None,
-        description=f"Low-rank background component from Robust PCA (frames {start_frame}-{end_frame})",
-        poly_row_col_to_lat=poly_row_col_to_lat_subset.copy() if poly_row_col_to_lat_subset is not None else None,
-        poly_row_col_to_lon=poly_row_col_to_lon_subset.copy() if poly_row_col_to_lon_subset is not None else None,
-        poly_lat_lon_to_row=poly_lat_lon_to_row_subset.copy() if poly_lat_lon_to_row_subset is not None else None,
-        poly_lat_lon_to_col=poly_lat_lon_to_col_subset.copy() if poly_lat_lon_to_col_subset is not None else None
-    )
-
-    foreground_imagery = Imagery(
-        name=f"{imagery.name} - Foreground (RPCA)",
-        images=foreground_images,
-        frames=frames_subset.copy(),
-        row_offset=imagery.row_offset,
-        column_offset=imagery.column_offset,
-        times=times_subset.copy() if times_subset is not None else None,
-        description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})",
-        poly_row_col_to_lat=poly_row_col_to_lat_subset.copy() if poly_row_col_to_lat_subset is not None else None,
-        poly_row_col_to_lon=poly_row_col_to_lon_subset.copy() if poly_row_col_to_lon_subset is not None else None,
-        poly_lat_lon_to_row=poly_lat_lon_to_row_subset.copy() if poly_lat_lon_to_row_subset is not None else None,
-        poly_lat_lon_to_col=poly_lat_lon_to_col_subset.copy() if poly_lat_lon_to_col_subset is not None else None
-    )
+    background_imagery = imagery_subset.copy()
+    background_imagery.name = f"{imagery.name} - Background"
+    background_imagery.images = background_images
+    background_imagery.description=f"Low-rank background component from Robust PCA (frames {start_frame}-{end_frame})"
+    
+    foreground_imagery = imagery_subset.copy()
+    foreground_imagery.name = f"{imagery.name} - Foreground (RPCA)"
+    foreground_imagery.images = foreground_images
+    foreground_imagery.description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})"
 
     # Pre-compute histograms for performance
     for i in range(len(background_imagery.images)):
