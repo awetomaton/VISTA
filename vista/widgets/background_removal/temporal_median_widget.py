@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
+from PyQt6.QtCore import QThread, pyqtSignal, QSettings
 import numpy as np
 import traceback
 
