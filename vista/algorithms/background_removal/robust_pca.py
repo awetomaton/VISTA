@@ -101,42 +101,21 @@ def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=100
     return L, S
 
 
-def run_robust_pca(imagery, config):
+def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000):
     """
-    Apply Robust PCA background subtraction to imagery.
+    Apply Robust PCA background subtraction to a 3D array of images.
 
     Args:
-        imagery: Imagery object containing frame data
-        config: Dictionary containing configuration:
-            - lambda_param: Sparsity parameter (default: auto)
-            - max_iter: Maximum iterations (default: 1000)
-            - tol: Convergence tolerance (default: 1e-7)
-            - start_frame: Starting frame index (default: 0)
-            - end_frame: Ending frame index exclusive (default: all frames)
+        images: 3D numpy array (num_frames, height, width) containing image data
+        lambda_param: Sparsity parameter (default: auto = 1/sqrt(max(m,n)))
+        tol: Convergence tolerance (default: 1e-7)
+        max_iter: Maximum iterations (default: 1000)
 
     Returns:
-        Dictionary containing:
-            - background: Low-rank background component (same shape as input)
-            - foreground: Sparse foreground component (same shape as input)
-            - background_imagery: Imagery object with background
-            - foreground_imagery: Imagery object with foreground
+        Tuple of (background_images, foreground_images):
+            - background_images: Low-rank background component (same shape as input)
+            - foreground_images: Sparse foreground component (same shape as input)
     """
-
-    # Extract parameters
-    lambda_param = config.get('lambda_param', None)
-    max_iter = config.get('max_iter', 1000)
-    tol = config.get('tol', 1e-7)
-    start_frame = config.get('start_frame', 0)
-    end_frame = config.get('end_frame', None)
-
-    # Apply frame range
-    if end_frame is None:
-        end_frame = len(imagery)
-
-    # Get the imagery subset corresponding to the selected frame range
-    imagery_subset = imagery[start_frame:end_frame]
-    images = imagery_subset.images
-
     # Get dimensions
     num_frames, height, width = images.shape
 
@@ -156,27 +135,4 @@ def run_robust_pca(imagery, config):
     background_images = L.T.reshape(num_frames, height, width).astype(np.float32)
     foreground_images = S.T.reshape(num_frames, height, width).astype(np.float32)
 
-    # Create new Imagery objects
-    background_imagery = imagery_subset.copy()
-    background_imagery.name = f"{imagery.name} - Background"
-    background_imagery.images = background_images
-    background_imagery.description=f"Low-rank background component from Robust PCA (frames {start_frame}-{end_frame})"
-    
-    foreground_imagery = imagery_subset.copy()
-    foreground_imagery.name = f"{imagery.name} - Foreground (RPCA)"
-    foreground_imagery.images = foreground_images
-    foreground_imagery.description=f"Sparse foreground component from Robust PCA (frames {start_frame}-{end_frame})"
-
-    # Pre-compute histograms for performance
-    for i in range(len(background_imagery.images)):
-        background_imagery.get_histogram(i)  # Lazy computation and caching
-
-    for i in range(len(foreground_imagery.images)):
-        foreground_imagery.get_histogram(i)  # Lazy computation and caching
-
-    return {
-        'background': background_images,
-        'foreground': foreground_images,
-        'background_imagery': background_imagery,
-        'foreground_imagery': foreground_imagery
-    }
+    return background_images, foreground_images

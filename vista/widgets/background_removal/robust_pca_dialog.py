@@ -1,23 +1,46 @@
 """Dialog for configuring and running Robust PCA background removal"""
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                              QPushButton, QGroupBox, QFormLayout,
-                              QDoubleSpinBox, QMessageBox, QProgressDialog,
-                              QSpinBox, QCheckBox)
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QGroupBox, QFormLayout,
+    QDoubleSpinBox, QMessageBox, QProgressBar,
+    QSpinBox, QCheckBox, QComboBox
+)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
-from vista.algorithms.background_removal import run_robust_pca
+import numpy as np
+import traceback
+
+from vista.imagery.imagery import Imagery
+from vista.algorithms.background_removal.robust_pca import run_robust_pca
 
 
-class RobustPCAWorker(QThread):
+class RobustPCAProcessingThread(QThread):
     """Worker thread for running Robust PCA in background"""
 
-    progress_updated = pyqtSignal(str, int, int)  # message, current, total
-    processing_complete = pyqtSignal(object)  # Emits result dictionary
-    error_occurred = pyqtSignal(str)  # Error message
+    progress_updated = pyqtSignal(int, int)  # (current, total)
+    processing_complete = pyqtSignal(object, object)  # Emits (background_imagery, foreground_imagery)
+    error_occurred = pyqtSignal(str)
 
-    def __init__(self, imagery, config):
+    def __init__(self, imagery, lambda_param, tolerance, max_iter, aoi=None, start_frame=0, end_frame=None):
+        """
+        Initialize the processing thread
+
+        Args:
+            imagery: Imagery object to process
+            lambda_param: Lambda parameter (None for auto)
+            tolerance: Convergence tolerance
+            max_iter: Maximum iterations
+            aoi: Optional AOI object to process subset of imagery
+            start_frame: Starting frame index (default: 0)
+            end_frame: Ending frame index exclusive (default: None for all frames)
+        """
         super().__init__()
         self.imagery = imagery
-        self.config = config
+        self.lambda_param = lambda_param
+        self.tolerance = tolerance
+        self.max_iter = max_iter
+        self.aoi = aoi
+        self.start_frame = start_frame
+        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
         self._cancelled = False
 
     def cancel(self):
@@ -30,33 +53,103 @@ class RobustPCAWorker(QThread):
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Running Robust PCA decomposition...", 20, 100)
+            # Use Imagery slicing for frame range
+            imagery_subset = self.imagery[self.start_frame:self.end_frame]
 
-            result = run_robust_pca(self.imagery, self.config)
+            # Apply AOI if selected
+            if self.aoi:
+                imagery_to_process = imagery_subset.get_aoi(self.aoi)
+            else:
+                imagery_to_process = imagery_subset
 
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Complete!", 100, 100)
-            self.processing_complete.emit(result)
+            # Update progress - starting RPCA
+            self.progress_updated.emit(1, 4)
+
+            # Apply Robust PCA to the image array
+            background_images, foreground_images = run_robust_pca(
+                imagery_to_process.images,
+                lambda_param=self.lambda_param,
+                tol=self.tolerance,
+                max_iter=self.max_iter
+            )
+
+            if self._cancelled:
+                return
+
+            # Update progress - RPCA complete, creating imagery objects
+            self.progress_updated.emit(2, 4)
+
+            # Create background Imagery object using metadata from processed imagery
+            background_imagery = imagery_to_process.copy()
+            background_imagery.name = f"{self.imagery.name} - Background" + (f" (AOI: {self.aoi.name})" if self.aoi else "")
+            background_imagery.images = background_images
+            background_imagery.description = f"Low-rank background component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
+
+            if self._cancelled:
+                return
+
+            # Create foreground Imagery object
+            foreground_imagery = imagery_to_process.copy()
+            foreground_imagery.name = f"{self.imagery.name} - Foreground (RPCA)" + (f" (AOI: {self.aoi.name})" if self.aoi else "")
+            foreground_imagery.images = foreground_images
+            foreground_imagery.description = f"Sparse foreground component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
+            
+            # Update progress - computing histograms
+            self.progress_updated.emit(3, 4)
+
+            # Pre-compute histograms for performance
+            for i in range(len(background_imagery.images)):
+                if self._cancelled:
+                    return
+                background_imagery.get_histogram(i)
+
+            for i in range(len(foreground_imagery.images)):
+                if self._cancelled:
+                    return
+                foreground_imagery.get_histogram(i)
+
+            if self._cancelled:
+                return
+
+            # Update progress - complete
+            self.progress_updated.emit(4, 4)
+
+            # Emit the processed imagery
+            self.processing_complete.emit(background_imagery, foreground_imagery)
 
         except Exception as e:
-            import traceback
+            # Get full traceback
             tb_str = traceback.format_exc()
-            self.error_occurred.emit(f"Robust PCA failed: {str(e)}\\n\\nTraceback:\\n{tb_str}")
+            error_msg = f"Error running Robust PCA: {str(e)}\n\nTraceback:\n{tb_str}"
+            self.error_occurred.emit(error_msg)
 
 
 class RobustPCADialog(QDialog):
     """Dialog for configuring Robust PCA parameters"""
 
-    def __init__(self, viewer, parent=None):
+    # Signal emitted when processing is complete (emits single imagery object)
+    imagery_processed = pyqtSignal(object)
+
+    def __init__(self, parent=None, imagery=None, aois=None):
+        """
+        Initialize the Robust PCA dialog
+
+        Args:
+            parent: Parent widget
+            imagery: Imagery object to process
+            aois: List of AOI objects to choose from (optional)
+        """
         super().__init__(parent)
-        self.viewer = viewer
+        self.imagery = imagery
+        self.aois = aois if aois is not None else []
         self.worker = None
-        self.progress_dialog = None
         self.settings = QSettings("VISTA", "RobustPCA")
 
         self.setWindowTitle("Robust PCA Background Removal")
+        self.setModal(True)
         self.setMinimumWidth(500)
 
         self.setup_ui()
@@ -82,6 +175,23 @@ class RobustPCADialog(QDialog):
         desc_label.setWordWrap(True)
         layout.addWidget(desc_label)
 
+        # AOI selection
+        aoi_layout = QHBoxLayout()
+        aoi_label = QLabel("Process Region:")
+        aoi_label.setToolTip(
+            "Select an Area of Interest (AOI) to process only a subset of the imagery.\n"
+            "The resulting imagery will have offsets to position it correctly."
+        )
+        self.aoi_combo = QComboBox()
+        self.aoi_combo.addItem("Full Image", None)
+        for aoi in self.aois:
+            self.aoi_combo.addItem(aoi.name, aoi)
+        self.aoi_combo.setToolTip(aoi_label.toolTip())
+        aoi_layout.addWidget(aoi_label)
+        aoi_layout.addWidget(self.aoi_combo)
+        aoi_layout.addStretch()
+        layout.addLayout(aoi_layout)
+
         # Parameters
         params_group = QGroupBox("Algorithm Parameters")
         params_layout = QFormLayout()
@@ -100,9 +210,9 @@ class RobustPCADialog(QDialog):
         self.lambda_param.setDecimals(3)
         self.lambda_param.setEnabled(False)
         self.lambda_param.setToolTip(
-            "Sparsity parameter (λ). Controls foreground sparsity.\\n"
-            "Lower values = more sparse foreground (fewer detections).\\n"
-            "Higher values = less sparse foreground (more detections).\\n"
+            "Sparsity parameter (λ). Controls foreground sparsity.\n"
+            "Lower values = more sparse foreground (fewer detections).\n"
+            "Higher values = less sparse foreground (more detections).\n"
             "Default (auto): 1/sqrt(max(width, height))"
         )
         params_layout.addRow("  Manual Lambda:", self.lambda_param)
@@ -114,9 +224,9 @@ class RobustPCADialog(QDialog):
         self.tolerance.setSingleStep(1e-8)
         self.tolerance.setDecimals(9)
         self.tolerance.setToolTip(
-            "Convergence tolerance for the optimization algorithm.\\n"
-            "Lower values = more accurate but slower.\\n"
-            "Higher values = faster but less accurate.\\n"
+            "Convergence tolerance for the optimization algorithm.\n"
+            "Lower values = more accurate but slower.\n"
+            "Higher values = faster but less accurate.\n"
             "Recommended: 1e-7"
         )
         params_layout.addRow("Tolerance:", self.tolerance)
@@ -127,8 +237,8 @@ class RobustPCADialog(QDialog):
         self.max_iter.setValue(1000)
         self.max_iter.setSingleStep(100)
         self.max_iter.setToolTip(
-            "Maximum number of optimization iterations.\\n"
-            "Algorithm may converge earlier if tolerance is met.\\n"
+            "Maximum number of optimization iterations.\n"
+            "Algorithm may converge earlier if tolerance is met.\n"
             "Recommended: 1000"
         )
         params_layout.addRow("Max Iterations:", self.max_iter)
@@ -171,16 +281,27 @@ class RobustPCADialog(QDialog):
         output_group.setLayout(output_layout)
         layout.addWidget(output_group)
 
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+
         # Buttons
         button_layout = QHBoxLayout()
+        button_layout.addStretch()
 
         self.run_button = QPushButton("Run")
         self.run_button.clicked.connect(self.run_robust_pca)
         button_layout.addWidget(self.run_button)
 
         self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.reject)
+        self.cancel_button.clicked.connect(self.cancel_processing)
+        self.cancel_button.setVisible(False)
         button_layout.addWidget(self.cancel_button)
+
+        self.close_button = QPushButton("Close")
+        self.close_button.clicked.connect(self.close)
+        button_layout.addWidget(self.close_button)
 
         layout.addLayout(button_layout)
 
@@ -215,90 +336,157 @@ class RobustPCADialog(QDialog):
     def run_robust_pca(self):
         """Start the Robust PCA processing"""
         # Check if imagery is loaded
-        if self.viewer.imagery is None:
-            QMessageBox.warning(self, "No Imagery Loaded",
-                              "Please load imagery first.")
+        if self.imagery is None:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "No imagery is currently loaded. Please load imagery first.",
+                QMessageBox.StandardButton.Ok
+            )
             return
 
-        # Build configuration
-        config = {
-            'lambda_param': None if self.auto_lambda.isChecked() else self.lambda_param.value(),
-            'tol': self.tolerance.value(),
-            'max_iter': self.max_iter.value(),
-            'start_frame': self.start_frame.value(),
-            'end_frame': min(self.end_frame.value(), len(self.viewer.imagery.frames))
-        }
+        # Get parameters
+        lambda_param = None if self.auto_lambda.isChecked() else self.lambda_param.value()
+        tolerance = self.tolerance.value()
+        max_iter = self.max_iter.value()
+        selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
+        start_frame = self.start_frame.value()
+        end_frame = min(self.end_frame.value(), len(self.imagery.frames))
 
         # Save settings for next time
         self.save_settings()
 
-        # Create progress dialog with indeterminate progress
-        self.progress_dialog = QProgressDialog("Initializing Robust PCA...", "Cancel", 0, 0, self)
-        self.progress_dialog.setWindowTitle("Running Robust PCA")
-        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        self.progress_dialog.canceled.connect(self.cancel_processing)
-        self.progress_dialog.show()
+        # Update UI for processing state
+        self.run_button.setEnabled(False)
+        self.close_button.setEnabled(False)
+        self.auto_lambda.setEnabled(False)
+        self.lambda_param.setEnabled(False)
+        self.tolerance.setEnabled(False)
+        self.max_iter.setEnabled(False)
+        self.aoi_combo.setEnabled(False)
+        self.start_frame.setEnabled(False)
+        self.end_frame.setEnabled(False)
+        self.add_background.setEnabled(False)
+        self.add_foreground.setEnabled(False)
+        self.cancel_button.setVisible(True)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setMaximum(4)
 
         # Create and start worker thread
-        self.worker = RobustPCAWorker(self.viewer.imagery, config)
-        self.worker.progress_updated.connect(self.on_progress)
-        self.worker.processing_complete.connect(self.on_complete)
-        self.worker.error_occurred.connect(self.on_error)
+        self.worker = RobustPCAProcessingThread(
+            self.imagery, lambda_param, tolerance, max_iter, selected_aoi, start_frame, end_frame
+        )
+        self.worker.progress_updated.connect(self.on_progress_updated)
+        self.worker.processing_complete.connect(self.on_processing_complete)
+        self.worker.error_occurred.connect(self.on_error_occurred)
+        self.worker.finished.connect(self.on_thread_finished)
+
         self.worker.start()
 
-    def on_progress(self, message, current, total):
-        """Update progress dialog"""
-        if self.progress_dialog:
-            self.progress_dialog.setLabelText(message)
+    def cancel_processing(self):
+        """Cancel the ongoing processing"""
+        if self.worker:
+            self.worker.cancel()
+            self.cancel_button.setEnabled(False)
+            self.cancel_button.setText("Cancelling...")
 
-    def on_complete(self, result):
-        """Handle processing completion"""
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
+    def on_progress_updated(self, current, total):
+        """Handle progress updates from the processing thread"""
+        self.progress_bar.setValue(current)
 
-        # Add imagery to viewer based on options
+    def on_processing_complete(self, background_imagery, foreground_imagery):
+        """Handle successful completion of processing"""
+        # Emit signal with processed imagery based on options
+        created_imagery = []
         added_items = []
-        last_added_imagery = None
-
         if self.add_background.isChecked():
-            self.viewer.add_imagery(result['background_imagery'])
+            created_imagery.append(background_imagery)
             added_items.append("background")
-            last_added_imagery = result['background_imagery']
 
         if self.add_foreground.isChecked():
-            self.viewer.add_imagery(result['foreground_imagery'])
+            created_imagery.append(foreground_imagery)
             added_items.append("foreground")
-            last_added_imagery = result['foreground_imagery']
 
-        # Select the last added imagery (foreground if both were added)
-        if last_added_imagery is not None:
-            self.viewer.select_imagery(last_added_imagery)
+        self.imagery_processed.emit(created_imagery)
 
-        # Show success message
         QMessageBox.information(
             self,
             "Processing Complete",
-            f"Robust PCA decomposition complete.\nAdded: {', '.join(added_items)}"
+            f"Robust PCA decomposition complete.\nAdded: {', '.join(added_items)}",
+            QMessageBox.StandardButton.Ok
         )
 
-        # Accept dialog
+        # Close the dialog
         self.accept()
 
-    def on_error(self, error_msg):
-        """Handle processing error"""
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
+    def on_error_occurred(self, error_message):
+        """Handle errors from the processing thread"""
+        # Create message box with detailed text
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
+        msg_box.setWindowTitle("Processing Error")
 
-        QMessageBox.critical(self, "Processing Error", error_msg)
+        # Split error message to show brief summary and full traceback
+        if "\n\nTraceback:\n" in error_message:
+            summary, full_traceback = error_message.split("\n\nTraceback:\n", 1)
+            msg_box.setText(summary)
+            msg_box.setDetailedText(f"Traceback:\n{full_traceback}")
+        else:
+            msg_box.setText(error_message)
 
-    def cancel_processing(self):
-        """Cancel the processing"""
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
+
+        # Reset UI
+        self.reset_ui()
+
+    def on_thread_finished(self):
+        """Handle thread completion (cleanup)"""
+        if self.worker:
+            self.worker.deleteLater()
+            self.worker = None
+
+        # If we're still here (not closed by success), reset UI
+        if self.isVisible():
+            self.reset_ui()
+
+    def reset_ui(self):
+        """Reset UI to initial state"""
+        self.run_button.setEnabled(True)
+        self.close_button.setEnabled(True)
+        self.auto_lambda.setEnabled(True)
+        self.on_auto_lambda_changed(self.auto_lambda.checkState())  # Re-enable lambda if needed
+        self.tolerance.setEnabled(True)
+        self.max_iter.setEnabled(True)
+        self.aoi_combo.setEnabled(True)
+        self.start_frame.setEnabled(True)
+        self.end_frame.setEnabled(True)
+        self.add_background.setEnabled(True)
+        self.add_foreground.setEnabled(True)
+        self.cancel_button.setVisible(False)
+        self.cancel_button.setEnabled(True)
+        self.cancel_button.setText("Cancel")
+        self.progress_bar.setVisible(False)
+
+    def closeEvent(self, event):
+        """Handle dialog close event"""
         if self.worker and self.worker.isRunning():
-            self.worker.cancel()
-            self.worker.wait()
+            reply = QMessageBox.question(
+                self,
+                "Processing in Progress",
+                "Processing is still in progress. Are you sure you want to cancel and close?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
 
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
+            if reply == QMessageBox.StandardButton.Yes:
+                self.cancel_processing()
+                # Wait for thread to finish
+                if self.worker:
+                    self.worker.wait()
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()

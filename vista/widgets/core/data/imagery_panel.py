@@ -92,7 +92,7 @@ class ImageryPanel(QWidget):
                 imagery = self.viewer.imageries[row]
                 self.viewer.select_imagery(imagery)
                 # Update frame range in main window
-                self.parent().parent().update_frame_range_from_imagery()
+                self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
                 self.data_changed.emit()
 
     def on_imagery_cell_changed(self, row, column):
@@ -134,7 +134,7 @@ class ImageryPanel(QWidget):
             # If there are still imageries and none is selected, select the first one
             if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
                 self.viewer.select_imagery(self.viewer.imageries[0])
-                self.parent().parent().update_frame_range_from_imagery()
+                self.parent().parent().parent().parent().parent().update_frame_range_from_imagery
 
             # Refresh table
             self.refresh_imagery_table()

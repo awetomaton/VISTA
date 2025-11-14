@@ -796,8 +796,41 @@ class VistaMainWindow(QMainWindow):
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
+    def on_multiple_imagery_created(self, processed_imagery):
+        """Handle completion of algorithms that produce multiple imagery"""
+        # Check for duplicate imagery name
+        existing_names = [img.name for img in self.viewer.imageries]
+        
+        for imagery in processed_imagery:
+            if imagery.name in existing_names:
+                QMessageBox.critical(
+                    self,
+                    "Duplicate Imagery Name",
+                    f"An imagery with the name '{processed_imagery.name}' already exists.\n\n"
+                    f"Please rename or remove the existing imagery before processing.",
+                    QMessageBox.StandardButton.Ok
+                )
+                return
+        
+        for imagery in processed_imagery:
+            # Add the processed imagery to the viewer
+            self.viewer.add_imagery(imagery)
+
+        # Select the new imagery for viewing
+        self.viewer.select_imagery(imagery)
+        
+        # Update playback controls
+        min_frame, max_frame = self.viewer.get_frame_range()
+        self.controls.set_frame_range(min_frame, max_frame)
+        self.controls.set_frame(min_frame)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Added {len(processed_imagery)} processed imagery", 3000)
+
     def on_single_imagery_created(self, processed_imagery):
-        """Handle completion of Temporal Median processing"""
+        """Handle completion of algorithms that create single imagery"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries]
         if processed_imagery.name in existing_names:
@@ -838,11 +871,16 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
         # Create and show the dialog
-        dialog = RobustPCADialog(self.viewer, self)
-        if dialog.exec():
-            # Refresh the data manager to show the new imagery
-            self.data_manager.refresh()
+        dialog = RobustPCADialog(self, current_imagery, aois)
+        dialog.imagery_processed.connect(self.on_multiple_imagery_created)
+        dialog.exec()
 
     def open_bias_removal_widget(self):
         """Open the bias removal configuration widget"""
