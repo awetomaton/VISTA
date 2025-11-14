@@ -47,6 +47,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when AOIs are updated
     aoi_updated = pyqtSignal()
 
+    # Signal emitted when a track is selected (emits track object)
+    track_selected = pyqtSignal(object)
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -90,6 +93,9 @@ class ImageryViewer(QWidget):
         self.current_detection_data = {}  # frame_number -> [(row, col), ...] for detections being created/edited
         self.editing_detector = None  # Detector object being edited
         self.temp_detection_plot = None  # Temporary plot item for detections being created/edited
+
+        # Track selection mode
+        self.track_selection_mode = False
 
         # Histogram bounds persistence
         self.user_histogram_bounds = None  # (min, max) tuple - None means use auto levels
@@ -485,6 +491,21 @@ class ImageryViewer(QWidget):
         """
         self.selected_track_ids = track_ids
         self.update_overlays()
+
+    def set_track_selection_mode(self, enabled):
+        """
+        Enable or disable track selection mode.
+
+        Args:
+            enabled: Boolean indicating whether track selection mode is enabled
+        """
+        self.track_selection_mode = enabled
+        if enabled:
+            # Change cursor to crosshair
+            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        else:
+            # Restore cursor
+            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
     def set_geolocation_enabled(self, enabled):
         """Enable or disable geolocation tooltip"""
@@ -1037,10 +1058,11 @@ class ImageryViewer(QWidget):
             return None
 
     def on_mouse_clicked(self, event):
-        """Handle mouse click events for track/detection creation/editing"""
-        # Only handle left clicks in creation/editing mode
+        """Handle mouse click events for track/detection creation/editing/selection"""
+        # Only handle left clicks in creation/editing/selection mode
         if not (self.track_creation_mode or self.track_editing_mode or
-                self.detection_creation_mode or self.detection_editing_mode):
+                self.detection_creation_mode or self.detection_editing_mode or
+                self.track_selection_mode):
             return
 
         if event.button() != Qt.MouseButton.LeftButton:
@@ -1108,6 +1130,49 @@ class ImageryViewer(QWidget):
 
                 # Update temporary detection display
                 self._update_temp_detection_display()
+
+            # Handle track selection
+            elif self.track_selection_mode:
+                # Find the closest track to the click position
+                closest_track = None
+                closest_distance = float('inf')
+
+                for tracker in self.trackers:
+                    for track in tracker.tracks:
+                        if not track.visible:
+                            continue
+
+                        # Determine which points to check based on track settings
+                        if track.complete:
+                            # Show all points regardless of current frame
+                            frame_mask = np.ones(len(track.frames), dtype=bool)
+                        elif track.tail_length > 0:
+                            # Show only last N frames
+                            frame_mask = track.frames >= (self.current_frame_number - track.tail_length)
+                            frame_mask &= track.frames <= self.current_frame_number
+                        else:
+                            # Show all history up to current frame
+                            frame_mask = track.frames <= self.current_frame_number
+
+                        # Get visible points
+                        visible_rows = track.rows[frame_mask]
+                        visible_cols = track.columns[frame_mask]
+
+                        if len(visible_rows) == 0:
+                            continue
+
+                        # Calculate distances to all visible points
+                        distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
+                        min_distance = np.min(distances)
+
+                        # Check if this is the closest track so far
+                        if min_distance < tolerance and min_distance < closest_distance:
+                            closest_distance = min_distance
+                            closest_track = track
+
+                # If we found a track, emit signal
+                if closest_track:
+                    self.track_selected.emit(closest_track)
 
     def _update_temp_track_display(self):
         """Update the temporary track plot during creation/editing"""

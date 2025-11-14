@@ -1,5 +1,5 @@
 import pathlib
-from PyQt6.QtGui import QIcon, QPixmap, QColor, QPainter
+from PyQt6.QtGui import QIcon
 
 
 ICON_DIR = pathlib.Path(__file__).resolve().parent
@@ -18,3 +18,5 @@ class VistaIcons(object):
         self.create_track_dark = QIcon(str(ICON_DIR / "create_track_dark.png"))
         self.create_detection_light = QIcon(str(ICON_DIR / "create_detection_light.png"))
         self.create_detection_dark = QIcon(str(ICON_DIR / "create_detection_dark.png"))
+        self.select_track_light = QIcon(str(ICON_DIR / "select_track_light.png"))
+        self.select_track_dark = QIcon(str(ICON_DIR / "select_track_dark.png"))

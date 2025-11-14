@@ -77,6 +77,9 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.data_changed.connect(self.on_data_changed)
         self.data_manager.setMinimumWidth(400)
 
+        # Connect viewer signals to data manager
+        self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
+
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
         self.data_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
@@ -250,6 +253,17 @@ class VistaMainWindow(QMainWindow):
         self.create_detection_action.toggled.connect(self.on_create_detection_toggled)
         toolbar.addAction(self.create_detection_action)
 
+        # Select Track action
+        if darkdetect.isDark():
+            self.select_track_action = QAction(self.icons.select_track_light, "Select Track", self)
+        else:
+            self.select_track_action = QAction(self.icons.select_track_dark, "Select Track", self)
+        self.select_track_action.setCheckable(True)
+        self.select_track_action.setChecked(False)
+        self.select_track_action.setToolTip("Click on a track in the viewer to select it in the table")
+        self.select_track_action.toggled.connect(self.on_select_track_toggled)
+        toolbar.addAction(self.select_track_action)
+
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
         self.viewer.set_geolocation_enabled(checked)
@@ -344,6 +358,17 @@ class VistaMainWindow(QMainWindow):
                 self.statusBar().showMessage(f"Detector created: {detector.name} with {total_detections} detections across {unique_frames} frames", 3000)
             else:
                 self.statusBar().showMessage("Detection creation cancelled (no points added)", 3000)
+
+    def on_select_track_toggled(self, checked):
+        """Handle Select Track toggle"""
+        if checked:
+            # Enable track selection mode in viewer
+            self.viewer.set_track_selection_mode(True)
+            self.statusBar().showMessage("Track selection mode: Click on a track in the viewer to select it in the table", 0)
+        else:
+            # Disable track selection mode
+            self.viewer.set_track_selection_mode(False)
+            self.statusBar().showMessage("Track selection mode disabled", 3000)
 
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""

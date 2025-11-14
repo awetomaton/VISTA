@@ -2244,6 +2244,32 @@ class DataManagerPanel(QWidget):
         # Update viewer with selected tracks
         self.viewer.set_selected_tracks(selected_track_ids)
 
+    def on_track_selected_in_viewer(self, track):
+        """Handle track selection from viewer click"""
+        # Switch to tracks tab
+        self.tabs.setCurrentIndex(1)  # Tracks tab is at index 1
+
+        # Find the row in the tracks table that matches this track
+        for row in range(self.tracks_table.rowCount()):
+            # Get track name from the table
+            name_item = self.tracks_table.item(row, 2)  # Track name column
+            if name_item and name_item.text() == track.name:
+                # Verify it's the same track by checking the tracker name
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                if tracker_item:
+                    tracker_name = tracker_item.text()
+                    # Find the tracker that owns this track
+                    for tracker in self.viewer.trackers:
+                        if tracker.name == tracker_name:
+                            for t in tracker.tracks:
+                                if t.name == track.name and id(t) == id(track):
+                                    # Found the matching row - select it
+                                    self.tracks_table.clearSelection()
+                                    self.tracks_table.selectRow(row)
+                                    # Scroll to make the row visible
+                                    self.tracks_table.scrollToItem(name_item)
+                                    return
+
     def on_edit_track_clicked(self, checked):
         """Handle Edit Track button click"""
         if checked:
