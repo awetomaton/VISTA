@@ -32,6 +32,12 @@ class Imagery:
     poly_row_col_to_lon: Optional[NDArray[np.float64]] = None  # Row, Column -> Longitude
     poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Row
     poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Column
+    bias_images: Optional[NDArray] = None
+    bias_image_frames: Optional[NDArray] = None
+    uniformity_gain_images: Optional[NDArray] = None
+    uniformity_gain_image_frames: Optional[NDArray] = None
+    bad_pixel_masks: Optional[NDArray] = None
+    bad_pixel_mask_frames: Optional[NDArray] = None
     uuid: str = field(init=None, default=None)
 
     def __post_init__(self):
@@ -78,7 +84,13 @@ class Imagery:
             poly_row_col_to_lat = self.poly_row_col_to_lat,
             poly_row_col_to_lon = self.poly_row_col_to_lon,
             poly_lat_lon_to_row = self.poly_lat_lon_to_row,
-            poly_lat_lon_to_col = self.poly_lat_lon_to_col
+            poly_lat_lon_to_col = self.poly_lat_lon_to_col,
+            bias_images = self.bias_images,
+            bias_image_frames = self.bias_image_frames,
+            uniformity_gain_images = self.uniformity_gain_images,
+            uniformity_gain_image_frames = self.uniformity_gain_image_frames,
+            bad_pixel_masks = self.bad_pixel_masks,
+            bad_pixel_mask_frames = self.bad_pixel_mask_frames,
         )
     
     def compute_histograms(self, bins=256):

@@ -17,6 +17,7 @@ from .data.data_loader import DataLoaderThread
 from ..background_removal.temporal_median_widget import TemporalMedianWidget
 from ..detectors.simple_threshold_widget import SimpleThresholdWidget
 from ..detectors.cfar_widget import CFARWidget
+from ..treatments import BiasRemovalWidget
 from ..enhancement.coaddition_widget import CoadditionWidget
 from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
 from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
@@ -195,6 +196,13 @@ class VistaMainWindow(QMainWindow):
         tracklet_tracker_action = QAction("Tracklet Tracker", self)
         tracklet_tracker_action.triggered.connect(self.open_tracklet_tracking_dialog)
         tracking_menu.addAction(tracklet_tracker_action)
+
+        # Treatment submenu
+        treatment_menu = image_processing_menu.addMenu("Treatment")
+
+        bias_removal_action = QAction("Bias Removal", self)
+        bias_removal_action.triggered.connect(self.open_bias_removal_widget)
+        treatment_menu.addAction(bias_removal_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -781,10 +789,10 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the widget
         widget = TemporalMedianWidget(self, current_imagery, aois)
-        widget.imagery_processed.connect(self.on_temporal_median_complete)
+        widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
-    def on_temporal_median_complete(self, processed_imagery):
+    def on_single_imagery_created(self, processed_imagery):
         """Handle completion of Temporal Median processing"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries]
@@ -832,6 +840,37 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new imagery
             self.data_manager.refresh()
 
+    def open_bias_removal_widget(self):
+        """Open the bias removal configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running treatment algorithms.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+        elif self.viewer.imagery.bias_images is None:
+            QMessageBox.warning(
+                self,
+                "No Imagery with bias images",
+                "Please load imagery with bias images before bias removal.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = BiasRemovalWidget(self, current_imagery, aois)
+        widget.imagery_processed.connect(self.on_single_imagery_created)
+        widget.exec()
+
     def open_coaddition_widget(self):
         """Open the Coaddition enhancement configuration widget"""
         # Check if imagery is loaded
@@ -852,38 +891,8 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the widget
         widget = CoadditionWidget(self, current_imagery, aois)
-        widget.imagery_processed.connect(self.on_coaddition_complete)
+        widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
-
-    def on_coaddition_complete(self, processed_imagery):
-        """Handle completion of Coaddition processing"""
-        # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries]
-        if processed_imagery.name in existing_names:
-            QMessageBox.critical(
-                self,
-                "Duplicate Imagery Name",
-                f"An imagery with the name '{processed_imagery.name}' already exists.\n\n"
-                f"Please rename or remove the existing imagery before processing.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
-
-        # Add the processed imagery to the viewer
-        self.viewer.add_imagery(processed_imagery)
-
-        # Select the new imagery for viewing
-        self.viewer.select_imagery(processed_imagery)
-
-        # Update playback controls
-        min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_frame_range(min_frame, max_frame)
-        self.controls.set_frame(min_frame)
-
-        # Refresh data manager
-        self.data_manager.refresh()
-
-        self.statusBar().showMessage(f"Added processed imagery: {processed_imagery.name}", 3000)
 
     def open_simple_threshold_widget(self):
         """Open the Simple Threshold detector configuration widget"""
