@@ -594,7 +594,7 @@ class ImageryViewer(QWidget):
                         pixel_value = self.imagery.images[image_index, row_floor, col_floor]
 
                         # Update text content
-                        text = f"Pixel value: {pixel_value:.2f}"
+                        text = f"({col_floor}, {row_floor} {pixel_value:.2f})"
                         self.pixel_value_text.setText(text)
                         self.pixel_value_text.setVisible(True)
 

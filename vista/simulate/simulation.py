@@ -37,6 +37,17 @@ class Simulation:
     center_lat: float = 40.0  # Center latitude for scene (degrees)
     center_lon: float = -105.0  # Center longitude for scene (degrees)
     pixel_to_deg_scale: float = 0.0001  # Approximate degrees per pixel
+    # Sensor calibration data simulation parameters
+    enable_bias_images: bool = False  # If True, generate bias/dark frames
+    num_bias_images: int = 2  # Number of bias images to generate
+    bias_value_range: Tuple[float, float] = (0.5, 2.0)  # Range of bias values
+    bias_pattern_scale: float = 0.3  # Scale of fixed-pattern noise
+    enable_uniformity_gain: bool = False  # If True, generate gain correction images
+    num_uniformity_gains: int = 2  # Number of gain images to generate
+    gain_variation_range: Tuple[float, float] = (0.9, 1.1)  # Range of pixel gain variations
+    enable_bad_pixel_masks: bool = False  # If True, generate bad pixel masks
+    num_bad_pixel_masks: int = 2  # Number of bad pixel masks to generate
+    bad_pixel_fraction: float = 0.01  # Fraction of pixels that are bad (0-1)
     start: Optional[any] = None
     imagery: Optional[Imagery] = None
     detectors: Optional[List[Detector]] = None
@@ -116,6 +127,123 @@ class Simulation:
         poly_lat_lon_to_col[:, 5] = -1e-9 / self.pixel_to_deg_scale  # Compensate y^2
 
         return poly_row_col_to_lat, poly_row_col_to_lon, poly_lat_lon_to_row, poly_lat_lon_to_col
+
+    def _generate_bias_images(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Generate synthetic bias/dark frames with fixed-pattern noise.
+
+        Returns:
+            Tuple of (bias_images, bias_image_frames)
+                bias_images: 3D array (num_bias_images, rows, columns)
+                bias_image_frames: 1D array of frame numbers where each bias becomes applicable
+        """
+        bias_images = np.zeros((self.num_bias_images, self.rows, self.columns), dtype=np.float32)
+
+        for i in range(self.num_bias_images):
+            # Generate base bias value
+            bias_value = np.random.uniform(*self.bias_value_range)
+
+            # Create fixed-pattern noise using smooth variations
+            x = np.linspace(0, 4 * np.pi, self.columns)
+            y = np.linspace(0, 4 * np.pi, self.rows)
+            xx, yy = np.meshgrid(x, y)
+            pattern = self.bias_pattern_scale * (
+                np.sin(xx) * np.cos(yy) +
+                0.5 * np.sin(2 * xx + np.pi / 4) * np.cos(2 * yy - np.pi / 3)
+            )
+
+            # Add random fixed-pattern noise
+            pattern += self.bias_pattern_scale * 0.5 * np.random.randn(self.rows, self.columns)
+
+            # Combine bias value with pattern
+            bias_images[i] = bias_value + pattern
+
+        # Generate frame numbers where each bias becomes applicable
+        # Distribute them evenly across the frame range
+        bias_image_frames = np.linspace(0, self.frames, self.num_bias_images + 1)[:-1].astype(np.int32)
+
+        return bias_images, bias_image_frames
+
+    def _generate_uniformity_gain_images(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Generate synthetic flat-field/gain correction images.
+
+        Returns:
+            Tuple of (uniformity_gain_images, uniformity_gain_image_frames)
+                uniformity_gain_images: 3D array (num_gains, rows, columns)
+                uniformity_gain_image_frames: 1D array of frame numbers where each gain becomes applicable
+        """
+        uniformity_gain_images = np.zeros((self.num_uniformity_gains, self.rows, self.columns), dtype=np.float32)
+
+        for i in range(self.num_uniformity_gains):
+            # Create radial falloff pattern (common in imaging systems)
+            center_row, center_col = self.rows / 2, self.columns / 2
+            row_indices, col_indices = np.meshgrid(
+                np.arange(self.rows) - center_row,
+                np.arange(self.columns) - center_col,
+                indexing='ij'
+            )
+
+            # Distance from center
+            distance = np.sqrt(row_indices**2 + col_indices**2)
+            max_distance = np.sqrt(center_row**2 + center_col**2)
+
+            # Radial falloff: higher gain in center, lower at edges
+            radial_variation = 1.0 - 0.2 * (distance / max_distance)**2
+
+            # Add smooth column-wise variations (vignetting)
+            col_variation = 1.0 - 0.1 * np.cos(2 * np.pi * col_indices / self.columns)
+
+            # Add pixel-to-pixel random variations
+            pixel_noise = np.random.uniform(*self.gain_variation_range, size=(self.rows, self.columns))
+
+            # Combine variations
+            uniformity_gain_images[i] = radial_variation * col_variation * pixel_noise
+
+        # Generate frame numbers where each gain becomes applicable
+        uniformity_gain_image_frames = np.linspace(0, self.frames, self.num_uniformity_gains + 1)[:-1].astype(np.int32)
+
+        return uniformity_gain_images, uniformity_gain_image_frames
+
+    def _generate_bad_pixel_masks(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Generate synthetic bad pixel masks.
+
+        Returns:
+            Tuple of (bad_pixel_masks, bad_pixel_mask_frames)
+                bad_pixel_masks: 3D array (num_masks, rows, columns)
+                bad_pixel_mask_frames: 1D array of frame numbers where each mask becomes applicable
+        """
+        bad_pixel_masks = np.zeros((self.num_bad_pixel_masks, self.rows, self.columns), dtype=np.float32)
+
+        total_pixels = self.rows * self.columns
+        num_bad_pixels = int(total_pixels * self.bad_pixel_fraction)
+
+        for i in range(self.num_bad_pixel_masks):
+            # Randomly select bad pixels
+            bad_pixel_indices = np.random.choice(total_pixels, size=num_bad_pixels, replace=False)
+
+            # Convert flat indices to 2D indices
+            bad_rows = bad_pixel_indices // self.columns
+            bad_cols = bad_pixel_indices % self.columns
+
+            # Mark bad pixels (1 = bad, 0 = good)
+            bad_pixel_masks[i, bad_rows, bad_cols] = 1.0
+
+            # Add clusters of bad pixels (hot pixel clusters)
+            num_clusters = max(1, num_bad_pixels // 20)
+            for _ in range(num_clusters):
+                cluster_row = np.random.randint(1, self.rows - 1)
+                cluster_col = np.random.randint(1, self.columns - 1)
+                # Mark 3x3 cluster as bad
+                bad_pixel_masks[i,
+                              max(0, cluster_row-1):min(self.rows, cluster_row+2),
+                              max(0, cluster_col-1):min(self.columns, cluster_col+2)] = 1.0
+
+        # Generate frame numbers where each mask becomes applicable
+        bad_pixel_mask_frames = np.linspace(0, self.frames, self.num_bad_pixel_masks + 1)[:-1].astype(np.int32)
+
+        return bad_pixel_masks, bad_pixel_mask_frames
 
     def save(self, dir = Union[str, pathlib.Path], save_geodetic_tracks=False, save_times_only=False):
         """
@@ -309,6 +437,24 @@ class Simulation:
                     imagery_kwargs['poly_row_col_to_lon'] = poly_row_col_to_lon
                     imagery_kwargs['poly_lat_lon_to_row'] = poly_lat_lon_to_row
                     imagery_kwargs['poly_lat_lon_to_col'] = poly_lat_lon_to_col
+
+                # Add bias images if enabled
+                if self.enable_bias_images:
+                    bias_images, bias_image_frames = self._generate_bias_images()
+                    imagery_kwargs['bias_images'] = bias_images
+                    imagery_kwargs['bias_image_frames'] = bias_image_frames
+
+                # Add uniformity gain images if enabled
+                if self.enable_uniformity_gain:
+                    uniformity_gain_images, uniformity_gain_image_frames = self._generate_uniformity_gain_images()
+                    imagery_kwargs['uniformity_gain_images'] = uniformity_gain_images
+                    imagery_kwargs['uniformity_gain_image_frames'] = uniformity_gain_image_frames
+
+                # Add bad pixel masks if enabled
+                if self.enable_bad_pixel_masks:
+                    bad_pixel_masks, bad_pixel_mask_frames = self._generate_bad_pixel_masks()
+                    imagery_kwargs['bad_pixel_masks'] = bad_pixel_masks
+                    imagery_kwargs['bad_pixel_mask_frames'] = bad_pixel_mask_frames
 
                 self.imagery = Imagery(**imagery_kwargs)
 

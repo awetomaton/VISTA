@@ -17,6 +17,140 @@ from vista.aoi import AOI
 
 @dataclass
 class Imagery:
+    """
+    Container for multi-frame imagery datasets with metadata and coordinate conversion capabilities.
+
+    VISTA's Imagery class represents a temporal sequence of image frames with associated metadata
+    including timestamps, geodetic coordinate conversion polynomials, and sensor calibration data.
+    This class serves as the foundation for all image-based analysis in VISTA.
+
+    Core Attributes
+    ---------------
+    name : str
+        Human-readable identifier for this imagery dataset
+    images : NDArray[np.float32]
+        3D array of image data with shape (num_frames, height, width).
+        Pixel values are stored as 32-bit floats to support processing operations.
+    frames : NDArray[np.int_]
+        1D array of frame numbers corresponding to each image.
+        Frame numbers need not be sequential or start at zero.
+    row_offset : int, optional
+        Row offset for imagery positioning (default: 0).
+        Used when imagery represents a subset/crop of a larger scene.
+    column_offset : int, optional
+        Column offset for imagery positioning (default: 0).
+        Used when imagery represents a subset/crop of a larger scene.
+
+    Temporal Metadata
+    -----------------
+    times : NDArray[np.datetime64], optional
+        Timestamp for each frame with microsecond precision.
+        Enables time-based analysis and temporal coordinate conversion.
+
+    Geodetic Conversion
+    -------------------
+    Polynomial coefficients for bidirectional coordinate conversion between pixel coordinates
+    and geodetic coordinates (latitude/longitude). Each polynomial dataset has shape
+    (num_frames, 15) where each row contains coefficients for a 4th-order 2D polynomial:
+
+        f(x,y) = c0 + c1*x + c2*y + c3*x² + c4*x*y + c5*y² + c6*x³ + c7*x²*y
+                 + c8*x*y² + c9*y³ + c10*x⁴ + c11*x³*y + c12*x²*y² + c13*x*y³ + c14*y⁴
+
+    poly_row_col_to_lat : NDArray[np.float64], optional
+        Converts (row, column) pixel coordinates to latitude (degrees)
+    poly_row_col_to_lon : NDArray[np.float64], optional
+        Converts (row, column) pixel coordinates to longitude (degrees)
+    poly_lat_lon_to_row : NDArray[np.float64], optional
+        Converts (latitude, longitude) to row pixel coordinate
+    poly_lat_lon_to_col : NDArray[np.float64], optional
+        Converts (latitude, longitude) to column pixel coordinate
+
+    Sensor Calibration Data
+    -----------------------
+    These datasets support sensor-specific image corrections and are applied via treatment
+    algorithms. Each dataset is a 3D array with corresponding frame numbers indicating when
+    each calibration image becomes applicable.
+
+    radiometric_gain : NDArray, optional
+        1D array of multiplicative factors for eaach frame to convert from counts to irradiance in units of kW/km²/sr 
+        (irradiance)
+
+    bias_images : NDArray, optional
+        3D array of bias/dark frames with shape (num_bias_images, height, width).
+        Bias images capture fixed-pattern noise and dark current from the sensor.
+    bias_image_frames : NDArray, optional
+        1D array specifying frame ranges for each bias image.
+        Example: [0, 100] means bias_images[0] applies to frames 0-99,
+        bias_images[1] applies to frames 100+.
+
+    uniformity_gain_images : NDArray, optional
+        3D array of flat-field/gain correction images with shape
+        (num_gain_images, height, width). Corrects for pixel-to-pixel sensitivity variations.
+    uniformity_gain_image_frames : NDArray, optional
+        1D array specifying frame ranges for each gain correction image.
+
+    bad_pixel_masks : NDArray, optional
+        3D array of bad pixel masks with shape (num_masks, height, width).
+        Binary or weighted masks indicating defective/unreliable pixels.
+    bad_pixel_mask_frames : NDArray, optional
+        1D array specifying frame ranges for each bad pixel mask.
+
+    Internal Attributes
+    -------------------
+    description : str, optional
+        Long-form description of the imagery (default: "")
+    _histograms : dict, optional
+        Cached histograms for performance. Maps frame_index -> (hist_y, hist_x).
+        Computed lazily via get_histogram() method.
+    uuid : str
+        Unique identifier automatically generated for each Imagery instance
+
+    Methods
+    -------
+    __getitem__(slice)
+        Slice imagery by frame range, preserving metadata
+    get_aoi(aoi)
+        Extract spatial subset defined by Area of Interest
+    pixel_to_geodetic(frame, rows, columns)
+        Convert pixel coordinates to geodetic (lat/lon/alt)
+    geodetic_to_pixel(frame, location)
+        Convert geodetic coordinates to pixel (row/column)
+    get_histogram(frame_index)
+        Compute or retrieve cached histogram for a frame
+    to_hdf5(file)
+        Save imagery and all metadata to HDF5 file
+    copy()
+        Create a shallow copy of the imagery object
+
+    Examples
+    --------
+    >>> # Create basic imagery
+    >>> import numpy as np
+    >>> images = np.random.randn(100, 256, 256).astype(np.float32)
+    >>> frames = np.arange(100)
+    >>> imagery = Imagery(name="Test", images=images, frames=frames)
+
+    >>> # Create imagery with timestamps
+    >>> times = np.array([np.datetime64('2024-01-01T00:00:00') +
+    ...                   np.timedelta64(i*100, 'ms') for i in range(100)])
+    >>> imagery = Imagery(name="Test", images=images, frames=frames, times=times)
+
+    >>> # Slice imagery by frame range
+    >>> subset = imagery[10:50]  # Frames 10-49
+
+    >>> # Extract spatial subset via AOI
+    >>> from vista.aoi import AOI
+    >>> aoi = AOI(name="Region1", x=50, y=50, width=100, height=100)
+    >>> cropped = imagery.get_aoi(aoi)
+
+    Notes
+    -----
+    - Frame numbers in the `frames` array need not be contiguous or zero-indexed
+    - All optional metadata (times, polynomials, calibration data) is preserved during
+      slicing operations
+    - Geodetic conversion requires valid polynomial coefficients for the frame of interest
+    - Calibration frame arrays define ranges: frame N applies until frame N+1 starts
+    """
     name: str
     images: NDArray[np.float32]
     frames: NDArray[np.int_]
@@ -32,6 +166,7 @@ class Imagery:
     poly_row_col_to_lon: Optional[NDArray[np.float64]] = None  # Row, Column -> Longitude
     poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Row
     poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Column
+    radiometric_gain: Optional[NDArray] = None
     bias_images: Optional[NDArray] = None
     bias_image_frames: Optional[NDArray] = None
     uniformity_gain_images: Optional[NDArray] = None
@@ -54,6 +189,7 @@ class Imagery:
             imagery_slice.images = imagery_slice.images[s]
             imagery_slice.frames = imagery_slice.frames[s]
             imagery_slice.times = imagery_slice.times[s] if imagery_slice.times is not None else None
+            imagery_slice.radiometric_gain = imagery_slice.radiometric_gain[s] if imagery_slice.radiometric_gain is not None else None
             imagery_slice.poly_row_col_to_lat = imagery_slice.poly_row_col_to_lat[s] if imagery_slice.poly_row_col_to_lat is not None else None
             imagery_slice.poly_row_col_to_lon = imagery_slice.poly_row_col_to_lon[s] if imagery_slice.poly_row_col_to_lon is not None else None
             imagery_slice.poly_lat_lon_to_row = imagery_slice.poly_lat_lon_to_row[s] if imagery_slice.poly_lat_lon_to_row is not None else None
@@ -85,6 +221,7 @@ class Imagery:
             poly_row_col_to_lon = self.poly_row_col_to_lon,
             poly_lat_lon_to_row = self.poly_lat_lon_to_row,
             poly_lat_lon_to_col = self.poly_lat_lon_to_col,
+            radiometric_gain = self.radiometric_gain,
             bias_images = self.bias_images,
             bias_image_frames = self.bias_image_frames,
             uniformity_gain_images = self.uniformity_gain_images,
@@ -279,6 +416,10 @@ class Imagery:
             if self.poly_lat_lon_to_col is not None:
                 fid.create_dataset("poly_lat_lon_to_col", data=self.poly_lat_lon_to_col)
 
+            # Save radiometric gain if present
+            if self.radiometric_gain is not None:
+                fid.create_dataset("radiometric_gain", data=self.radiometric_gainbias_images)
+
             # Save bias images if present
             if self.bias_images is not None:
                 fid.create_dataset("bias_images", data=self.bias_images)
@@ -291,6 +432,6 @@ class Imagery:
 
             # Save bad pixel mask images if present
             if self.bad_pixel_masks is not None:
-                fid.create_dataset("bad_pixel_masks", data=self.bias_images)
-                fid.create_dataset("bad_pixel_mask_frames", data=self.bias_image_frames)
+                fid.create_dataset("bad_pixel_masks", data=self.bad_pixel_masks)
+                fid.create_dataset("bad_pixel_mask_frames", data=self.bad_pixel_mask_frames)
     
