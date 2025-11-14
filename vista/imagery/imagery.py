@@ -278,3 +278,19 @@ class Imagery:
                 fid.create_dataset("poly_lat_lon_to_row", data=self.poly_lat_lon_to_row)
             if self.poly_lat_lon_to_col is not None:
                 fid.create_dataset("poly_lat_lon_to_col", data=self.poly_lat_lon_to_col)
+
+            # Save bias images if present
+            if self.bias_images is not None:
+                fid.create_dataset("bias_images", data=self.bias_images)
+                fid.create_dataset("bias_image_frames", data=self.bias_image_frames)
+            
+            # Save uniformity gain if present
+            if self.uniformity_gain_images is not None:
+                fid.create_dataset("uniformity_gain_images", data=self.uniformity_gain_images)
+                fid.create_dataset("uniformity_gain_image_frames", data=self.uniformity_gain_image_frames)
+
+            # Save bad pixel mask images if present
+            if self.bad_pixel_masks is not None:
+                fid.create_dataset("bad_pixel_masks", data=self.bias_images)
+                fid.create_dataset("bad_pixel_mask_frames", data=self.bias_image_frames)
+    

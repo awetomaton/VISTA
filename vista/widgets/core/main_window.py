@@ -17,7 +17,7 @@ from .data.data_loader import DataLoaderThread
 from ..background_removal.temporal_median_widget import TemporalMedianWidget
 from ..detectors.simple_threshold_widget import SimpleThresholdWidget
 from ..detectors.cfar_widget import CFARWidget
-from ..treatments import BiasRemovalWidget
+from ..treatments import BiasRemovalWidget, NonUniformityCorrectionRemovalWidget
 from ..enhancement.coaddition_widget import CoadditionWidget
 from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
 from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
@@ -203,6 +203,10 @@ class VistaMainWindow(QMainWindow):
         bias_removal_action = QAction("Bias Removal", self)
         bias_removal_action.triggered.connect(self.open_bias_removal_widget)
         treatment_menu.addAction(bias_removal_action)
+
+        non_uniformity_correction_action = QAction("Non-Uniformity Correction", self)
+        non_uniformity_correction_action.triggered.connect(self.open_non_uniformity_correction_widget)
+        treatment_menu.addAction(non_uniformity_correction_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -868,6 +872,37 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the widget
         widget = BiasRemovalWidget(self, current_imagery, aois)
+        widget.imagery_processed.connect(self.on_single_imagery_created)
+        widget.exec()
+
+    def open_non_uniformity_correction_widget(self):
+        """Open the bias removal configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running treatment algorithms.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+        elif self.viewer.imagery.uniformity_gain_images is None:
+            QMessageBox.warning(
+                self,
+                "No Imagery with uniformity gain images",
+                "Please load imagery with uniformity gain images before non-uniformity correction.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = NonUniformityCorrectionRemovalWidget(self, current_imagery, aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
