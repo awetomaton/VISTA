@@ -13,6 +13,7 @@ import pathlib
 from typing import Tuple, Union, Optional
 import uuid
 from vista.aoi import AOI
+from vista.sensors.sensor import Sensor
 
 
 @dataclass
@@ -65,6 +66,13 @@ class Imagery:
     poly_lat_lon_to_col : NDArray[np.float64], optional
         Converts (latitude, longitude) to column pixel coordinate
 
+    Sensor Information
+    ------------------
+    sensor : Sensor, optional
+        Optional Sensor object that provides sensor position and point spread function modeling.
+        The Sensor can be used to retrieve sensor positions for given times and optionally
+        model the sensor's point spread function for irradiance estimation.
+
     Sensor Calibration Data
     -----------------------
     These datasets support sensor-specific image corrections and are applied via treatment
@@ -72,7 +80,7 @@ class Imagery:
     each calibration image becomes applicable.
 
     radiometric_gain : NDArray, optional
-        1D array of multiplicative factors for eaach frame to convert from counts to irradiance in units of kW/km²/sr 
+        1D array of multiplicative factors for eaach frame to convert from counts to irradiance in units of kW/km²/sr
         (irradiance)
 
     bias_images : NDArray, optional
@@ -166,6 +174,7 @@ class Imagery:
     poly_row_col_to_lon: Optional[NDArray[np.float64]] = None  # Row, Column -> Longitude
     poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Row
     poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None  # Latitude, Longitude -> Column
+    sensor: Optional[Sensor] = None
     radiometric_gain: Optional[NDArray] = None
     bias_images: Optional[NDArray] = None
     bias_image_frames: Optional[NDArray] = None
@@ -214,13 +223,14 @@ class Imagery:
             images = self.images,
             frames = self.frames,
             row_offset = self.row_offset,
-            column_offset = self.column_offset, 
+            column_offset = self.column_offset,
             times = self.times,
             description = self.description,
             poly_row_col_to_lat = self.poly_row_col_to_lat,
             poly_row_col_to_lon = self.poly_row_col_to_lon,
             poly_lat_lon_to_row = self.poly_lat_lon_to_row,
             poly_lat_lon_to_col = self.poly_lat_lon_to_col,
+            sensor = self.sensor,
             radiometric_gain = self.radiometric_gain,
             bias_images = self.bias_images,
             bias_image_frames = self.bias_image_frames,

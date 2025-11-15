@@ -63,6 +63,7 @@ class VistaMainWindow(QMainWindow):
     def init_ui(self):
         # Create main widget and layout
         main_widget = QWidget()
+        main_widget.setMinimumWidth(500)
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout()
 

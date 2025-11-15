@@ -34,10 +34,12 @@ requires-python = ">=3.9"
 dependencies = [
     "astropy",
     "h5py",
+    "numpy",
     "pandas",
     "PyQt6",
     "pyqtgraph",
     "scikit-image",
+    "scipy",
     "darkdetect",
 ]
 
