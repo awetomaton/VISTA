@@ -1,9 +1,9 @@
 name: Publish to PyPI
 
 on:
-  push:
-    tags:
-      - 'v*'  # Trigger on version tags like v1.4.0, v1.5.0, etc.
+  release:
+    types:
+      - created
 
 permissions:
   contents: read
