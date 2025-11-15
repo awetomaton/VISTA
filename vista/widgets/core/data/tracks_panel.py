@@ -1210,41 +1210,13 @@ class TracksPanel(QWidget):
 
         # Create first track (before and at current frame)
         first_name = f"{track_to_split.name}_1"
-        first_track = Track(
-            name=first_name,
-            frames=track_to_split.frames[mask_first],
-            rows=track_to_split.rows[mask_first],
-            columns=track_to_split.columns[mask_first],
-            times=track_to_split.times[mask_first] if track_to_split.times is not None else None,
-            color=track_to_split.color,
-            marker=track_to_split.marker,
-            line_width=track_to_split.line_width,
-            marker_size=track_to_split.marker_size,
-            visible=track_to_split.visible,
-            tail_length=track_to_split.tail_length,
-            complete=track_to_split.complete,
-            show_line=track_to_split.show_line,
-            line_style=track_to_split.line_style
-        )
+        first_track = track_to_split[mask_first]
+        first_track.name = first_name
 
         # Create second track (after current frame)
         second_name = f"{track_to_split.name}_2"
-        second_track = Track(
-            name=second_name,
-            frames=track_to_split.frames[mask_second],
-            rows=track_to_split.rows[mask_second],
-            columns=track_to_split.columns[mask_second],
-            times=track_to_split.times[mask_second] if track_to_split.times is not None else None,
-            color=track_to_split.color,
-            marker=track_to_split.marker,
-            line_width=track_to_split.line_width,
-            marker_size=track_to_split.marker_size,
-            visible=track_to_split.visible,
-            tail_length=track_to_split.tail_length,
-            complete=track_to_split.complete,
-            show_line=track_to_split.show_line,
-            line_style=track_to_split.line_style
-        )
+        second_track = track_to_split[mask_second]
+        second_track.name = second_name
 
         # Remove the original track
         parent_tracker.tracks.remove(track_to_split)

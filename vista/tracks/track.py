@@ -3,6 +3,7 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 from dataclasses import dataclass, field
+from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 
 
 @dataclass
@@ -11,7 +12,7 @@ class Track:
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
-    length: int = field(init=False)
+    _length: int = field(init=False, default=None)
     times: NDArray[np.datetime64] = None  # Optional times for each track point
     # Styling attributes
     color: str = 'g'  # Green by default
@@ -23,13 +24,19 @@ class Track:
     complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
     show_line: bool = True  # If True, show line connecting track points
     line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
-
-    def __post_init__(self):
-        if len(self.rows) < 2:
-            self.length = 0.0
+    
+    def __getitem__(self, s):
+        if isinstance(s, slice) or isinstance(s, np.ndarray):
+            # Handle slice objects
+            track_slice = self.copy()
+            track_slice.frames = track_slice.frames[s]
+            track_slice.rows = track_slice.rows[s]
+            track_slice.columns = track_slice.columns[s]
+            track_slice.times = track_slice.times[s] if track_slice.times is not None else None
+            return track_slice
         else:
-            self.length = np.sum(np.sqrt(np.diff(self.rows)**2 + np.diff(self.columns)**2))
-
+            raise TypeError("Invalid index or slice type.")
+        
     def __len__(self):
         return len(self.frames)
 
@@ -114,7 +121,6 @@ class Track:
                     "Imagery required for geodetic-to-pixel mapping."
                 )
             # Map geodetic to pixel using imagery
-            from vista.utils.geodetic_mapping import map_geodetic_to_pixel
             rows, columns = map_geodetic_to_pixel(
                 df["Latitude"].to_numpy(),
                 df["Longitude"].to_numpy(),
@@ -134,6 +140,34 @@ class Track:
             rows = rows,
             columns = columns,
             **kwargs
+        )
+    
+    @property
+    def length(self):
+        if self._length is None:
+            if len(self.rows) < 2:
+                self._length = 0.0
+            else:
+                self._length = np.sum(np.sqrt(np.diff(self.rows)**2 + np.diff(self.columns)**2))
+        return self._length
+    
+    def copy(self):
+        """Create a full copy of this track object"""
+        return self.__class__(
+            name = self.name,
+            frames = self.frames.copy(),
+            rows = self.rows.copy(),
+            columns = self.columns.copy(),
+            times = self.times.copy() if self.times is not None else None,
+            color = self.color,
+            marker = self.marker,
+            line_width = self.line_width,
+            marker_size = self.marker_size,
+            visible = self.visible,
+            tail_length = self.tail_length,
+            complete = self.complete,
+            show_line = self.show_line,
+            line_style = self.line_style,
         )
     
     def to_dataframe(self, imagery=None, include_geolocation=False, include_time=False) -> pd.DataFrame:
