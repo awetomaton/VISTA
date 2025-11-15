@@ -111,6 +111,8 @@ class ImageryViewer(QWidget):
     def init_ui(self):
         # Create layout
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)  # Remove all margins
+        layout.setSpacing(2)  # Minimal spacing between graphics and histogram
 
         # Create main graphics layout widget
 

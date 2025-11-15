@@ -41,9 +41,13 @@ class PlaybackControls(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)  # left, top, right, bottom
+        #layout.setSpacing(3)  # Reduce spacing between slider_section and button_layout
 
         # Frame slider and info layout
         slider_section = QVBoxLayout()
+        slider_section.setContentsMargins(0, 0, 0, 0)
+        slider_section.setSpacing(10)
 
         # Slider on top
         self.frame_slider = QSlider(Qt.Orientation.Horizontal)
@@ -54,9 +58,10 @@ class PlaybackControls(QWidget):
 
         # Frame and time info underneath
         info_layout = QHBoxLayout()
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.frame_label = QLabel("Frame: 0 / 0")
         self.time_label = QLabel("")  # Will show ISO time when available
-        #self.time_label.setMinimumWidth(200)
 
         info_layout.addStretch()
         info_layout.addWidget(self.frame_label)
@@ -67,6 +72,7 @@ class PlaybackControls(QWidget):
 
         # Playback buttons row
         button_layout = QHBoxLayout()
+        button_layout.setContentsMargins(0, 0, 0, 0)
 
         # Get standard icons from the application style
         style = QApplication.style()
@@ -101,6 +107,8 @@ class PlaybackControls(QWidget):
 
         # Bounce mode controls row
         bounce_layout = QHBoxLayout()
+        bounce_layout.setContentsMargins(0, 0, 0, 0)
+        bounce_layout.setSpacing(5)
 
         self.bounce_checkbox = QCheckBox("Bounce Mode")
         self.bounce_checkbox.stateChanged.connect(self.on_bounce_toggled)
@@ -121,16 +129,11 @@ class PlaybackControls(QWidget):
         self.bounce_end_spinbox.setEnabled(False)
         self.bounce_end_spinbox.valueChanged.connect(self.on_bounce_range_changed)
 
-        self.set_bounce_button = QPushButton("Set Current Range")
-        self.set_bounce_button.setEnabled(False)
-        self.set_bounce_button.clicked.connect(self.set_bounce_to_current)
-
         bounce_layout.addWidget(self.bounce_checkbox)
         bounce_layout.addWidget(self.bounce_start_label)
         bounce_layout.addWidget(self.bounce_start_spinbox)
         bounce_layout.addWidget(self.bounce_end_label)
         bounce_layout.addWidget(self.bounce_end_spinbox)
-        bounce_layout.addWidget(self.set_bounce_button)
 
         button_layout.addLayout(bounce_layout)
 
@@ -414,12 +417,6 @@ class PlaybackControls(QWidget):
             self.bounce_start = max(0, self.bounce_end - 1)
             self.bounce_start_spinbox.setValue(self.bounce_start)
             self.bounce_start_spinbox.blockSignals(False)
-
-    def set_bounce_to_current(self):
-        """Set bounce range to include current frame"""
-        # Set start to 0 and end to current frame, or adjust as needed
-        self.bounce_start_spinbox.setValue(0)
-        self.bounce_end_spinbox.setValue(self.current_frame)
 
     def frame_changed(self, frame_index):
         """Override this method to handle frame changes"""
