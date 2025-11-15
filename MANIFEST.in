@@ -1,0 +1,18 @@
+# Include documentation and metadata files
+include README.md
+include readme.md
+include LICENSE
+include CITATION.cff
+include CLAUDE.md
+include requirements.txt
+
+# Include icon files
+recursive-include vista/icons *.png
+recursive-include vista/icons *.jpg
+recursive-include vista/icons *.svg
+
+# Exclude compiled Python files and caches
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store

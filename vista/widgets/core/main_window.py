@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction
 
+import vista
 from vista.icons import VistaIcons
 from .imagery_viewer import ImageryViewer
 from .playback_controls import PlaybackControls
@@ -39,7 +40,7 @@ class VistaMainWindow(QMainWindow):
             detections: Optional Detector object or list of Detector objects to load at startup
         """
         super().__init__()
-        self.setWindowTitle("VISTA - 1.4.0")
+        self.setWindowTitle(f"VISTA - {vista.__version__}")
         self.icons = VistaIcons()
         self.setWindowIcon(self.icons.logo)
 

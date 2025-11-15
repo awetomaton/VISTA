@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vista-imagery"
+dynamic = ["version"]
+description = "A PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays"
+readme = "readme.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Stephen Hartzell", email = "hartzell.stephen@gmail.com"}
+]
+maintainers = [
+    {name = "Stephen Hartzell", email = "hartzell.stephen@gmail.com"}
+]
+keywords = ["VISTA", "tracking", "detection", "imagery", "PyQt6", "scientific", "analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Environment :: X11 Applications :: Qt",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "astropy",
+    "h5py",
+    "pandas",
+    "PyQt6",
+    "pyqtgraph",
+    "scikit-image",
+    "darkdetect",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-qt",
+    "black",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/hartzell-stephen-me/vista"
+Repository = "https://github.com/hartzell-stephen-me/vista"
+Issues = "https://github.com/hartzell-stephen-me/vista/issues"
+
+[project.gui-scripts]
+vista = "vista.__main__:main"
+
+[tool.setuptools]
+packages = {find = {}}  # Automatically find all packages under vista
+
+[tool.setuptools.dynamic]
+version = {attr = "vista.__version__"}
+
+[tool.setuptools.package-data]
+vista = ["icons/*.png", "icons/*.jpg"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
