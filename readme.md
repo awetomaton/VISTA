@@ -5,8 +5,9 @@
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
 ![Version](https://img.shields.io/badge/version-1.5.0-blue)
-![Python](https://img.shields.io/badge/python-3.x-blue)
+![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
 
 ## Watch the demo!
 [![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=O34wxldMEeg)
@@ -65,6 +66,9 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 - **Simple Tracker**: Nearest-neighbor association with maximum distance threshold
 - **Kalman Filter Tracker**: State estimation with motion models and measurement uncertainty
 - **Network Flow Tracker**: Global optimization using min-cost flow for track assignment
+- **Tracklet Tracker**: Two-stage hierarchical tracker optimized for high false alarm scenarios (100:1 or higher)
+  - Stage 1: Forms high-confidence tracklets using strict association criteria
+  - Stage 2: Links tracklets based on velocity extrapolation and smoothness
 
 ### Image Enhancement
 - **Coaddition**: Temporal averaging for noise reduction and signal enhancement
@@ -81,6 +85,16 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
   - Robust to outliers and sparse foreground
   - Supports AOI (Area of Interest) processing
   - Separates imagery into background and foreground components
+
+### Image Treatments (Sensor Calibration)
+- **Bias Removal**: Apply bias/dark frame correction using calibration data
+  - Subtracts sensor dark current from imagery
+  - Uses frame-specific bias images based on `bias_images` and `bias_image_frames`
+  - Supports AOI (Area of Interest) processing
+- **Non-Uniformity Correction (NUC)**: Apply flat-field gain correction
+  - Corrects pixel-to-pixel response variations
+  - Uses frame-specific uniformity gain images based on `uniformity_gain_images` and `uniformity_gain_image_frames`
+  - Supports AOI (Area of Interest) processing
 
 ### Playback Controls
 - Play/Pause with adjustable FPS (-100 to +100 FPS for reverse playback)
@@ -113,39 +127,67 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 ## Installation
 
 ### Prerequisites
-- Python 3.x
+- Python 3.9 or higher
 
-### Dependencies
+### Installation via pip (Recommended)
+
+VISTA is available on PyPI and can be installed with pip:
+
 ```bash
-pip install PyQt6 h5py pandas numpy pyqtgraph astropy darkdetect scikit-learn cvxpy Pillow
+pip install vista-imagery
 ```
 
-Optional (for example scripts):
+After installation, you can launch VISTA using the command:
 ```bash
-pip install plotly
+vista
 ```
 
-**Note:** Pillow is required for Earth background simulation feature.
+Or programmatically in Python:
+```python
+from vista.app import VistaApp
+app = VistaApp()
+app.exec()
+```
 
-### Setup
+### Installation from Source
+
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/hartzell-stephen-me/vista.git
 cd vista
 ```
 
-2. Set the PYTHONPATH (optional):
+2. Install in development mode:
 ```bash
-export PYTHONPATH=/path/to/vista  # Linux/Mac
-set PYTHONPATH=C:\path\to\vista   # Windows
+pip install -e .
+```
+
+Or install with development dependencies:
+```bash
+pip install -e ".[dev]"
 ```
 
 3. Run the application:
 ```bash
-python -m vista.app
+vista
 # Or
-python vista/app.py
+python -m vista
 ```
+
+### Dependencies
+
+The following dependencies are automatically installed with pip:
+- PyQt6 - GUI framework
+- pyqtgraph - High-performance visualization
+- h5py - HDF5 file support
+- pandas - Data manipulation
+- numpy - Numerical computing
+- astropy - Astronomical/geodetic calculations
+- darkdetect - Dark mode detection
+- scikit-image - Image processing
+- scipy - Scientific computing
+
+**Note:** Pillow is automatically included via scikit-image and is required for Earth background simulation feature.
 
 ## Input Data Formats
 
@@ -402,8 +444,14 @@ Detector,Frames,Rows,Columns,Color,Marker,Marker Size,Line Thickness
 
 ### Launching the Application
 
+If installed via pip:
 ```bash
-python -m vista.app
+vista
+```
+
+Or using Python module syntax:
+```bash
+python -m vista
 ```
 
 ### Loading Data
@@ -603,6 +651,25 @@ All tracking algorithms take detections as input and produce tracks as output.
 - **Miss Penalty**: Cost for missing detections (default: 10.0)
 - **False Alarm Penalty**: Cost for false alarm detections (default: 10.0)
 
+#### Tracklet Tracker
+
+**Menu Path:** `Tracking → Tracklet Tracker`
+
+**Description:** Two-stage hierarchical tracker optimized for high false alarm scenarios (100:1 or higher)
+
+**Stage 1 Parameters (Tracklet Formation):**
+- **Initial Search Radius**: Maximum distance for forming tracklets (default: 10.0 pixels)
+- **Max Velocity Change**: Maximum allowed velocity change for smooth motion (default: 5.0 pixels/frame)
+- **Min Tracklet Length**: Minimum detections required to save a tracklet (default: 3)
+- **Max Consecutive Misses**: Maximum frames without detection before ending tracklet (default: 2)
+- **Min Detection Rate**: Minimum hit-to-age ratio for valid tracklets (default: 0.6)
+
+**Stage 2 Parameters (Tracklet Linking):**
+- **Max Linking Gap**: Maximum frame gap when linking tracklets (default: 10 frames)
+- **Linking Search Radius**: Maximum distance for linking tracklets (default: 30.0 pixels)
+
+**Best for:** Scenarios with smooth target motion and high clutter/false alarm rates
+
 ### Image Enhancement
 
 #### Coaddition
@@ -646,6 +713,36 @@ All tracking algorithms take detections as input and produce tracks as output.
 - **Add Foreground**: Option to add foreground component to data manager
 
 **Output:** Two new imagery datasets - low-rank background and sparse foreground components
+
+### Image Treatments
+
+#### Bias Removal
+
+**Menu Path:** `Image Processing → Treatments → Bias Removal`
+
+**Description:** Apply bias/dark frame correction using sensor calibration data
+
+**Parameters:**
+- **AOI Selection**: Optional area of interest to process (default: Full Image)
+
+**Requirements:**
+- Imagery must contain `bias_images` and `bias_image_frames` datasets
+
+**Output:** New imagery dataset with bias frames subtracted
+
+#### Non-Uniformity Correction (NUC)
+
+**Menu Path:** `Image Processing → Treatments → Non-Uniformity Correction`
+
+**Description:** Apply flat-field gain correction to correct pixel-to-pixel response variations
+
+**Parameters:**
+- **AOI Selection**: Optional area of interest to process (default: Full Image)
+
+**Requirements:**
+- Imagery must contain `uniformity_gain_images` and `uniformity_gain_image_frames` datasets
+
+**Output:** New imagery dataset with uniformity correction applied
 
 ### Playback Controls
 
@@ -787,12 +884,16 @@ Vista/
 │   │   ├── trackers/                # Tracking algorithm widgets
 │   │   │   ├── simple_tracking_dialog.py
 │   │   │   ├── kalman_tracking_dialog.py
-│   │   │   └── network_flow_tracking_dialog.py
+│   │   │   ├── network_flow_tracking_dialog.py
+│   │   │   └── tracklet_tracking_dialog.py
 │   │   ├── background_removal/      # Background removal widgets
 │   │   │   ├── temporal_median_widget.py
 │   │   │   └── robust_pca_dialog.py
-│   │   └── enhancement/             # Enhancement widgets
-│   │       └── coaddition_widget.py
+│   │   ├── enhancement/             # Enhancement widgets
+│   │   │   └── coaddition_widget.py
+│   │   └── treatments/              # Sensor calibration widgets
+│   │       ├── bias_removal.py
+│   │       └── non_uniformity_correction.py
 │   ├── imagery/                     # Image data models
 │   │   └── imagery.py               # Imagery class with geodetic support
 │   ├── tracks/                      # Track data models
@@ -806,13 +907,19 @@ Vista/
 │   │   │   └── robust_pca.py
 │   │   ├── detectors/
 │   │   │   ├── cfar.py
-│   │   │   └── simple_threshold.py
+│   │   │   └── threshold.py
 │   │   ├── trackers/
 │   │   │   ├── simple_tracker.py
 │   │   │   ├── kalman_tracker.py
-│   │   │   └── network_flow_tracker.py
+│   │   │   ├── network_flow_tracker.py
+│   │   │   └── tracklet_tracker.py
 │   │   └── enhancement/
-│   │       └── coaddition.py
+│   │       └── coadd.py
+│   ├── aoi/                         # Area of Interest support
+│   │   └── aoi.py                   # AOI data model
+│   ├── sensors/                     # Sensor calibration models
+│   │   ├── sensor.py                # Base sensor class
+│   │   └── sampled_sensor.py        # Sampled sensor implementation
 │   ├── utils/                       # Utilities
 │   │   ├── color.py                 # Color conversion helpers
 │   │   ├── random_walk.py           # Random walk simulation
@@ -827,6 +934,7 @@ Vista/
 │   ├── create_comprehensive_data.py # Generate comprehensive test data with all features
 │   └── example_programmatic_loading.py  # Programmatic API usage example
 ├── data/                            # Example datasets (gitignored)
+├── pyproject.toml                   # Package configuration and dependencies
 └── readme.md                        # This file
 ```
 
