@@ -1074,7 +1074,7 @@ class VistaMainWindow(QMainWindow):
         dialog = SimpleTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
-            self.data_manager.refresh_tracks_table()
+            self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
 
     def open_kalman_tracking_dialog(self):
@@ -1093,7 +1093,7 @@ class VistaMainWindow(QMainWindow):
         dialog = KalmanTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
-            self.data_manager.refresh_tracks_table()
+            self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
 
     def open_network_flow_tracking_dialog(self):
@@ -1112,7 +1112,7 @@ class VistaMainWindow(QMainWindow):
         dialog = NetworkFlowTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
-            self.data_manager.refresh_tracks_table()
+            self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
 
     def open_tracklet_tracking_dialog(self):
@@ -1131,7 +1131,7 @@ class VistaMainWindow(QMainWindow):
         dialog = TrackletTrackingDialog(self.viewer, self)
         if dialog.exec():
             # Refresh the data manager to show the new tracks
-            self.data_manager.refresh_tracks_table()
+            self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
 
     def load_data_programmatically(self, imagery=None, tracks=None, detections=None):

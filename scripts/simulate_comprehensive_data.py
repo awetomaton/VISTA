@@ -143,7 +143,7 @@ def create_all_features_simulation(output_dir="sim_all_features"):
         radiometric_gain_std=0.05,
         # Earth background
         enable_earth_background=True,
-        earth_jitter_std=0.3,
+        earth_jitter_std=0.15,
         earth_scale=1.0
     )
     sim.simulate()

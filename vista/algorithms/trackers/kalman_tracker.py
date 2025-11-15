@@ -279,11 +279,6 @@ def run_kalman_tracker(detectors, config):
             frames=frames_array,
             rows=rows,
             columns=columns,
-            color='b',  # Blue for tracked targets
-            marker='s',  # Square marker
-            line_width=2,
-            marker_size=10,
-            visible=True
         )
         vista_tracks.append(vista_track)
 
