@@ -173,15 +173,20 @@ class PlaybackControls(QWidget):
         self.setLayout(layout)
 
     def set_frame_range(self, min_frame: int, max_frame: int):
-        """Set the range of frame numbers"""
+        """Set the range of frame numbers without changing current frame"""
         self.min_frame = min_frame
         self.max_frame = max_frame
-        self.current_frame = min_frame
+
+        # Block signals to prevent triggering frame changes while updating range
+        self.frame_slider.blockSignals(True)
 
         # Update slider range
         self.frame_slider.setMinimum(min_frame)
         self.frame_slider.setMaximum(max_frame)
-        self.frame_slider.setValue(min_frame)
+        # Don't set value here - let set_frame() handle it
+
+        # Unblock signals
+        self.frame_slider.blockSignals(False)
 
         # Update bounce spinboxes
         self.bounce_start_spinbox.setMinimum(min_frame)

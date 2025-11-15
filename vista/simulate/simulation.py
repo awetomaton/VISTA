@@ -4,6 +4,7 @@ import pathlib
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, List
 from PIL import Image
+from scipy.ndimage import shift
 from vista.utils.random_walk import RandomWalk
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
@@ -387,29 +388,27 @@ class Simulation:
                 base_row = jitter_margin
                 base_col = jitter_margin
 
-            # Generate random jitter for each frame relative to base position
+            # Extract base window from earth image (without jitter)
+            base_window = earth_array[
+                base_row:base_row + self.rows,
+                base_col:base_col + self.columns
+            ]
+
+            # Generate random jitter for each frame and apply sub-pixel shifts
             for f in range(self.frames):
-                # Random jitter offsets (Gaussian distributed)
-                jitter_row = int(np.random.randn() * self.earth_jitter_std)
-                jitter_col = int(np.random.randn() * self.earth_jitter_std)
+                # Random sub-pixel jitter offsets (Gaussian distributed)
+                # These are floating-point values, not integers
+                jitter_row = np.random.randn() * self.earth_jitter_std
+                jitter_col = np.random.randn() * self.earth_jitter_std
 
-                # Calculate actual position for this frame (base + jitter)
-                start_row = base_row + jitter_row
-                start_col = base_col + jitter_col
+                # Apply sub-pixel shift to the base window using scipy.ndimage.shift
+                # shift expects [row_shift, col_shift] order
+                # Use order=3 (cubic interpolation) for smooth sub-pixel shifts
+                shifted_window = shift(base_window, [jitter_row, jitter_col],
+                                      order=3, mode='constant', cval=0.0)
 
-                # Ensure we don't go out of bounds
-                start_row = max(0, min(start_row, earth_height - self.rows))
-                start_col = max(0, min(start_col, earth_width - self.columns))
-
-                # Extract window from earth image
-                earth_window = earth_array[
-                    start_row:start_row + self.rows,
-                    start_col:start_col + self.columns
-                ]
-
-                # Handle edge cases where window might be smaller
-                actual_rows, actual_cols = earth_window.shape
-                images[f, :actual_rows, :actual_cols] = earth_window * self.earth_scale
+                # Store the shifted window
+                images[f] = shifted_window * self.earth_scale
 
                 # Add noise on top of earth image
                 images[f] += np.random.randn(self.rows, self.columns)

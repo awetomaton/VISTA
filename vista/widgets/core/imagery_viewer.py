@@ -186,16 +186,29 @@ class ImageryViewer(QWidget):
         """Select which imagery to display"""
         if imagery in self.imageries:
             self.imagery = imagery
-            self.current_frame_number = imagery.frames[0] if len(imagery.frames) > 0 else 0
-            
-            # Display the first frame
+
+            # Try to retain the current frame number if it exists in the new imagery
+            if len(imagery.frames) > 0:
+                if self.current_frame_number in imagery.frames:
+                    # Current frame exists in new imagery, keep it
+                    frame_to_display = self.current_frame_number
+                else:
+                    # Current frame doesn't exist, use first frame
+                    frame_to_display = imagery.frames[0]
+            else:
+                frame_to_display = 0
+
+            self.current_frame_number = frame_to_display
+
+            # Display the selected frame
+            frame_index = np.where(imagery.frames == frame_to_display)[0][0] if frame_to_display in imagery.frames else 0
             self.setting_imagery = True
-            self.image_item.setImage(imagery.images[0])
+            self.image_item.setImage(imagery.images[frame_index])
             self.setting_imagery = False
-            
+
             # Apply imagery offsets for positioning
             self.image_item.setPos(imagery.column_offset, imagery.row_offset)
-            
+
             # Refresh the current frame display
             self.set_frame_number(self.current_frame_number)
 

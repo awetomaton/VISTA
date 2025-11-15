@@ -456,11 +456,20 @@ class VistaMainWindow(QMainWindow):
         """Update frame range controls when imagery selection changes"""
         min_frame, max_frame = self.viewer.get_frame_range()
         self.controls.set_frame_range(min_frame, max_frame)
-        # Set to the first frame of the selected imagery
+        # Try to retain current frame if it exists in the selected imagery
         if self.viewer.imagery:
-            first_frame = self.viewer.imagery.frames[0] if len(self.viewer.imagery.frames) > 0 else 0
-            self.controls.set_frame(first_frame)
-            self.viewer.set_frame_number(first_frame)
+            current_frame = self.viewer.current_frame_number
+            if len(self.viewer.imagery.frames) > 0:
+                if current_frame in self.viewer.imagery.frames:
+                    # Current frame exists, keep it
+                    frame_to_set = current_frame
+                else:
+                    # Current frame doesn't exist, use first frame
+                    frame_to_set = self.viewer.imagery.frames[0]
+            else:
+                frame_to_set = 0
+            self.controls.set_frame(frame_to_set)
+            self.viewer.set_frame_number(frame_to_set)
 
     def load_detections_file(self):
         """Load detections from CSV file(s) using background thread"""
@@ -820,11 +829,9 @@ class VistaMainWindow(QMainWindow):
 
         # Select the new imagery for viewing
         self.viewer.select_imagery(imagery)
-        
-        # Update playback controls
-        min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_frame_range(min_frame, max_frame)
-        self.controls.set_frame(min_frame)
+
+        # Update playback controls and retain current frame if possible
+        self.update_frame_range_from_imagery()
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -851,10 +858,8 @@ class VistaMainWindow(QMainWindow):
         # Select the new imagery for viewing
         self.viewer.select_imagery(processed_imagery)
 
-        # Update playback controls
-        min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_frame_range(min_frame, max_frame)
-        self.controls.set_frame(min_frame)
+        # Update playback controls and retain current frame if possible
+        self.update_frame_range_from_imagery()
 
         # Refresh data manager
         self.data_manager.refresh()
