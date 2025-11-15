@@ -8,6 +8,7 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 ![Python](https://img.shields.io/badge/python-3.x-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## Watch the demo!
 [![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=O34wxldMEeg)
 
 ## Important Assumptions
