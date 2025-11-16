@@ -10,6 +10,9 @@ Stage 2: Link tracklets based on velocity extrapolation and smoothness
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
+
 
 class Tracklet:
     """High-confidence track segment with velocity consistency"""
@@ -160,9 +163,6 @@ def run_tracklet_tracker(detectors, config):
     Returns:
         Tracker object containing the generated tracks
     """
-    from vista.tracks.tracker import Tracker
-    from vista.tracks.track import Track
-
     # Extract configuration with smart defaults
     tracker_name = config.get('tracker_name', 'Tracklet Tracker')
     initial_search_radius = config.get('initial_search_radius', 10.0)

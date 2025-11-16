@@ -1,15 +1,17 @@
 """Detections panel for data manager"""
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QMessageBox
-)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QBrush
+import traceback
+
 import numpy as np
 import pandas as pd
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QBrush, QColor
+from PyQt6.QtWidgets import (
+    QColorDialog, QFileDialog, QHBoxLayout, QHeaderView, QMessageBox,
+    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+)
 
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
-from vista.widgets.core.data.delegates import ColorDelegate, MarkerDelegate, LineThicknessDelegate
+from vista.widgets.core.data.delegates import ColorDelegate, LineThicknessDelegate, MarkerDelegate
 
 
 class DetectionsPanel(QWidget):
@@ -139,13 +141,11 @@ class DetectionsPanel(QWidget):
 
                 except Exception as e:
                     print(f"Error adding detector '{detector.name}' to table at row {row}: {e}")
-                    import traceback
                     traceback.print_exc()
 
             self.detections_table.blockSignals(False)
         except Exception as e:
             print(f"Error in refresh_detections_table: {e}")
-            import traceback
             traceback.print_exc()
             self.detections_table.blockSignals(False)
 
@@ -210,7 +210,6 @@ class DetectionsPanel(QWidget):
             current_color = pg_color_to_qcolor(detector.color)
 
             # Open color dialog
-            from PyQt6.QtWidgets import QColorDialog
             color = QColorDialog.getColor(current_color, self, "Select Detector Color")
 
             if color.isValid():

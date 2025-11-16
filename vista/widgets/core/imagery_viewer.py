@@ -1,13 +1,14 @@
 """ImageryViewer widget for displaying imagery with overlays"""
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
-from vista.imagery.imagery import Imagery
-from vista.detections.detector import Detector
-from vista.tracks.tracker import Tracker
 from vista.aoi.aoi import AOI
+from vista.detections.detector import Detector
+from vista.imagery.imagery import Imagery
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
 
 
 class CustomViewBox(pg.ViewBox):
@@ -909,8 +910,6 @@ class ImageryViewer(QWidget):
 
         # Create Track object if we have data
         if len(self.current_track_data) > 0:
-            from vista.tracks.track import Track
-
             # Sort by frame number
             sorted_frames = sorted(self.current_track_data.keys())
             frames = np.array(sorted_frames, dtype=np.int_)
@@ -1005,8 +1004,6 @@ class ImageryViewer(QWidget):
 
         # Create Detector object if we have data
         if len(self.current_detection_data) > 0:
-            from vista.detections.detector import Detector
-
             # Flatten the detection data into arrays
             frames_list = []
             rows_list = []

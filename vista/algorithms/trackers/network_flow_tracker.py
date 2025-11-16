@@ -1,6 +1,10 @@
 """Network flow optimization tracker for VISTA"""
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
+
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
 
 
 def run_network_flow_tracker(detectors, config):
@@ -30,9 +34,6 @@ def run_network_flow_tracker(detectors, config):
     Returns:
         Tracker object containing the generated tracks
     """
-    from vista.tracks.tracker import Tracker
-    from vista.tracks.track import Track
-
     # Extract configuration with defaults
     tracker_name = config.get('tracker_name', 'Network Flow Tracker')
     max_gap = config.get('max_gap', 5)

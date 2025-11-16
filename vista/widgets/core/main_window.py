@@ -1,30 +1,35 @@
 """Main window for the Vista application"""
 import darkdetect
 import numpy as np
+import pandas as pd
 from pathlib import Path
-from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter,
-    QFileDialog, QMessageBox, QDockWidget, QProgressDialog, QDialog
-)
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import (
+    QDialog, QDockWidget, QFileDialog, QMainWindow, QMessageBox,
+    QProgressDialog, QSplitter, QVBoxLayout, QWidget
+)
 
 import vista
+from vista.detections.detector import Detector
 from vista.icons import VistaIcons
-from .imagery_viewer import ImageryViewer
-from .playback_controls import PlaybackControls
-from .data.data_manager import DataManagerPanel
-from .data.data_loader import DataLoaderThread
+from vista.imagery.imagery import Imagery
+from vista.tracks.tracker import Tracker
+from ..background_removal.robust_pca_dialog import RobustPCADialog
 from ..background_removal.temporal_median_widget import TemporalMedianWidget
-from ..detectors.simple_threshold_widget import SimpleThresholdWidget
 from ..detectors.cfar_widget import CFARWidget
-from ..treatments import BiasRemovalWidget, NonUniformityCorrectionRemovalWidget
+from ..detectors.simple_threshold_widget import SimpleThresholdWidget
 from ..enhancement.coaddition_widget import CoadditionWidget
-from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
 from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
 from ..trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
+from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
 from ..trackers.tracklet_tracking_dialog import TrackletTrackingDialog
-from ..background_removal.robust_pca_dialog import RobustPCADialog
+from ..treatments import BiasRemovalWidget, NonUniformityCorrectionRemovalWidget
+from .data.data_loader import DataLoaderThread
+from .data.data_manager import DataManagerPanel
+from .imagery_selection_dialog import ImagerySelectionDialog
+from .imagery_viewer import ImageryViewer
+from .playback_controls import PlaybackControls
 
 
 class VistaMainWindow(QMainWindow):
@@ -333,7 +338,6 @@ class VistaMainWindow(QMainWindow):
             if track is not None:
                 # Add track to a new tracker or existing tracker
                 # For now, create a new tracker for each track
-                from vista.tracks.tracker import Tracker
                 tracker_name = f"Manual Track {len(self.viewer.trackers) + 1}"
                 tracker = Tracker(name=tracker_name, tracks=[track])
                 self.viewer.add_tracker(tracker)
@@ -561,9 +565,6 @@ class VistaMainWindow(QMainWindow):
 
     def load_tracks_file(self):
         """Load tracks from CSV file(s) using background thread"""
-        import pandas as pd
-        from .imagery_selection_dialog import ImagerySelectionDialog
-
         # Get last used directory from settings
         last_dir = self.settings.value("last_tracks_dir", "")
 
@@ -1143,10 +1144,6 @@ class VistaMainWindow(QMainWindow):
             tracks: Tracker object or list of Tracker objects
             detections: Detector object or list of Detector objects
         """
-        from vista.imagery.imagery import Imagery
-        from vista.tracks.tracker import Tracker
-        from vista.detections.detector import Detector
-
         # Load imagery
         if imagery is not None:
             # Convert single item to list

@@ -1,9 +1,13 @@
 """Dialog for configuring and running the Tracklet tracker"""
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                              QComboBox, QPushButton, QGroupBox, QFormLayout,
-                              QDoubleSpinBox, QListWidget, QMessageBox,
-                              QProgressDialog, QSpinBox)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
+import traceback
+
+from PyQt6.QtCore import Qt, QSettings, QThread, pyqtSignal
+from PyQt6.QtWidgets import (
+    QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout,
+    QLabel, QListWidget, QMessageBox, QProgressDialog, QPushButton, QSpinBox,
+    QVBoxLayout
+)
+
 from vista.algorithms.trackers import run_tracklet_tracker
 
 
@@ -41,7 +45,6 @@ class TrackletTrackingWorker(QThread):
             self.tracking_complete.emit(vista_tracker)
 
         except Exception as e:
-            import traceback
             tb_str = traceback.format_exc()
             self.error_occurred.emit(f"Tracking failed: {str(e)}\n\nTraceback:\n{tb_str}")
 

@@ -2,6 +2,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
+
 
 class KalmanTrack:
     """Single track with constant velocity Kalman filter"""
@@ -138,9 +141,6 @@ def run_kalman_tracker(detectors, config):
     Returns:
         Tracker object containing the generated tracks
     """
-    from vista.tracks.tracker import Tracker
-    from vista.tracks.track import Track
-
     # Extract configuration
     process_noise = config['process_noise']
     measurement_noise = config['measurement_noise']

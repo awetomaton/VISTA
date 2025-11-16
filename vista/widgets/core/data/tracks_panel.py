@@ -1,17 +1,18 @@
 """Tracks panel for data manager"""
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QMessageBox,
-    QComboBox, QCheckBox, QSpinBox, QColorDialog, QMenu, QDialog, QLineEdit,
-    QRadioButton, QButtonGroup, QDoubleSpinBox, QScrollArea
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
-from PyQt6.QtGui import QColor, QBrush, QAction
 import numpy as np
 import pandas as pd
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtGui import QAction, QBrush, QColor
+from PyQt6.QtWidgets import (
+    QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
+    QDoubleSpinBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton, QScrollArea,
+    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+)
 
+from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
-from vista.widgets.core.data.delegates import ColorDelegate, MarkerDelegate, LineStyleDelegate
+from vista.widgets.core.data.delegates import ColorDelegate, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.export_dialogs import ExportTracksDialog
 
 
@@ -1007,8 +1008,6 @@ class TracksPanel(QWidget):
 
     def merge_selected_tracks(self):
         """Merge selected tracks into a single track"""
-        from vista.tracks.track import Track
-
         # Get selected rows from the table
         selected_rows = sorted(set(index.row() for index in self.tracks_table.selectedIndexes()))
 
@@ -1133,8 +1132,6 @@ class TracksPanel(QWidget):
 
     def split_selected_track(self):
         """Split selected track at the current frame"""
-        from vista.tracks.track import Track
-
         # Get selected row from the table
         selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
 

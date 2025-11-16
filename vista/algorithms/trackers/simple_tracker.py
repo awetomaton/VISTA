@@ -2,6 +2,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
+
 
 class SimpleTrack:
     """Simple track using running average for position prediction"""
@@ -83,9 +86,6 @@ def run_simple_tracker(detectors, config):
     Returns:
         Tracker object containing the generated tracks
     """
-    from vista.tracks.tracker import Tracker
-    from vista.tracks.track import Track
-
     # Extract configuration with smart defaults
     tracker_name = config.get('tracker_name', 'Simple Tracker')
     min_track_length = config.get('min_track_length', 5)

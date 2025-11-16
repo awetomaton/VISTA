@@ -1,9 +1,13 @@
 """Dialog for configuring and running trackers"""
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                              QComboBox, QPushButton, QGroupBox, QFormLayout,
-                              QDoubleSpinBox, QListWidget, QMessageBox,
-                              QProgressDialog, QSpinBox, QWidget)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
+import traceback
+
+from PyQt6.QtCore import Qt, QSettings, QThread, pyqtSignal
+from PyQt6.QtWidgets import (
+    QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout,
+    QLabel, QListWidget, QMessageBox, QProgressDialog, QPushButton, QSpinBox,
+    QVBoxLayout, QWidget
+)
+
 from vista.algorithms.trackers import run_kalman_tracker, run_simple_tracker
 
 
@@ -46,7 +50,6 @@ class TrackingWorker(QThread):
             self.tracking_complete.emit(vista_tracker)
 
         except Exception as e:
-            import traceback
             tb_str = traceback.format_exc()
             self.error_occurred.emit(f"Tracking failed: {str(e)}\n\nTraceback:\n{tb_str}")
 

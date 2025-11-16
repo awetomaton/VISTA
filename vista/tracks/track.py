@@ -1,9 +1,12 @@
 """This modules stores an object representing a single track from a tracker"""
+from dataclasses import dataclass, field
+
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
-from dataclasses import dataclass, field
+
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
+from vista.utils.time_mapping import map_times_to_frames
 
 
 @dataclass
@@ -100,7 +103,6 @@ class Track:
             frames = df["Frames"].to_numpy()
         elif times is not None and imagery is not None:
             # Map times to frames using imagery
-            from vista.utils.time_mapping import map_times_to_frames
             frames = map_times_to_frames(times, imagery.times, imagery.frames)
         elif times is not None:
             # Times present but no imagery - raise error

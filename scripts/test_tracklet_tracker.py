@@ -6,12 +6,14 @@ This script creates synthetic data with:
 - Smooth real tracks with consistent velocity
 - Tests the tracklet tracker's ability to filter false alarms
 """
+import traceback
 
 import numpy as np
-from vista.app import VistaApp
-from vista.imagery.imagery import Imagery
-from vista.detections.detector import Detector
+
 from vista.algorithms.trackers import run_tracklet_tracker
+from vista.app import VistaApp
+from vista.detections.detector import Detector
+from vista.imagery.imagery import Imagery
 
 
 def create_synthetic_data():
@@ -184,7 +186,6 @@ def test_tracklet_tracker():
         app.exec()
 
     except Exception as e:
-        import traceback
         print(f"\nERROR: {e}")
         print("\nTraceback:")
         print(traceback.format_exc())
