@@ -54,11 +54,23 @@ class ImageryPanel(QWidget):
         self.setLayout(layout)
 
     def refresh_imagery_table(self):
-        """Refresh the imagery table"""
+        """Refresh the imagery table, filtering by selected sensor"""
         self.imagery_table.blockSignals(True)
         self.imagery_table.setRowCount(0)
 
-        for row, imagery in enumerate(self.viewer.imageries):
+        # Get selected sensor from parent DataManagerPanel
+        selected_sensor = None
+        if hasattr(self.parent(), 'selected_sensor'):
+            selected_sensor = self.parent().selected_sensor
+
+        # Filter imageries by selected sensor
+        filtered_imageries = []
+        if selected_sensor is not None:
+            filtered_imageries = [img for img in self.viewer.imageries if img.sensor == selected_sensor]
+        else:
+            filtered_imageries = self.viewer.imageries
+
+        for row, imagery in enumerate(filtered_imageries):
             self.imagery_table.insertRow(row)
 
             # Name (editable)
@@ -75,7 +87,7 @@ class ImageryPanel(QWidget):
         self.imagery_table.blockSignals(False)
 
         # Select the row for the currently active imagery
-        for row, imagery in enumerate(self.viewer.imageries):
+        for row, imagery in enumerate(filtered_imageries):
             if imagery == self.viewer.imagery:
                 self.imagery_table.selectRow(row)
                 break
@@ -87,13 +99,18 @@ class ImageryPanel(QWidget):
 
         if selected_rows:
             row = selected_rows[0]
-            if row < len(self.viewer.imageries):
-                # User selected this imagery
-                imagery = self.viewer.imageries[row]
-                self.viewer.select_imagery(imagery)
-                # Update frame range in main window
-                self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
-                self.data_changed.emit()
+            # Get the imagery ID from the name item
+            name_item = self.imagery_table.item(row, 0)
+            if name_item:
+                imagery_id = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the imagery by ID
+                for imagery in self.viewer.imageries:
+                    if id(imagery) == imagery_id:
+                        self.viewer.select_imagery(imagery)
+                        # Update frame range in main window
+                        self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+                        # Note: Don't emit data_changed here - selection doesn't change data
+                        break
 
     def on_imagery_cell_changed(self, row, column):
         """Handle imagery cell changes"""

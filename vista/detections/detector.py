@@ -1,9 +1,10 @@
+from dataclasses import dataclass
+from typing import Union
+import pathlib
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
-import pathlib
-from dataclasses import dataclass
-from typing import Union
+from vista.sensors.sensor import Sensor
 
 
 @dataclass
@@ -12,6 +13,7 @@ class Detector:
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
+    sensor: Sensor
     description: str = ""
     # Styling attributes
     color: str = 'r'  # Red by default
@@ -33,7 +35,10 @@ class Detector:
         return s
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, name: str = None):
+    def from_dataframe(cls, df: pd.DataFrame, name: str = None, sensor=None):
+        if sensor is None:
+            raise ValueError("Detector requires a sensor")
+
         if name is None:
             name = df["Detector"][0]
         kwargs = {}
@@ -52,6 +57,7 @@ class Detector:
             frames = df["Frames"].to_numpy(),
             rows = df["Rows"].to_numpy(),
             columns = df["Columns"].to_numpy(),
+            sensor = sensor,
             **kwargs
         )
 

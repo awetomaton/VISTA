@@ -1,21 +1,23 @@
 """Background data loading using QThread to prevent UI blocking"""
-from PyQt6.QtCore import QThread, pyqtSignal
 from pathlib import Path
-import h5py
-import pandas as pd
-import numpy as np
 
-from vista.imagery.imagery import Imagery
+import h5py
+import numpy as np
+import pandas as pd
+from PyQt6.QtCore import QThread, pyqtSignal
+
 from vista.detections.detector import Detector
-from vista.tracks.tracker import Tracker
+from vista.imagery.imagery import Imagery
+from vista.sensors.sampled_sensor import SampledSensor
 from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
 
 
 class DataLoaderThread(QThread):
     """Worker thread for loading data in the background"""
 
     # Signals for different data types
-    imagery_loaded = pyqtSignal(object)  # Emits Imagery object
+    imagery_loaded = pyqtSignal(object, object)  # Emits (Imagery object, Sensor object)
     detector_loaded = pyqtSignal(object)  # Emits Detector object
     detectors_loaded = pyqtSignal(list)  # Emits list of Detector objects
     tracker_loaded = pyqtSignal(object)  # Emits Tracker object
@@ -132,18 +134,60 @@ class DataLoaderThread(QThread):
         if self._cancelled:
             return  # Exit early if cancelled
 
-        # Create Imagery object
+        # Load radiometric calibration data if present
+        radiometric_gain = None
+        bias_images = None
+        bias_image_frames = None
+        uniformity_gain_images = None
+        uniformity_gain_image_frames = None
+        bad_pixel_masks = None
+        bad_pixel_mask_frames = None
+
+        with h5py.File(self.file_path, 'r') as f:
+            if 'radiometric_gain' in f:
+                radiometric_gain = f['radiometric_gain'][:]
+            if 'bias_images' in f:
+                bias_images = f['bias_images'][:]
+                bias_image_frames = f['bias_image_frames'][:]
+            if 'uniformity_gain_images' in f:
+                uniformity_gain_images = f['uniformity_gain_images'][:]
+                uniformity_gain_image_frames = f['uniformity_gain_image_frames'][:]
+            if 'bad_pixel_masks' in f:
+                bad_pixel_masks = f['bad_pixel_masks'][:]
+                bad_pixel_mask_frames = f['bad_pixel_mask_frames'][:]
+
+        # Create SampledSensor object with metadata from HDF5 file
+        # Use a stationary sensor at origin since we don't have position data in the file
+        sensor_positions = np.array([[0.0], [0.0], [0.0]])  # (3, 1) array at origin
+        sensor_times = np.array([times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
+
+        sensor = SampledSensor(
+            name="Unknown",
+            positions=sensor_positions,
+            times=sensor_times,
+            frames=frames,
+            poly_row_col_to_lat=poly_row_col_to_lat,
+            poly_row_col_to_lon=poly_row_col_to_lon,
+            poly_lat_lon_to_row=poly_lat_lon_to_row,
+            poly_lat_lon_to_col=poly_lat_lon_to_col,
+            radiometric_gain=radiometric_gain,
+            bias_images=bias_images,
+            bias_image_frames=bias_image_frames,
+            uniformity_gain_images=uniformity_gain_images,
+            uniformity_gain_image_frames=uniformity_gain_image_frames,
+            bad_pixel_masks=bad_pixel_masks,
+            bad_pixel_mask_frames=bad_pixel_mask_frames,
+        )
+
+        # Create Imagery object with sensor reference
         imagery = Imagery(
             name=Path(self.file_path).stem,
             images=images,
             frames=frames,
+            sensor=sensor,
             row_offset=row_offset,
             column_offset=column_offset,
             times=times,
-            poly_row_col_to_lat=poly_row_col_to_lat,
-            poly_row_col_to_lon=poly_row_col_to_lon,
-            poly_lat_lon_to_row=poly_lat_lon_to_row,
-            poly_lat_lon_to_col=poly_lat_lon_to_col
         )
 
         # Pre-compute histograms with progress updates
@@ -155,8 +199,8 @@ class DataLoaderThread(QThread):
             imagery.get_histogram(i)  # Lazy computation
             self.progress_updated.emit("Computing histograms...", i + 1, len(imagery.images))
 
-        # Emit the loaded imagery
-        self.imagery_loaded.emit(imagery)
+        # Emit the loaded imagery and sensor
+        self.imagery_loaded.emit(imagery, sensor)
 
     def _load_detections_csv(self):
         """Load detections from CSV file"""

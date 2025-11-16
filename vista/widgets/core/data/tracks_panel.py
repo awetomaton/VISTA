@@ -225,18 +225,25 @@ class TracksPanel(QWidget):
         self.on_bulk_property_changed(0)
 
     def refresh_tracks_table(self):
-        """Refresh the tracks table with all trackers consolidated"""
+        """Refresh the tracks table with all trackers consolidated, filtering by selected sensor"""
         self.tracks_table.blockSignals(True)
         self.tracks_table.setRowCount(0)
 
         # Update header labels with filter/sort icons
         self._update_track_header_icons()
 
-        # Build list of all tracks with their tracker reference
+        # Get selected sensor from parent DataManagerPanel
+        selected_sensor = None
+        if hasattr(self.parent(), 'selected_sensor'):
+            selected_sensor = self.parent().selected_sensor
+
+        # Build list of all tracks with their tracker reference, filtering by sensor
         all_tracks = []
         for tracker in self.viewer.trackers:
             for track in tracker.tracks:
-                all_tracks.append((tracker, track))
+                # Filter by selected sensor
+                if selected_sensor is None or track.sensor == selected_sensor:
+                    all_tracks.append((tracker, track))
 
         # Apply filters
         filtered_tracks = self._apply_track_filters(all_tracks)

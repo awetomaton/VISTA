@@ -425,7 +425,7 @@ class VistaMainWindow(QMainWindow):
 
             self.loader_thread.start()
 
-    def on_imagery_loaded(self, imagery):
+    def on_imagery_loaded(self, imagery, sensor):
         """Handle imagery loaded in background thread"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries]
@@ -439,6 +439,20 @@ class VistaMainWindow(QMainWindow):
             )
             self.statusBar().showMessage(f"Failed to load imagery: duplicate name '{imagery.name}'", 5000)
             return
+
+        # Handle sensor - check if sensor with same name already exists
+        existing_sensor = None
+        for s in self.viewer.sensors:
+            if s.name == sensor.name:
+                existing_sensor = s
+                break
+
+        if existing_sensor is not None:
+            # Reuse existing sensor
+            imagery.sensor = existing_sensor
+        else:
+            # Add new sensor to viewer
+            self.viewer.sensors.append(sensor)
 
         # Add imagery to viewer (will be selected if it's the first one)
         self.viewer.add_imagery(imagery)

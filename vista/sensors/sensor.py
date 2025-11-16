@@ -1,9 +1,8 @@
-"""Module that contains the abstract Sensor class
+"""Module that contains the base Sensor class
 
-The Sensor class provides an abstract interface for sensor position and point spread function modeling.
-Subclasses must implement the position retrieval method.
+The Sensor class provides an base interface for sensor modeling.
 """
-from abc import ABC, abstractmethod
+
 from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
@@ -11,22 +10,32 @@ from typing import Optional
 
 
 @dataclass
-class Sensor(ABC):
+class Sensor:
     """
-    Abstract base class for sensor position and point spread function modeling.
+    Base class for sensor position, line-of-sight, geodetic conversion, and radiometric modeling
 
     The Sensor class provides a framework for representing sensor platforms and their
-    associated characteristics. It requires subclasses to implement position retrieval
-    for given times and optionally supports point spread function (PSF) modeling.
+    associated characteristics including projection polynomials and radiometric calibration data.
 
-    Methods
-    -------
-    get_positions(times)
-        Return sensor positions in Cartesian ECEF coordinates (km) for given times.
-        Must be implemented by subclasses.
-    model_psf(sigma, size)
-        Optional method to model the sensor's point spread function.
-        Can be overridden by subclasses for PSF-based analysis.
+    Attributes
+    ----------
+    name : str
+        Unique name for this sensor. Used as the primary identifier.
+    frames : NDArray[np.int_], optional
+        Frame numbers for which calibration data is available. Used to index
+        time-varying sensor properties like projection polynomials.
+    bias_images : NDArray, optional
+        3D array of bias/dark frames with shape (num_bias_images, height, width).
+    bias_image_frames : NDArray, optional
+        1D array specifying frame ranges for each bias image.
+    uniformity_gain_images : NDArray, optional
+        3D array of flat-field/gain correction images.
+    uniformity_gain_image_frames : NDArray, optional
+        1D array specifying frame ranges for each uniformity gain image.
+    bad_pixel_masks : NDArray, optional
+        3D array of bad pixel masks.
+    bad_pixel_mask_frames : NDArray, optional
+        1D array specifying frame ranges for each bad pixel mask.
 
     Notes
     -----
@@ -34,17 +43,25 @@ class Sensor(ABC):
     - Position units are kilometers
     - Positions are represented as (3, N) arrays with x, y, z in each column
     - PSF modeling is optional and can be used for fitting signal blobs to estimate irradiance
+    - Sensor names must be unique within a VISTA session
 
     Examples
     --------
-    >>> # Subclass must implement get_positions
+    >>> # Subclass can implement get_positions
     >>> class MySensor(Sensor):
     ...     def get_positions(self, times):
     ...         # Return sensor positions for given times
     ...         return np.array([[x1, x2], [y1, y2], [z1, z2]])
     """
+    name: str
+    frames: Optional[NDArray[np.int_]] = None
+    bias_images: Optional[NDArray] = None
+    bias_image_frames: Optional[NDArray] = None
+    uniformity_gain_images: Optional[NDArray] = None
+    uniformity_gain_image_frames: Optional[NDArray] = None
+    bad_pixel_masks: Optional[NDArray] = None
+    bad_pixel_mask_frames: Optional[NDArray] = None
 
-    @abstractmethod
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
         Return sensor positions in Cartesian ECEF coordinates for given times.
@@ -62,9 +79,9 @@ class Sensor(ABC):
 
         Notes
         -----
-        This method must be implemented by all subclasses.
+        The default implementation returns None. Subclasses should override this method
         """
-        pass
+        return None
 
     def model_psf(self, sigma: Optional[float] = None, size: Optional[int] = None) -> Optional[NDArray[np.float64]]:
         """
@@ -92,3 +109,52 @@ class Sensor(ABC):
         method to provide specific PSF models (e.g., Gaussian, Airy disk, etc.).
         """
         return None
+
+    def can_geolocate(self) -> bool:
+        """
+        Check if sensor can convert pixels to geodetic coordiantes and vice versa. 
+        
+        Notes
+        -----
+        The default implementation returns False. Subclasses can override this method.
+
+        Returns
+        -------
+        bool
+            True if sensor has both forward and reverse geolocation polynomials.
+        """
+        return False
+
+    def can_correct_bad_pixel(self) -> bool:
+        """
+        Check if sensor has radiometric bad pixel masks.
+
+        Returns
+        -------
+        bool
+            True if sensor has radiometric bad pixel masks.
+        """
+        return self.bad_pixel_masks is not None
+
+    def can_correct_bias(self) -> bool:
+        """
+        Check if sensor has bias images
+
+        Returns
+        -------
+        bool
+            True if sensor has bias images.
+        """
+        return self.bias_images is not None
+    
+    def can_correct_non_uniformity(self) -> bool:
+        """
+        Check if sensor has uniformity gain images
+
+        Returns
+        -------
+        bool
+            True if sensor has uniformity gain images.
+        """
+        return self.uniformity_gain_images is not None
+

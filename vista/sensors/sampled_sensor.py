@@ -3,11 +3,13 @@
 The SampledSensor class provides sensor position retrieval via interpolation/extrapolation
 from sampled position data.
 """
+from astropy.coordinates import EarthLocation
+from astropy import units
 from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
-from typing import Optional
+from typing import Optional, Tuple
 from vista.sensors.sensor import Sensor
 
 
@@ -26,8 +28,25 @@ class SampledSensor(Sensor):
     positions : NDArray[np.float64]
         Sensor positions as (3, N) array where N is the number of samples.
         Each column contains [x, y, z] ECEF coordinates in kilometers.
+        Required - will raise ValueError in __post_init__ if not provided.
     times : NDArray[np.datetime64]
         Times corresponding to each position sample. Must have length N.
+        Required - will raise ValueError in __post_init__ if not provided.
+    radiometric_gain : NDArray, optional
+        1D array of multiplicative factors for each frame to convert from counts to
+        irradiance in units of kW/km²/sr.
+    poly_row_col_to_lat : NDArray[np.float64], optional
+        Polynomial coefficients for converting (row, column) to latitude (degrees).
+        Shape: (num_frames, 15) for 4th order 2D polynomials.
+    poly_row_col_to_lon : NDArray[np.float64], optional
+        Polynomial coefficients for converting (row, column) to longitude (degrees).
+        Shape: (num_frames, 15) for 4th order 2D polynomials.
+    poly_lat_lon_to_row : NDArray[np.float64], optional
+        Polynomial coefficients for converting (latitude, longitude) to row.
+        Shape: (num_frames, 15) for 4th order 2D polynomials.
+    poly_lat_lon_to_col : NDArray[np.float64], optional
+        Polynomial coefficients for converting (latitude, longitude) to column.
+        Shape: (num_frames, 15) for 4th order 2D polynomials.
 
     Methods
     -------
@@ -67,8 +86,13 @@ class SampledSensor(Sensor):
     >>> # Returns same position for any query time
     >>> pos = sensor_static.get_positions(query_times)
     """
-    positions: NDArray[np.float64]
-    times: NDArray[np.datetime64]
+    positions: Optional[NDArray[np.float64]] = None
+    times: Optional[NDArray[np.datetime64]] = None
+    radiometric_gain: Optional[NDArray] = None
+    poly_row_col_to_lat: Optional[NDArray[np.float64]] = None
+    poly_row_col_to_lon: Optional[NDArray[np.float64]] = None
+    poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None
+    poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None
 
     def __post_init__(self):
         """
@@ -76,7 +100,18 @@ class SampledSensor(Sensor):
 
         Ensures positions and times have compatible shapes and removes any
         duplicate time entries along with their corresponding positions.
+
+        Raises
+        ------
+        ValueError
+            If positions or times are not provided, or if they have incompatible shapes.
         """
+        # Validate required fields
+        if self.positions is None:
+            raise ValueError("positions is required for SampledSensor")
+        if self.times is None:
+            raise ValueError("times is required for SampledSensor")
+
         # Validate shape of positions
         if self.positions.ndim != 2 or self.positions.shape[0] != 3:
             raise ValueError(f"positions must be a (3, N) array, got shape {self.positions.shape}")
@@ -95,6 +130,46 @@ class SampledSensor(Sensor):
             self.times = unique_times
             self.positions = self.positions[:, unique_indices]
 
+    @staticmethod
+    def _eval_polynomial_2d_order4(x: np.ndarray, y: np.ndarray, coeffs: np.ndarray) -> np.ndarray:
+        """
+        Evaluate a 2D 4th order polynomial.
+
+        The polynomial is: f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 +
+                                    c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 +
+                                    c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4
+
+        Args:
+            x: X coordinates (can be scalar or array)
+            y: Y coordinates (can be scalar or array)
+            coeffs: Array of 15 coefficients
+
+        Returns:
+            Evaluated polynomial values
+        """
+        return (
+            coeffs[0] +
+            coeffs[1] * x + coeffs[2] * y +
+            coeffs[3] * x**2 + coeffs[4] * x * y + coeffs[5] * y**2 +
+            coeffs[6] * x**3 + coeffs[7] * x**2 * y + coeffs[8] * x * y**2 + coeffs[9] * y**3 +
+            coeffs[10] * x**4 + coeffs[11] * x**3 * y + coeffs[12] * x**2 * y**2 +
+            coeffs[13] * x * y**3 + coeffs[14] * y**4
+        )
+    
+    def can_geolocate(self) -> bool:
+        """
+        Check if sensor can convert pixels to geodetic coordiantes and vice versa
+
+        Returns
+        -------
+        bool
+            True if sensor has both forward and reverse geolocation polynomials.
+        """
+        return (self.poly_row_col_to_lat is not None and
+                self.poly_row_col_to_lon is not None and
+                self.poly_lat_lon_to_row is not None and
+                self.poly_lat_lon_to_col is not None)
+    
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
         Return sensor positions for given times via interpolation/extrapolation.
@@ -142,3 +217,87 @@ class SampledSensor(Sensor):
             interpolated_positions[i, :] = interpolator(query_times_ns)
 
         return interpolated_positions
+
+    def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
+        """
+        Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
+
+        Args:
+            frame: Frame number
+            rows: Array of row pixel coordinates
+            columns: Array of column pixel coordinates
+
+        Returns:
+            EarthLocation objects with lat/lon coordinates (or zeros if no polynomials)
+        """
+        # If no polynomial coefficients provided, return zeros
+        if (self.poly_row_col_to_lat is None or
+            self.poly_row_col_to_lon is None or
+            self.frames is None):
+            invalid = np.zeros_like(rows)
+            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+
+        # Find frame index in sensor's frame array
+        frame_mask = self.frames == frame
+        if not np.any(frame_mask):
+            # Frame not found in sensor calibration, return zeros
+            invalid = np.zeros_like(rows)
+            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+
+        frame_idx = np.where(frame_mask)[0][0]
+
+        # Get polynomial coefficients for this frame
+        lat_coeffs = self.poly_row_col_to_lat[frame_idx]
+        lon_coeffs = self.poly_row_col_to_lon[frame_idx]
+
+        # Evaluate polynomials
+        latitudes = self._eval_polynomial_2d_order4(columns, rows, lat_coeffs)
+        longitudes = self._eval_polynomial_2d_order4(columns, rows, lon_coeffs)
+
+        # Convert to EarthLocation using geodetic coordinates
+        return EarthLocation.from_geodetic(
+            lon=longitudes * units.deg,
+            lat=latitudes * units.deg,
+            height=0 * units.km
+        )
+    
+    def geodetic_to_pixel(self, frame: int, loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
+
+        Args:
+            frame: Frame number
+            loc: EarthLocation object(s) with lat/lon coordinates
+
+        Returns:
+            Tuple of (rows, columns) pixel coordinates (or zeros if no polynomials)
+        """
+        # If no polynomial coefficients provided, return zeros
+        if (self.poly_lat_lon_to_row is None or
+            self.poly_lat_lon_to_col is None or
+            self.frames is None):
+            invalid = np.zeros(len(loc.lat))
+            return invalid, invalid
+
+        # Find frame index in sensor's frame array
+        frame_mask = self.frames == frame
+        if not np.any(frame_mask):
+            # Frame not found in sensor calibration, return zeros
+            invalid = np.zeros(len(loc.lat))
+            return invalid, invalid
+
+        frame_idx = np.where(frame_mask)[0][0]
+
+        # Get polynomial coefficients for this frame
+        row_coeffs = self.poly_lat_lon_to_row[frame_idx]
+        col_coeffs = self.poly_lat_lon_to_col[frame_idx]
+
+        # Extract latitudes and longitudes
+        latitudes = loc.lat.deg
+        longitudes = loc.lon.deg
+
+        # Evaluate polynomials
+        rows = self._eval_polynomial_2d_order4(longitudes, latitudes, row_coeffs)
+        columns = self._eval_polynomial_2d_order4(longitudes, latitudes, col_coeffs)
+
+        return rows, columns

@@ -97,12 +97,24 @@ class DetectionsPanel(QWidget):
         self.setLayout(layout)
 
     def refresh_detections_table(self):
-        """Refresh the detections table"""
+        """Refresh the detections table, filtering by selected sensor"""
         try:
             self.detections_table.blockSignals(True)
             self.detections_table.setRowCount(0)
 
-            for row, detector in enumerate(self.viewer.detectors):
+            # Get selected sensor from parent DataManagerPanel
+            selected_sensor = None
+            if hasattr(self.parent(), 'selected_sensor'):
+                selected_sensor = self.parent().selected_sensor
+
+            # Filter detectors by selected sensor
+            filtered_detectors = []
+            if selected_sensor is not None:
+                filtered_detectors = [det for det in self.viewer.detectors if det.sensor == selected_sensor]
+            else:
+                filtered_detectors = self.viewer.detectors
+
+            for row, detector in enumerate(filtered_detectors):
                 try:
                     self.detections_table.insertRow(row)
 

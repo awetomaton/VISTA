@@ -54,10 +54,12 @@ class ImageryViewer(QWidget):
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
+        self.sensors = []  # List of Sensor objects
         self.imageries = []  # List of Imagery objects
         self.imagery = None  # Currently selected imagery for display
         self.detectors = []  # List of Detector objects
         self.trackers = []  # List of Tracker objects
+        self.tracks = []  # List of Track objects (for compatibility with sensor deletion)
         self.aois = []  # List of AOI objects
 
         # Persistent plot items (created once, reused for efficiency)
@@ -238,7 +240,11 @@ class ImageryViewer(QWidget):
                     user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
 
                 # Block signals to prevent histogram recomputation
-                self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+                try:
+                    self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+                except TypeError:
+                    # Signal not connected yet, ignore
+                    pass
 
                 # Use cached histogram if available
                 if self.imagery.has_cached_histograms():
@@ -248,12 +254,16 @@ class ImageryViewer(QWidget):
                     # Manually update histogram with cached data
                     hist_y, hist_x = self.imagery.get_histogram(image_index)
                     self.histogram.plot.setData(hist_x, hist_y)
-                else:                    
+                else:
                     # Let HistogramLUTItem compute histogram automatically
                     self.image_item.setImage(self.imagery.images[image_index])
 
                 # Reconnect the histogram image changed signal
-                self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
+                try:
+                    self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
+                except TypeError:
+                    # Signal already connected, ignore
+                    pass
 
                 # Restore user's histogram bounds if they were manually set
                 if user_histogram_bounds is not None:

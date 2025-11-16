@@ -1,12 +1,11 @@
 """This modules stores an object representing a single track from a tracker"""
 from dataclasses import dataclass, field
-
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
-
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
+from vista.sensors.sensor import Sensor
 
 
 @dataclass
@@ -15,6 +14,7 @@ class Track:
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
+    sensor: Sensor
     _length: int = field(init=False, default=None)
     times: NDArray[np.datetime64] = None  # Optional times for each track point
     # Styling attributes
@@ -53,7 +53,7 @@ class Track:
         return s
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, name: str = None, imagery=None):
+    def from_dataframe(cls, df: pd.DataFrame, name: str = None, imagery=None, sensor=None):
         """
         Create Track from DataFrame
 
@@ -61,13 +61,17 @@ class Track:
             df: DataFrame with track data
             name: Track name (if None, taken from df["Track"])
             imagery: Optional Imagery object for time-to-frame and/or geodetic-to-pixel mapping
+            sensor: Sensor object for this track (required)
 
         Returns:
             Track object
 
         Raises:
-            ValueError: If required columns are missing or imagery is required but not provided
+            ValueError: If required columns are missing, sensor is missing, or imagery is required but not provided
         """
+        if sensor is None:
+            raise ValueError("Track requires a sensor")
+
         if name is None:
             name = df["Track"][0]
         kwargs = {}
@@ -141,6 +145,7 @@ class Track:
             frames = frames,
             rows = rows,
             columns = columns,
+            sensor = sensor,
             **kwargs
         )
     
@@ -160,6 +165,7 @@ class Track:
             frames = self.frames.copy(),
             rows = self.rows.copy(),
             columns = self.columns.copy(),
+            sensor = self.sensor,
             times = self.times.copy() if self.times is not None else None,
             color = self.color,
             marker = self.marker,
