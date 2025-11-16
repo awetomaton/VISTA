@@ -55,7 +55,7 @@ class DetectionsPanel(QWidget):
         self.detections_table = QTableWidget()
         self.detections_table.setColumnCount(6)
         self.detections_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Color", "Marker", "Size", "Line"
+            "Visible", "Name", "Color", "Marker", "Marker Size", "Line Thickness"
         ])
 
         # Enable row selection via vertical header

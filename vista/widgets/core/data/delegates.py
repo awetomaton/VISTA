@@ -87,6 +87,15 @@ class MarkerDelegate(QStyledItemDelegate):
         marker_symbol = self.MARKERS[marker_name]
         model.setData(index, marker_symbol, Qt.ItemDataRole.EditRole)
 
+    def displayText(self, value, locale):
+        """Convert marker symbol to full name for display"""
+        # Find the name for this marker symbol
+        for name, symbol in self.MARKERS.items():
+            if symbol == value:
+                return name
+        # If not found, return the value as-is
+        return str(value)
+
     def paint(self, painter, option, index):
         """Paint with proper selection highlighting"""
         # Use default painting which handles selection highlighting
