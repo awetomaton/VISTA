@@ -26,6 +26,7 @@ class Track:
     complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
     show_line: bool = True  # If True, show line connecting track points
     line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
+    labels: set[str] = field(default_factory=set)  # Set of labels for this track
     # Private attributes
     _length: int = field(init=False, default=None)
     
@@ -92,6 +93,13 @@ class Track:
             kwargs["show_line"] = df["Show Line"].iloc[0]
         if "Line Style" in df.columns:
             kwargs["line_style"] = df["Line Style"].iloc[0]
+        if "Labels" in df.columns:
+            # Parse labels from comma-separated string
+            labels_str = df["Labels"].iloc[0]
+            if pd.notna(labels_str) and labels_str:
+                kwargs["labels"] = set(label.strip() for label in labels_str.split(','))
+            else:
+                kwargs["labels"] = set()
 
         # Handle times (optional)
         times = None
@@ -180,6 +188,7 @@ class Track:
             complete = self.complete,
             show_line = self.show_line,
             line_style = self.line_style,
+            labels = self.labels.copy(),
         )
     
     def to_dataframe(self, imagery=None, include_geolocation=False, include_time=False) -> pd.DataFrame:
@@ -211,6 +220,7 @@ class Track:
             "Complete": self.complete,
             "Show Line": self.show_line,
             "Line Style": self.line_style,
+            "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
         }
 
         # Include geolocation if requested

@@ -13,8 +13,141 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
-from vista.widgets.core.data.delegates import ColorDelegate, LineStyleDelegate, MarkerDelegate
+from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.export_dialogs import ExportTracksDialog
+
+
+class LabelsManagerDialog(QDialog):
+    """Dialog for managing track labels"""
+
+    def __init__(self, parent=None):
+        """
+        Initialize the labels manager dialog.
+
+        Args:
+            parent: Parent widget
+        """
+        super().__init__(parent)
+        self.settings = QSettings("VISTA", "TrackLabels")
+        self.setWindowTitle("Manage Track Labels")
+        self.setModal(True)
+        self.init_ui()
+        self.load_labels()
+
+    def init_ui(self):
+        """Initialize the user interface"""
+        layout = QVBoxLayout()
+
+        # Information label
+        info_label = QLabel("Create and manage labels that can be applied to tracks.")
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+
+        # Labels list
+        list_label = QLabel("Available Labels:")
+        layout.addWidget(list_label)
+
+        self.labels_list = QListWidget()
+        self.labels_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        layout.addWidget(self.labels_list)
+
+        # Add label section
+        add_layout = QHBoxLayout()
+        add_layout.addWidget(QLabel("New Label:"))
+        self.new_label_input = QLineEdit()
+        self.new_label_input.setPlaceholderText("Enter label name...")
+        self.new_label_input.returnPressed.connect(self.add_label)
+        add_layout.addWidget(self.new_label_input)
+
+        self.add_btn = QPushButton("Add")
+        self.add_btn.clicked.connect(self.add_label)
+        add_layout.addWidget(self.add_btn)
+
+        layout.addLayout(add_layout)
+
+        # Delete button
+        self.delete_btn = QPushButton("Delete Selected")
+        self.delete_btn.clicked.connect(self.delete_selected_labels)
+        layout.addWidget(self.delete_btn)
+
+        # Dialog buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        button_box.rejected.connect(self.accept)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+        self.resize(400, 400)
+
+    def load_labels(self):
+        """Load labels from settings"""
+        labels = self.settings.value("labels", [])
+        if labels is None:
+            labels = []
+        self.labels_list.clear()
+        for label in sorted(labels):
+            self.labels_list.addItem(label)
+
+    def save_labels(self):
+        """Save labels to settings"""
+        labels = []
+        for i in range(self.labels_list.count()):
+            labels.append(self.labels_list.item(i).text())
+        self.settings.setValue("labels", labels)
+
+    def add_label(self):
+        """Add a new label"""
+        label_text = self.new_label_input.text().strip()
+        if not label_text:
+            return
+
+        # Check if label already exists (case-insensitive)
+        existing_labels = [self.labels_list.item(i).text().lower()
+                          for i in range(self.labels_list.count())]
+        if label_text.lower() in existing_labels:
+            QMessageBox.warning(self, "Duplicate Label",
+                              f"Label '{label_text}' already exists.")
+            return
+
+        # Add to list
+        self.labels_list.addItem(label_text)
+        self.new_label_input.clear()
+
+        # Re-sort the list
+        labels = [self.labels_list.item(i).text() for i in range(self.labels_list.count())]
+        labels.sort()
+        self.labels_list.clear()
+        for label in labels:
+            self.labels_list.addItem(label)
+
+        self.save_labels()
+
+    def delete_selected_labels(self):
+        """Delete selected labels"""
+        selected_items = self.labels_list.selectedItems()
+        if not selected_items:
+            return
+
+        # Confirm deletion
+        label_names = [item.text() for item in selected_items]
+        reply = QMessageBox.question(
+            self, "Delete Labels",
+            f"Delete {len(label_names)} label(s)?\n\n" + "\n".join(label_names),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            for item in selected_items:
+                self.labels_list.takeItem(self.labels_list.row(item))
+            self.save_labels()
+
+    @staticmethod
+    def get_available_labels():
+        """Get list of all available labels from settings"""
+        settings = QSettings("VISTA", "TrackLabels")
+        labels = settings.value("labels", [])
+        if labels is None:
+            labels = []
+        return sorted(labels)
 
 
 class TracksPanel(QWidget):
@@ -40,7 +173,7 @@ class TracksPanel(QWidget):
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
         self.bulk_property_combo.addItems([
-            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Marker Size"
+            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Marker Size", "Labels"
         ])
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
@@ -89,6 +222,12 @@ class TracksPanel(QWidget):
         self.bulk_marker_size_spinbox.setValue(12)
         self.bulk_marker_size_spinbox.setMaximumWidth(60)
         bulk_layout.addWidget(self.bulk_marker_size_spinbox)
+
+        # Labels button
+        self.bulk_labels_btn = QPushButton("Select Labels")
+        self.bulk_labels_btn.clicked.connect(self.choose_bulk_labels)
+        self.bulk_labels = set()  # Store selected labels
+        bulk_layout.addWidget(self.bulk_labels_btn)
 
         # Apply button - now applies to visible/filtered rows
         self.bulk_apply_btn = QPushButton("Apply to Visible")
@@ -140,6 +279,12 @@ class TracksPanel(QWidget):
         self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
         tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
 
+        # Add manage labels button
+        self.manage_labels_btn = QPushButton("Manage Labels")
+        self.manage_labels_btn.clicked.connect(self.manage_labels)
+        self.manage_labels_btn.setToolTip("Create and manage track labels")
+        tracks_actions_layout.addWidget(self.manage_labels_btn)
+
         tracks_actions_layout.addStretch()
         layout.addLayout(tracks_actions_layout)
 
@@ -157,7 +302,8 @@ class TracksPanel(QWidget):
             8: True,   # Tail Length
             9: True,   # Complete
             10: True,  # Show Line
-            11: True   # Line Style
+            11: True,  # Line Style
+            12: True   # Labels
         }
 
         # Load saved column visibility settings
@@ -165,9 +311,9 @@ class TracksPanel(QWidget):
 
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
-        self.tracks_table.setColumnCount(12)  # Added Show Line and Line Style columns
+        self.tracks_table.setColumnCount(13)  # Added Show Line, Line Style, and Labels columns
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"
+            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Labels"
         ])
 
         # Enable row selection via vertical header
@@ -193,6 +339,7 @@ class TracksPanel(QWidget):
         header.setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
         #header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Line Style (dropdown)
         self.tracks_table.setColumnWidth(11, 120)  # Set reasonably large width to accommodate delegate
+        header.setSectionResizeMode(12, QHeaderView.ResizeMode.Stretch)  # Labels (can have multiple labels)
 
         # Set minimum widths for Tracker and Name columns to ensure headers are never truncated
         # Calculate minimum width based on header text plus padding
@@ -227,6 +374,9 @@ class TracksPanel(QWidget):
 
         self.tracks_line_style_delegate = LineStyleDelegate(self.tracks_table)
         self.tracks_table.setItemDelegateForColumn(11, self.tracks_line_style_delegate)  # Line Style
+
+        self.tracks_labels_delegate = LabelsDelegate(self.tracks_table)
+        self.tracks_table.setItemDelegateForColumn(12, self.tracks_labels_delegate)  # Labels
 
         # Handle color cell clicks manually
         self.tracks_table.cellClicked.connect(self.on_tracks_cell_clicked)
@@ -328,6 +478,11 @@ class TracksPanel(QWidget):
             # Line Style
             self.tracks_table.setItem(row, 11, QTableWidgetItem(track.line_style))
 
+            # Labels
+            labels_text = ', '.join(sorted(track.labels)) if track.labels else ''
+            labels_item = QTableWidgetItem(labels_text)
+            self.tracks_table.setItem(row, 12, labels_item)
+
         # Apply column visibility
         self._apply_track_column_visibility()
 
@@ -341,7 +496,7 @@ class TracksPanel(QWidget):
     def _update_track_header_icons(self):
         """Update header labels to show filter and sort indicators"""
         # Base column names
-        base_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
+        base_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Labels"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -387,6 +542,14 @@ class TracksPanel(QWidget):
                     value = "True" if track.complete else "False"
                 elif col_idx == 10:
                     value = "True" if track.show_line else "False"
+                elif col_idx == 12:
+                    # For labels, check if any filter labels intersect with track labels
+                    if filter_type == 'set':
+                        # Check if any of the selected filter labels are in the track's labels
+                        if not track.labels.intersection(filter_values):
+                            include = False
+                            break
+                    continue  # Skip normal filter processing for labels
                 else:
                     continue
 
@@ -449,6 +612,8 @@ class TracksPanel(QWidget):
                 return track.complete
             elif column == 10:
                 return track.show_line
+            elif column == 12:
+                return ', '.join(sorted(track.labels)) if track.labels else ''
             return ""
 
         reverse = (order == Qt.SortOrder.DescendingOrder)
@@ -461,8 +626,8 @@ class TracksPanel(QWidget):
 
         menu = QMenu(self)
 
-        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3), Complete (9), Show Line (10)
-        if column in [0, 1, 2, 3, 9, 10]:
+        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3), Complete (9), Show Line (10), Labels (12)
+        if column in [0, 1, 2, 3, 9, 10, 12]:
             # Sort options
             sort_asc_action = QAction("Sort Ascending", self)
             sort_asc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.AscendingOrder))
@@ -493,7 +658,7 @@ class TracksPanel(QWidget):
         menu.addSeparator()
 
         # Column visibility submenu (always available)
-        column_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
+        column_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Labels"]
         columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
 
         for col_idx in range(len(column_names)):
@@ -531,7 +696,7 @@ class TracksPanel(QWidget):
     def load_track_column_visibility(self):
         """Load track column visibility settings from QSettings"""
         # Load each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 12):
+        for col_idx in range(1, 13):
             key = f"track_column_{col_idx}_visible"
             saved_value = self.settings.value(key, True, type=bool)
             self.track_column_visibility[col_idx] = saved_value
@@ -749,6 +914,9 @@ class TracksPanel(QWidget):
                     unique_values.add("True" if track.complete else "False")
                 elif column == 10:
                     unique_values.add("True" if track.show_line else "False")
+                elif column == 12:
+                    # For labels, add all individual labels from all tracks
+                    unique_values.update(track.labels)
 
         # Create dialog with checkboxes for each unique value
         dialog = QDialog(self)
@@ -892,6 +1060,14 @@ class TracksPanel(QWidget):
         elif column == 11:  # Line Style
             item = self.tracks_table.item(row, column)
             track.line_style = item.text()
+        elif column == 12:  # Labels
+            item = self.tracks_table.item(row, column)
+            labels_text = item.text()
+            if labels_text:
+                # Parse comma-separated labels
+                track.labels = set(label.strip() for label in labels_text.split(','))
+            else:
+                track.labels = set()
 
         self.data_changed.emit()
 
@@ -948,6 +1124,7 @@ class TracksPanel(QWidget):
         self.bulk_marker_combo.hide()
         self.bulk_line_width_spinbox.hide()
         self.bulk_marker_size_spinbox.hide()
+        self.bulk_labels_btn.hide()
 
         # Show the appropriate control
         property_name = self.bulk_property_combo.currentText()
@@ -963,6 +1140,8 @@ class TracksPanel(QWidget):
             self.bulk_line_width_spinbox.show()
         elif property_name == "Marker Size":
             self.bulk_marker_size_spinbox.show()
+        elif property_name == "Labels":
+            self.bulk_labels_btn.show()
 
     def choose_bulk_color(self):
         """Open color dialog for bulk color selection"""
@@ -971,6 +1150,21 @@ class TracksPanel(QWidget):
             self.bulk_color = color
             # Update button to show selected color
             self.bulk_color_btn.setStyleSheet(f"background-color: {color.name()};")
+
+    def choose_bulk_labels(self):
+        """Open labels selection dialog for bulk label assignment"""
+        from vista.widgets.core.data.delegates import LabelsSelectionDialog
+
+        # Get all available labels
+        available_labels = LabelsManagerDialog.get_available_labels()
+
+        # Show dialog with currently selected bulk labels
+        dialog = LabelsSelectionDialog(available_labels, self.bulk_labels, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.bulk_labels = dialog.get_selected_labels()
+            # Update button text to show count
+            count = len(self.bulk_labels)
+            self.bulk_labels_btn.setText(f"Select Labels ({count} selected)")
 
     def apply_bulk_action(self):
         """Apply the selected bulk action to all visible (filtered) tracks"""
@@ -1021,6 +1215,8 @@ class TracksPanel(QWidget):
                 track.line_width = self.bulk_line_width_spinbox.value()
             elif property_name == "Marker Size":
                 track.marker_size = self.bulk_marker_size_spinbox.value()
+            elif property_name == "Labels":
+                track.labels = self.bulk_labels.copy()
 
         self.refresh_tracks_table()
         self.data_changed.emit()
@@ -1416,6 +1612,13 @@ class TracksPanel(QWidget):
                     main_window = self.parent().parent()
                     if hasattr(main_window, 'statusBar'):
                         main_window.statusBar().showMessage("Track editing cancelled", 3000)
+
+    def manage_labels(self):
+        """Open the labels manager dialog"""
+        dialog = LabelsManagerDialog(self)
+        dialog.exec()
+        # After closing the dialog, refresh the table to show any label changes
+        self.refresh_tracks_table()
 
     def export_tracks(self):
         """Export all tracks to CSV file"""
