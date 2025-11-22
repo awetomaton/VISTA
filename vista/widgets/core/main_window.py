@@ -457,16 +457,21 @@ class VistaMainWindow(QMainWindow):
         # Add imagery to viewer (will be selected if it's the first one)
         self.viewer.add_imagery(imagery)
 
-        # Select this imagery for viewing
-        self.viewer.select_imagery(imagery)
+        # Refresh data manager to show the new imagery (this also handles sensor selection)
+        self.data_manager.refresh()
+
+        # If there's a selected sensor, filter by it. Otherwise select this imagery for viewing
+        if self.viewer.selected_sensor is not None:
+            # Filter will handle selecting appropriate imagery for the selected sensor
+            self.viewer.filter_by_sensor(self.viewer.selected_sensor)
+        else:
+            # No sensor filter, select this imagery for viewing
+            self.viewer.select_imagery(imagery)
 
         # Update playback controls with frame range
         min_frame, max_frame = self.viewer.get_frame_range()
         self.controls.set_frame_range(min_frame, max_frame)
         self.controls.set_frame(min_frame)
-
-        # Refresh data manager to show the new imagery
-        self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Loaded imagery: {imagery.name}", 3000)
 

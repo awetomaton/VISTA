@@ -23,6 +23,17 @@ class Detector:
     line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
 
+    def __getitem__(self, s):
+        if isinstance(s, slice) or isinstance(s, np.ndarray):
+            # Handle slice objects
+            detector_slice = self.copy()
+            detector_slice.frames = detector_slice.frames[s]
+            detector_slice.rows = detector_slice.rows[s]
+            detector_slice.columns = detector_slice.columns[s]
+            return detector_slice
+        else:
+            raise TypeError("Invalid index or slice type.")
+    
     def __len__(self):
         return len(self.frames)
 
@@ -59,6 +70,21 @@ class Detector:
             **kwargs
         )
 
+    def copy(self):
+        """Create a full copy of this track object"""
+        return self.__class__(
+            name = self.name,
+            frames = self.frames.copy(),
+            rows = self.rows.copy(),
+            columns = self.columns.copy(),
+            sensor = self.sensor,
+            color = self.color,
+            marker = self.marker,
+            marker_size = self.marker_size,
+            line_thickness = self.line_thickness,
+            visible = self.visible,
+        )
+    
     def to_csv(self, file: Union[str, pathlib.Path]):
         self.to_dataframe().to_csv(file, index=None)
       

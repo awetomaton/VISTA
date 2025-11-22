@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QColorDialog, QFileDialog, QHBoxLayout, QHeaderView, QMessageBox,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
-
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LineThicknessDelegate, MarkerDelegate
 
@@ -435,7 +435,6 @@ class DetectionsPanel(QWidget):
             return
 
         # Create dialog to select target sensor
-        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
         dialog = QDialog(self)
         dialog.setWindowTitle("Select Target Sensor")
         dialog_layout = QVBoxLayout()
@@ -512,7 +511,6 @@ class DetectionsPanel(QWidget):
             return
 
         # Create dialog to select target sensor
-        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
         dialog = QDialog(self)
         dialog.setWindowTitle("Select Target Sensor")
         dialog_layout = QVBoxLayout()
@@ -551,22 +549,10 @@ class DetectionsPanel(QWidget):
                             break
 
             # Copy detectors to target sensor
-            from vista.detections.detector import Detector
             for detector in detectors_to_copy:
                 # Create a copy of the detector with the new sensor
-                detector_copy = Detector(
-                    name=f"{detector.name} (copy)",
-                    frames=detector.frames.copy(),
-                    rows=detector.rows.copy(),
-                    columns=detector.columns.copy(),
-                    sensor=target_sensor,
-                    description=detector.description,
-                    color=detector.color,
-                    marker=detector.marker,
-                    marker_size=detector.marker_size,
-                    line_thickness=detector.line_thickness,
-                    visible=detector.visible
-                )
+                detector_copy = detector.copy()
+                detector_copy.name = f"{detector.name} (copy)",
 
                 # Add to viewer
                 self.viewer.add_detector(detector_copy)

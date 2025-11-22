@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton, QScrollArea,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
@@ -1588,7 +1589,6 @@ class TracksPanel(QWidget):
             return
 
         # Create dialog to select target sensor
-        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
         dialog = QDialog(self)
         dialog.setWindowTitle("Select Target Sensor")
         dialog_layout = QVBoxLayout()

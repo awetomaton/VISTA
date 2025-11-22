@@ -551,6 +551,10 @@ class ImageryViewer(QWidget):
                 else:
                     # No imagery from this sensor, clear display
                     self.imagery = None
+                    # Clear the image display
+                    self.image_item.clear()
+                    # Clear the histogram plot
+                    self.histogram.plot.setData([], [])
 
         # Update display to show only items from selected sensor
         self.update_overlays()
