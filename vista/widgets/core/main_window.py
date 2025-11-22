@@ -160,6 +160,13 @@ class VistaMainWindow(QMainWindow):
         self.toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
         view_menu.addAction(self.toggle_data_manager_action)
 
+        # Tools menu
+        tools_menu = menubar.addMenu("Tools")
+
+        manage_labels_action = QAction("Manage Labels", self)
+        manage_labels_action.triggered.connect(self.manage_labels)
+        tools_menu.addAction(manage_labels_action)
+
         # Image Processing menu
         image_processing_menu = menubar.addMenu("Image Processing")
 
@@ -896,6 +903,14 @@ class VistaMainWindow(QMainWindow):
     def toggle_data_manager(self, checked):
         """Toggle data manager visibility"""
         self.data_dock.setVisible(checked)
+
+    def manage_labels(self):
+        """Open the labels manager dialog"""
+        from vista.widgets.core.data.tracks_panel import LabelsManagerDialog
+        dialog = LabelsManagerDialog(self)
+        dialog.exec()
+        # Refresh the data manager to show any label changes
+        self.data_manager.tracks_panel.refresh_tracks_table()
 
     def on_data_dock_visibility_changed(self, visible):
         """Update menu action when dock visibility changes"""

@@ -229,8 +229,8 @@ class TracksPanel(QWidget):
         self.bulk_labels = set()  # Store selected labels
         bulk_layout.addWidget(self.bulk_labels_btn)
 
-        # Apply button - now applies to visible/filtered rows
-        self.bulk_apply_btn = QPushButton("Apply to Visible")
+        # Apply button - applies to selected rows
+        self.bulk_apply_btn = QPushButton("Apply to Selected")
         self.bulk_apply_btn.clicked.connect(self.apply_bulk_action)
         bulk_layout.addWidget(self.bulk_apply_btn)
         bulk_layout.addStretch()
@@ -279,12 +279,6 @@ class TracksPanel(QWidget):
         self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
         tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
 
-        # Add manage labels button
-        self.manage_labels_btn = QPushButton("Manage Labels")
-        self.manage_labels_btn.clicked.connect(self.manage_labels)
-        self.manage_labels_btn.setToolTip("Create and manage track labels")
-        tracks_actions_layout.addWidget(self.manage_labels_btn)
-
         tracks_actions_layout.addStretch()
         layout.addLayout(tracks_actions_layout)
 
@@ -294,16 +288,16 @@ class TracksPanel(QWidget):
             0: True,   # Visible - always shown
             1: True,   # Tracker
             2: True,   # Name
-            3: True,   # Length
-            4: True,   # Color
-            5: True,   # Marker
-            6: True,   # Line Width
-            7: True,   # Marker Size
-            8: True,   # Tail Length
-            9: True,   # Complete
-            10: True,  # Show Line
-            11: True,  # Line Style
-            12: True   # Labels
+            3: True,   # Labels
+            4: True,   # Length
+            5: True,   # Color
+            6: True,   # Marker
+            7: True,   # Line Width
+            8: True,   # Marker Size
+            9: True,   # Tail Length
+            10: True,  # Complete
+            11: True,  # Show Line
+            12: True   # Line Style
         }
 
         # Load saved column visibility settings
@@ -313,7 +307,7 @@ class TracksPanel(QWidget):
         self.tracks_table = QTableWidget()
         self.tracks_table.setColumnCount(13)  # Added Show Line, Line Style, and Labels columns
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Labels"
+            "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"
         ])
 
         # Enable row selection via vertical header
@@ -323,23 +317,23 @@ class TracksPanel(QWidget):
         # Connect selection changed signal to update Edit Track button state
         self.tracks_table.itemSelectionChanged.connect(self.on_track_selection_changed)
 
-        # Set column resize modes - only Tracker and Name should stretch
+        # Set column resize modes - only Tracker, Name, and Labels should stretch
         header = self.tracks_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Tracker (can be long)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Length (numeric)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
-        #header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
-        self.tracks_table.setColumnWidth(5, 80)  # Set reasonably large width to accommodate delegate
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
-        header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
-        header.setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
-        header.setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
-        #header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Line Style (dropdown)
-        self.tracks_table.setColumnWidth(11, 120)  # Set reasonably large width to accommodate delegate
-        header.setSectionResizeMode(12, QHeaderView.ResizeMode.Stretch)  # Labels (can have multiple labels)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)  # Labels (can have multiple labels)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Length (numeric)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
+        #header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        self.tracks_table.setColumnWidth(6, 80)  # Set reasonably large width to accommodate delegate
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
+        header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
+        header.setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
+        header.setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
+        header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
+        #header.setSectionResizeMode(12, QHeaderView.ResizeMode.ResizeToContents)  # Line Style (dropdown)
+        self.tracks_table.setColumnWidth(12, 120)  # Set reasonably large width to accommodate delegate
 
         # Set minimum widths for Tracker and Name columns to ensure headers are never truncated
         # Calculate minimum width based on header text plus padding
@@ -366,17 +360,17 @@ class TracksPanel(QWidget):
         self.track_sort_order = Qt.SortOrder.AscendingOrder
 
         # Set delegates for special columns (keep references to prevent garbage collection)
+        self.tracks_labels_delegate = LabelsDelegate(self.tracks_table)
+        self.tracks_table.setItemDelegateForColumn(3, self.tracks_labels_delegate)  # Labels
+
         self.tracks_color_delegate = ColorDelegate(self.tracks_table)
-        self.tracks_table.setItemDelegateForColumn(4, self.tracks_color_delegate)  # Color
+        self.tracks_table.setItemDelegateForColumn(5, self.tracks_color_delegate)  # Color
 
         self.tracks_marker_delegate = MarkerDelegate(self.tracks_table)
-        self.tracks_table.setItemDelegateForColumn(5, self.tracks_marker_delegate)  # Marker
+        self.tracks_table.setItemDelegateForColumn(6, self.tracks_marker_delegate)  # Marker
 
         self.tracks_line_style_delegate = LineStyleDelegate(self.tracks_table)
-        self.tracks_table.setItemDelegateForColumn(11, self.tracks_line_style_delegate)  # Line Style
-
-        self.tracks_labels_delegate = LabelsDelegate(self.tracks_table)
-        self.tracks_table.setItemDelegateForColumn(12, self.tracks_labels_delegate)  # Labels
+        self.tracks_table.setItemDelegateForColumn(12, self.tracks_line_style_delegate)  # Line Style
 
         # Handle color cell clicks manually
         self.tracks_table.cellClicked.connect(self.on_tracks_cell_clicked)
@@ -435,10 +429,15 @@ class TracksPanel(QWidget):
             track_name_item.setData(Qt.ItemDataRole.UserRole, id(track))
             self.tracks_table.setItem(row, 2, track_name_item)
 
+            # Labels
+            labels_text = ', '.join(sorted(track.labels)) if track.labels else ''
+            labels_item = QTableWidgetItem(labels_text)
+            self.tracks_table.setItem(row, 3, labels_item)
+
             # Length (not editable)
             length_item = QTableWidgetItem(f"{track.length:.2f}")
             length_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.tracks_table.setItem(row, 3, length_item)
+            self.tracks_table.setItem(row, 4, length_item)
 
             # Color
             color_item = QTableWidgetItem()
@@ -446,42 +445,37 @@ class TracksPanel(QWidget):
             color = pg_color_to_qcolor(track.color)
             color_item.setBackground(QBrush(color))
             color_item.setData(Qt.ItemDataRole.UserRole, track.color)
-            self.tracks_table.setItem(row, 4, color_item)
+            self.tracks_table.setItem(row, 5, color_item)
 
             # Marker
-            self.tracks_table.setItem(row, 5, QTableWidgetItem(track.marker))
+            self.tracks_table.setItem(row, 6, QTableWidgetItem(track.marker))
 
             # Line Width
             width_item = QTableWidgetItem(str(track.line_width))
-            self.tracks_table.setItem(row, 6, width_item)
+            self.tracks_table.setItem(row, 7, width_item)
 
             # Marker Size
             size_item = QTableWidgetItem(str(track.marker_size))
-            self.tracks_table.setItem(row, 7, size_item)
+            self.tracks_table.setItem(row, 8, size_item)
 
             # Tail Length
             tail_item = QTableWidgetItem(str(track.tail_length))
-            self.tracks_table.setItem(row, 8, tail_item)
+            self.tracks_table.setItem(row, 9, tail_item)
 
             # Complete checkbox
             complete_item = QTableWidgetItem()
             complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             complete_item.setCheckState(Qt.CheckState.Checked if track.complete else Qt.CheckState.Unchecked)
-            self.tracks_table.setItem(row, 9, complete_item)
+            self.tracks_table.setItem(row, 10, complete_item)
 
             # Show Line checkbox
             show_line_item = QTableWidgetItem()
             show_line_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             show_line_item.setCheckState(Qt.CheckState.Checked if track.show_line else Qt.CheckState.Unchecked)
-            self.tracks_table.setItem(row, 10, show_line_item)
+            self.tracks_table.setItem(row, 11, show_line_item)
 
             # Line Style
-            self.tracks_table.setItem(row, 11, QTableWidgetItem(track.line_style))
-
-            # Labels
-            labels_text = ', '.join(sorted(track.labels)) if track.labels else ''
-            labels_item = QTableWidgetItem(labels_text)
-            self.tracks_table.setItem(row, 12, labels_item)
+            self.tracks_table.setItem(row, 12, QTableWidgetItem(track.line_style))
 
         # Apply column visibility
         self._apply_track_column_visibility()
@@ -496,7 +490,7 @@ class TracksPanel(QWidget):
     def _update_track_header_icons(self):
         """Update header labels to show filter and sort indicators"""
         # Base column names
-        base_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Labels"]
+        base_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -537,12 +531,6 @@ class TracksPanel(QWidget):
                 elif col_idx == 2:
                     value = track.name
                 elif col_idx == 3:
-                    value = track.length
-                elif col_idx == 9:
-                    value = "True" if track.complete else "False"
-                elif col_idx == 10:
-                    value = "True" if track.show_line else "False"
-                elif col_idx == 12:
                     # For labels, check if any filter labels intersect with track labels
                     if filter_type == 'set':
                         # Check if any of the selected filter labels are in the track's labels
@@ -550,6 +538,12 @@ class TracksPanel(QWidget):
                             include = False
                             break
                     continue  # Skip normal filter processing for labels
+                elif col_idx == 4:
+                    value = track.length
+                elif col_idx == 10:
+                    value = "True" if track.complete else "False"
+                elif col_idx == 11:
+                    value = "True" if track.show_line else "False"
                 else:
                     continue
 
@@ -607,13 +601,13 @@ class TracksPanel(QWidget):
             elif column == 2:
                 return track.name
             elif column == 3:
-                return track.length
-            elif column == 9:
-                return track.complete
-            elif column == 10:
-                return track.show_line
-            elif column == 12:
                 return ', '.join(sorted(track.labels)) if track.labels else ''
+            elif column == 4:
+                return track.length
+            elif column == 10:
+                return track.complete
+            elif column == 11:
+                return track.show_line
             return ""
 
         reverse = (order == Qt.SortOrder.DescendingOrder)
@@ -626,8 +620,8 @@ class TracksPanel(QWidget):
 
         menu = QMenu(self)
 
-        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Length (3), Complete (9), Show Line (10), Labels (12)
-        if column in [0, 1, 2, 3, 9, 10, 12]:
+        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Labels (3), Length (4), Complete (10), Show Line (11)
+        if column in [0, 1, 2, 3, 4, 10, 11]:
             # Sort options
             sort_asc_action = QAction("Sort Ascending", self)
             sort_asc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.AscendingOrder))
@@ -658,7 +652,7 @@ class TracksPanel(QWidget):
         menu.addSeparator()
 
         # Column visibility submenu (always available)
-        column_names = ["Visible", "Tracker", "Name", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Labels"]
+        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
         columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
 
         for col_idx in range(len(column_names)):
@@ -757,10 +751,10 @@ class TracksPanel(QWidget):
         # Column 2 (Name) uses text filter
         if column == 2:
             self._show_text_filter_dialog(column, column_name)
-        # Column 3 (Length) uses numeric filter
-        elif column == 3:
+        # Column 4 (Length) uses numeric filter
+        elif column == 4:
             self._show_numeric_filter_dialog(column, column_name)
-        # Columns 0 (Visible), 1 (Tracker), 9 (Complete), and 10 (Show Line) use set filter
+        # Columns 0 (Visible), 1 (Tracker), 3 (Labels), 10 (Complete), and 11 (Show Line) use set filter
         else:
             self._show_set_filter_dialog(column, column_name)
 
@@ -910,13 +904,13 @@ class TracksPanel(QWidget):
                     unique_values.add("True" if track.visible else "False")
                 elif column == 1:
                     unique_values.add(tracker.name)
-                elif column == 9:
-                    unique_values.add("True" if track.complete else "False")
-                elif column == 10:
-                    unique_values.add("True" if track.show_line else "False")
-                elif column == 12:
+                elif column == 3:
                     # For labels, add all individual labels from all tracks
                     unique_values.update(track.labels)
+                elif column == 10:
+                    unique_values.add("True" if track.complete else "False")
+                elif column == 11:
+                    unique_values.add("True" if track.show_line else "False")
 
         # Create dialog with checkboxes for each unique value
         dialog = QDialog(self)
@@ -1026,41 +1020,7 @@ class TracksPanel(QWidget):
         elif column == 2:  # Track Name
             item = self.tracks_table.item(row, column)
             track.name = item.text()
-        elif column == 4:  # Color
-            item = self.tracks_table.item(row, column)
-            color = item.background().color()
-            track.color = qcolor_to_pg_color(color)
-        elif column == 5:  # Marker
-            item = self.tracks_table.item(row, column)
-            track.marker = item.text()
-        elif column == 6:  # Line Width
-            item = self.tracks_table.item(row, column)
-            try:
-                track.line_width = int(item.text())
-            except ValueError:
-                pass
-        elif column == 7:  # Marker Size
-            item = self.tracks_table.item(row, column)
-            try:
-                track.marker_size = int(item.text())
-            except ValueError:
-                pass
-        elif column == 8:  # Tail Length
-            item = self.tracks_table.item(row, column)
-            try:
-                track.tail_length = int(item.text())
-            except ValueError:
-                pass
-        elif column == 9:  # Complete
-            item = self.tracks_table.item(row, column)
-            track.complete = item.checkState() == Qt.CheckState.Checked
-        elif column == 10:  # Show Line
-            item = self.tracks_table.item(row, column)
-            track.show_line = item.checkState() == Qt.CheckState.Checked
-        elif column == 11:  # Line Style
-            item = self.tracks_table.item(row, column)
-            track.line_style = item.text()
-        elif column == 12:  # Labels
+        elif column == 3:  # Labels
             item = self.tracks_table.item(row, column)
             labels_text = item.text()
             if labels_text:
@@ -1068,12 +1028,46 @@ class TracksPanel(QWidget):
                 track.labels = set(label.strip() for label in labels_text.split(','))
             else:
                 track.labels = set()
+        elif column == 5:  # Color
+            item = self.tracks_table.item(row, column)
+            color = item.background().color()
+            track.color = qcolor_to_pg_color(color)
+        elif column == 6:  # Marker
+            item = self.tracks_table.item(row, column)
+            track.marker = item.text()
+        elif column == 7:  # Line Width
+            item = self.tracks_table.item(row, column)
+            try:
+                track.line_width = int(item.text())
+            except ValueError:
+                pass
+        elif column == 8:  # Marker Size
+            item = self.tracks_table.item(row, column)
+            try:
+                track.marker_size = int(item.text())
+            except ValueError:
+                pass
+        elif column == 9:  # Tail Length
+            item = self.tracks_table.item(row, column)
+            try:
+                track.tail_length = int(item.text())
+            except ValueError:
+                pass
+        elif column == 10:  # Complete
+            item = self.tracks_table.item(row, column)
+            track.complete = item.checkState() == Qt.CheckState.Checked
+        elif column == 11:  # Show Line
+            item = self.tracks_table.item(row, column)
+            track.show_line = item.checkState() == Qt.CheckState.Checked
+        elif column == 12:  # Line Style
+            item = self.tracks_table.item(row, column)
+            track.line_style = item.text()
 
         self.data_changed.emit()
 
     def on_tracks_cell_clicked(self, row, column):
         """Handle track cell clicks (for color picker)"""
-        if column == 4:  # Color column (updated index)
+        if column == 5:  # Color column
             # Find the actual track for this row
             tracker_item = self.tracks_table.item(row, 1)
             track_name_item = self.tracks_table.item(row, 2)
@@ -1167,8 +1161,15 @@ class TracksPanel(QWidget):
             self.bulk_labels_btn.setText(f"Select Labels ({count} selected)")
 
     def apply_bulk_action(self):
-        """Apply the selected bulk action to all visible (filtered) tracks"""
+        """Apply the selected bulk action to all selected tracks"""
         property_name = self.bulk_property_combo.currentText()
+
+        # Get selected rows
+        selected_rows = sorted(set(index.row() for index in self.tracks_table.selectedIndexes()))
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to apply bulk actions.")
+            return
 
         # Map marker names to symbols
         marker_map = {
@@ -1176,8 +1177,8 @@ class TracksPanel(QWidget):
             'Diamond': 'd', 'Plus': '+', 'Cross': 'x', 'Star': 'star'
         }
 
-        # Apply to all tracks currently visible in the table (respects filters)
-        for row in range(self.tracks_table.rowCount()):
+        # Apply to all selected tracks
+        for row in selected_rows:
             # Get tracker and track names from the table
             tracker_item = self.tracks_table.item(row, 1)
             track_name_item = self.tracks_table.item(row, 2)
