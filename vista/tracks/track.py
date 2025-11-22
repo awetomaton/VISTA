@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
-from typing import Optional
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
 from vista.sensors.sensor import Sensor
@@ -15,7 +14,7 @@ class Track:
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
-    sensor: Optional[Sensor] = None
+    sensor: Sensor
     times: NDArray[np.datetime64] = None  # Optional times for each track point
     # Styling attributes
     color: str = 'g'  # Green by default
@@ -55,15 +54,15 @@ class Track:
         return s
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, name: str = None, imagery=None, sensor=None):
+    def from_dataframe(cls, df: pd.DataFrame, sensor, name: str = None, imagery=None):
         """
         Create Track from DataFrame
 
         Args:
             df: DataFrame with track data
+            sensor: Sensor object for this track
             name: Track name (if None, taken from df["Track"])
             imagery: Optional Imagery object for time-to-frame and/or geodetic-to-pixel mapping
-            sensor: Sensor object for this track
 
         Returns:
             Track object
