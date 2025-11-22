@@ -970,7 +970,8 @@ class ImageryViewer(QWidget):
                 name=f"Track {len([t for tracker in self.trackers for t in tracker.tracks]) + 1}",
                 frames=frames,
                 rows=rows,
-                columns=columns
+                columns=columns,
+                sensor=self.selected_sensor
             )
 
             self.current_track_data = {}
@@ -1069,7 +1070,8 @@ class ImageryViewer(QWidget):
                 name=f"Detector {len(self.detectors) + 1}",
                 frames=np.array(frames_list, dtype=np.int_),
                 rows=np.array(rows_list),
-                columns=np.array(columns_list)
+                columns=np.array(columns_list),
+                sensor=self.selected_sensor
             )
 
             self.current_detection_data = {}

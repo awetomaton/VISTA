@@ -322,8 +322,8 @@ class VistaMainWindow(QMainWindow):
                 # No imagery, show warning and uncheck
                 QMessageBox.warning(
                     self,
-                    "No Imagery",
-                    "Please load imagery before creating tracks.",
+                    "No Sensor",
+                    "A sensor is required to create tracks.",
                     QMessageBox.StandardButton.Ok
                 )
                 self.create_track_action.setChecked(False)
@@ -354,8 +354,8 @@ class VistaMainWindow(QMainWindow):
                 # No imagery, show warning and uncheck
                 QMessageBox.warning(
                     self,
-                    "No Imagery",
-                    "Please load imagery before creating detections.",
+                    "No Sensor",
+                    "A sensor is required to create detections.",
                     QMessageBox.StandardButton.Ok
                 )
                 self.create_detection_action.setChecked(False)
