@@ -3,9 +3,6 @@ from collections import defaultdict
 
 import numpy as np
 
-from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
-
 
 def run_network_flow_tracker(detectors, config):
     """
@@ -32,7 +29,10 @@ def run_network_flow_tracker(detectors, config):
             - min_track_length: Minimum detections required for valid track (default: 3)
 
     Returns:
-        Tracker object containing the generated tracks
+        List of track data dictionaries, each containing:
+            - 'frames': numpy array of frame numbers
+            - 'rows': numpy array of row coordinates
+            - 'columns': numpy array of column coordinates
     """
     # Extract configuration with defaults
     tracker_name = config.get('tracker_name', 'Network Flow Tracker')
@@ -61,8 +61,8 @@ def run_network_flow_tracker(detectors, config):
     all_detections.sort(key=lambda x: x['frame'])
 
     if len(all_detections) == 0:
-        # No detections, return empty tracker
-        return Tracker(name=tracker_name, tracks=[])
+        # No detections, return empty list
+        return []
 
     # Build detection index by frame for fast lookup
     detections_by_frame = defaultdict(list)
@@ -167,8 +167,8 @@ def run_network_flow_tracker(detectors, config):
     # Each detection can only be used once (flow capacity = 1)
     tracks = solve_min_cost_flow(all_detections, edges)
 
-    # Convert to VISTA Track objects
-    vista_tracks = []
+    # Convert to track data
+    track_data_list = []
     for track_detections in tracks:
         if len(track_detections) < min_track_length:
             continue
@@ -181,26 +181,14 @@ def run_network_flow_tracker(detectors, config):
         rows = np.array([d['row'] for d in track_detections])
         columns = np.array([d['column'] for d in track_detections])
 
-        vista_track = Track(
-            name=f"Track {len(vista_tracks) + 1}",
-            frames=frames_array,
-            rows=rows,
-            columns=columns,
-            color='r',  # Red for network flow tracks
-            marker='o',  # Circle marker
-            line_width=2,
-            marker_size=10,
-            visible=True
-        )
-        vista_tracks.append(vista_track)
+        track_data = {
+            'frames': frames_array,
+            'rows': rows,
+            'columns': columns,
+        }
+        track_data_list.append(track_data)
 
-    # Create VISTA Tracker object
-    vista_tracker = Tracker(
-        name=tracker_name,
-        tracks=vista_tracks
-    )
-
-    return vista_tracker
+    return track_data_list
 
 
 def solve_min_cost_flow(detections, edges):

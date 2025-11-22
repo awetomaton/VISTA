@@ -9,13 +9,15 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.algorithms.trackers import run_kalman_tracker
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
 
 
 class KalmanTrackingWorker(QThread):
     """Worker thread for running Kalman tracker in background"""
 
     progress_updated = pyqtSignal(str)  # message
-    tracking_complete = pyqtSignal(object)  # Emits Tracker object
+    tracking_complete = pyqtSignal(object, str)  # Emits (track_data_list, tracker_name)
     error_occurred = pyqtSignal(str)  # Error message
 
     def __init__(self, detectors, tracker_config):
@@ -36,13 +38,13 @@ class KalmanTrackingWorker(QThread):
 
             self.progress_updated.emit("Running Kalman tracker...")
 
-            vista_tracker = run_kalman_tracker(self.detectors, self.config)
+            track_data_list = run_kalman_tracker(self.detectors, self.config)
 
             if self._cancelled:
                 return
 
             self.progress_updated.emit("Complete!")
-            self.tracking_complete.emit(vista_tracker)
+            self.tracking_complete.emit(track_data_list, self.config['tracker_name'])
 
         except Exception as e:
             tb_str = traceback.format_exc()
@@ -267,11 +269,49 @@ class KalmanTrackingDialog(QDialog):
         if self.progress_dialog:
             self.progress_dialog.setLabelText(message)
 
-    def on_complete(self, tracker):
+    def on_complete(self, track_data_list, tracker_name):
         """Handle tracking completion"""
         if self.progress_dialog:
             self.progress_dialog.close()
             self.progress_dialog = None
+
+        # Get sensor from selected detectors (they should all have the same sensor)
+        selected_items = self.detector_list.selectedItems()
+        sensor = None
+        for item in selected_items:
+            detector_name = item.text()
+            for detector in self.viewer.detectors:
+                if detector.name == detector_name:
+                    sensor = detector.sensor
+                    break
+            if sensor is not None:
+                break
+
+        if sensor is None:
+            QMessageBox.critical(
+                self,
+                "Tracking Error",
+                "Could not determine sensor from selected detectors."
+            )
+            return
+
+        # Create Track objects from raw track data
+        vista_tracks = []
+        for i, track_data in enumerate(track_data_list):
+            vista_track = Track(
+                name=f"Track {i + 1}",
+                frames=track_data['frames'],
+                rows=track_data['rows'],
+                columns=track_data['columns'],
+                sensor=sensor
+            )
+            vista_tracks.append(vista_track)
+
+        # Create Tracker object
+        tracker = Tracker(
+            name=tracker_name,
+            tracks=vista_tracks
+        )
 
         # Add tracker to viewer
         self.viewer.trackers.append(tracker)
@@ -280,7 +320,7 @@ class KalmanTrackingDialog(QDialog):
         QMessageBox.information(
             self,
             "Tracking Complete",
-            f"Generated {len(tracker.tracks)} track(s)."
+            f"Generated {len(vista_tracks)} track(s)."
         )
 
         # Accept dialog

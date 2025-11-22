@@ -10,9 +10,6 @@ Stage 2: Link tracklets based on velocity extrapolation and smoothness
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
-
 
 class Tracklet:
     """High-confidence track segment with velocity consistency"""
@@ -161,7 +158,10 @@ def run_tracklet_tracker(detectors, config):
             - min_track_length: Minimum detections for final track (default: 5)
 
     Returns:
-        Tracker object containing the generated tracks
+        List[dict]: List of track data dictionaries, each containing:
+            - 'frames': numpy array of frame numbers
+            - 'rows': numpy array of row coordinates
+            - 'columns': numpy array of column coordinates
     """
     # Extract configuration with smart defaults
     tracker_name = config.get('tracker_name', 'Tracklet Tracker')
@@ -185,7 +185,7 @@ def run_tracklet_tracker(detectors, config):
             detections_by_frame[frame].append(pos)
 
     if len(detections_by_frame) == 0:
-        return Tracker(name=tracker_name, tracks=[])
+        return []
 
     frames = sorted(detections_by_frame.keys())
 
@@ -301,7 +301,7 @@ def run_tracklet_tracker(detectors, config):
     # STAGE 2: Link tracklets based on velocity extrapolation and smoothness
     # ========================================================================
     if len(finished_tracklets) == 0:
-        return Tracker(name=tracker_name, tracks=[])
+        return []
 
     # Build tracklet linking cost matrix
     n_tracklets = len(finished_tracklets)
@@ -388,9 +388,9 @@ def run_tracklet_tracker(detectors, config):
             linked_tracklets.append([i])
 
     # ========================================================================
-    # Convert linked tracklets to VISTA Track objects
+    # Convert linked tracklets to track data dictionaries
     # ========================================================================
-    vista_tracks = []
+    track_data_list = []
 
     for tracklet_indices in linked_tracklets:
         # Combine tracklets
@@ -415,23 +415,11 @@ def run_tracklet_tracker(detectors, config):
         frames_array = frames_array[sort_idx]
         positions = positions[sort_idx]
 
-        vista_track = Track(
-            name=f"Track {len(vista_tracks) + 1}",
-            frames=frames_array,
-            rows=positions[:, 1],  # y
-            columns=positions[:, 0],  # x
-            color='g',  # Green for tracklet-based tracks
-            marker='o',
-            line_width=2,
-            marker_size=10,
-            visible=True
-        )
-        vista_tracks.append(vista_track)
+        track_data = {
+            'frames': frames_array,
+            'rows': positions[:, 1],  # y
+            'columns': positions[:, 0],  # x
+        }
+        track_data_list.append(track_data)
 
-    # Create tracker
-    vista_tracker = Tracker(
-        name=tracker_name,
-        tracks=vista_tracks
-    )
-
-    return vista_tracker
+    return track_data_list

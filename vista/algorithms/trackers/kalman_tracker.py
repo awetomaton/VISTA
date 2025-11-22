@@ -2,9 +2,6 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
-
 
 class KalmanTrack:
     """Single track with constant velocity Kalman filter"""
@@ -139,7 +136,10 @@ def run_kalman_tracker(detectors, config):
             - delete_threshold: Covariance trace threshold for track deletion
 
     Returns:
-        Tracker object containing the generated tracks
+        List of track data dictionaries, each containing:
+            - 'frames': numpy array of frame numbers
+            - 'rows': numpy array of row coordinates
+            - 'columns': numpy array of column coordinates
     """
     # Extract configuration
     process_noise = config['process_noise']
@@ -260,10 +260,10 @@ def run_kalman_tracker(detectors, config):
         for track in tentative_to_delete:
             tentative_tracks.remove(track)
 
-    # Convert tracks to VISTA Track objects (include both active and finished)
+    # Convert tracks to track data (include both active and finished)
     all_valid_tracks = active_tracks + finished_tracks
 
-    vista_tracks = []
+    track_data_list = []
     for track in all_valid_tracks:
         if len(track.frames) < 2:
             continue
@@ -274,18 +274,11 @@ def run_kalman_tracker(detectors, config):
         rows = positions[:, 1]  # y
         frames_array = np.array(track.frames, dtype=np.int_)
 
-        vista_track = Track(
-            name=f"Track {len(vista_tracks) + 1}",
-            frames=frames_array,
-            rows=rows,
-            columns=columns,
-        )
-        vista_tracks.append(vista_track)
+        track_data = {
+            'frames': frames_array,
+            'rows': rows,
+            'columns': columns,
+        }
+        track_data_list.append(track_data)
 
-    # Create VISTA Tracker object
-    vista_tracker = Tracker(
-        name=config['tracker_name'],
-        tracks=vista_tracks
-    )
-
-    return vista_tracker
+    return track_data_list

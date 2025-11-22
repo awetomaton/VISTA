@@ -2,9 +2,6 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
-
 
 class SimpleTrack:
     """Simple track using running average for position prediction"""
@@ -84,7 +81,10 @@ def run_simple_tracker(detectors, config):
             - max_age: Maximum frames a track can go without detection (default: auto-computed)
 
     Returns:
-        Tracker object containing the generated tracks
+        List of track data dictionaries, each containing:
+            - 'frames': numpy array of frame numbers
+            - 'rows': numpy array of row coordinates
+            - 'columns': numpy array of column coordinates
     """
     # Extract configuration with smart defaults
     tracker_name = config.get('tracker_name', 'Simple Tracker')
@@ -215,7 +215,7 @@ def run_simple_tracker(detectors, config):
             if track.hits >= min_track_length:
                 finished_tracks.append(track)
 
-    # Convert to VISTA tracks, filter by minimum length
+    # Convert to track data, filter by minimum length
     # Combine both active tracks and finished tracks
     all_valid_tracks = []
     for track in active_tracks:
@@ -223,28 +223,16 @@ def run_simple_tracker(detectors, config):
             all_valid_tracks.append(track)
     all_valid_tracks.extend(finished_tracks)
 
-    vista_tracks = []
+    track_data_list = []
     for track in all_valid_tracks:
         positions = np.array(track.positions)
         frames_array = np.array(track.frames, dtype=np.int_)
 
-        vista_track = Track(
-            name=f"Track {len(vista_tracks) + 1}",
-            frames=frames_array,
-            rows=positions[:, 1],  # y
-            columns=positions[:, 0],  # x
-            color='b',
-            marker='s',
-            line_width=2,
-            marker_size=10,
-            visible=True
-        )
-        vista_tracks.append(vista_track)
+        track_data = {
+            'frames': frames_array,
+            'rows': positions[:, 1],  # y
+            'columns': positions[:, 0],  # x
+        }
+        track_data_list.append(track_data)
 
-    # Create tracker
-    vista_tracker = Tracker(
-        name=tracker_name,
-        tracks=vista_tracks
-    )
-
-    return vista_tracker
+    return track_data_list
