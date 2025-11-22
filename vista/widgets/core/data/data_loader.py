@@ -52,15 +52,9 @@ class DataLoaderThread(QThread):
             if self.data_type == 'imagery':
                 self._load_imagery()
             elif self.data_type == 'detections':
-                if self.file_format == 'csv':
-                    self._load_detections_csv()
-                else:
-                    self._load_detections_hdf5()
+                self._load_detections_csv()
             elif self.data_type == 'tracks':
-                if self.file_format == 'csv':
-                    self._load_tracks_csv()
-                else:
-                    self._load_tracks_hdf5()
+                self._load_tracks_csv()
             else:
                 self.error_occurred.emit(f"Unknown data type: {self.data_type}")
         except Exception as e:
@@ -233,34 +227,6 @@ class DataLoaderThread(QThread):
         # Emit the loaded detectors
         self.detectors_loaded.emit(detectors)
 
-    def _load_detections_hdf5(self):
-        """Load detections from HDF5 file"""
-        with h5py.File(self.file_path, 'r') as f:
-            frames = f['frames'][:]
-            rows = f['rows'][:]
-            columns = f['columns'][:]
-
-            # Load styling attributes with defaults
-            color = f.attrs.get('color', 'r')
-            marker = f.attrs.get('marker', 'o')
-            marker_size = f.attrs.get('marker_size', 12)
-            visible = f.attrs.get('visible', True)
-
-        # Create Detector object
-        detector = Detector(
-            name=Path(self.file_path).stem,
-            frames=frames,
-            rows=rows,
-            columns=columns,
-            color=color,
-            marker=marker,
-            marker_size=marker_size,
-            visible=visible
-        )
-
-        # Emit the loaded detector
-        self.detector_loaded.emit(detector)
-
     def _load_tracks_csv(self):
         """Load tracks from CSV file"""
         df = pd.read_csv(self.file_path)
@@ -315,52 +281,3 @@ class DataLoaderThread(QThread):
 
         # Emit the loaded trackers
         self.trackers_loaded.emit(trackers)
-
-    def _load_tracks_hdf5(self):
-        """Load tracks from HDF5 file"""
-        with h5py.File(self.file_path, 'r') as f:
-            tracks = []
-
-            # Get list of track groups
-            track_names = [key for key in f.keys() if key.startswith('track_')]
-            self.progress_updated.emit("Loading tracks...", 0, len(track_names))
-
-            for idx, track_name in enumerate(track_names):
-                track_group = f[track_name]
-
-                frames = track_group['frames'][:]
-                rows = track_group['rows'][:]
-                columns = track_group['columns'][:]
-
-                # Load styling attributes with defaults
-                color = track_group.attrs.get('color', 'g')
-                marker = track_group.attrs.get('marker', 'o')
-                line_width = track_group.attrs.get('line_width', 2)
-                marker_size = track_group.attrs.get('marker_size', 12)
-                visible = track_group.attrs.get('visible', True)
-                tail_length = track_group.attrs.get('tail_length', 0)
-
-                track = Track(
-                    name=track_group.attrs.get('name', track_name),
-                    frames=frames,
-                    rows=rows,
-                    columns=columns,
-                    color=color,
-                    marker=marker,
-                    line_width=line_width,
-                    marker_size=marker_size,
-                    visible=visible,
-                    tail_length=tail_length
-                )
-                tracks.append(track)
-
-                self.progress_updated.emit("Loading tracks...", idx + 1, len(track_names))
-
-        # Create Tracker object
-        tracker = Tracker(
-            name=Path(self.file_path).stem,
-            tracks=tracks
-        )
-
-        # Emit the loaded tracker
-        self.tracker_loaded.emit(tracker)
