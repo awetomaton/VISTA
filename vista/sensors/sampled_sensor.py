@@ -3,13 +3,15 @@
 The SampledSensor class provides sensor position retrieval via interpolation/extrapolation
 from sampled position data.
 """
+
+import h5py
 from astropy.coordinates import EarthLocation
 from astropy import units
 from dataclasses import dataclass
-import numpy as np
-from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 from typing import Optional, Tuple
+import numpy as np
+from numpy.typing import NDArray
 from vista.sensors.sensor import Sensor
 
 
@@ -310,3 +312,57 @@ class SampledSensor(Sensor):
         columns = self._eval_polynomial_2d_order4(longitudes, latitudes, col_coeffs)
 
         return rows, columns
+
+    def to_hdf5(self, group: h5py.Group):
+        """
+        Save sampled sensor data to an HDF5 group.
+
+        Parameters
+        ----------
+        group : h5py.Group
+            HDF5 group to write sensor data to (typically sensors/<sensor_name>/)
+
+        Notes
+        -----
+        This method extends the base Sensor.to_hdf5() by adding:
+        - Position data (positions, times) in position/ subgroup
+        - Geolocation polynomials in geolocation/ subgroup
+        - Radiometric gain values in radiometric/ subgroup
+        """
+        # Call parent to save base radiometric data
+        super().to_hdf5(group)
+
+        # Override sensor type
+        group.attrs['sensor_type'] = 'SampledSensor'
+
+        # Save position data
+        if self.positions is not None and self.times is not None:
+            position_group = group.create_group('position')
+            position_group.create_dataset('positions', data=self.positions)
+
+            # Convert times to unix_times and unix_fine_times
+            total_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
+            unix_times = (total_nanoseconds // 1_000_000_000).astype(np.int64)
+            unix_fine_times = (total_nanoseconds % 1_000_000_000).astype(np.int64)
+
+            position_group.create_dataset('unix_times', data=unix_times)
+            position_group.create_dataset('unix_fine_times', data=unix_fine_times)
+
+        # Save geolocation polynomials
+        if self.can_geolocate():
+            geolocation_group = group.create_group('geolocation')
+            geolocation_group.create_dataset('poly_row_col_to_lat', data=self.poly_row_col_to_lat)
+            geolocation_group.create_dataset('poly_row_col_to_lon', data=self.poly_row_col_to_lon)
+            geolocation_group.create_dataset('poly_lat_lon_to_row', data=self.poly_lat_lon_to_row)
+            geolocation_group.create_dataset('poly_lat_lon_to_col', data=self.poly_lat_lon_to_col)
+            geolocation_group.create_dataset('frames', data=self.frames)
+
+        # Save radiometric gain (extend radiometric group if exists, or create it)
+        if self.radiometric_gain is not None:
+            if 'radiometric' in group:
+                radiometric_group = group['radiometric']
+            else:
+                radiometric_group = group.create_group('radiometric')
+
+            radiometric_group.create_dataset('radiometric_gain', data=self.radiometric_gain)
+            radiometric_group.create_dataset('radiometric_gain_frames', data=self.frames)

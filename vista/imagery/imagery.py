@@ -217,51 +217,140 @@ class Imagery:
 
         return imagery_aoi
     
-    def to_hdf5(self, file: Union[str, pathlib.Path]):
-        file = pathlib.Path(file)
-        with h5py.File(file, "w") as fid:
-            fid.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
-            fid["images"].attrs["row_offset"] = self.row_offset
-            fid["images"].attrs["column_offset"] = self.column_offset
-            fid.create_dataset("frames", data=self.frames)
-            if self.times is not None:
-                # Convert datetime64 to unix seconds + nanoseconds
-                # datetime64 is in nanoseconds since epoch
-                total_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-                unix_time = (total_nanoseconds // 1_000_000_000).astype(np.int64)
-                unix_fine_time = (total_nanoseconds % 1_000_000_000).astype(np.int64)
+    def to_hdf5(self, group: h5py.Group):
+        """
+        Save imagery data to an HDF5 group.
 
-                fid.create_dataset("unix_time", data=unix_time)
-                fid.create_dataset("unix_fine_time", data=unix_fine_time)
+        Parameters
+        ----------
+        group : h5py.Group
+            HDF5 group to write imagery data to (typically sensors/<sensor_name>/imagery/<imagery_name>/)
 
-            # Save sensor metadata
-            if self.sensor is not None:
-                # Save polynomial coefficients if present in sensor
-                if self.sensor.poly_row_col_to_lat is not None:
-                    fid.create_dataset("poly_row_col_to_lat", data=self.sensor.poly_row_col_to_lat)
-                if self.sensor.poly_row_col_to_lon is not None:
-                    fid.create_dataset("poly_row_col_to_lon", data=self.sensor.poly_row_col_to_lon)
-                if self.sensor.poly_lat_lon_to_row is not None:
-                    fid.create_dataset("poly_lat_lon_to_row", data=self.sensor.poly_lat_lon_to_row)
-                if self.sensor.poly_lat_lon_to_col is not None:
-                    fid.create_dataset("poly_lat_lon_to_col", data=self.sensor.poly_lat_lon_to_col)
+        Notes
+        -----
+        This method writes only imagery-specific data:
+        - Image arrays (chunked for efficient loading)
+        - Frame numbers
+        - Times (as unix_times and unix_fine_times)
+        - Row/column offsets
+        - Metadata attributes (name, description, uuid)
 
-                # Save radiometric gain if present in sensor
-                if self.sensor.radiometric_gain is not None:
-                    fid.create_dataset("radiometric_gain", data=self.sensor.radiometric_gain)
+        Sensor data should be written separately using sensor.to_hdf5()
+        """
+        # Set imagery attributes
+        group.attrs['name'] = self.name
+        group.attrs['description'] = self.description
+        group.attrs['uuid'] = str(self.uuid)
+        group.attrs['row_offset'] = self.row_offset
+        group.attrs['column_offset'] = self.column_offset
 
-                # Save bias images if present in sensor
-                if self.sensor.bias_images is not None:
-                    fid.create_dataset("bias_images", data=self.sensor.bias_images)
-                    fid.create_dataset("bias_image_frames", data=self.sensor.bias_image_frames)
+        # Save image data with chunking
+        group.create_dataset('images', data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
 
-                # Save uniformity gain if present in sensor
-                if self.sensor.uniformity_gain_images is not None:
-                    fid.create_dataset("uniformity_gain_images", data=self.sensor.uniformity_gain_images)
-                    fid.create_dataset("uniformity_gain_image_frames", data=self.sensor.uniformity_gain_image_frames)
+        # Save frames
+        group.create_dataset('frames', data=self.frames)
 
-                # Save bad pixel mask images if present in sensor
-                if self.sensor.bad_pixel_masks is not None:
-                    fid.create_dataset("bad_pixel_masks", data=self.sensor.bad_pixel_masks)
-                    fid.create_dataset("bad_pixel_mask_frames", data=self.sensor.bad_pixel_mask_frames)
-    
+        # Save times if present
+        if self.times is not None:
+            # Convert datetime64 to unix seconds + nanoseconds
+            total_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
+            unix_times = (total_nanoseconds // 1_000_000_000).astype(np.int64)
+            unix_fine_times = (total_nanoseconds % 1_000_000_000).astype(np.int64)
+
+            group.create_dataset('unix_times', data=unix_times)
+            group.create_dataset('unix_fine_times', data=unix_fine_times)
+
+
+def save_imagery_hdf5(
+    file_path: Union[str, pathlib.Path],
+    sensor_imagery_map: dict[str, list[Imagery]]
+):
+    """
+    Save imagery data to HDF5 file with hierarchical sensor/imagery structure.
+
+    Parameters
+    ----------
+    file_path : Union[str, pathlib.Path]
+        Path to the HDF5 file to create
+    sensor_imagery_map : dict[str, list[Imagery]]
+        Dictionary mapping Sensor object names to lists of Imagery objects from that sensor
+
+    Notes
+    -----
+    The HDF5 file structure created is:
+    ```
+    root/
+    ├── [attrs] format_version, created
+    └── sensors/
+        ├── <sensor_name>/
+        │   ├── [attrs] name, sensor_type
+        │   ├── position/ (SampledSensor only)
+        │   ├── geolocation/ (if can_geolocate)
+        │   ├── radiometric/ (if calibration data exists)
+        │   └── imagery/
+        │       ├── <imagery_name_1>/
+        │       └── <imagery_name_2>/
+        └── <sensor_name_2>/
+            └── ...
+    ```
+
+    Examples
+    --------
+    >>> sensor = SampledSensor(name="MySensor", ...)
+    >>> imagery1 = Imagery(name="img1", sensor=sensor, ...)
+    >>> imagery2 = Imagery(name="img2", sensor=sensor, ...)
+    >>> save_imagery_hdf5("data.h5", {"MySensor": [imagery1, imagery2]})
+    """
+    file_path = pathlib.Path(file_path)
+
+    with h5py.File(file_path, 'w') as f:
+        # Set root attributes
+        f.attrs['format_version'] = '2.0'
+        f.attrs['created'] = str(np.datetime64('now').astype(str))
+
+        # Create sensors group
+        sensors_group = f.create_group('sensors')
+
+        # Iterate through sensor names and their imagery
+        for sensor_name, imagery_list in sensor_imagery_map.items():
+            if not imagery_list:
+                continue  # Skip if no imagery for this sensor
+
+            # Get sensor from first imagery (all imagery in list should have same sensor)
+            sensor = imagery_list[0].sensor
+
+            # Create sensor group with sanitized name
+            sanitized_name = sensor_name.replace('/', '_')  # Sanitize name for HDF5
+            sensor_group_name = sanitized_name
+
+            # Handle potential name collisions
+            if sensor_group_name in sensors_group:
+                counter = 1
+                while f'{sanitized_name}_{counter}' in sensors_group:
+                    counter += 1
+                sensor_group_name = f'{sanitized_name}_{counter}'
+
+            sensor_group = sensors_group.create_group(sensor_group_name)
+
+            # Save sensor data
+            sensor.to_hdf5(sensor_group)
+
+            # Create imagery subgroup
+            imagery_group = sensor_group.create_group('imagery')
+
+            # Save each imagery dataset
+            for imagery_idx, imagery in enumerate(imagery_list):
+                # Create imagery group with sanitized name
+                imagery_name = imagery.name.replace('/', '_')  # Sanitize name for HDF5
+
+                # Handle potential name collisions
+                if imagery_name in imagery_group:
+                    counter = 1
+                    while f'{imagery_name}_{counter}' in imagery_group:
+                        counter += 1
+                    imagery_name = f'{imagery_name}_{counter}'
+
+                img_group = imagery_group.create_group(imagery_name)
+
+                # Save imagery data
+                imagery.to_hdf5(img_group)

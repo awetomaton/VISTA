@@ -5,12 +5,13 @@ from dataclasses import dataclass
 from typing import Union, Optional, Tuple, List
 from PIL import Image
 from scipy.ndimage import shift
-from vista.utils.random_walk import RandomWalk
 from vista.detections.detector import Detector
-from vista.imagery.imagery import Imagery
+from vista.imagery.imagery import Imagery, save_imagery_hdf5
+from vista.sensors.sampled_sensor import SampledSensor
+from vista.simulate.data import EARTH_IMAGE
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
-from vista.simulate.data import EARTH_IMAGE
+from vista.utils.random_walk import RandomWalk
 
 
 @dataclass
@@ -337,10 +338,12 @@ class Simulation:
                 pixel_row = row['Rows']
                 pixel_col = row['Columns']
 
-                # Use imagery's pixel_to_geodetic method
-                location = self.imagery.pixel_to_geodetic(frame,
-                                                         np.array([pixel_row]),
-                                                         np.array([pixel_col]))
+                # Use sensor's pixel_to_geodetic method
+                location = self.imagery.sensor.pixel_to_geodetic(
+                    frame,
+                    np.array([pixel_row]),
+                    np.array([pixel_col])
+                )
                 latitudes.append(location.lat.deg[0])
                 longitudes.append(location.lon.deg[0])
                 altitudes.append(location.height.to('m').value[0])
@@ -359,9 +362,73 @@ class Simulation:
             detectors_df = pd.concat((detectors_df, detector.to_dataframe()))
         detectors_df.to_csv(dir / "detectors.csv", index=False)
 
-        self.imagery.to_hdf5(dir / "imagery.h5")
+        # Save imagery using new HDF5 v2.0 format
+        if self.imagery is not None and self.imagery.sensor is not None:
+            save_imagery_hdf5(dir / "imagery.h5", {self.imagery.sensor.name: [self.imagery]})
 
     def simulate(self):
+        # Create sensor first (before tracks/detectors) so we can pass it to them
+        frames_array = np.arange(self.frames)
+
+        # Generate times if enabled
+        times = None
+        if self.enable_times:
+            times = self._generate_times()
+
+        # Create sensor with calibration data
+        sensor_kwargs = {
+            'name': f"{self.name} Sensor"
+        }
+
+        # Use stationary sensor position at origin
+        sensor_positions = np.array([[0.0], [0.0], [0.0]])
+        sensor_times = np.array([times[0] if times is not None else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
+
+        # Add bias images if enabled
+        if self.enable_bias_images:
+            bias_images, bias_image_frames = self._generate_bias_images()
+            sensor_kwargs['bias_images'] = bias_images
+            sensor_kwargs['bias_image_frames'] = bias_image_frames
+
+        # Add uniformity gain images if enabled
+        if self.enable_uniformity_gain:
+            uniformity_gain_images, uniformity_gain_image_frames = self._generate_uniformity_gain_images()
+            sensor_kwargs['uniformity_gain_images'] = uniformity_gain_images
+            sensor_kwargs['uniformity_gain_image_frames'] = uniformity_gain_image_frames
+
+        # Add bad pixel masks if enabled
+        if self.enable_bad_pixel_masks:
+            bad_pixel_masks, bad_pixel_mask_frames = self._generate_bad_pixel_masks()
+            sensor_kwargs['bad_pixel_masks'] = bad_pixel_masks
+            sensor_kwargs['bad_pixel_mask_frames'] = bad_pixel_mask_frames
+
+        # Add geodetic polynomials to sensor if enabled
+        poly_row_col_to_lat = None
+        poly_row_col_to_lon = None
+        poly_lat_lon_to_row = None
+        poly_lat_lon_to_col = None
+        if self.enable_geodetic:
+            (poly_row_col_to_lat, poly_row_col_to_lon,
+             poly_lat_lon_to_row, poly_lat_lon_to_col) = self._generate_geodetic_polynomials()
+
+        # Add radiometric gain if enabled
+        radiometric_gain = None
+        if self.enable_radiometric_gain:
+            radiometric_gain = self._generate_radiometric_gains()
+
+        # Create SampledSensor
+        sensor = SampledSensor(
+            positions=sensor_positions,
+            times=sensor_times,
+            frames=frames_array,
+            poly_row_col_to_lat=poly_row_col_to_lat,
+            poly_row_col_to_lon=poly_row_col_to_lon,
+            poly_lat_lon_to_row=poly_lat_lon_to_row,
+            poly_lat_lon_to_col=poly_lat_lon_to_col,
+            radiometric_gain=radiometric_gain,
+            **sensor_kwargs
+        )
+
         # Initialize images with earth background if enabled
         if self.enable_earth_background:
             # Load earth image from file path and convert to grayscale
@@ -427,13 +494,14 @@ class Simulation:
                 frames = np.concatenate((frames, np.array(false_detections*[f])))
                 rows = np.concatenate((rows, self.rows*np.random.rand(1, false_detections).squeeze()))
                 columns = np.concatenate((columns, self.columns*np.random.rand(1, false_detections).squeeze()))
-            
+
             self.detectors.append(
                 Detector(
                     name = f"Detector {d}",
                     frames = frames,
                     rows = rows,
                     columns = columns,
+                    sensor = sensor,
                 )
             )
         
@@ -499,53 +567,9 @@ class Simulation:
                     name=f"Tracker {tracker_index} - Track {track_index}",
                     frames = frames,
                     rows = rows,
-                    columns = columns
+                    columns = columns,
+                    sensor = sensor,
                 ))
-
-                # Create imagery objects with optional times and geodetic polynomials
-                imagery_kwargs = {
-                    'name': self.name,
-                    'images': images,
-                    'frames': np.arange(len(images))
-                }
-
-                # Add times if enabled
-                if self.enable_times:
-                    imagery_kwargs['times'] = self._generate_times()
-
-                # Add geodetic polynomials if enabled
-                if self.enable_geodetic:
-                    (poly_row_col_to_lat, poly_row_col_to_lon,
-                     poly_lat_lon_to_row, poly_lat_lon_to_col) = self._generate_geodetic_polynomials()
-                    imagery_kwargs['poly_row_col_to_lat'] = poly_row_col_to_lat
-                    imagery_kwargs['poly_row_col_to_lon'] = poly_row_col_to_lon
-                    imagery_kwargs['poly_lat_lon_to_row'] = poly_lat_lon_to_row
-                    imagery_kwargs['poly_lat_lon_to_col'] = poly_lat_lon_to_col
-
-                # Add bias images if enabled
-                if self.enable_bias_images:
-                    bias_images, bias_image_frames = self._generate_bias_images()
-                    imagery_kwargs['bias_images'] = bias_images
-                    imagery_kwargs['bias_image_frames'] = bias_image_frames
-
-                # Add uniformity gain images if enabled
-                if self.enable_uniformity_gain:
-                    uniformity_gain_images, uniformity_gain_image_frames = self._generate_uniformity_gain_images()
-                    imagery_kwargs['uniformity_gain_images'] = uniformity_gain_images
-                    imagery_kwargs['uniformity_gain_image_frames'] = uniformity_gain_image_frames
-
-                # Add bad pixel masks if enabled
-                if self.enable_bad_pixel_masks:
-                    bad_pixel_masks, bad_pixel_mask_frames = self._generate_bad_pixel_masks()
-                    imagery_kwargs['bad_pixel_masks'] = bad_pixel_masks
-                    imagery_kwargs['bad_pixel_mask_frames'] = bad_pixel_mask_frames
-
-                # Add radiometric gain if enabled
-                if self.enable_radiometric_gain:
-                    radiometric_gain = self._generate_radiometric_gains()
-                    imagery_kwargs['radiometric_gain'] = radiometric_gain
-
-                self.imagery = Imagery(**imagery_kwargs)
 
                 # Simulate detections of this tracker's tracks
                 for detector in self.detectors:
@@ -553,12 +577,21 @@ class Simulation:
                     detector.frames = np.concatenate((detector.frames, frames[detected_frames]))
                     detector.rows = np.concatenate((detector.rows, rows[detected_frames]))
                     detector.columns = np.concatenate((detector.columns, columns[detected_frames]))
-            
+
             self.trackers.append(
                 Tracker(
                     f"Tracker {tracker_index}",
                     tracks = tracker_tracks
                 )
             )
+
+        # Create imagery with sensor reference (sensor was created at the beginning)
+        self.imagery = Imagery(
+            name=self.name,
+            images=images,
+            frames=frames_array,
+            sensor=sensor,
+            times=times,
+        )
     
     

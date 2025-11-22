@@ -63,98 +63,78 @@ class DataLoaderThread(QThread):
             self.error_occurred.emit(f"Error loading {self.data_type}: {str(e)}")
 
     def _load_imagery(self):
-        """Load imagery from HDF5 file"""
+        """Load imagery from HDF5 file (supports both v1.0 and v2.0 formats)"""
         with h5py.File(self.file_path, 'r') as f:
-            images_dataset = f['images']
-            frames = f['frames'][:]
-
-            # Load the row and columns offsets
-            row_offset = None
-            if "row_offset" in images_dataset.attrs:
-                row_offset = images_dataset.attrs["row_offset"]
-            column_offset = None
-            if "column_offset" in images_dataset.attrs:
-                column_offset = images_dataset.attrs["column_offset"]
-
-            # Load time data
-            times = None
-            if 'unix_time' in f and 'unix_fine_time' in f:
-                unix_time = f['unix_time'][:]
-                unix_fine_time = f['unix_fine_time'][:]
-                # Combine into total nanoseconds and convert to datetime64[ns]
-                total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
-                times = total_nanoseconds.astype('datetime64[ns]')
-
-            # Load polynomial coefficients for geodetic conversion
-            poly_row_col_to_lat = None
-            poly_row_col_to_lon = None
-            poly_lat_lon_to_row = None
-            poly_lat_lon_to_col = None
-            if 'poly_row_col_to_lat' in f:
-                poly_row_col_to_lat = f['poly_row_col_to_lat'][:]
-            if 'poly_row_col_to_lon' in f:
-                poly_row_col_to_lon = f['poly_row_col_to_lon'][:]
-            if 'poly_lat_lon_to_row' in f:
-                poly_lat_lon_to_row = f['poly_lat_lon_to_row'][:]
-            if 'poly_lat_lon_to_col' in f:
-                poly_lat_lon_to_col = f['poly_lat_lon_to_col'][:]
-
-            # Check if dataset is chunked
-            is_chunked = images_dataset.chunks is not None
-            num_images = images_dataset.shape[0]
-
-            if is_chunked:
-                # Load chunked data progressively using iter_chunks
-                self.progress_updated.emit("Loading imagery...", 0, num_images)
-
-                # Pre-allocate array
-                images = np.empty(images_dataset.shape, dtype=images_dataset.dtype)
-
-                # Load using iter_chunks for efficient chunked reading
-                images_loaded = 0
-                for chunk_slice in images_dataset.iter_chunks():
-                    if self._cancelled:
-                        return  # Exit early if cancelled
-                    images[chunk_slice] = images_dataset[chunk_slice]
-                    # Calculate how many images we've loaded (first dimension)
-                    images_loaded = chunk_slice[0].stop if chunk_slice[0].stop else num_images
-                    self.progress_updated.emit("Loading imagery...", images_loaded, num_images)
+            # Detect format version
+            if 'sensors' in f:
+                # New v2.0 hierarchical format
+                self._load_imagery_v2(f)
             else:
-                # Load all at once for non-chunked data
-                self.progress_updated.emit("Loading imagery...", 0, 1)
-                if self._cancelled:
-                    return  # Exit early if cancelled
-                images = images_dataset[:]
-                self.progress_updated.emit("Loading imagery...", 1, 1)
+                # Old v1.0 flat format (legacy support)
+                self._load_imagery_v1(f)
+
+    def _load_imagery_v1(self, f: h5py.File):
+        """Load imagery from legacy v1.0 HDF5 format"""
+        images_dataset = f['images']
+        frames = f['frames'][:]
+
+        # Load the row and columns offsets
+        row_offset = images_dataset.attrs.get("row_offset", 0)
+        column_offset = images_dataset.attrs.get("column_offset", 0)
+
+        # Load time data
+        times = None
+        if 'unix_time' in f and 'unix_fine_time' in f:
+            unix_time = f['unix_time'][:]
+            unix_fine_time = f['unix_fine_time'][:]
+            # Combine into total nanoseconds and convert to datetime64[ns]
+            total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
+            times = total_nanoseconds.astype('datetime64[ns]')
+
+        # Load polynomial coefficients for geodetic conversion
+        poly_row_col_to_lat = f.get('poly_row_col_to_lat', None)
+        poly_row_col_to_lon = f.get('poly_row_col_to_lon', None)
+        poly_lat_lon_to_row = f.get('poly_lat_lon_to_row', None)
+        poly_lat_lon_to_col = f.get('poly_lat_lon_to_col', None)
+
+        if poly_row_col_to_lat is not None:
+            poly_row_col_to_lat = poly_row_col_to_lat[:]
+        if poly_row_col_to_lon is not None:
+            poly_row_col_to_lon = poly_row_col_to_lon[:]
+        if poly_lat_lon_to_row is not None:
+            poly_lat_lon_to_row = poly_lat_lon_to_row[:]
+        if poly_lat_lon_to_col is not None:
+            poly_lat_lon_to_col = poly_lat_lon_to_col[:]
+
+        # Load images with progress
+        images = self._load_images_dataset(images_dataset)
 
         if self._cancelled:
-            return  # Exit early if cancelled
+            return
 
         # Load radiometric calibration data if present
-        radiometric_gain = None
-        bias_images = None
-        bias_image_frames = None
-        uniformity_gain_images = None
-        uniformity_gain_image_frames = None
-        bad_pixel_masks = None
-        bad_pixel_mask_frames = None
+        radiometric_gain = f.get('radiometric_gain', None)
+        bias_images = f.get('bias_images', None)
+        bias_image_frames = f.get('bias_image_frames', None)
+        uniformity_gain_images = f.get('uniformity_gain_images', None)
+        uniformity_gain_image_frames = f.get('uniformity_gain_image_frames', None)
+        bad_pixel_masks = f.get('bad_pixel_masks', None)
+        bad_pixel_mask_frames = f.get('bad_pixel_mask_frames', None)
 
-        with h5py.File(self.file_path, 'r') as f:
-            if 'radiometric_gain' in f:
-                radiometric_gain = f['radiometric_gain'][:]
-            if 'bias_images' in f:
-                bias_images = f['bias_images'][:]
-                bias_image_frames = f['bias_image_frames'][:]
-            if 'uniformity_gain_images' in f:
-                uniformity_gain_images = f['uniformity_gain_images'][:]
-                uniformity_gain_image_frames = f['uniformity_gain_image_frames'][:]
-            if 'bad_pixel_masks' in f:
-                bad_pixel_masks = f['bad_pixel_masks'][:]
-                bad_pixel_mask_frames = f['bad_pixel_mask_frames'][:]
+        if radiometric_gain is not None:
+            radiometric_gain = radiometric_gain[:]
+        if bias_images is not None:
+            bias_images = bias_images[:]
+            bias_image_frames = bias_image_frames[:]
+        if uniformity_gain_images is not None:
+            uniformity_gain_images = uniformity_gain_images[:]
+            uniformity_gain_image_frames = uniformity_gain_image_frames[:]
+        if bad_pixel_masks is not None:
+            bad_pixel_masks = bad_pixel_masks[:]
+            bad_pixel_mask_frames = bad_pixel_mask_frames[:]
 
-        # Create SampledSensor object with metadata from HDF5 file
-        # Use a stationary sensor at origin since we don't have position data in the file
-        sensor_positions = np.array([[0.0], [0.0], [0.0]])  # (3, 1) array at origin
+        # Create SampledSensor with dummy position data
+        sensor_positions = np.array([[0.0], [0.0], [0.0]])
         sensor_times = np.array([times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
 
         sensor = SampledSensor(
@@ -175,7 +155,6 @@ class DataLoaderThread(QThread):
             bad_pixel_mask_frames=bad_pixel_mask_frames,
         )
 
-        # Create Imagery object with sensor reference
         imagery = Imagery(
             name=Path(self.file_path).stem,
             images=images,
@@ -186,16 +165,206 @@ class DataLoaderThread(QThread):
             times=times,
         )
 
-        # Pre-compute histograms with progress updates
+        self._compute_histograms_and_emit(imagery, sensor)
+
+    def _load_imagery_v2(self, f: h5py.File):
+        """Load imagery from v2.0 hierarchical HDF5 format"""
+        sensors_group = f['sensors']
+
+        # For now, load all sensors and all imagery
+        # TODO: In the future, present a dialog to let user select which ones to load
+
+        for sensor_name in sensors_group.keys():
+            sensor_group = sensors_group[sensor_name]
+
+            # Load sensor
+            sensor = self._load_sensor_from_group(sensor_group)
+
+            if self._cancelled:
+                return
+
+            # Load imagery for this sensor
+            if 'imagery' in sensor_group:
+                imagery_group = sensor_group['imagery']
+
+                for imagery_name in imagery_group.keys():
+                    img_group = imagery_group[imagery_name]
+
+                    # Load imagery data
+                    imagery = self._load_imagery_from_group(img_group, sensor)
+
+                    if self._cancelled:
+                        return
+
+                    self._compute_histograms_and_emit(imagery, sensor)
+
+    def _load_sensor_from_group(self, sensor_group: h5py.Group):
+        """Load a Sensor or SampledSensor from an HDF5 group"""
+        sensor_type = sensor_group.attrs.get('sensor_type', 'Sensor')
+        sensor_name = sensor_group.attrs.get('name', 'Unknown Sensor')
+
+        # Load radiometric calibration data
+        bias_images = None
+        bias_image_frames = None
+        uniformity_gain_images = None
+        uniformity_gain_image_frames = None
+        bad_pixel_masks = None
+        bad_pixel_mask_frames = None
+        radiometric_gain = None
+        radiometric_gain_frames = None
+
+        if 'radiometric' in sensor_group:
+            rad_group = sensor_group['radiometric']
+            if 'bias_images' in rad_group:
+                bias_images = rad_group['bias_images'][:]
+                bias_image_frames = rad_group['bias_image_frames'][:]
+            if 'uniformity_gain_images' in rad_group:
+                uniformity_gain_images = rad_group['uniformity_gain_images'][:]
+                uniformity_gain_image_frames = rad_group['uniformity_gain_image_frames'][:]
+            if 'bad_pixel_masks' in rad_group:
+                bad_pixel_masks = rad_group['bad_pixel_masks'][:]
+                bad_pixel_mask_frames = rad_group['bad_pixel_mask_frames'][:]
+            if 'radiometric_gain' in rad_group:
+                radiometric_gain = rad_group['radiometric_gain'][:]
+                radiometric_gain_frames = rad_group['radiometric_gain_frames'][:]
+
+        if sensor_type == 'SampledSensor':
+            # Load position data
+            positions = None
+            times = None
+            if 'position' in sensor_group:
+                pos_group = sensor_group['position']
+                positions = pos_group['positions'][:]
+
+                # Load times
+                unix_times = pos_group['unix_times'][:]
+                unix_fine_times = pos_group['unix_fine_times'][:]
+                total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
+                times = total_nanoseconds.astype('datetime64[ns]')
+
+            # Load geolocation polynomials
+            poly_row_col_to_lat = None
+            poly_row_col_to_lon = None
+            poly_lat_lon_to_row = None
+            poly_lat_lon_to_col = None
+            frames = None
+
+            if 'geolocation' in sensor_group:
+                geo_group = sensor_group['geolocation']
+                poly_row_col_to_lat = geo_group['poly_row_col_to_lat'][:]
+                poly_row_col_to_lon = geo_group['poly_row_col_to_lon'][:]
+                poly_lat_lon_to_row = geo_group['poly_lat_lon_to_row'][:]
+                poly_lat_lon_to_col = geo_group['poly_lat_lon_to_col'][:]
+                frames = geo_group['frames'][:]
+            elif radiometric_gain_frames is not None:
+                # Use radiometric gain frames if geolocation frames not available
+                frames = radiometric_gain_frames
+
+            # If no position data, create dummy position
+            if positions is None or times is None:
+                positions = np.array([[0.0], [0.0], [0.0]])
+                times = np.array([np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
+
+            # If no frames, create dummy frames
+            if frames is None:
+                frames = np.array([0], dtype=np.int64)
+
+            return SampledSensor(
+                name=sensor_name,
+                positions=positions,
+                times=times,
+                frames=frames,
+                poly_row_col_to_lat=poly_row_col_to_lat,
+                poly_row_col_to_lon=poly_row_col_to_lon,
+                poly_lat_lon_to_row=poly_lat_lon_to_row,
+                poly_lat_lon_to_col=poly_lat_lon_to_col,
+                radiometric_gain=radiometric_gain,
+                bias_images=bias_images,
+                bias_image_frames=bias_image_frames,
+                uniformity_gain_images=uniformity_gain_images,
+                uniformity_gain_image_frames=uniformity_gain_image_frames,
+                bad_pixel_masks=bad_pixel_masks,
+                bad_pixel_mask_frames=bad_pixel_mask_frames,
+            )
+        else:
+            # Base Sensor class
+            from vista.sensors.sensor import Sensor
+            return Sensor(
+                name=sensor_name,
+                bias_images=bias_images,
+                bias_image_frames=bias_image_frames,
+                uniformity_gain_images=uniformity_gain_images,
+                uniformity_gain_image_frames=uniformity_gain_image_frames,
+                bad_pixel_masks=bad_pixel_masks,
+                bad_pixel_mask_frames=bad_pixel_mask_frames,
+            )
+
+    def _load_imagery_from_group(self, img_group: h5py.Group, sensor):
+        """Load an Imagery object from an HDF5 group"""
+        # Load attributes
+        name = img_group.attrs.get('name', 'Unknown')
+        description = img_group.attrs.get('description', '')
+        row_offset = img_group.attrs.get('row_offset', 0)
+        column_offset = img_group.attrs.get('column_offset', 0)
+
+        # Load datasets
+        images = self._load_images_dataset(img_group['images'])
+        frames = img_group['frames'][:]
+
+        # Load times if present
+        times = None
+        if 'unix_times' in img_group and 'unix_fine_times' in img_group:
+            unix_times = img_group['unix_times'][:]
+            unix_fine_times = img_group['unix_fine_times'][:]
+            total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
+            times = total_nanoseconds.astype('datetime64[ns]')
+
+        return Imagery(
+            name=name,
+            images=images,
+            frames=frames,
+            sensor=sensor,
+            row_offset=row_offset,
+            column_offset=column_offset,
+            times=times,
+            description=description,
+        )
+
+    def _load_images_dataset(self, images_dataset: h5py.Dataset) -> np.ndarray:
+        """Load images dataset with progress tracking"""
+        is_chunked = images_dataset.chunks is not None
+        num_images = images_dataset.shape[0]
+
+        if is_chunked:
+            self.progress_updated.emit("Loading imagery...", 0, num_images)
+            images = np.empty(images_dataset.shape, dtype=images_dataset.dtype)
+
+            images_loaded = 0
+            for chunk_slice in images_dataset.iter_chunks():
+                if self._cancelled:
+                    return None
+                images[chunk_slice] = images_dataset[chunk_slice]
+                images_loaded = chunk_slice[0].stop if chunk_slice[0].stop else num_images
+                self.progress_updated.emit("Loading imagery...", images_loaded, num_images)
+        else:
+            self.progress_updated.emit("Loading imagery...", 0, 1)
+            if self._cancelled:
+                return None
+            images = images_dataset[:]
+            self.progress_updated.emit("Loading imagery...", 1, 1)
+
+        return images
+
+    def _compute_histograms_and_emit(self, imagery: Imagery, sensor):
+        """Compute histograms and emit loaded signal"""
         self.progress_updated.emit("Computing histograms...", 0, len(imagery.images))
 
         for i in range(len(imagery.images)):
             if self._cancelled:
-                return  # Exit early if cancelled
-            imagery.get_histogram(i)  # Lazy computation
+                return
+            imagery.get_histogram(i)
             self.progress_updated.emit("Computing histograms...", i + 1, len(imagery.images))
 
-        # Emit the loaded imagery and sensor
         self.imagery_loaded.emit(imagery, sensor)
 
     def _load_detections_csv(self):

@@ -3,12 +3,14 @@
 The Sensor class provides an base interface for sensor modeling.
 """
 
+import h5py
+import pathlib
 from astropy.coordinates import EarthLocation
 from astropy import units
 from dataclasses import dataclass
+from typing import Optional, Tuple, Union
 import numpy as np
 from numpy.typing import NDArray
-from typing import Optional, Tuple
 
 
 @dataclass
@@ -188,10 +190,10 @@ class Sensor:
     def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
-        
+
         Note:
             This function may be implemented bysubclasses
-        
+
         Args:
             frame: Frame number
             rows: Array of row pixel coordinates
@@ -205,3 +207,46 @@ class Sensor:
             lat=np.zeros_like(rows) * units.deg,
             height=np.zeros_like(rows) * units.km
         )
+
+    def to_hdf5(self, group: h5py.Group):
+        """
+        Save sensor radiometric calibration data to an HDF5 group.
+
+        Parameters
+        ----------
+        group : h5py.Group
+            HDF5 group to write sensor data to (typically sensors/<sensor_name>/)
+
+        Notes
+        -----
+        This method writes radiometric calibration data to the HDF5 group:
+        - bias_images and bias_image_frames
+        - uniformity_gain_images and uniformity_gain_image_frames
+        - bad_pixel_masks and bad_pixel_mask_frames
+
+        Subclasses should call super().to_hdf5(group) and then add their own data.
+        """
+        # Set sensor type attribute
+        group.attrs['sensor_type'] = 'Sensor'
+        group.attrs['name'] = self.name
+
+        # Create radiometric calibration subgroup
+        if (self.bias_images is not None or
+            self.uniformity_gain_images is not None or
+            self.bad_pixel_masks is not None):
+            radiometric_group = group.create_group('radiometric')
+
+            # Save bias images if present
+            if self.bias_images is not None:
+                radiometric_group.create_dataset('bias_images', data=self.bias_images)
+                radiometric_group.create_dataset('bias_image_frames', data=self.bias_image_frames)
+
+            # Save uniformity gain images if present
+            if self.uniformity_gain_images is not None:
+                radiometric_group.create_dataset('uniformity_gain_images', data=self.uniformity_gain_images)
+                radiometric_group.create_dataset('uniformity_gain_image_frames', data=self.uniformity_gain_image_frames)
+
+            # Save bad pixel masks if present
+            if self.bad_pixel_masks is not None:
+                radiometric_group.create_dataset('bad_pixel_masks', data=self.bad_pixel_masks)
+                radiometric_group.create_dataset('bad_pixel_mask_frames', data=self.bad_pixel_mask_frames)

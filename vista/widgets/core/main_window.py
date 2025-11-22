@@ -30,6 +30,7 @@ from .data.data_loader import DataLoaderThread
 from .data.data_manager import DataManagerPanel
 from .imagery_viewer import ImageryViewer
 from .playback_controls import PlaybackControls
+from .save_imagery_dialog import SaveImageryDialog
 
 
 class VistaMainWindow(QMainWindow):
@@ -131,6 +132,12 @@ class VistaMainWindow(QMainWindow):
         load_tracks_action = QAction("Load Tracks (CSV)", self)
         load_tracks_action.triggered.connect(self.load_tracks_file)
         file_menu.addAction(load_tracks_action)
+
+        file_menu.addSeparator()
+
+        save_imagery_action = QAction("Save Imagery (HDF5)", self)
+        save_imagery_action.triggered.connect(self.save_imagery_file)
+        file_menu.addAction(save_imagery_action)
 
         file_menu.addSeparator()
 
@@ -834,6 +841,36 @@ class VistaMainWindow(QMainWindow):
         if self.loader_thread:
             self.loader_thread.deleteLater()
             self.loader_thread = None
+
+    def save_imagery_file(self):
+        """Open dialog to save imagery data to HDF5 file"""
+        # Check if any imagery is loaded
+        if not self.viewer.imageries:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "No imagery data is loaded. Please load imagery before saving.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Check if any sensors exist
+        if not self.viewer.sensors:
+            QMessageBox.warning(
+                self,
+                "No Sensors",
+                "No sensors are loaded. Please load imagery with sensors before saving.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Open save imagery dialog
+        dialog = SaveImageryDialog(
+            sensors=self.viewer.sensors,
+            imageries=self.viewer.imageries,
+            parent=self
+        )
+        dialog.exec()
 
     def clear_overlays(self):
         """Clear all overlays and update frame range"""
