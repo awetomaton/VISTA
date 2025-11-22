@@ -305,7 +305,7 @@ def save_imagery_hdf5(
 
     with h5py.File(file_path, 'w') as f:
         # Set root attributes
-        f.attrs['format_version'] = '2.0'
+        f.attrs['format_version'] = '1.6'
         f.attrs['created'] = str(np.datetime64('now').astype(str))
 
         # Create sensors group

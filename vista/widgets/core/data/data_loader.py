@@ -63,18 +63,18 @@ class DataLoaderThread(QThread):
             self.error_occurred.emit(f"Error loading {self.data_type}: {str(e)}")
 
     def _load_imagery(self):
-        """Load imagery from HDF5 file (supports both v1.0 and v2.0 formats)"""
+        """Load imagery from HDF5 file (supports both v1.5 and v1.6 formats)"""
         with h5py.File(self.file_path, 'r') as f:
             # Detect format version
             if 'sensors' in f:
-                # New v2.0 hierarchical format
-                self._load_imagery_v2(f)
+                # New v1.6 hierarchical format
+                self._load_imagery_v16(f)
             else:
-                # Old v1.0 flat format (legacy support)
-                self._load_imagery_v1(f)
+                # Old v1.5 flat format (legacy support)
+                self._load_imagery_v15(f)
 
-    def _load_imagery_v1(self, f: h5py.File):
-        """Load imagery from legacy v1.0 HDF5 format"""
+    def _load_imagery_v15(self, f: h5py.File):
+        """Load imagery from legacy v1.5 HDF5 format"""
         images_dataset = f['images']
         frames = f['frames'][:]
 
@@ -167,8 +167,8 @@ class DataLoaderThread(QThread):
 
         self._compute_histograms_and_emit(imagery, sensor)
 
-    def _load_imagery_v2(self, f: h5py.File):
-        """Load imagery from v2.0 hierarchical HDF5 format"""
+    def _load_imagery_v16(self, f: h5py.File):
+        """Load imagery from v1.6 hierarchical HDF5 format"""
         sensors_group = f['sensors']
 
         # For now, load all sensors and all imagery
