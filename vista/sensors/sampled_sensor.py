@@ -32,6 +32,9 @@ class SampledSensor(Sensor):
     times : NDArray[np.datetime64]
         Times corresponding to each position sample. Must have length N.
         Required - will raise ValueError in __post_init__ if not provided.
+    frames : NDArray[np.int64]
+        Sensor frames numbers corresponding to each time sample. Must have length N.
+        Required - will raise ValueError in __post_init__ if not provided.
     radiometric_gain : NDArray, optional
         1D array of multiplicative factors for each frame to convert from counts to
         irradiance in units of kW/km²/sr.
@@ -88,6 +91,7 @@ class SampledSensor(Sensor):
     """
     positions: Optional[NDArray[np.float64]] = None
     times: Optional[NDArray[np.datetime64]] = None
+    frames: Optional[NDArray[np.int64]] = None
     radiometric_gain: Optional[NDArray] = None
     poly_row_col_to_lat: Optional[NDArray[np.float64]] = None
     poly_row_col_to_lon: Optional[NDArray[np.float64]] = None
@@ -106,11 +110,16 @@ class SampledSensor(Sensor):
         ValueError
             If positions or times are not provided, or if they have incompatible shapes.
         """
+        # Call parent's __post_init__ to increment instance counter
+        super().__post_init__()
+
         # Validate required fields
         if self.positions is None:
             raise ValueError("positions is required for SampledSensor")
         if self.times is None:
             raise ValueError("times is required for SampledSensor")
+        if self.frames is None:
+            raise ValueError("frame numbers are required for SampledSensor")
 
         # Validate shape of positions
         if self.positions.ndim != 2 or self.positions.shape[0] != 3:

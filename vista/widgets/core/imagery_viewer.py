@@ -589,12 +589,12 @@ class ImageryViewer(QWidget):
                     image_index = valid_indices[-1]
                     frame = self.imagery.frames[image_index]
 
-                    if self.geolocation_enabled:
+                    if self.geolocation_enabled and self.imagery.sensor.can_geolocate():
                         # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
                         rows_array = np.array([row])
                         cols_array = np.array([col])
 
-                        locations = self.imagery.pixel_to_geodetic(frame, rows_array, cols_array)
+                        locations = self.imagery.sensor.pixel_to_geodetic(frame, rows_array, cols_array)
 
                         # Extract lat/lon from EarthLocation
                         if locations is not None and len(locations) > 0:

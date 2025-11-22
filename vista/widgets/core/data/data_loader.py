@@ -25,7 +25,7 @@ class DataLoaderThread(QThread):
     error_occurred = pyqtSignal(str)  # Emits error message
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total)
 
-    def __init__(self, file_path, data_type, file_format='hdf5', imagery=None):
+    def __init__(self, file_path, data_type, file_format='hdf5', sensor=None, imagery=None):
         """
         Initialize the data loader thread
 
@@ -33,12 +33,14 @@ class DataLoaderThread(QThread):
             file_path: Path to the file to load
             data_type: Type of data to load ('imagery', 'detections', 'tracks')
             file_format: Format of the file ('hdf5' or 'csv')
+            sensor: Optional Sensor object for track/detection association and geodetic mapping
             imagery: Optional Imagery object for time-to-frame mapping (for tracks with times)
         """
         super().__init__()
         self.file_path = file_path
         self.data_type = data_type
         self.file_format = file_format
+        self.sensor = sensor
         self.imagery = imagery
         self._cancelled = False
 
@@ -213,12 +215,12 @@ class DataLoaderThread(QThread):
             for idx, (detector_name, group_df) in enumerate(detector_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                detector = Detector.from_dataframe(group_df, name=detector_name)
+                detector = Detector.from_dataframe(group_df, sensor=self.sensor, name=detector_name)
                 detectors.append(detector)
                 self.progress_updated.emit("Loading detections...", idx + 1, len(detector_groups))
         else:
             # Single detector
-            detector = Detector.from_dataframe(df, name=Path(self.file_path).stem)
+            detector = Detector.from_dataframe(df, sensor=self.sensor, name=Path(self.file_path).stem)
             detectors.append(detector)
 
         if self._cancelled:
@@ -250,7 +252,7 @@ class DataLoaderThread(QThread):
                 for track_name, track_df in tracker_df.groupby('Track'):
                     if self._cancelled:
                         return  # Exit early if cancelled
-                    track = Track.from_dataframe(track_df, name=track_name, imagery=self.imagery)
+                    track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name, imagery=self.imagery)
                     tracks.append(track)
                 tracker = Tracker(name=tracker_name, tracks=tracks)
                 trackers.append(tracker)
@@ -264,7 +266,7 @@ class DataLoaderThread(QThread):
             for idx, (track_name, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                track = Track.from_dataframe(track_df, name=track_name, imagery=self.imagery)
+                track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name, imagery=self.imagery)
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
 
@@ -272,7 +274,7 @@ class DataLoaderThread(QThread):
             trackers.append(tracker)
         else:
             # Single track, single tracker
-            track = Track.from_dataframe(df, name="Track 1", imagery=self.imagery)
+            track = Track.from_dataframe(df, sensor=self.sensor, name="Track 1", imagery=self.imagery)
             tracker = Tracker(name=Path(self.file_path).stem, tracks=[track])
             trackers.append(tracker)
 

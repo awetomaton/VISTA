@@ -31,10 +31,8 @@ class SensorsPanel(QWidget):
 
         # Sensors table
         self.sensors_table = QTableWidget()
-        self.sensors_table.setColumnCount(6)
-        self.sensors_table.setHorizontalHeaderLabels([
-            "Name", "Geolocation", "Bias Corr.", "Non-Unif. Corr.", "Bad Pixel Corr.", "Frames"
-        ])
+        self.sensors_table.setColumnCount(5)
+        self.sensors_table.setHorizontalHeaderLabels(["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask"])
 
         # Enable row selection (single selection only)
         self.sensors_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -44,10 +42,9 @@ class SensorsPanel(QWidget):
         header = self.sensors_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Geolocation
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Corr.
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Non-Unif. Corr.
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Corr.
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Frames
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Uniformity Gain
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
@@ -91,13 +88,6 @@ class SensorsPanel(QWidget):
             bad_pixel_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             bad_pixel_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.sensors_table.setItem(row, 4, bad_pixel_item)
-
-            # Frame Count
-            frame_count = len(sensor.frames) if sensor.frames is not None else 0
-            frame_count_item = QTableWidgetItem(str(frame_count))
-            frame_count_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            frame_count_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 5, frame_count_item)
 
         self.sensors_table.blockSignals(False)
 

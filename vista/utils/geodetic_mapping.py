@@ -10,27 +10,27 @@ def map_geodetic_to_pixel(
     longitudes: NDArray[np.float64],
     altitudes: NDArray[np.float64],
     frames: NDArray[np.int_],
-    imagery
+    sensor
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """
-    Map geodetic coordinates (lat/lon/alt) to pixel coordinates (row/col) using imagery.
+    Map geodetic coordinates (lat/lon/alt) to pixel coordinates (row/col) using sensor.
 
     Args:
         latitudes: Array of latitude values in degrees
         longitudes: Array of longitude values in degrees
         altitudes: Array of altitude values in meters
         frames: Array of frame numbers corresponding to each position
-        imagery: Imagery object with geodetic_to_pixel conversion capability
+        sensor: Sensor object with geodetic_to_pixel conversion capability
 
     Returns:
         Tuple of (rows, columns) arrays
 
     Raises:
-        ValueError: If imagery lacks geodetic conversion polynomials
+        ValueError: If sensor lacks geodetic conversion capability
     """
-    if imagery.poly_lat_lon_to_row is None or imagery.poly_lat_lon_to_col is None:
+    if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
         raise ValueError(
-            "Imagery does not have geodetic conversion polynomials. "
+            "Sensor does not have geodetic conversion capability. "
             "Cannot convert lat/lon to row/col coordinates."
         )
 
@@ -59,8 +59,8 @@ def map_geodetic_to_pixel(
             height=alts * u.m
         )
 
-        # Convert to pixel coordinates
-        frame_rows, frame_cols = imagery.geodetic_to_pixel(frame, locations)
+        # Convert to pixel coordinates using sensor
+        frame_rows, frame_cols = sensor.geodetic_to_pixel(frame, locations)
 
         # Store results
         rows[frame_indices] = frame_rows

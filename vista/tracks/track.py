@@ -120,18 +120,23 @@ class Track:
             columns = df["Columns"].to_numpy()
         elif "Latitude" in df.columns and "Longitude" in df.columns and "Altitude" in df.columns:
             # Need geodetic-to-pixel conversion
-            if imagery is None:
+            if sensor is None:
                 raise ValueError(
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no row/column. "
-                    "Imagery required for geodetic-to-pixel mapping."
+                    "Sensor required for geodetic-to-pixel mapping."
                 )
-            # Map geodetic to pixel using imagery
+            if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
+                raise ValueError(
+                    f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
+                    "does not support geolocation."
+                )
+            # Map geodetic to pixel using sensor
             rows, columns = map_geodetic_to_pixel(
                 df["Latitude"].to_numpy(),
                 df["Longitude"].to_numpy(),
                 df["Altitude"].to_numpy(),
                 frames,
-                imagery
+                sensor
             )
         else:
             raise ValueError(

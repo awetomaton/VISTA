@@ -50,6 +50,18 @@ class DetectionsPanel(QWidget):
         self.edit_detector_btn.clicked.connect(self.on_edit_detector_clicked)
         button_layout.addWidget(self.edit_detector_btn)
 
+        # Add reassign sensor button
+        self.reassign_sensor_btn = QPushButton("Reassign Sensor")
+        self.reassign_sensor_btn.clicked.connect(self.reassign_sensor)
+        self.reassign_sensor_btn.setToolTip("Reassign selected detections to a different sensor")
+        button_layout.addWidget(self.reassign_sensor_btn)
+
+        # Add copy to sensor button
+        self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
+        self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
+        self.copy_to_sensor_btn.setToolTip("Copy selected detections to a different sensor")
+        button_layout.addWidget(self.copy_to_sensor_btn)
+
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -400,3 +412,174 @@ class DetectionsPanel(QWidget):
                     "Export Error",
                     f"Failed to export detections:\n{str(e)}"
                 )
+
+    def reassign_sensor(self):
+        """Reassign selected detections to a different sensor"""
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.information(
+                self,
+                "No Selection",
+                "Please select one or more detectors to reassign.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get all available sensors
+        if not self.viewer.sensors:
+            QMessageBox.warning(
+                self,
+                "No Sensors",
+                "No sensors are available. Please load imagery to create sensors.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create dialog to select target sensor
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Select Target Sensor")
+        dialog_layout = QVBoxLayout()
+
+        dialog_layout.addWidget(QLabel("Select the sensor to reassign detections to:"))
+
+        sensor_list = QListWidget()
+        for sensor in self.viewer.sensors:
+            sensor_list.addItem(sensor.name)
+        dialog_layout.addWidget(sensor_list)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        dialog_layout.addWidget(button_box)
+
+        dialog.setLayout(dialog_layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            if sensor_list.currentRow() < 0:
+                return
+
+            target_sensor = self.viewer.sensors[sensor_list.currentRow()]
+
+            # Get selected detectors
+            detectors_to_reassign = []
+            for row in selected_rows:
+                detector_name_item = self.detections_table.item(row, 1)
+                if detector_name_item:
+                    detector_name = detector_name_item.text()
+
+                    # Find the detector
+                    for detector in self.viewer.detectors:
+                        if detector.name == detector_name:
+                            detectors_to_reassign.append(detector)
+                            break
+
+            # Reassign sensor
+            for detector in detectors_to_reassign:
+                detector.sensor = target_sensor
+
+            # Refresh the table and emit data changed
+            self.refresh_detections_table()
+            self.data_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Reassigned {len(detectors_to_reassign)} detector(s) to sensor '{target_sensor.name}'.",
+                QMessageBox.StandardButton.Ok
+            )
+
+    def copy_to_sensor(self):
+        """Copy selected detections to a different sensor"""
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.information(
+                self,
+                "No Selection",
+                "Please select one or more detectors to copy.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get all available sensors
+        if not self.viewer.sensors:
+            QMessageBox.warning(
+                self,
+                "No Sensors",
+                "No sensors are available. Please load imagery to create sensors.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create dialog to select target sensor
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Select Target Sensor")
+        dialog_layout = QVBoxLayout()
+
+        dialog_layout.addWidget(QLabel("Select the sensor to copy detections to:"))
+
+        sensor_list = QListWidget()
+        for sensor in self.viewer.sensors:
+            sensor_list.addItem(sensor.name)
+        dialog_layout.addWidget(sensor_list)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        dialog_layout.addWidget(button_box)
+
+        dialog.setLayout(dialog_layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            if sensor_list.currentRow() < 0:
+                return
+
+            target_sensor = self.viewer.sensors[sensor_list.currentRow()]
+
+            # Get selected detectors and copy them
+            detectors_to_copy = []
+            for row in selected_rows:
+                detector_name_item = self.detections_table.item(row, 1)
+                if detector_name_item:
+                    detector_name = detector_name_item.text()
+
+                    # Find the detector
+                    for detector in self.viewer.detectors:
+                        if detector.name == detector_name:
+                            detectors_to_copy.append(detector)
+                            break
+
+            # Copy detectors to target sensor
+            from vista.detections.detector import Detector
+            for detector in detectors_to_copy:
+                # Create a copy of the detector with the new sensor
+                detector_copy = Detector(
+                    name=f"{detector.name} (copy)",
+                    frames=detector.frames.copy(),
+                    rows=detector.rows.copy(),
+                    columns=detector.columns.copy(),
+                    sensor=target_sensor,
+                    description=detector.description,
+                    color=detector.color,
+                    marker=detector.marker,
+                    marker_size=detector.marker_size,
+                    line_thickness=detector.line_thickness,
+                    visible=detector.visible
+                )
+
+                # Add to viewer
+                self.viewer.add_detector(detector_copy)
+
+            # Refresh the table and emit data changed
+            self.refresh_detections_table()
+            self.data_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Copied {len(detectors_to_copy)} detector(s) to sensor '{target_sensor.name}'.",
+                QMessageBox.StandardButton.Ok
+            )

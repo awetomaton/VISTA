@@ -3,10 +3,12 @@
 The Sensor class provides an base interface for sensor modeling.
 """
 
+from astropy.coordinates import EarthLocation
+from astropy import units
 from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
-from typing import Optional
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -21,9 +23,6 @@ class Sensor:
     ----------
     name : str
         Unique name for this sensor. Used as the primary identifier.
-    frames : NDArray[np.int_], optional
-        Frame numbers for which calibration data is available. Used to index
-        time-varying sensor properties like projection polynomials.
     bias_images : NDArray, optional
         3D array of bias/dark frames with shape (num_bias_images, height, width).
     bias_image_frames : NDArray, optional
@@ -44,6 +43,7 @@ class Sensor:
     - Positions are represented as (3, N) arrays with x, y, z in each column
     - PSF modeling is optional and can be used for fitting signal blobs to estimate irradiance
     - Sensor names must be unique within a VISTA session
+    - Class variable _instance_count tracks the total number of Sensor instances created
 
     Examples
     --------
@@ -53,14 +53,22 @@ class Sensor:
     ...         # Return sensor positions for given times
     ...         return np.array([[x1, x2], [y1, y2], [z1, z2]])
     """
+
     name: str
-    frames: Optional[NDArray[np.int_]] = None
     bias_images: Optional[NDArray] = None
     bias_image_frames: Optional[NDArray] = None
     uniformity_gain_images: Optional[NDArray] = None
     uniformity_gain_image_frames: Optional[NDArray] = None
     bad_pixel_masks: Optional[NDArray] = None
     bad_pixel_mask_frames: Optional[NDArray] = None
+
+    # Class variable to track total number of sensor instances created
+    _instance_count: int = 0
+
+    def __post_init__(self):
+        """Increment the instance counter when a new Sensor is created."""
+        # Increment the class-level counter
+        Sensor._instance_count += 1
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
@@ -158,3 +166,42 @@ class Sensor:
         """
         return self.uniformity_gain_images is not None
 
+    def geodetic_to_pixel(self, frame: int, loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
+
+        Note:
+            This function may be implemented bysubclasses
+
+        Args:
+            frame: Frame number
+            loc: EarthLocation object(s) with lat/lon coordinates
+
+        Returns:
+            Tuple of (rows, columns) pixel coordinates (or zeros if no polynomials)
+        """
+        empty = np.empty_like(loc.x.values)
+        empty.fill(np.nan)
+        return empty, empty.copy()
+    
+    
+    def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
+        """
+        Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
+        
+        Note:
+            This function may be implemented bysubclasses
+        
+        Args:
+            frame: Frame number
+            rows: Array of row pixel coordinates
+            columns: Array of column pixel coordinates
+
+        Returns:
+            EarthLocation objects with lat/lon coordinates (or zeros if no polynomials)
+        """
+        return EarthLocation.from_geodetic(
+            lon=np.zeros_like(rows) * units.deg,
+            lat=np.zeros_like(rows) * units.deg,
+            height=np.zeros_like(rows) * units.km
+        )

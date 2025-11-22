@@ -126,6 +126,19 @@ class TracksPanel(QWidget):
         self.edit_track_btn.setEnabled(False)  # Disabled until single track selected
         self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
         tracks_actions_layout.addWidget(self.edit_track_btn)
+
+        # Add reassign sensor button
+        self.reassign_sensor_btn = QPushButton("Reassign Sensor")
+        self.reassign_sensor_btn.clicked.connect(self.reassign_sensor)
+        self.reassign_sensor_btn.setToolTip("Reassign selected tracks to a different sensor")
+        tracks_actions_layout.addWidget(self.reassign_sensor_btn)
+
+        # Add copy to sensor button
+        self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
+        self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
+        self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
+        tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
+
         tracks_actions_layout.addStretch()
         layout.addLayout(tracks_actions_layout)
 
@@ -1471,3 +1484,171 @@ class TracksPanel(QWidget):
                     "Export Error",
                     f"Failed to export tracks:\n{str(e)}"
                 )
+
+    def reassign_sensor(self):
+        """Reassign selected tracks to a different sensor"""
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.information(
+                self,
+                "No Selection",
+                "Please select one or more tracks to reassign.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get all available sensors
+        if not self.viewer.sensors:
+            QMessageBox.warning(
+                self,
+                "No Sensors",
+                "No sensors are available. Please load imagery to create sensors.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create dialog to select target sensor
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Select Target Sensor")
+        dialog_layout = QVBoxLayout()
+
+        dialog_layout.addWidget(QLabel("Select the sensor to reassign tracks to:"))
+
+        sensor_list = QListWidget()
+        for sensor in self.viewer.sensors:
+            sensor_list.addItem(sensor.name)
+        dialog_layout.addWidget(sensor_list)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        dialog_layout.addWidget(button_box)
+
+        dialog.setLayout(dialog_layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            if sensor_list.currentRow() < 0:
+                return
+
+            target_sensor = self.viewer.sensors[sensor_list.currentRow()]
+
+            # Get selected tracks
+            tracks_to_reassign = []
+            for row in selected_rows:
+                track_name_item = self.tracks_table.item(row, 2)
+                if track_name_item:
+                    track_name = track_name_item.text()
+                    tracker_item = self.tracks_table.item(row, 1)
+                    tracker_name = tracker_item.text() if tracker_item else None
+
+                    # Find the track
+                    for tracker in self.viewer.trackers:
+                        if tracker_name is None or tracker.name == tracker_name:
+                            for track in tracker.tracks:
+                                if track.name == track_name:
+                                    tracks_to_reassign.append(track)
+                                    break
+
+            # Reassign sensor
+            for track in tracks_to_reassign:
+                track.sensor = target_sensor
+
+            # Refresh the table and emit data changed
+            self.refresh_tracks_table()
+            self.data_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Reassigned {len(tracks_to_reassign)} track(s) to sensor '{target_sensor.name}'.",
+                QMessageBox.StandardButton.Ok
+            )
+
+    def copy_to_sensor(self):
+        """Copy selected tracks to a different sensor"""
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.information(
+                self,
+                "No Selection",
+                "Please select one or more tracks to copy.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get all available sensors
+        if not self.viewer.sensors:
+            QMessageBox.warning(
+                self,
+                "No Sensors",
+                "No sensors are available. Please load imagery to create sensors.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Create dialog to select target sensor
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Select Target Sensor")
+        dialog_layout = QVBoxLayout()
+
+        dialog_layout.addWidget(QLabel("Select the sensor to copy tracks to:"))
+
+        sensor_list = QListWidget()
+        for sensor in self.viewer.sensors:
+            sensor_list.addItem(sensor.name)
+        dialog_layout.addWidget(sensor_list)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        dialog_layout.addWidget(button_box)
+
+        dialog.setLayout(dialog_layout)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            if sensor_list.currentRow() < 0:
+                return
+
+            target_sensor = self.viewer.sensors[sensor_list.currentRow()]
+
+            # Get selected tracks and copy them
+            tracks_to_copy = []
+            for row in selected_rows:
+                track_name_item = self.tracks_table.item(row, 2)
+                if track_name_item:
+                    track_name = track_name_item.text()
+                    tracker_item = self.tracks_table.item(row, 1)
+                    tracker_name = tracker_item.text() if tracker_item else None
+
+                    # Find the track
+                    for tracker in self.viewer.trackers:
+                        if tracker_name is None or tracker.name == tracker_name:
+                            for track in tracker.tracks:
+                                if track.name == track_name:
+                                    tracks_to_copy.append((tracker, track))
+                                    break
+
+            # Copy tracks to target sensor
+            for tracker, track in tracks_to_copy:
+                # Create a copy of the track with the new sensor
+                track_copy = track.copy()
+                track_copy.sensor = target_sensor
+                track_copy.name = f"{track.name} (copy)"
+
+                # Add to the same tracker
+                tracker.tracks.append(track_copy)
+
+            # Refresh the table and emit data changed
+            self.refresh_tracks_table()
+            self.data_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Copied {len(tracks_to_copy)} track(s) to sensor '{target_sensor.name}'.",
+                QMessageBox.StandardButton.Ok
+            )

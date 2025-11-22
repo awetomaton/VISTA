@@ -6,7 +6,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
-    QDialog, QDockWidget, QFileDialog, QMainWindow, QMessageBox,
+    QDockWidget, QFileDialog, QMainWindow, QMessageBox,
     QProgressDialog, QSplitter, QVBoxLayout, QWidget
 )
 
@@ -14,6 +14,7 @@ import vista
 from vista.detections.detector import Detector
 from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
+from vista.sensors.sensor import Sensor
 from vista.tracks.tracker import Tracker
 from ..background_removal.robust_pca_dialog import RobustPCADialog
 from ..background_removal.temporal_median_widget import TemporalMedianWidget
@@ -27,7 +28,6 @@ from ..trackers.tracklet_tracking_dialog import TrackletTrackingDialog
 from ..treatments import BiasRemovalWidget, NonUniformityCorrectionRemovalWidget
 from .data.data_loader import DataLoaderThread
 from .data.data_manager import DataManagerPanel
-from .imagery_selection_dialog import ImagerySelectionDialog
 from .imagery_viewer import ImageryViewer
 from .playback_controls import PlaybackControls
 
@@ -502,8 +502,30 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_detections_dir", str(Path(file_paths[0]).parent))
 
-            # Store file paths queue for sequential loading
+            # Get currently selected sensor from data manager
+            selected_sensor = self.data_manager.selected_sensor
+
+            # Check if sensor is selected (required for detection association)
+            if not selected_sensor:
+                # Create an "Unknown" sensor if no sensor is selected
+                sensor_name = f"Unknown {Sensor._instance_count + 1}"
+                selected_sensor = Sensor(name=sensor_name)
+                self.viewer.sensors.append(selected_sensor)
+                self.data_manager.refresh()
+
+                # Show info about auto-created sensor
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("Detection Loading Information")
+                msg.setText(f"Detections will be associated with '{sensor_name}' sensor.")
+                msg.setInformativeText("No sensor was selected, so an 'Unknown' sensor has been created automatically.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                if msg.exec() != QMessageBox.StandardButton.Ok:
+                    return
+
+            # Store file paths queue and sensor for sequential loading
             self.detections_file_queue = list(file_paths)
+            self.detections_selected_sensor = selected_sensor
             self.detections_loaded_count = 0
             self.detections_total_count = len(file_paths)
 
@@ -525,7 +547,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.detections_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, 'detections', 'csv')
+        self.loader_thread = DataLoaderThread(file_path, 'detections', 'csv', sensor=self.detections_selected_sensor)
         self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
@@ -590,14 +612,16 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_tracks_dir", str(Path(file_paths[0]).parent))
 
-            # Check if any tracks need imagery for conversion (times or geodetic coordinates)
-            selected_imagery = None
-            needs_imagery = False
+            # Get currently selected sensor and imagery from data manager
+            selected_sensor = self.data_manager.selected_sensor
+            selected_imagery = self.viewer.imagery
+
+            # Check if any tracks need sensor or imagery for conversion
             overall_needs_time_mapping = False
             overall_needs_geodetic_mapping = False
 
             try:
-                # Check all files to see if any need imagery
+                # Check all files to see if any need sensor/imagery
                 for file_path in file_paths:
                     # Quick peek at CSV to check columns
                     df_peek = pd.read_csv(file_path, nrows=1)
@@ -609,41 +633,61 @@ class VistaMainWindow(QMainWindow):
                     needs_time_mapping = has_times and not has_frames
                     needs_geodetic_mapping = has_geodetic and not has_rows_cols
 
-                    if needs_time_mapping or needs_geodetic_mapping:
-                        needs_imagery = True
-                        overall_needs_time_mapping = overall_needs_time_mapping or needs_time_mapping
-                        overall_needs_geodetic_mapping = overall_needs_geodetic_mapping or needs_geodetic_mapping
+                    overall_needs_time_mapping = overall_needs_time_mapping or needs_time_mapping
+                    overall_needs_geodetic_mapping = overall_needs_geodetic_mapping or needs_geodetic_mapping
 
-                if needs_imagery:
-                    # Need imagery for time-to-frame and/or geodetic-to-pixel mapping
-                    if len(self.viewer.imageries) == 0:
-                        # Build error message based on what's needed
-                        reasons = []
-                        if overall_needs_time_mapping:
-                            reasons.append("times but no frame numbers")
-                        if overall_needs_geodetic_mapping:
-                            reasons.append("geodetic coordinates (Lat/Lon/Alt) but no pixel coordinates (Row/Column)")
+                # Build message explaining what will be used for mapping
+                mapping_info = []
+                missing_requirements = []
 
-                        reason_text = " and ".join(reasons)
-                        QMessageBox.critical(
-                            self,
-                            "No Imagery Loaded",
-                            f"One or more track files contain {reason_text}.\n\n"
-                            "Please load imagery before loading these tracks.",
-                            QMessageBox.StandardButton.Ok
-                        )
+                if overall_needs_time_mapping:
+                    if selected_imagery:
+                        mapping_info.append(f"• Time mapping: {selected_imagery.name}")
+                    else:
+                        missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
+
+                if overall_needs_geodetic_mapping:
+                    if selected_sensor and hasattr(selected_sensor, 'can_geolocate') and selected_sensor.can_geolocate():
+                        mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
+                    else:
+                        if not selected_sensor:
+                            missing_requirements.append("• Sensor must be loaded and selected for geodetic-to-pixel mapping")
+                        else:
+                            missing_requirements.append(f"• Selected sensor '{selected_sensor.name}' cannot perform geolocation")
+
+                # Check if sensor is selected (always required for track association)
+                if not selected_sensor:
+                    if not overall_needs_geodetic_mapping:
+                        # Create an "Unknown" sensor if no sensor is selected
+                        sensor_name = f"Unknown {Sensor._instance_count + 1}"
+                        selected_sensor = Sensor(name=sensor_name)
+                        self.viewer.sensors.append(selected_sensor)
+                        self.data_manager.refresh()
+                        mapping_info.insert(0, f"• Sensor association: {sensor_name} (created automatically)")
+                else:
+                    mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
+
+                # Show error if missing requirements
+                if missing_requirements:
+                    QMessageBox.critical(
+                        self,
+                        "Cannot Load Tracks",
+                        "Missing required data for track loading:\n\n" + "\n".join(missing_requirements),
+                        QMessageBox.StandardButton.Ok
+                    )
+                    return
+
+                # Show info dialog if mapping is needed
+                if overall_needs_time_mapping or overall_needs_geodetic_mapping:
+                    msg = QMessageBox(self)
+                    msg.setIcon(QMessageBox.Icon.Information)
+                    msg.setWindowTitle("Track Loading Information")
+                    msg.setText("The following will be used for track data mapping:")
+                    msg.setInformativeText("\n".join(mapping_info))
+                    msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                    if msg.exec() != QMessageBox.StandardButton.Ok:
                         return
 
-                    # Show imagery selection dialog (once for all files)
-                    dialog = ImagerySelectionDialog(self.viewer.imageries, self,
-                                                   needs_time_mapping=overall_needs_time_mapping,
-                                                   needs_geodetic_mapping=overall_needs_geodetic_mapping)
-                    if dialog.exec() == QDialog.DialogCode.Accepted:
-                        selected_imagery = dialog.get_selected_imagery()
-                        if selected_imagery is None:
-                            return  # User cancelled
-                    else:
-                        return  # User cancelled
             except Exception as e:
                 QMessageBox.warning(
                     self,
@@ -653,8 +697,9 @@ class VistaMainWindow(QMainWindow):
                 )
                 return
 
-            # Store file paths queue and imagery for sequential loading
+            # Store file paths queue, sensor, and imagery for sequential loading
             self.tracks_file_queue = list(file_paths)
+            self.tracks_selected_sensor = selected_sensor
             self.tracks_selected_imagery = selected_imagery
             self.tracks_loaded_count = 0
             self.tracks_total_count = len(file_paths)
@@ -677,7 +722,11 @@ class VistaMainWindow(QMainWindow):
         file_path = self.tracks_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, 'tracks', 'csv', imagery=self.tracks_selected_imagery)
+        self.loader_thread = DataLoaderThread(
+            file_path, 'tracks', 'csv',
+            sensor=self.tracks_selected_sensor,
+            imagery=self.tracks_selected_imagery
+        )
         self.loader_thread.trackers_loaded.connect(self.on_trackers_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
