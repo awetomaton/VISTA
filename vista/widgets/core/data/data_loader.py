@@ -23,6 +23,7 @@ class DataLoaderThread(QThread):
     tracker_loaded = pyqtSignal(object)  # Emits Tracker object
     trackers_loaded = pyqtSignal(list)  # Emits list of Tracker objects
     error_occurred = pyqtSignal(str)  # Emits error message
+    warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total)
 
     def __init__(self, file_path, data_type, file_format='hdf5', sensor=None, imagery=None):
@@ -75,6 +76,14 @@ class DataLoaderThread(QThread):
 
     def _load_imagery_v15(self, f: h5py.File):
         """Load imagery from legacy v1.5 HDF5 format"""
+        # Emit deprecation warning to be shown in a dialog
+        self.warning_occurred.emit(
+            "Deprecated File Format",
+            "The v1.5 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
+            "Please re-save your imagery files using the new v1.6 format:\n"
+            "File > Save Imagery (HDF5)"
+        )
+
         images_dataset = f['images']
         frames = f['frames'][:]
 
@@ -202,6 +211,7 @@ class DataLoaderThread(QThread):
         """Load a Sensor or SampledSensor from an HDF5 group"""
         sensor_type = sensor_group.attrs.get('sensor_type', 'Sensor')
         sensor_name = sensor_group.attrs.get('name', 'Unknown Sensor')
+        sensor_uuid = sensor_group.attrs.get('uuid', None)
 
         # Load radiometric calibration data
         bias_images = None
@@ -269,7 +279,7 @@ class DataLoaderThread(QThread):
             if frames is None:
                 frames = np.array([0], dtype=np.int64)
 
-            return SampledSensor(
+            sensor = SampledSensor(
                 name=sensor_name,
                 positions=positions,
                 times=times,
@@ -289,7 +299,7 @@ class DataLoaderThread(QThread):
         else:
             # Base Sensor class
             from vista.sensors.sensor import Sensor
-            return Sensor(
+            sensor = Sensor(
                 name=sensor_name,
                 bias_images=bias_images,
                 bias_image_frames=bias_image_frames,
@@ -299,11 +309,19 @@ class DataLoaderThread(QThread):
                 bad_pixel_mask_frames=bad_pixel_mask_frames,
             )
 
+        # Restore UUID if present in file, otherwise keep auto-generated UUID
+        if sensor_uuid is not None:
+            import uuid
+            sensor.uuid = uuid.UUID(sensor_uuid)
+
+        return sensor
+
     def _load_imagery_from_group(self, img_group: h5py.Group, sensor):
         """Load an Imagery object from an HDF5 group"""
         # Load attributes
         name = img_group.attrs.get('name', 'Unknown')
         description = img_group.attrs.get('description', '')
+        imagery_uuid = img_group.attrs.get('uuid', None)
         row_offset = img_group.attrs.get('row_offset', 0)
         column_offset = img_group.attrs.get('column_offset', 0)
 
@@ -319,7 +337,7 @@ class DataLoaderThread(QThread):
             total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
             times = total_nanoseconds.astype('datetime64[ns]')
 
-        return Imagery(
+        imagery = Imagery(
             name=name,
             images=images,
             frames=frames,
@@ -329,6 +347,13 @@ class DataLoaderThread(QThread):
             times=times,
             description=description,
         )
+
+        # Restore UUID if present in file, otherwise keep auto-generated UUID
+        if imagery_uuid is not None:
+            import uuid
+            imagery.uuid = uuid.UUID(imagery_uuid)
+
+        return imagery
 
     def _load_images_dataset(self, images_dataset: h5py.Dataset) -> np.ndarray:
         """Load images dataset with progress tracking"""

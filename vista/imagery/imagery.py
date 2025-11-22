@@ -224,7 +224,7 @@ class Imagery:
         Parameters
         ----------
         group : h5py.Group
-            HDF5 group to write imagery data to (typically sensors/<sensor_name>/imagery/<imagery_name>/)
+            HDF5 group to write imagery data to (typically sensors/<sensor_uuid>/imagery/<imagery_uuid>/)
 
         Notes
         -----
@@ -282,15 +282,16 @@ def save_imagery_hdf5(
     root/
     ├── [attrs] format_version, created
     └── sensors/
-        ├── <sensor_name>/
-        │   ├── [attrs] name, sensor_type
+        ├── <sensor_uuid>/
+        │   ├── [attrs] name, uuid, sensor_type
         │   ├── position/ (SampledSensor only)
         │   ├── geolocation/ (if can_geolocate)
         │   ├── radiometric/ (if calibration data exists)
         │   └── imagery/
-        │       ├── <imagery_name_1>/
-        │       └── <imagery_name_2>/
-        └── <sensor_name_2>/
+        │       ├── <imagery_uuid_1>/
+        │       │   ├── [attrs] name, uuid, description, ...
+        │       └── <imagery_uuid_2>/
+        └── <sensor_uuid_2>/
             └── ...
     ```
 
@@ -319,18 +320,8 @@ def save_imagery_hdf5(
             # Get sensor from first imagery (all imagery in list should have same sensor)
             sensor = imagery_list[0].sensor
 
-            # Create sensor group with sanitized name
-            sanitized_name = sensor_name.replace('/', '_')  # Sanitize name for HDF5
-            sensor_group_name = sanitized_name
-
-            # Handle potential name collisions
-            if sensor_group_name in sensors_group:
-                counter = 1
-                while f'{sanitized_name}_{counter}' in sensors_group:
-                    counter += 1
-                sensor_group_name = f'{sanitized_name}_{counter}'
-
-            sensor_group = sensors_group.create_group(sensor_group_name)
+            # Create sensor group using UUID (guaranteed unique, no sanitization needed)
+            sensor_group = sensors_group.create_group(str(sensor.uuid))
 
             # Save sensor data
             sensor.to_hdf5(sensor_group)
@@ -339,18 +330,9 @@ def save_imagery_hdf5(
             imagery_group = sensor_group.create_group('imagery')
 
             # Save each imagery dataset
-            for imagery_idx, imagery in enumerate(imagery_list):
-                # Create imagery group with sanitized name
-                imagery_name = imagery.name.replace('/', '_')  # Sanitize name for HDF5
-
-                # Handle potential name collisions
-                if imagery_name in imagery_group:
-                    counter = 1
-                    while f'{imagery_name}_{counter}' in imagery_group:
-                        counter += 1
-                    imagery_name = f'{imagery_name}_{counter}'
-
-                img_group = imagery_group.create_group(imagery_name)
+            for imagery in imagery_list:
+                # Create imagery group using UUID (guaranteed unique, no sanitization needed)
+                img_group = imagery_group.create_group(str(imagery.uuid))
 
                 # Save imagery data
                 imagery.to_hdf5(img_group)

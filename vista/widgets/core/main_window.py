@@ -424,6 +424,7 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread = DataLoaderThread(file_path, 'imagery')
             self.loader_thread.imagery_loaded.connect(self.on_imagery_loaded)
             self.loader_thread.error_occurred.connect(self.on_loading_error)
+            self.loader_thread.warning_occurred.connect(self.on_loading_warning)
             self.loader_thread.progress_updated.connect(self.on_loading_progress)
             self.loader_thread.finished.connect(self.on_loading_finished)
 
@@ -571,6 +572,7 @@ class VistaMainWindow(QMainWindow):
         self.loader_thread = DataLoaderThread(file_path, 'detections', 'csv', sensor=self.detections_selected_sensor)
         self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
         self.loader_thread.finished.connect(self._on_detections_file_loaded)
 
@@ -750,6 +752,7 @@ class VistaMainWindow(QMainWindow):
         )
         self.loader_thread.trackers_loaded.connect(self.on_trackers_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
         self.loader_thread.finished.connect(self._on_tracks_file_loaded)
 
@@ -823,6 +826,16 @@ class VistaMainWindow(QMainWindow):
             self,
             "Error Loading Data",
             f"Failed to load data:\n\n{error_message}",
+            QMessageBox.StandardButton.Ok
+        )
+
+    def on_loading_warning(self, title, message):
+        """Handle warnings from background loading thread"""
+        # Show warning dialog (loading continues, so don't close progress dialog)
+        QMessageBox.warning(
+            self,
+            title,
+            message,
             QMessageBox.StandardButton.Ok
         )
 

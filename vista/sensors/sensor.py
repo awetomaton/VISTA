@@ -5,9 +5,10 @@ The Sensor class provides an base interface for sensor modeling.
 
 import h5py
 import pathlib
+import uuid
 from astropy.coordinates import EarthLocation
 from astropy import units
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Tuple, Union
 import numpy as np
 from numpy.typing import NDArray
@@ -63,6 +64,7 @@ class Sensor:
     uniformity_gain_image_frames: Optional[NDArray] = None
     bad_pixel_masks: Optional[NDArray] = None
     bad_pixel_mask_frames: Optional[NDArray] = None
+    uuid: str = field(init=None, default=None)
 
     # Class variable to track total number of sensor instances created
     _instance_count: int = 0
@@ -71,6 +73,9 @@ class Sensor:
         """Increment the instance counter when a new Sensor is created."""
         # Increment the class-level counter
         Sensor._instance_count += 1
+        # Generate UUID if not set
+        if self.uuid is None:
+            self.uuid = uuid.uuid4()
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
@@ -215,7 +220,7 @@ class Sensor:
         Parameters
         ----------
         group : h5py.Group
-            HDF5 group to write sensor data to (typically sensors/<sensor_name>/)
+            HDF5 group to write sensor data to (typically sensors/<sensor_uuid>/)
 
         Notes
         -----
@@ -226,9 +231,10 @@ class Sensor:
 
         Subclasses should call super().to_hdf5(group) and then add their own data.
         """
-        # Set sensor type attribute
+        # Set sensor type and identification attributes
         group.attrs['sensor_type'] = 'Sensor'
         group.attrs['name'] = self.name
+        group.attrs['uuid'] = str(self.uuid)
 
         # Create radiometric calibration subgroup
         if (self.bias_images is not None or
