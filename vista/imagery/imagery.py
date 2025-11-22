@@ -142,6 +142,9 @@ class Imagery:
     def __len__(self):
         return self.images.shape[0]
     
+    def __eq__(self, other):
+        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
+    
     def __str__(self):
         return self.__repr__()
 

@@ -428,12 +428,12 @@ class VistaMainWindow(QMainWindow):
     def on_imagery_loaded(self, imagery, sensor):
         """Handle imagery loaded in background thread"""
         # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries]
+        existing_names = [img.name for img in self.viewer.imageries if img.sensor is sensor]
         if imagery.name in existing_names:
             QMessageBox.critical(
                 self,
                 "Duplicate Imagery Name",
-                f"An imagery with the name '{imagery.name}' is already loaded.\n\n"
+                f"Imagery with the name '{imagery.name}' is already loaded.\n\n"
                 f"Please rename one of the imagery files or close the existing imagery before loading.",
                 QMessageBox.StandardButton.Ok
             )
@@ -874,14 +874,14 @@ class VistaMainWindow(QMainWindow):
     def on_multiple_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that produce multiple imagery"""
         # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries]
+        existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
         
         for imagery in processed_imagery:
             if imagery.name in existing_names:
                 QMessageBox.critical(
                     self,
                     "Duplicate Imagery Name",
-                    f"An imagery with the name '{processed_imagery.name}' already exists.\n\n"
+                    f"Imagery with the name '{processed_imagery.name}' already exists.\n\n"
                     f"Please rename or remove the existing imagery before processing.",
                     QMessageBox.StandardButton.Ok
                 )
@@ -905,12 +905,12 @@ class VistaMainWindow(QMainWindow):
     def on_single_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that create single imagery"""
         # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries]
+        existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
         if processed_imagery.name in existing_names:
             QMessageBox.critical(
                 self,
                 "Duplicate Imagery Name",
-                f"An imagery with the name '{processed_imagery.name}' already exists.\n\n"
+                f"Imagery with the name '{processed_imagery.name}' already exists.\n\n"
                 f"Please rename or remove the existing imagery before processing.",
                 QMessageBox.StandardButton.Ok
             )

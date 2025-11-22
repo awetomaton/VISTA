@@ -62,6 +62,8 @@ class DataManagerPanel(QWidget):
     def on_sensor_selected(self, sensor):
         """Handle sensor selection change"""
         self.selected_sensor = sensor
+        # Filter the viewer to show only data for selected sensor
+        self.viewer.filter_by_sensor(sensor)
         # Refresh other panels to show only data for selected sensor
         self.imagery_panel.refresh_imagery_table()
         self.tracks_panel.refresh_tracks_table()

@@ -55,6 +55,7 @@ class ImageryViewer(QWidget):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
         self.sensors = []  # List of Sensor objects
+        self.selected_sensor = None  # Currently selected sensor for filtering display
         self.imageries = []  # List of Imagery objects
         self.imagery = None  # Currently selected imagery for display
         self.detectors = []  # List of Detector objects
@@ -366,6 +367,11 @@ class ImageryViewer(QWidget):
 
             scatter = self.detector_plot_items[detector_id]
 
+            # Filter by sensor if one is selected
+            if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
+                scatter.setData(x=[], y=[])  # Hide detector from different sensor
+                continue
+
             # Update visibility
             if not detector.visible:
                 scatter.setData(x=[], y=[])  # Hide by setting empty data
@@ -401,6 +407,12 @@ class ImageryViewer(QWidget):
 
                 path = self.track_path_items[track_id]
                 marker = self.track_marker_items[track_id]
+
+                # Filter by sensor if one is selected
+                if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                    path.setData(x=[], y=[])  # Hide track from different sensor
+                    marker.setData(x=[], y=[])
+                    continue
 
                 # Update visibility
                 if not track.visible:
@@ -517,6 +529,30 @@ class ImageryViewer(QWidget):
             track_ids: Set of track IDs (id(track)) to highlight
         """
         self.selected_track_ids = track_ids
+        self.update_overlays()
+
+    def filter_by_sensor(self, sensor):
+        """
+        Filter displayed imagery, tracks, and detections by sensor.
+
+        Args:
+            sensor: Sensor object to filter by, or None to show all
+        """
+        self.selected_sensor = sensor
+
+        if sensor is not None:
+            # Check if current imagery is from the selected sensor
+            if self.imagery is None or self.imagery.sensor != sensor:
+                # Find imagery from this sensor
+                sensor_imageries = [img for img in self.imageries if img.sensor == sensor]
+                if sensor_imageries:
+                    # Select the first imagery from this sensor
+                    self.select_imagery(sensor_imageries[0])
+                else:
+                    # No imagery from this sensor, clear display
+                    self.imagery = None
+
+        # Update display to show only items from selected sensor
         self.update_overlays()
 
     def set_track_selection_mode(self, enabled):

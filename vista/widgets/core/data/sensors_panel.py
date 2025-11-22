@@ -101,6 +101,8 @@ class SensorsPanel(QWidget):
             # Default to first sensor if none selected
             self.sensors_table.selectRow(0)
             self.selected_sensor = self.viewer.sensors[0]
+            # Explicitly emit signal to ensure viewer is filtered
+            self.sensor_selected.emit(self.selected_sensor)
 
     def on_sensor_selection_changed(self):
         """Handle sensor selection changes from table"""

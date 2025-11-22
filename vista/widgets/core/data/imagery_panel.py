@@ -58,10 +58,8 @@ class ImageryPanel(QWidget):
         self.imagery_table.blockSignals(True)
         self.imagery_table.setRowCount(0)
 
-        # Get selected sensor from parent DataManagerPanel
-        selected_sensor = None
-        if hasattr(self.parent(), 'selected_sensor'):
-            selected_sensor = self.parent().selected_sensor
+        # Get selected sensor from viewer
+        selected_sensor = self.viewer.selected_sensor
 
         # Filter imageries by selected sensor
         filtered_imageries = []

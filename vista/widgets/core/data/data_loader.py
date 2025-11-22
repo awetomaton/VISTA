@@ -158,7 +158,7 @@ class DataLoaderThread(QThread):
         sensor_times = np.array([times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
 
         sensor = SampledSensor(
-            name="Unknown",
+            name=f"Unknown {SampledSensor._instance_count+1}",
             positions=sensor_positions,
             times=sensor_times,
             frames=frames,

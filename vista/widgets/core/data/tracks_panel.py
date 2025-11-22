@@ -245,10 +245,8 @@ class TracksPanel(QWidget):
         # Update header labels with filter/sort icons
         self._update_track_header_icons()
 
-        # Get selected sensor from parent DataManagerPanel
-        selected_sensor = None
-        if hasattr(self.parent(), 'selected_sensor'):
-            selected_sensor = self.parent().selected_sensor
+        # Get selected sensor from viewer
+        selected_sensor = self.viewer.selected_sensor
 
         # Build list of all tracks with their tracker reference, filtering by sensor
         all_tracks = []
