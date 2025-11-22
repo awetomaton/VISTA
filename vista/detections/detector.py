@@ -4,6 +4,7 @@ import pathlib
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
+from typing import Optional
 from vista.sensors.sensor import Sensor
 
 
@@ -13,8 +14,8 @@ class Detector:
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
-    sensor: Sensor
     description: str = ""
+    sensor: Optional[Sensor] = None
     # Styling attributes
     color: str = 'r'  # Red by default
     marker: str = 'o'  # Circle by default
@@ -36,9 +37,6 @@ class Detector:
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, name: str = None, sensor=None):
-        if sensor is None:
-            raise ValueError("Detector requires a sensor")
-
         if name is None:
             name = df["Detector"][0]
         kwargs = {}

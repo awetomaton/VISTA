@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
+from typing import Optional
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
 from vista.sensors.sensor import Sensor
@@ -14,8 +15,7 @@ class Track:
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
-    sensor: Sensor
-    _length: int = field(init=False, default=None)
+    sensor: Optional[Sensor] = None
     times: NDArray[np.datetime64] = None  # Optional times for each track point
     # Styling attributes
     color: str = 'g'  # Green by default
@@ -27,6 +27,8 @@ class Track:
     complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
     show_line: bool = True  # If True, show line connecting track points
     line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
+    # Private attributes
+    _length: int = field(init=False, default=None)
     
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
@@ -61,7 +63,7 @@ class Track:
             df: DataFrame with track data
             name: Track name (if None, taken from df["Track"])
             imagery: Optional Imagery object for time-to-frame and/or geodetic-to-pixel mapping
-            sensor: Sensor object for this track (required)
+            sensor: Sensor object for this track
 
         Returns:
             Track object
@@ -69,8 +71,6 @@ class Track:
         Raises:
             ValueError: If required columns are missing, sensor is missing, or imagery is required but not provided
         """
-        if sensor is None:
-            raise ValueError("Track requires a sensor")
 
         if name is None:
             name = df["Track"][0]
