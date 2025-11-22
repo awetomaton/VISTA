@@ -7,7 +7,6 @@ from PyQt6.QtCore import QThread, pyqtSignal, QSettings
 import numpy as np
 import traceback
 
-from vista.imagery.imagery import Imagery
 from vista.algorithms.enhancement.coadd import Coaddition
 
 

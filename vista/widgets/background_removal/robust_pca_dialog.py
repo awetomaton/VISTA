@@ -6,10 +6,8 @@ from PyQt6.QtWidgets import (
     QSpinBox, QCheckBox, QComboBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
-import numpy as np
 import traceback
 
-from vista.imagery.imagery import Imagery
 from vista.algorithms.background_removal.robust_pca import run_robust_pca
 
 

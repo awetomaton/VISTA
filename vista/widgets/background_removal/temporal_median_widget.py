@@ -48,49 +48,16 @@ class TemporalMedianProcessingThread(QThread):
     def run(self):
         """Execute the temporal median algorithm in background thread"""
         try:
-            # Apply frame range first
-            frame_images = self.imagery.images[self.start_frame:self.end_frame]
-            frame_frames = self.imagery.frames[self.start_frame:self.end_frame]
-            frame_times = self.imagery.times[self.start_frame:self.end_frame] if self.imagery.times is not None else None
-
-            # Subset polynomial coefficients if they exist
-            poly_row_col_to_lat_subset = self.imagery.poly_row_col_to_lat[self.start_frame:self.end_frame] if self.imagery.poly_row_col_to_lat is not None else None
-            poly_row_col_to_lon_subset = self.imagery.poly_row_col_to_lon[self.start_frame:self.end_frame] if self.imagery.poly_row_col_to_lon is not None else None
-            poly_lat_lon_to_row_subset = self.imagery.poly_lat_lon_to_row[self.start_frame:self.end_frame] if self.imagery.poly_lat_lon_to_row is not None else None
-            poly_lat_lon_to_col_subset = self.imagery.poly_lat_lon_to_col[self.start_frame:self.end_frame] if self.imagery.poly_lat_lon_to_col is not None else None
-
             # Determine the region to process
             if self.aoi:
-                # Extract AOI bounds
-                row_start = int(self.aoi.y) - self.imagery.row_offset
-                row_end = int(self.aoi.y + self.aoi.height) - self.imagery.row_offset
-                col_start = int(self.aoi.x) - self.imagery.column_offset
-                col_end = int(self.aoi.x + self.aoi.width) - self.imagery.column_offset
-
-                # Crop imagery to AOI
-                cropped_images = frame_images[:, row_start:row_end, col_start:col_end]
-
                 # Create temporary imagery object for the cropped region
-                temp_imagery = Imagery(
-                    name=self.imagery.name,
-                    images=cropped_images,
-                    frames=frame_frames,
-                    times=frame_times
-                )
-
-                # Store offsets for later use
-                row_offset = self.imagery.row_offset + row_start
-                column_offset = self.imagery.column_offset + col_start
+                temp_imagery = self.imagery.get_aoi(self.aoi)
             else:
                 # Process frame range of imagery
-                temp_imagery = Imagery(
-                    name=self.imagery.name,
-                    images=frame_images,
-                    frames=frame_frames,
-                    times=frame_times
-                )
-                row_offset = self.imagery.row_offset
-                column_offset = self.imagery.column_offset
+                temp_imagery = self.imagery
+
+            # Apply frame range
+            temp_imagery = temp_imagery[self.start_frame:self.end_frame]
 
             # Create the algorithm instance
             algorithm = TemporalMedian(
@@ -123,20 +90,10 @@ class TemporalMedianProcessingThread(QThread):
             if self.aoi:
                 new_name += f" (AOI: {self.aoi.name})"
 
-            processed_imagery = Imagery(
-                name=new_name,
-                images=processed_images,
-                frames=temp_imagery.frames.copy(),
-                row_offset=row_offset,
-                column_offset=column_offset,
-                times=temp_imagery.times.copy() if temp_imagery.times is not None else None,
-                description=f"Processed with {algorithm.name} (background={self.background}, offset={self.offset})",
-                poly_row_col_to_lat=poly_row_col_to_lat_subset.copy() if poly_row_col_to_lat_subset is not None else None,
-                poly_row_col_to_lon=poly_row_col_to_lon_subset.copy() if poly_row_col_to_lon_subset is not None else None,
-                poly_lat_lon_to_row=poly_lat_lon_to_row_subset.copy() if poly_lat_lon_to_row_subset is not None else None,
-                poly_lat_lon_to_col=poly_lat_lon_to_col_subset.copy() if poly_lat_lon_to_col_subset is not None else None
-            )
-
+            processed_imagery = temp_imagery.copy()
+            processed_imagery.images = processed_images
+            processed_imagery.name = new_name
+            
             # Pre-compute histograms for performance
             for i in range(len(processed_imagery.images)):
                 if self._cancelled:

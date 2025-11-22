@@ -3,13 +3,11 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QDoubleSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
+from PyQt6.QtCore import QThread, pyqtSignal, QSettings
 import numpy as np
 import traceback
 
-from vista.imagery.imagery import Imagery
 from vista.algorithms.detectors.threshold import SimpleThreshold
-from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 
 
@@ -54,43 +52,16 @@ class SimpleThresholdProcessingThread(QThread):
     def run(self):
         """Execute the simple threshold algorithm in background thread"""
         try:
-            # Apply frame range first
-            frame_images = self.imagery.images[self.start_frame:self.end_frame]
-            frame_frames = self.imagery.frames[self.start_frame:self.end_frame]
-            frame_times = self.imagery.times[self.start_frame:self.end_frame] if self.imagery.times is not None else None
-
             # Determine the region to process
             if self.aoi:
-                # Extract AOI bounds
-                row_start = int(self.aoi.y) - self.imagery.row_offset
-                row_end = int(self.aoi.y + self.aoi.height) - self.imagery.row_offset
-                col_start = int(self.aoi.x) - self.imagery.column_offset
-                col_end = int(self.aoi.x + self.aoi.width) - self.imagery.column_offset
-
-                # Crop imagery to AOI
-                cropped_images = frame_images[:, row_start:row_end, col_start:col_end]
-
                 # Create temporary imagery object for the cropped region
-                temp_imagery = Imagery(
-                    name=self.imagery.name,
-                    images=cropped_images,
-                    frames=frame_frames,
-                    times=frame_times
-                )
-
-                # Store offsets for later use
-                row_offset = self.imagery.row_offset + row_start
-                column_offset = self.imagery.column_offset + col_start
+                temp_imagery = self.imagery.get_aoi(self.aoi)
             else:
                 # Process frame range of imagery
-                temp_imagery = Imagery(
-                    name=self.imagery.name,
-                    images=frame_images,
-                    frames=frame_frames,
-                    times=frame_times
-                )
-                row_offset = self.imagery.row_offset
-                column_offset = self.imagery.column_offset
+                temp_imagery = self.imagery
+
+            # Apply frame range
+            temp_imagery = temp_imagery[self.start_frame:self.end_frame]
 
             # Create the algorithm instance
             algorithm = SimpleThreshold(
@@ -145,6 +116,7 @@ class SimpleThresholdProcessingThread(QThread):
                 frames=all_frames,
                 rows=all_rows,
                 columns=all_columns,
+                sensor=self.imagery.sensor,
                 color='r',
                 marker='o',
                 marker_size=12,

@@ -447,12 +447,14 @@ class VistaMainWindow(QMainWindow):
                 existing_sensor = s
                 break
 
+        is_new_sensor = existing_sensor is None
         if existing_sensor is not None:
             # Reuse existing sensor
             imagery.sensor = existing_sensor
         else:
             # Add new sensor to viewer
             self.viewer.sensors.append(sensor)
+            imagery.sensor = sensor
 
         # Add imagery to viewer (will be selected if it's the first one)
         self.viewer.add_imagery(imagery)
@@ -460,8 +462,15 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager to show the new imagery (this also handles sensor selection)
         self.data_manager.refresh()
 
-        # If there's a selected sensor, filter by it. Otherwise select this imagery for viewing
-        if self.viewer.selected_sensor is not None:
+        # If this is a new sensor, automatically select it in the sensors table
+        if is_new_sensor:
+            # Find the sensor's row in the sensors table and select it
+            # This will trigger the sensor_selected signal and update everything properly
+            for row, s in enumerate(self.viewer.sensors):
+                if s == sensor:
+                    self.data_manager.sensors_panel.sensors_table.selectRow(row)
+                    break
+        elif self.viewer.selected_sensor is not None:
             # Filter will handle selecting appropriate imagery for the selected sensor
             self.viewer.filter_by_sensor(self.viewer.selected_sensor)
         else:
