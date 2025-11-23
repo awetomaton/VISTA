@@ -5,7 +5,7 @@ import pathlib
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
-    QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
+    QApplication, QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
     QDoubleSpinBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
     QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton, QScrollArea,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
@@ -1427,12 +1427,31 @@ class TracksPanel(QWidget):
 
     def on_track_selected_in_viewer(self, track):
         """Handle track selection from viewer click"""
+        # Check if Ctrl (Windows/Linux) or Cmd (Mac) is held down
+        modifiers = QApplication.keyboardModifiers()
+        ctrl_or_cmd_held = (modifiers & Qt.KeyboardModifier.ControlModifier) or (modifiers & Qt.KeyboardModifier.MetaModifier)
+
         # Find the row in the tracks table that matches this track
         for row in range(self.tracks_table.rowCount()):
             track_name_item = self.tracks_table.item(row, 2)
             if track_name_item and track_name_item.text() == track.name:
-                # Select this row
-                self.tracks_table.selectRow(row)
+                if ctrl_or_cmd_held:
+                    # Add to selection (toggle if already selected)
+                    if self.tracks_table.item(row, 0).isSelected():
+                        # Deselect this row
+                        for col in range(self.tracks_table.columnCount()):
+                            item = self.tracks_table.item(row, col)
+                            if item:
+                                item.setSelected(False)
+                    else:
+                        # Add this row to selection
+                        for col in range(self.tracks_table.columnCount()):
+                            item = self.tracks_table.item(row, col)
+                            if item:
+                                item.setSelected(True)
+                else:
+                    # Replace selection with this row
+                    self.tracks_table.selectRow(row)
                 break
 
     def on_edit_track_clicked(self, checked):

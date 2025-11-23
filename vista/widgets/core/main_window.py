@@ -292,7 +292,7 @@ class VistaMainWindow(QMainWindow):
             self.select_track_action = QAction(self.icons.select_track_dark, "Select Track", self)
         self.select_track_action.setCheckable(True)
         self.select_track_action.setChecked(False)
-        self.select_track_action.setToolTip("Click on a track in the viewer to select it in the table")
+        self.select_track_action.setToolTip("Click on a track in the viewer to select it in the table.\nHold Ctrl (Windows/Linux) or Cmd (Mac) to add to selection.")
         self.select_track_action.toggled.connect(self.on_select_track_toggled)
         toolbar.addAction(self.select_track_action)
 
@@ -395,7 +395,7 @@ class VistaMainWindow(QMainWindow):
         if checked:
             # Enable track selection mode in viewer
             self.viewer.set_track_selection_mode(True)
-            self.statusBar().showMessage("Track selection mode: Click on a track in the viewer to select it in the table", 0)
+            self.statusBar().showMessage("Track selection mode: Click on a track to select it. Hold Ctrl/Cmd to add to selection.", 0)
         else:
             # Disable track selection mode
             self.viewer.set_track_selection_mode(False)
