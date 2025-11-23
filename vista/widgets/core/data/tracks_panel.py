@@ -401,8 +401,20 @@ class TracksPanel(QWidget):
                 elif col_idx == 3:
                     # For labels, check if any filter labels intersect with track labels
                     if filter_type == 'set':
-                        # Check if any of the selected filter labels are in the track's labels
-                        if not track.labels.intersection(filter_values):
+                        # Check if "(No Labels)" is in filter and track has no labels
+                        has_no_labels = len(track.labels) == 0
+                        no_labels_selected = "(No Labels)" in filter_values
+
+                        # Remove "(No Labels)" from filter values for intersection check
+                        label_filter_values = filter_values - {"(No Labels)"}
+
+                        # Include track if:
+                        # 1. Track has no labels AND "(No Labels)" is selected, OR
+                        # 2. Track has labels that intersect with filter labels
+                        matches_filter = (has_no_labels and no_labels_selected) or \
+                                       (not has_no_labels and len(label_filter_values) > 0 and track.labels.intersection(label_filter_values))
+
+                        if not matches_filter:
                             include = False
                             break
                     continue  # Skip normal filter processing for labels
@@ -766,6 +778,7 @@ class TracksPanel(QWidget):
         """Show set-based filter dialog with checkboxes"""
         # Get all unique values for this column
         unique_values = set()
+        has_blank_labels = False  # Track if any tracks have no labels
         for tracker in self.viewer.trackers:
             for track in tracker.tracks:
                 if column == 0:
@@ -774,11 +787,18 @@ class TracksPanel(QWidget):
                     unique_values.add(tracker.name)
                 elif column == 3:
                     # For labels, add all individual labels from all tracks
-                    unique_values.update(track.labels)
+                    if len(track.labels) == 0:
+                        has_blank_labels = True
+                    else:
+                        unique_values.update(track.labels)
                 elif column == 10:
                     unique_values.add("True" if track.complete else "False")
                 elif column == 11:
                     unique_values.add("True" if track.show_line else "False")
+
+        # Add special "(No Labels)" option for labels column if any tracks have no labels
+        if column == 3 and has_blank_labels:
+            unique_values.add("(No Labels)")
 
         # Create dialog with checkboxes for each unique value
         dialog = QDialog(self)
