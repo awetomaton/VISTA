@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineStyleDelegate, MarkerDelegate
+from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 
 
 class TracksPanel(QWidget):
@@ -1483,7 +1484,7 @@ class TracksPanel(QWidget):
 
     def manage_labels(self):
         """Open the labels manager dialog"""
-        dialog = LabelsManagerDialog(self)
+        dialog = LabelsManagerDialog(self, viewer=self.viewer)
         dialog.exec()
         # After closing the dialog, refresh the table to show any label changes
         self.refresh_tracks_table()

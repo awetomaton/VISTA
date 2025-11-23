@@ -16,7 +16,7 @@ from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.tracks.tracker import Tracker
-from vista.widgets.core.data.labels import LabelsManagerDialog
+from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from ..background_removal.robust_pca_dialog import RobustPCADialog
 from ..background_removal.temporal_median_widget import TemporalMedianWidget
 from ..detectors.cfar_widget import CFARWidget
@@ -908,7 +908,7 @@ class VistaMainWindow(QMainWindow):
 
     def manage_labels(self):
         """Open the labels manager dialog"""
-        dialog = LabelsManagerDialog(self)
+        dialog = LabelsManagerDialog(self, viewer=self.viewer)
         dialog.exec()
         # Refresh the data manager to show any label changes
         self.data_manager.tracks_panel.refresh_tracks_table()
