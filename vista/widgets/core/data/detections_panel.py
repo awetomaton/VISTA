@@ -24,6 +24,8 @@ class DetectionsPanel(QWidget):
         super().__init__()
         self.settings = QSettings("VISTA", "DataManager")
         self.viewer = viewer
+        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.waiting_for_track_selection = False  # Flag when waiting for user to select track
         self.init_ui()
 
     def init_ui(self):
@@ -66,6 +68,31 @@ class DetectionsPanel(QWidget):
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
+
+        # Create track from selected detections section
+        track_from_detections_layout = QHBoxLayout()
+        self.selected_detections_label = QLabel("Selected: 0 detections")
+        track_from_detections_layout.addWidget(self.selected_detections_label)
+
+        self.create_track_from_detections_btn = QPushButton("Create Track from Selected Detections")
+        self.create_track_from_detections_btn.clicked.connect(self.create_track_from_selected_detections)
+        self.create_track_from_detections_btn.setEnabled(False)
+        self.create_track_from_detections_btn.setToolTip("Create a track from the selected detections")
+        track_from_detections_layout.addWidget(self.create_track_from_detections_btn)
+
+        self.add_to_existing_track_btn = QPushButton("Add to Existing Track")
+        self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
+        self.add_to_existing_track_btn.setEnabled(False)
+        self.add_to_existing_track_btn.setToolTip("Add selected detections to an existing track (click track in viewer after)")
+        track_from_detections_layout.addWidget(self.add_to_existing_track_btn)
+
+        self.clear_detection_selection_btn = QPushButton("Clear Selection")
+        self.clear_detection_selection_btn.clicked.connect(self.clear_detection_selection)
+        self.clear_detection_selection_btn.setEnabled(False)
+        track_from_detections_layout.addWidget(self.clear_detection_selection_btn)
+
+        track_from_detections_layout.addStretch()
+        layout.addLayout(track_from_detections_layout)
 
         # Detections table
         self.detections_table = QTableWidget()
@@ -577,3 +604,250 @@ class DetectionsPanel(QWidget):
                 f"Copied {len(detectors_to_copy)} detector(s) to sensor '{target_sensor.name}'.",
                 QMessageBox.StandardButton.Ok
             )
+
+    def on_detections_selected_in_viewer(self, detections):
+        """Handle detection selection from viewer"""
+        if not self.waiting_for_track_selection:
+            self.selected_detections = detections
+            self.selected_detections_label.setText(f"Selected: {len(detections)} detection(s)")
+            self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)
+            self.add_to_existing_track_btn.setEnabled(len(detections) >= 1)
+            self.clear_detection_selection_btn.setEnabled(len(detections) > 0)
+
+    def clear_detection_selection(self):
+        """Clear detection selection"""
+        self.selected_detections = []
+        self.viewer.selected_detections = []
+        self.selected_detections_label.setText("Selected: 0 detections")
+        self.create_track_from_detections_btn.setEnabled(False)
+        self.add_to_existing_track_btn.setEnabled(False)
+        self.clear_detection_selection_btn.setEnabled(False)
+        # Reset waiting state if active
+        if self.waiting_for_track_selection:
+            self.cancel_add_to_existing_track()
+
+    def create_track_from_selected_detections(self):
+        """Create a track from selected detections"""
+        if len(self.selected_detections) < 2:
+            QMessageBox.warning(self, "Insufficient Detections", "Select at least 2 detections to create a track.")
+            return
+
+        # Extract frames, rows, columns from selected detections
+        frames_list = []
+        rows_list = []
+        columns_list = []
+        sensor = None
+
+        for detector, frame, index in self.selected_detections:
+            if sensor is None:
+                sensor = detector.sensor
+            elif sensor != detector.sensor:
+                QMessageBox.warning(
+                    self, "Mixed Sensors",
+                    "Selected detections belong to different sensors. Please select detections from the same sensor."
+                )
+                return
+
+            frames_list.append(frame)
+            rows_list.append(detector.rows[index])
+            columns_list.append(detector.columns[index])
+
+        # Sort by frame
+        sorted_indices = np.argsort(frames_list)
+        frames = np.array(frames_list)[sorted_indices].astype(np.int_)
+        rows = np.array(rows_list)[sorted_indices]
+        columns = np.array(columns_list)[sorted_indices]
+
+        # Create track
+        from vista.tracks.track import Track
+        from vista.tracks.tracker import Tracker
+
+        track_name = f"Track from Detections {len([t for tracker in self.viewer.trackers for t in tracker.tracks]) + 1}"
+        track = Track(
+            name=track_name,
+            frames=frames,
+            rows=rows,
+            columns=columns,
+            sensor=sensor
+        )
+
+        # Create or find a tracker for manually created tracks
+        tracker_name = "Manual Tracks from Detections"
+        manual_tracker = None
+        for tracker in self.viewer.trackers:
+            if tracker.name == tracker_name:
+                manual_tracker = tracker
+                break
+
+        if manual_tracker is None:
+            manual_tracker = Tracker(name=tracker_name, tracks=[])
+            self.viewer.add_tracker(manual_tracker)
+
+        manual_tracker.tracks.append(track)
+
+        # Clear selection
+        self.clear_detection_selection()
+
+        # Refresh displays
+        self.viewer.update_overlays()
+
+        # Explicitly refresh the tracks table to show the new track
+        # Get the tracks panel from the parent data manager
+        parent_widget = self.parent()
+        while parent_widget is not None:
+            if hasattr(parent_widget, 'tracks_panel'):
+                parent_widget.tracks_panel.refresh_tracks_table()
+                break
+            parent_widget = parent_widget.parent()
+
+        self.data_changed.emit()
+
+        # Exit detection selection mode
+        self._exit_detection_selection_mode()
+
+        QMessageBox.information(
+            self, "Track Created",
+            f"Track '{track_name}' created with {len(frames)} points across {len(np.unique(frames))} frames."
+        )
+
+    def start_add_to_existing_track(self):
+        """Start the process of adding detections to an existing track"""
+        if len(self.selected_detections) < 1:
+            QMessageBox.warning(self, "No Detections", "Select at least 1 detection to add to a track.")
+            return
+
+        # Keep detection selection mode active but pause new selections
+        # Enable track selection mode
+        self.waiting_for_track_selection = True
+        self.viewer.set_track_selection_mode(True)
+
+        # Update UI
+        self.selected_detections_label.setText(f"Selected: {len(self.selected_detections)} detection(s) - Click a track to add to")
+        self.add_to_existing_track_btn.setText("Cancel")
+        self.add_to_existing_track_btn.clicked.disconnect()
+        self.add_to_existing_track_btn.clicked.connect(self.cancel_add_to_existing_track)
+
+        # Show status message
+        from PyQt6.QtWidgets import QApplication
+        main_window = QApplication.instance().activeWindow()
+        if hasattr(main_window, 'statusBar'):
+            main_window.statusBar().showMessage("Click on a track in the viewer to add selected detections to it", 0)
+
+    def cancel_add_to_existing_track(self):
+        """Cancel adding detections to an existing track"""
+        # Disable track selection mode
+        self.viewer.set_track_selection_mode(False)
+        self.waiting_for_track_selection = False
+
+        # Restore detection selection cursor (since we're still in detection selection mode)
+        from PyQt6.QtCore import Qt
+        self.viewer.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+
+        # Restore UI
+        self.selected_detections_label.setText(f"Selected: {len(self.selected_detections)} detection(s)")
+        self.add_to_existing_track_btn.setText("Add to Existing Track")
+        self.add_to_existing_track_btn.clicked.disconnect()
+        self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
+
+        # Clear status message
+        from PyQt6.QtWidgets import QApplication
+        main_window = QApplication.instance().activeWindow()
+        if hasattr(main_window, 'statusBar'):
+            main_window.statusBar().showMessage("Add to existing track cancelled", 3000)
+
+    def on_track_selected_for_adding_detections(self, track):
+        """Handle track selection when adding detections to existing track"""
+        if not self.waiting_for_track_selection:
+            return
+
+        # Check if detections are from same sensor as track
+        sensor = None
+        for detector, frame, index in self.selected_detections:
+            if sensor is None:
+                sensor = detector.sensor
+            elif sensor != detector.sensor:
+                QMessageBox.warning(
+                    self, "Mixed Sensors",
+                    "Selected detections belong to different sensors."
+                )
+                self.cancel_add_to_existing_track()
+                return
+
+        if track.sensor != sensor:
+            QMessageBox.warning(
+                self, "Sensor Mismatch",
+                f"Selected detections are from sensor '{sensor.name}' but track is from sensor '{track.sensor.name}'."
+            )
+            self.cancel_add_to_existing_track()
+            return
+
+        # Show confirmation dialog
+        reply = QMessageBox.question(
+            self,
+            "Add Detections to Track",
+            f"Add {len(self.selected_detections)} detection(s) to track '{track.name}'?\n\n"
+            f"The detections will be merged with the existing track data.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Store count before clearing
+            num_detections_added = len(self.selected_detections)
+
+            # Extract frames, rows, columns from selected detections
+            frames_list = list(track.frames)
+            rows_list = list(track.rows)
+            columns_list = list(track.columns)
+
+            for detector, frame, index in self.selected_detections:
+                frames_list.append(frame)
+                rows_list.append(detector.rows[index])
+                columns_list.append(detector.columns[index])
+
+            # Sort by frame and remove duplicates
+            sorted_indices = np.argsort(frames_list)
+            frames = np.array(frames_list)[sorted_indices].astype(np.int_)
+            rows = np.array(rows_list)[sorted_indices]
+            columns = np.array(columns_list)[sorted_indices]
+
+            # Remove duplicate frames (keep first occurrence)
+            unique_mask = np.concatenate(([True], frames[1:] != frames[:-1]))
+            frames = frames[unique_mask]
+            rows = rows[unique_mask]
+            columns = columns[unique_mask]
+
+            # Update track
+            track.frames = frames
+            track.rows = rows
+            track.columns = columns
+
+            # Clear selection and reset state
+            self.clear_detection_selection()
+            self.cancel_add_to_existing_track()
+
+            # Refresh displays
+            self.viewer.update_overlays()
+            self.data_changed.emit()
+
+            # Exit detection selection mode
+            self._exit_detection_selection_mode()
+
+            QMessageBox.information(
+                self, "Detections Added",
+                f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
+                f"Track now has {len(frames)} points across {len(np.unique(frames))} frames."
+            )
+        else:
+            self.cancel_add_to_existing_track()
+
+    def _exit_detection_selection_mode(self):
+        """Exit detection selection mode and turn off the toolbar action"""
+        # Disable detection selection mode in viewer
+        self.viewer.set_detection_selection_mode(False)
+
+        # Turn off the toolbar action
+        from PyQt6.QtWidgets import QApplication
+        main_window = QApplication.instance().activeWindow()
+        if hasattr(main_window, 'select_detections_action'):
+            main_window.select_detections_action.setChecked(False)

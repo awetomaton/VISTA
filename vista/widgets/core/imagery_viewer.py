@@ -51,6 +51,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when a track is selected (emits track object)
     track_selected = pyqtSignal(object)
 
+    # Signal emitted when detections are selected (emits list of tuples: [(detector, frame, index), ...])
+    detections_selected = pyqtSignal(list)
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -100,6 +103,11 @@ class ImageryViewer(QWidget):
 
         # Track selection mode
         self.track_selection_mode = False
+
+        # Detection selection mode
+        self.detection_selection_mode = False
+        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.selected_detections_plot = None  # ScatterPlotItem for highlighting selected detections
 
         # Histogram bounds persistence
         self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
@@ -509,6 +517,10 @@ class ImageryViewer(QWidget):
         if self.detection_creation_mode or self.detection_editing_mode:
             self._update_temp_detection_display()
 
+        # Update selected detections highlighting
+        if self.detection_selection_mode:
+            self._update_selected_detections_display()
+
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
         self.detectors.append(detector)
@@ -573,6 +585,29 @@ class ImageryViewer(QWidget):
         else:
             # Restore cursor
             self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def set_detection_selection_mode(self, enabled):
+        """
+        Enable or disable detection selection mode.
+
+        Args:
+            enabled: Boolean indicating whether detection selection mode is enabled
+        """
+        self.detection_selection_mode = enabled
+        if enabled:
+            # Change cursor to crosshair
+            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+            # Clear any previous selections
+            self.selected_detections = []
+        else:
+            # Restore cursor
+            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+            # Clear selections
+            self.selected_detections = []
+            # Clear highlighting
+            if self.selected_detections_plot is not None:
+                self.plot_item.removeItem(self.selected_detections_plot)
+                self.selected_detections_plot = None
 
     def set_geolocation_enabled(self, enabled):
         """Enable or disable geolocation tooltip"""
@@ -1127,7 +1162,7 @@ class ImageryViewer(QWidget):
         # Only handle left clicks in creation/editing/selection mode
         if not (self.track_creation_mode or self.track_editing_mode or
                 self.detection_creation_mode or self.detection_editing_mode or
-                self.track_selection_mode):
+                self.track_selection_mode or self.detection_selection_mode):
             return
 
         if event.button() != Qt.MouseButton.LeftButton:
@@ -1238,6 +1273,62 @@ class ImageryViewer(QWidget):
                 # If we found a track, emit signal
                 if closest_track:
                     self.track_selected.emit(closest_track)
+
+            # Handle detection selection
+            elif self.detection_selection_mode:
+                # Find the closest detection to the click position
+                from PyQt6.QtWidgets import QApplication
+                modifiers = QApplication.keyboardModifiers()
+                ctrl_or_cmd_held = (modifiers & Qt.KeyboardModifier.ControlModifier) or (modifiers & Qt.KeyboardModifier.MetaModifier)
+
+                closest_detection = None
+                closest_distance = float('inf')
+
+                for detector in self.detectors:
+                    if not detector.visible:
+                        continue
+
+                    # Filter by sensor if one is selected
+                    if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
+                        continue
+
+                    # Find detections at current frame
+                    mask = detector.frames == self.current_frame_number
+                    if not np.any(mask):
+                        continue
+
+                    rows = detector.rows[mask]
+                    cols = detector.columns[mask]
+                    indices = np.where(mask)[0]
+
+                    # Calculate distances to all detections at this frame
+                    distances = np.sqrt((cols - col)**2 + (rows - row)**2)
+                    min_idx = np.argmin(distances)
+                    min_distance = distances[min_idx]
+
+                    # Check if this is the closest detection so far
+                    if min_distance < tolerance and min_distance < closest_distance:
+                        closest_distance = min_distance
+                        original_index = indices[min_idx]
+                        closest_detection = (detector, self.current_frame_number, int(original_index))
+
+                # If we found a detection, add/toggle in selection
+                if closest_detection:
+                    if ctrl_or_cmd_held:
+                        # Toggle selection
+                        if closest_detection in self.selected_detections:
+                            self.selected_detections.remove(closest_detection)
+                        else:
+                            self.selected_detections.append(closest_detection)
+                    else:
+                        # Replace selection
+                        self.selected_detections = [closest_detection]
+
+                    # Update highlighting display
+                    self._update_selected_detections_display()
+
+                    # Emit signal with current selections
+                    self.detections_selected.emit(self.selected_detections)
 
     def _update_temp_track_display(self):
         """Update the temporary track plot during creation/editing"""
@@ -1358,5 +1449,68 @@ class ImageryViewer(QWidget):
             plots.append(current_plot)
 
         self.temp_detection_plot = plots if len(plots) > 0 else None
+
+    def _update_selected_detections_display(self):
+        """Update the selected detections highlighting overlay"""
+        # Remove old plot if it exists
+        if self.selected_detections_plot is not None:
+            if isinstance(self.selected_detections_plot, list):
+                for plot in self.selected_detections_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.selected_detections_plot)
+            self.selected_detections_plot = None
+
+        # If no detections selected, nothing to draw
+        if len(self.selected_detections) == 0:
+            return
+
+        # Separate detections into current frame and other frames
+        current_frame_rows = []
+        current_frame_cols = []
+        other_frame_rows = []
+        other_frame_cols = []
+
+        for detector, frame, index in self.selected_detections:
+            row = detector.rows[index]
+            col = detector.columns[index]
+
+            if frame == self.current_frame_number:
+                current_frame_rows.append(row)
+                current_frame_cols.append(col)
+            else:
+                other_frame_rows.append(row)
+                other_frame_cols.append(col)
+
+        # Create scatter plots with different sizes
+        plots = []
+
+        # Draw other frames with smaller points
+        if len(other_frame_rows) > 0:
+            other_plot = pg.ScatterPlotItem(
+                x=np.array(other_frame_cols),
+                y=np.array(other_frame_rows),
+                pen=pg.mkPen('m', width=2),  # Dark purple border
+                brush=None,  # No fill, just border
+                size=10,  # Smaller size for other frames
+                symbol='o'
+            )
+            self.plot_item.addItem(other_plot)
+            plots.append(other_plot)
+
+        # Draw current frame with larger points
+        if len(current_frame_rows) > 0:
+            current_plot = pg.ScatterPlotItem(
+                x=np.array(current_frame_cols),
+                y=np.array(current_frame_rows),
+                pen=pg.mkPen('m', width=3),  # Thick dark purple border
+                brush=None,  # No fill, just border
+                size=16,  # Larger size for current frame
+                symbol='o'
+            )
+            self.plot_item.addItem(current_plot)
+            plots.append(current_plot)
+
+        self.selected_detections_plot = plots if len(plots) > 0 else None
 
 

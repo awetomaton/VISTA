@@ -89,6 +89,7 @@ class VistaMainWindow(QMainWindow):
 
         # Connect viewer signals to data manager
         self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
+        self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
 
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
@@ -296,6 +297,17 @@ class VistaMainWindow(QMainWindow):
         self.select_track_action.toggled.connect(self.on_select_track_toggled)
         toolbar.addAction(self.select_track_action)
 
+        # Select Detections action
+        if darkdetect.isDark():
+            self.select_detections_action = QAction(self.icons.select_detections_light, "Select Detections", self)
+        else:
+            self.select_detections_action = QAction(self.icons.select_detections_dark, "Select Detections", self)
+        self.select_detections_action.setCheckable(True)
+        self.select_detections_action.setChecked(False)
+        self.select_detections_action.setToolTip("Click on detections in the viewer to select them.\nHold Ctrl (Windows/Linux) or Cmd (Mac) to add to selection.\nUse to create tracks from selected detections.")
+        self.select_detections_action.toggled.connect(self.on_select_detections_toggled)
+        toolbar.addAction(self.select_detections_action)
+
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
         self.viewer.set_geolocation_enabled(checked)
@@ -400,6 +412,19 @@ class VistaMainWindow(QMainWindow):
             # Disable track selection mode
             self.viewer.set_track_selection_mode(False)
             self.statusBar().showMessage("Track selection mode disabled", 3000)
+
+    def on_select_detections_toggled(self, checked):
+        """Handle Select Detections toggle"""
+        if checked:
+            # Switch to detections tab
+            self.data_manager.tabs.setCurrentIndex(3)  # Detections tab
+            # Enable detection selection mode in viewer
+            self.viewer.set_detection_selection_mode(True)
+            self.statusBar().showMessage("Detection selection mode: Click on detections to select them. Hold Ctrl/Cmd to add to selection.", 0)
+        else:
+            # Disable detection selection mode
+            self.viewer.set_detection_selection_mode(False)
+            self.statusBar().showMessage("Detection selection mode disabled", 3000)
 
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""

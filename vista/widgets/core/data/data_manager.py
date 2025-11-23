@@ -87,13 +87,27 @@ class DataManagerPanel(QWidget):
     def on_track_selected_in_viewer(self, track):
         """
         Handle track selection from viewer click.
-        Forwards to tracks panel.
+        Forwards to tracks panel or detections panel depending on state.
 
         Args:
             track: Track object that was clicked
         """
-        self.tabs.setCurrentIndex(2)  # Switch to tracks tab (now index 2 because sensors is 0)
-        self.tracks_panel.on_track_selected_in_viewer(track)
+        # Check if detections panel is waiting for track selection
+        if self.detections_panel.waiting_for_track_selection:
+            self.detections_panel.on_track_selected_for_adding_detections(track)
+        else:
+            self.tabs.setCurrentIndex(2)  # Switch to tracks tab (now index 2 because sensors is 0)
+            self.tracks_panel.on_track_selected_in_viewer(track)
+
+    def on_detections_selected_in_viewer(self, detections):
+        """
+        Handle detection selection from viewer click.
+        Forwards to detections panel.
+
+        Args:
+            detections: List of tuples [(detector, frame, index), ...]
+        """
+        self.detections_panel.on_detections_selected_in_viewer(detections)
 
     def refresh_aois_table(self):
         """Refresh AOIs table - wrapper for compatibility"""
