@@ -446,7 +446,7 @@ class DataLoaderThread(QThread):
                 for track_name, track_df in tracker_df.groupby('Track'):
                     if self._cancelled:
                         return  # Exit early if cancelled
-                    track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name, imagery=self.imagery)
+                    track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name)
                     tracks.append(track)
                 tracker = Tracker(name=tracker_name, tracks=tracks)
                 trackers.append(tracker)
@@ -460,7 +460,7 @@ class DataLoaderThread(QThread):
             for idx, (track_name, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name, imagery=self.imagery)
+                track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name)
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
 
@@ -468,7 +468,7 @@ class DataLoaderThread(QThread):
             trackers.append(tracker)
         else:
             # Single track, single tracker
-            track = Track.from_dataframe(df, sensor=self.sensor, name="Track 1", imagery=self.imagery)
+            track = Track.from_dataframe(df, sensor=self.sensor, name="Track 1")
             tracker = Tracker(name=Path(self.file_path).stem, tracks=[track])
             trackers.append(tracker)
 

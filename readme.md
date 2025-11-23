@@ -392,7 +392,7 @@ Track,Times,Rows,Columns,Color,Marker,Line Width,Marker Size
 
 **Geodetic Format:**
 ```csv
-Track,Frames,Latitude,Longitude,Altitude,Color
+Track,Frames,Latitude (deg),Longitude (deg),Altitude (km),Color
 "Track 1",0,40.0128,-105.0156,0.0,g
 "Track 1",1,40.0129,-105.0157,0.0,g
 "Track 1",2,40.0130,-105.0158,0.0,g
@@ -400,7 +400,7 @@ Track,Frames,Latitude,Longitude,Altitude,Color
 
 **Time + Geodetic Format:**
 ```csv
-Track,Times,Latitude,Longitude,Altitude
+Track,Times,Latitude (deg),Longitude (deg),Altitude (km)
 "Track 1",2024-01-01T12:00:00.000000,40.0128,-105.0156,0.0
 "Track 1",2024-01-01T12:00:00.100000,40.0129,-105.0157,0.0
 "Track 1",2024-01-01T12:00:00.200000,40.0130,-105.0158,0.0

@@ -15,7 +15,6 @@ class Track:
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
-    times: NDArray[np.datetime64] = None  # Optional times for each track point
     # Styling attributes
     color: str = 'g'  # Green by default
     marker: str = 'o'  # Circle by default
@@ -37,7 +36,6 @@ class Track:
             track_slice.frames = track_slice.frames[s]
             track_slice.rows = track_slice.rows[s]
             track_slice.columns = track_slice.columns[s]
-            track_slice.times = track_slice.times[s] if track_slice.times is not None else None
             return track_slice
         else:
             raise TypeError("Invalid index or slice type.")
@@ -54,8 +52,27 @@ class Track:
         s += str(self.to_dataframe())
         return s
 
+    def get_times(self) -> NDArray[np.datetime64]:
+        sensor_imagery_frames, sensor_imagery_times = self.sensor.get_imagery_frames_and_times()
+        if len(sensor_imagery_times) < 1:
+            return None
+        
+        # Find where each track_frame would be inserted in sensor_frames
+        indices = np.searchsorted(sensor_imagery_frames, self.frames)
+
+        # Create output array filled with NaT
+        track_times = np.full(len(self.frames), np.datetime64('NaT'), dtype='datetime64[ns]')
+
+        # Validate matches: check if indices are in bounds and values actually match
+        valid_mask = (indices < len(sensor_imagery_frames)) & (sensor_imagery_frames[indices] == self.frames)
+
+        # Assign matching times
+        track_times[valid_mask] = sensor_imagery_times[indices[valid_mask]]
+
+        return track_times
+
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, sensor, name: str = None, imagery=None):
+    def from_dataframe(cls, df: pd.DataFrame, sensor: Sensor, name: str = None):
         """
         Create Track from DataFrame
 
@@ -63,7 +80,6 @@ class Track:
             df: DataFrame with track data
             sensor: Sensor object for this track
             name: Track name (if None, taken from df["Track"])
-            imagery: Optional Imagery object for time-to-frame and/or geodetic-to-pixel mapping
 
         Returns:
             Track object
@@ -106,18 +122,19 @@ class Track:
         if "Times" in df.columns:
             # Parse times as datetime64
             times = pd.to_datetime(df["Times"]).to_numpy()
-            kwargs["times"] = times
 
         # Determine frames - priority: Frames column > time-to-frame mapping
         if "Frames" in df.columns:
             # Frames take precedence
             frames = df["Frames"].to_numpy()
-        elif times is not None and imagery is not None:
-            # Map times to frames using imagery
-            frames = map_times_to_frames(times, imagery.times, imagery.frames)
         elif times is not None:
-            # Times present but no imagery - raise error
-            raise ValueError(f"Track '{name}' has times but no frames. Imagery required for time-to-frame mapping.")
+            sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
+            if len(sensor_imagery_times) == 0:
+                # Times present but no cannot map to frames using sensor - raise error
+                raise ValueError(f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping.")
+            
+            # Map times to frames using the sensor imagery
+            frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
         else:
             raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
 
@@ -126,7 +143,7 @@ class Track:
             # Row/Column take precedence
             rows = df["Rows"].to_numpy()
             columns = df["Columns"].to_numpy()
-        elif "Latitude" in df.columns and "Longitude" in df.columns and "Altitude" in df.columns:
+        elif "Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns and "Altitude (km)" in df.columns:
             # Need geodetic-to-pixel conversion
             if sensor is None:
                 raise ValueError(
@@ -140,9 +157,9 @@ class Track:
                 )
             # Map geodetic to pixel using sensor
             rows, columns = map_geodetic_to_pixel(
-                df["Latitude"].to_numpy(),
-                df["Longitude"].to_numpy(),
-                df["Altitude"].to_numpy(),
+                df["Latitude (deg)"].to_numpy(),
+                df["Longitude (deg)"].to_numpy(),
+                df["Altitude (km)"].to_numpy(),
                 frames,
                 sensor
             )
@@ -178,7 +195,6 @@ class Track:
             rows = self.rows.copy(),
             columns = self.columns.copy(),
             sensor = self.sensor,
-            times = self.times.copy() if self.times is not None else None,
             color = self.color,
             marker = self.marker,
             line_width = self.line_width,
@@ -191,17 +207,8 @@ class Track:
             labels = self.labels.copy(),
         )
     
-    def to_dataframe(self, imagery=None, include_geolocation=False, include_time=False) -> pd.DataFrame:
-        """
-        Convert track to DataFrame.
-
-        Args:
-            imagery: Optional Imagery object for coordinate/time conversion
-            include_geolocation: If True, add Latitude, Longitude, Altitude columns (requires imagery)
-            include_time: If True, add Times column using imagery times (requires imagery)
-
-        Returns:
-            DataFrame with track data
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert track to DataFrame
 
         Raises:
             ValueError: If geolocation/time requested but imagery is missing required data
@@ -223,55 +230,27 @@ class Track:
             "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
         }
 
-        # Include geolocation if requested
-        if include_geolocation:
-            if imagery is None:
-                raise ValueError("Imagery required for geolocation conversion")
-            if imagery.poly_row_col_to_lat is None or imagery.poly_row_col_to_lon is None:
-                raise ValueError("Imagery does not have geodetic conversion polynomials")
+        # Include geolocation if possible
 
-            # Convert pixel coordinates to geodetic for each frame
-            latitudes = []
-            longitudes = []
-            altitudes = []
+        # Convert pixel coordinates to geodetic for each frame
+        latitudes = []
+        longitudes = []
+        altitudes = []
 
-            for i, frame in enumerate(self.frames):
-                # Convert single point
-                locations = imagery.pixel_to_geodetic(frame, np.array([self.rows[i]]), np.array([self.columns[i]]))
-                latitudes.append(locations.lat.deg[0])
-                longitudes.append(locations.lon.deg[0])
-                altitudes.append(locations.height.to('m').value[0])
+        for i, frame in enumerate(self.frames):
+            # Convert single point
+            locations = self.sensor.pixel_to_geodetic(frame, np.array([self.rows[i]]), np.array([self.columns[i]]))
+            latitudes.append(locations.lat.deg[0])
+            longitudes.append(locations.lon.deg[0])
+            altitudes.append(locations.height.to('km').value[0])
 
-            data["Latitude"] = latitudes
-            data["Longitude"] = longitudes
-            data["Altitude"] = altitudes
+        data["Latitude (deg)"] = latitudes
+        data["Longitude (deg)"] = longitudes
+        data["Altitude (km)"] = altitudes
 
-        # Include times if requested or if track already has times
-        if include_time:
-            if self.times is not None:
-                # Use track's own times if available
-                data["Times"] = pd.to_datetime(self.times).strftime('%Y-%m-%dT%H:%M:%S.%f')
-            elif imagery is not None and imagery.times is not None:
-                # Map frames to times using imagery
-                # Find the time for each frame in the track
-                track_times = []
-                for frame in self.frames:
-                    # Find the index of this frame in imagery
-                    frame_mask = imagery.frames == frame
-                    if np.any(frame_mask):
-                        frame_idx = np.where(frame_mask)[0][0]
-                        track_times.append(imagery.times[frame_idx])
-                    else:
-                        # Frame not found in imagery, use NaT (Not a Time)
-                        track_times.append(np.datetime64('NaT'))
-
-                track_times = np.array(track_times)
-                data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
-            else:
-                raise ValueError("Cannot include times: track has no times and imagery has no times")
-        elif self.times is not None:
-            # Include times if track already has them (backward compatibility)
-            data["Times"] = pd.to_datetime(self.times).strftime('%Y-%m-%dT%H:%M:%S.%f')
-
+        # Include times if possible
+        track_times = self.get_times()
+        if track_times is not None:
+            data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
         return pd.DataFrame(data)
     

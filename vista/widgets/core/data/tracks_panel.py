@@ -1,6 +1,7 @@
 """Tracks panel for data manager"""
 import numpy as np
 import pandas as pd
+import pathlib
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -14,7 +15,6 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineStyleDelegate, MarkerDelegate
-from vista.widgets.core.data.export_dialogs import ExportTracksDialog
 
 
 class LabelsManagerDialog(QDialog):
@@ -1300,7 +1300,7 @@ class TracksPanel(QWidget):
             frames=combined_df['Frames'].to_numpy().astype(np.int_),
             rows=combined_df['Rows'].to_numpy(),
             columns=combined_df['Columns'].to_numpy(),
-            times=pd.to_datetime(combined_df['Times']).to_numpy() if 'Times' in combined_df.columns else None,
+            sensor=first_track.sensor,
             color=first_track.color,
             marker=first_track.marker,
             line_width=first_track.line_width,
@@ -1627,39 +1627,30 @@ class TracksPanel(QWidget):
             QMessageBox.warning(self, "No Tracks", "There are no tracks to export.")
             return
 
-        # Get list of available imagery
-        imagery_list = self.viewer.imageries if hasattr(self.viewer, 'imageries') else []
-
-        # Show export options dialog
-        dialog = ExportTracksDialog(imagery_list, parent=self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return  # User cancelled
-
-        # Get export settings from dialog
-        include_geolocation = dialog.include_geolocation
-        include_time = dialog.include_time
-        selected_imagery = dialog.selected_imagery
+        # Get last used save file from settings
+        last_save_file = self.settings.value("last_tracks_export_dir", "")
+        if last_save_file:
+            last_save_file = str(pathlib.Path(last_save_file) / "tracks.csv")
+        else:
+            last_save_file = "tracks.csv"
 
         # Open file dialog
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Export Tracks",
-            "tracks.csv",
-            "CSV Files (*.csv);;All Files (*)"
+            last_save_file,
+            "CSV Files (*.csv);;All Files (*)",
         )
 
         if file_path:
+            self.settings.setValue("last_tracks_export_dir", str(pathlib.Path(file_path).parent))
             try:
                 # Combine all trackers' data
                 all_tracks_df = pd.DataFrame()
 
                 for tracker in self.viewer.trackers:
                     if len(tracker.tracks) > 0:
-                        tracker_df = tracker.to_dataframe(
-                            imagery=selected_imagery,
-                            include_geolocation=include_geolocation,
-                            include_time=include_time
-                        )
+                        tracker_df = tracker.to_dataframe()
                         all_tracks_df = pd.concat([all_tracks_df, tracker_df], ignore_index=True)
 
                 # Save to CSV
@@ -1669,13 +1660,7 @@ class TracksPanel(QWidget):
 
                 # Build success message with included options
                 message_parts = [f"Exported {num_tracks} track(s)"]
-                if include_geolocation:
-                    message_parts.append("with geolocation")
-                if include_time:
-                    message_parts.append("with times")
-
                 message = " ".join(message_parts) + f" to:\n{file_path}"
-
                 QMessageBox.information(
                     self,
                     "Success",

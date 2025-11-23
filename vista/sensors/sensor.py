@@ -3,15 +3,15 @@
 The Sensor class provides an base interface for sensor modeling.
 """
 
-import h5py
-import pathlib
-import uuid
 from astropy.coordinates import EarthLocation
 from astropy import units
 from dataclasses import dataclass, field
-from typing import Optional, Tuple, Union
+import h5py
 import numpy as np
 from numpy.typing import NDArray
+import pandas as pd
+from typing import Optional, Tuple
+import uuid
 
 
 @dataclass
@@ -65,6 +65,9 @@ class Sensor:
     bad_pixel_masks: Optional[NDArray] = None
     bad_pixel_mask_frames: Optional[NDArray] = None
     uuid: str = field(init=None, default=None)
+    _added_imagery_uuids: list = field(init=None, default=None)
+    # Private class attributes
+    _imagery_frames_dataframe: pd.DataFrame = field(init=None, default=None)
 
     # Class variable to track total number of sensor instances created
     _instance_count: int = 0
@@ -76,6 +79,29 @@ class Sensor:
         # Generate UUID if not set
         if self.uuid is None:
             self.uuid = uuid.uuid4()
+        self._added_imagery_uuids = []
+        self._imagery_frames_dataframe = pd.DataFrame({
+            "frames": pd.Series([], dtype=int), 
+            "times": pd.Series([], dtype='datetime64[ns]')
+        })
+    
+    def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
+        """All unique imagery frames and corresponding times in increasing order"""
+        return self._imagery_frames_dataframe["frames"].to_numpy(), self._imagery_frames_dataframe["times"].to_numpy()
+    
+    def add_imagery(self, imagery):
+        """Make this sensor aware of a new imagery that it associated with it, and update unique imagery frames / times
+        """
+        if (imagery.uuid in self._added_imagery_uuids) or (imagery.times is None):
+            return
+        self._imagery_frames_dataframe = pd.concat((
+            self._imagery_frames_dataframe,
+            pd.DataFrame({
+                "frames": imagery.frames, 
+                "times": imagery.times
+            })
+        ))
+        self._imagery_frames_dataframe = self._imagery_frames_dataframe.drop_duplicates()
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """

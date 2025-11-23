@@ -3,7 +3,8 @@ import traceback
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import Qt, pyqtSignal
+import pathlib
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
     QColorDialog, QFileDialog, QHBoxLayout, QHeaderView, QMessageBox,
@@ -21,6 +22,7 @@ class DetectionsPanel(QWidget):
 
     def __init__(self, viewer):
         super().__init__()
+        self.settings = QSettings("VISTA", "DataManager")
         self.viewer = viewer
         self.init_ui()
 
@@ -378,15 +380,23 @@ class DetectionsPanel(QWidget):
             QMessageBox.warning(self, "No Detections", "There are no detections to export.")
             return
 
+        # Get last used directory from settings
+        last_save_file = self.settings.value("last_detections_export_dir", "")
+        if last_save_file:
+            last_save_file = str(pathlib.Path(last_save_file) / "detections.csv")
+        else:
+            last_save_file = "detections.csv"
+
         # Open file dialog
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Export Detections",
-            "detections.csv",
-            "CSV Files (*.csv);;All Files (*)"
+            last_save_file,
+            "CSV Files (*.csv);;All Files (*)",
         )
 
         if file_path:
+            self.settings.setValue("last_detections_export_dir", str(pathlib.Path(file_path).parent))
             try:
                 # Combine all detectors' data
                 all_detections_df = pd.DataFrame()

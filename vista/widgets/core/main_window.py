@@ -667,16 +667,19 @@ class VistaMainWindow(QMainWindow):
                     overall_needs_geodetic_mapping = overall_needs_geodetic_mapping or needs_geodetic_mapping
 
                 # Build message explaining what will be used for mapping
+                preamble = []
                 mapping_info = []
                 missing_requirements = []
 
                 if overall_needs_time_mapping:
+                    preamble.append(f"Track data is missing frames, but has times. Times must be mapped to frames.")
                     if selected_imagery:
                         mapping_info.append(f"• Time mapping: {selected_imagery.name}")
                     else:
                         missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
 
                 if overall_needs_geodetic_mapping:
+                    preamble.append(f"Track data is missing row / column, but has geospatial coordinates. Geospatial coordinates must be mapped to pixels.")
                     if selected_sensor and hasattr(selected_sensor, 'can_geolocate') and selected_sensor.can_geolocate():
                         mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
                     else:
@@ -702,7 +705,7 @@ class VistaMainWindow(QMainWindow):
                     QMessageBox.critical(
                         self,
                         "Cannot Load Tracks",
-                        "Missing required data for track loading:\n\n" + "\n".join(missing_requirements),
+                        "Missing required data for track loading:\n\n" + "\n\n".join(preamble) + "\n\n" + "\n".join(missing_requirements),
                         QMessageBox.StandardButton.Ok
                     )
                     return
@@ -713,7 +716,7 @@ class VistaMainWindow(QMainWindow):
                     msg.setIcon(QMessageBox.Icon.Information)
                     msg.setWindowTitle("Track Loading Information")
                     msg.setText("The following will be used for track data mapping:")
-                    msg.setInformativeText("\n".join(mapping_info))
+                    msg.setInformativeText("\n".join(preamble) + "\n\n".join(mapping_info))
                     msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                     if msg.exec() != QMessageBox.StandardButton.Ok:
                         return
