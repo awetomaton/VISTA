@@ -16,6 +16,7 @@ from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.tracks.tracker import Tracker
+from vista.widgets.core.data.labels import LabelsManagerDialog
 from ..background_removal.robust_pca_dialog import RobustPCADialog
 from ..background_removal.temporal_median_widget import TemporalMedianWidget
 from ..detectors.cfar_widget import CFARWidget
@@ -160,12 +161,10 @@ class VistaMainWindow(QMainWindow):
         self.toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
         view_menu.addAction(self.toggle_data_manager_action)
 
-        # Tools menu
-        tools_menu = menubar.addMenu("Tools")
-
-        manage_labels_action = QAction("Manage Labels", self)
+        # Labels action
+        manage_labels_action = QAction("Labels", self)
         manage_labels_action.triggered.connect(self.manage_labels)
-        tools_menu.addAction(manage_labels_action)
+        menubar.addAction(manage_labels_action)
 
         # Image Processing menu
         image_processing_menu = menubar.addMenu("Image Processing")
@@ -909,7 +908,6 @@ class VistaMainWindow(QMainWindow):
 
     def manage_labels(self):
         """Open the labels manager dialog"""
-        from vista.widgets.core.data.tracks_panel import LabelsManagerDialog
         dialog = LabelsManagerDialog(self)
         dialog.exec()
         # Refresh the data manager to show any label changes
