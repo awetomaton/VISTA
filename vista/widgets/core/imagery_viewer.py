@@ -606,7 +606,11 @@ class ImageryViewer(QWidget):
             self.selected_detections = []
             # Clear highlighting
             if self.selected_detections_plot is not None:
-                self.plot_item.removeItem(self.selected_detections_plot)
+                if isinstance(self.selected_detections_plot, list):
+                    for plot in self.selected_detections_plot:
+                        self.plot_item.removeItem(plot)
+                else:
+                    self.plot_item.removeItem(self.selected_detections_plot)
                 self.selected_detections_plot = None
 
     def set_geolocation_enabled(self, enabled):

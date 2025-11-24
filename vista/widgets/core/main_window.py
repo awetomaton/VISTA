@@ -424,6 +424,8 @@ class VistaMainWindow(QMainWindow):
         else:
             # Disable detection selection mode
             self.viewer.set_detection_selection_mode(False)
+            # Clear selected detections in panel
+            self.data_manager.detections_panel.clear_detection_selection()
             self.statusBar().showMessage("Detection selection mode disabled", 3000)
 
     def on_aoi_updated(self):

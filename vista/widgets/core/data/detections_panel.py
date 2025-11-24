@@ -605,6 +605,12 @@ class DetectionsPanel(QWidget):
             self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)
             self.add_to_existing_track_btn.setEnabled(len(detections) >= 1)
 
+    def clear_detection_selection(self):
+        """Clear the selected detections and update UI"""
+        self.selected_detections = []
+        self.create_track_from_detections_btn.setEnabled(False)
+        self.add_to_existing_track_btn.setEnabled(False)
+
     def create_track_from_selected_detections(self):
         """Create a track from selected detections"""
         if len(self.selected_detections) < 2:
