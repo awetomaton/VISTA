@@ -54,12 +54,6 @@ class DetectionsPanel(QWidget):
         self.edit_detector_btn.clicked.connect(self.on_edit_detector_clicked)
         button_layout.addWidget(self.edit_detector_btn)
 
-        # Add reassign sensor button
-        self.reassign_sensor_btn = QPushButton("Reassign Sensor")
-        self.reassign_sensor_btn.clicked.connect(self.reassign_sensor)
-        self.reassign_sensor_btn.setToolTip("Reassign selected detections to a different sensor")
-        button_layout.addWidget(self.reassign_sensor_btn)
-
         # Add copy to sensor button
         self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
         self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
@@ -78,7 +72,7 @@ class DetectionsPanel(QWidget):
         self.create_track_from_detections_btn.setToolTip("Create a track from the selected detections")
         track_from_detections_layout.addWidget(self.create_track_from_detections_btn)
 
-        self.add_to_existing_track_btn = QPushButton("Add to Existing Track")
+        self.add_to_existing_track_btn = QPushButton("Add to Track")
         self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
         self.add_to_existing_track_btn.setEnabled(False)
         self.add_to_existing_track_btn.setToolTip("Add selected detections to an existing track (click track in viewer after)")
@@ -441,82 +435,6 @@ class DetectionsPanel(QWidget):
                     f"Failed to export detections:\n{str(e)}"
                 )
 
-    def reassign_sensor(self):
-        """Reassign selected detections to a different sensor"""
-        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
-
-        if not selected_rows:
-            QMessageBox.information(
-                self,
-                "No Selection",
-                "Please select one or more detectors to reassign.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
-
-        # Get all available sensors
-        if not self.viewer.sensors:
-            QMessageBox.warning(
-                self,
-                "No Sensors",
-                "No sensors are available. Please load imagery to create sensors.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
-
-        # Create dialog to select target sensor
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Select Target Sensor")
-        dialog_layout = QVBoxLayout()
-
-        dialog_layout.addWidget(QLabel("Select the sensor to reassign detections to:"))
-
-        sensor_list = QListWidget()
-        for sensor in self.viewer.sensors:
-            sensor_list.addItem(sensor.name)
-        dialog_layout.addWidget(sensor_list)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(dialog.accept)
-        button_box.rejected.connect(dialog.reject)
-        dialog_layout.addWidget(button_box)
-
-        dialog.setLayout(dialog_layout)
-
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            if sensor_list.currentRow() < 0:
-                return
-
-            target_sensor = self.viewer.sensors[sensor_list.currentRow()]
-
-            # Get selected detectors
-            detectors_to_reassign = []
-            for row in selected_rows:
-                detector_name_item = self.detections_table.item(row, 1)
-                if detector_name_item:
-                    detector_name = detector_name_item.text()
-
-                    # Find the detector
-                    for detector in self.viewer.detectors:
-                        if detector.name == detector_name:
-                            detectors_to_reassign.append(detector)
-                            break
-
-            # Reassign sensor
-            for detector in detectors_to_reassign:
-                detector.sensor = target_sensor
-
-            # Refresh the table and emit data changed
-            self.refresh_detections_table()
-            self.data_changed.emit()
-
-            QMessageBox.information(
-                self,
-                "Success",
-                f"Reassigned {len(detectors_to_reassign)} detector(s) to sensor '{target_sensor.name}'.",
-                QMessageBox.StandardButton.Ok
-            )
-
     def copy_to_sensor(self):
         """Copy selected detections to a different sensor"""
         selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
@@ -582,7 +500,7 @@ class DetectionsPanel(QWidget):
             for detector in detectors_to_copy:
                 # Create a copy of the detector with the new sensor
                 detector_copy = detector.copy()
-                detector_copy.name = f"{detector.name} (copy)",
+                detector_copy.name = f"{detector.name} (copy)"
 
                 # Add to viewer
                 self.viewer.add_detector(detector_copy)
@@ -707,7 +625,7 @@ class DetectionsPanel(QWidget):
         self.viewer.set_track_selection_mode(True)
 
         # Update UI
-        self.add_to_existing_track_btn.setText("Cancel")
+        self.add_to_existing_track_btn.setText("Cancel Adding to Track")
         self.add_to_existing_track_btn.clicked.disconnect()
         self.add_to_existing_track_btn.clicked.connect(self.cancel_add_to_existing_track)
 
@@ -728,7 +646,7 @@ class DetectionsPanel(QWidget):
         self.viewer.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
 
         # Restore UI
-        self.add_to_existing_track_btn.setText("Add to Existing Track")
+        self.add_to_existing_track_btn.setText("Add to Track")
         self.add_to_existing_track_btn.clicked.disconnect()
         self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
 
@@ -736,7 +654,7 @@ class DetectionsPanel(QWidget):
         from PyQt6.QtWidgets import QApplication
         main_window = QApplication.instance().activeWindow()
         if hasattr(main_window, 'statusBar'):
-            main_window.statusBar().showMessage("Add to existing track cancelled", 3000)
+            main_window.statusBar().showMessage("Add to track cancelled", 3000)
 
     def on_track_selected_for_adding_detections(self, track):
         """Handle track selection when adding detections to existing track"""

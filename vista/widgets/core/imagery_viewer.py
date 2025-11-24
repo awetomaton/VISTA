@@ -1282,8 +1282,6 @@ class ImageryViewer(QWidget):
             elif self.detection_selection_mode:
                 # Find the closest detection to the click position
                 from PyQt6.QtWidgets import QApplication
-                modifiers = QApplication.keyboardModifiers()
-                ctrl_or_cmd_held = (modifiers & Qt.KeyboardModifier.ControlModifier) or (modifiers & Qt.KeyboardModifier.MetaModifier)
 
                 closest_detection = None
                 closest_distance = float('inf')
@@ -1318,15 +1316,11 @@ class ImageryViewer(QWidget):
 
                 # If we found a detection, add/toggle in selection
                 if closest_detection:
-                    if ctrl_or_cmd_held:
-                        # Toggle selection
-                        if closest_detection in self.selected_detections:
-                            self.selected_detections.remove(closest_detection)
-                        else:
-                            self.selected_detections.append(closest_detection)
+                    # Toggle selection
+                    if closest_detection in self.selected_detections:
+                        self.selected_detections.remove(closest_detection)
                     else:
-                        # Replace selection
-                        self.selected_detections = [closest_detection]
+                        self.selected_detections.append(closest_detection)
 
                     # Update highlighting display
                     self._update_selected_detections_display()

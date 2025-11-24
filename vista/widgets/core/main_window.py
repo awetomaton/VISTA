@@ -304,7 +304,7 @@ class VistaMainWindow(QMainWindow):
             self.select_detections_action = QAction(self.icons.select_detections_dark, "Select Detections", self)
         self.select_detections_action.setCheckable(True)
         self.select_detections_action.setChecked(False)
-        self.select_detections_action.setToolTip("Click on detections in the viewer to select them.\nHold Ctrl (Windows/Linux) or Cmd (Mac) to add to selection.\nUse to create tracks from selected detections.")
+        self.select_detections_action.setToolTip("Click on detections in the viewer to select them. \nUse to create tracks from selected detections.")
         self.select_detections_action.toggled.connect(self.on_select_detections_toggled)
         toolbar.addAction(self.select_detections_action)
 
@@ -420,7 +420,7 @@ class VistaMainWindow(QMainWindow):
             self.data_manager.tabs.setCurrentIndex(3)  # Detections tab
             # Enable detection selection mode in viewer
             self.viewer.set_detection_selection_mode(True)
-            self.statusBar().showMessage("Detection selection mode: Click on detections to select them. Hold Ctrl/Cmd to add to selection.", 0)
+            self.statusBar().showMessage("Detection selection mode: Click on detections to select them.", 0)
         else:
             # Disable detection selection mode
             self.viewer.set_detection_selection_mode(False)
