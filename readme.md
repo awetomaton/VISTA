@@ -4,7 +4,7 @@
 
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
-![Version](https://img.shields.io/badge/version-1.5.0-blue)
+![Version](https://img.shields.io/badge/version-1.6.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
@@ -14,12 +14,12 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 
 ## Important Assumptions
 
-**Frame Synchronization Across Imagery Datasets:**
+**Frame Synchronization Across Imagery Datasets per Sensor:**
 
-VISTA assumes that all loaded imagery datasets are captured from the same sensor or are temporally synchronized. Specifically:
+VISTA assumes that all loaded imagery datasets for a given sensor are temporally synchronized. Specifically:
 
-- Frame numbers represent the same temporal moments across all loaded imagery
-- Frame 10 in one imagery dataset corresponds to the exact same time as frame 10 in any other loaded imagery
+- Frame numbers represent the same temporal moments across all imagery
+- Frame 10 in one imagery dataset corresponds to the exact same time as frame 10 in any other imagery for the same sensor
 - This assumption is critical for proper visualization and analysis when multiple imagery datasets are loaded simultaneously
 - When loading tracks with time-based mapping, the selected imagery's time-to-frame mapping is used as the reference
 
