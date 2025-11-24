@@ -1422,51 +1422,30 @@ class ImageryViewer(QWidget):
             self.temp_detection_plot = None
             return
 
-        # Separate points into current frame and other frames
+        # Only show detections for the current frame
         current_frame_rows = []
         current_frame_cols = []
-        other_frame_rows = []
-        other_frame_cols = []
 
-        for frame, detections in self.current_detection_data.items():
-            for row, col in detections:
-                if frame == self.current_frame_number:
-                    current_frame_rows.append(row)
-                    current_frame_cols.append(col)
-                else:
-                    other_frame_rows.append(row)
-                    other_frame_cols.append(col)
+        # Get detections for current frame only
+        if self.current_frame_number in self.current_detection_data:
+            for row, col in self.current_detection_data[self.current_frame_number]:
+                current_frame_rows.append(row)
+                current_frame_cols.append(col)
 
-        # Create scatter plots with different sizes
-        plots = []
-
-        # Draw other frames with smaller points
-        if len(other_frame_rows) > 0:
-            other_plot = pg.ScatterPlotItem(
-                x=np.array(other_frame_cols),
-                y=np.array(other_frame_rows),
-                pen=pg.mkPen('c', width=1),  # Cyan color to distinguish from tracks
-                brush=pg.mkBrush('c'),
-                size=6,  # Smaller size for other frames
-                symbol='o'
-            )
-            self.plot_item.addItem(other_plot)
-            plots.append(other_plot)
-
-        # Draw current frame with larger points
+        # Draw current frame detections
         if len(current_frame_rows) > 0:
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_cols),
                 y=np.array(current_frame_rows),
                 pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
                 brush=pg.mkBrush('c'),
-                size=14,  # Larger size for current frame
+                size=14,  # Larger size for visibility
                 symbol='o'
             )
             self.plot_item.addItem(current_plot)
-            plots.append(current_plot)
-
-        self.temp_detection_plot = plots if len(plots) > 0 else None
+            self.temp_detection_plot = current_plot
+        else:
+            self.temp_detection_plot = None
 
     def _update_selected_detections_display(self):
         """Update the selected detections highlighting overlay"""

@@ -649,7 +649,7 @@ class DetectionsPanel(QWidget):
                 main_window = self.parent().parent()
                 if hasattr(main_window, 'statusBar'):
                     main_window.statusBar().showMessage(
-                        f"Detector editing mode: Click on frames to add/remove detection points for '{detector.name}' (multiple per frame allowed). Uncheck 'Edit Detector' when finished.",
+                        f"Detector editing mode: Click to add detections or click existing detections to remove them for '{detector.name}'. Only current frame shown. Uncheck 'Edit Detector' when finished.",
                         0
                     )
         else:
