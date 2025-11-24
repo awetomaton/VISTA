@@ -47,15 +47,15 @@ class NonUniformityCorrectionProcessingThread(QThread):
             processed_images = np.empty_like(temp_imagery.images)
 
             # Process each frame
-            nuc_image_frame_bounds = self.imagery.uniformity_gain_image_frames.tolist() + [np.inf]
-            current_nuc_image = self.imagery.uniformity_gain_images[0]
+            nuc_image_frame_bounds = self.imagery.sensor.uniformity_gain_image_frames.tolist() + [np.inf]
+            current_nuc_image = self.imagery.sensor.uniformity_gain_images[0]
             current_nuc_image_index = 0
             for i, frame in enumerate(temp_imagery.frames):
                 if self._cancelled:
                     return  # Exit early if cancelled
                 if frame >= nuc_image_frame_bounds[current_nuc_image_index + 1]:
                     current_nuc_image_index += 1
-                    current_nuc_image = self.imagery.uniformity_gain_images[current_nuc_image_index]
+                    current_nuc_image = self.imagery.sensor.uniformity_gain_images[current_nuc_image_index]
                 
                 # Correct the non-uniform responsivity by multiplying by the uniformity gain 
                 processed_images[i] = temp_imagery.images[i] * current_nuc_image

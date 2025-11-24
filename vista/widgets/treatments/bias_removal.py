@@ -47,15 +47,15 @@ class BiasRemovalProcessingThread(QThread):
             processed_images = np.empty_like(temp_imagery.images)
 
             # Process each frame
-            bias_image_frame_bounds = self.imagery.bias_image_frames.tolist() + [np.inf]
-            current_bias_image = self.imagery.bias_images[0]
+            bias_image_frame_bounds = self.imagery.sensor.bias_image_frames.tolist() + [np.inf]
+            current_bias_image = self.imagery.sensor.bias_images[0]
             current_bias_image_index = 0
             for i, frame in enumerate(temp_imagery.frames):
                 if self._cancelled:
                     return  # Exit early if cancelled
                 if frame >= bias_image_frame_bounds[current_bias_image_index + 1]:
                     current_bias_image_index += 1
-                    current_bias_image = self.imagery.bias_images[current_bias_image_index]
+                    current_bias_image = self.imagery.sensor.bias_images[current_bias_image_index]
                 
                 # Remove the bias frame
                 processed_images[i] = temp_imagery.images[i] - current_bias_image

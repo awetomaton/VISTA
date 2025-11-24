@@ -1075,7 +1075,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.bias_images is None:
+        elif self.viewer.imagery.sensor.bias_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with bias images",
@@ -1106,7 +1106,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.uniformity_gain_images is None:
+        elif self.viewer.imagery.sensor.uniformity_gain_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with uniformity gain images",
