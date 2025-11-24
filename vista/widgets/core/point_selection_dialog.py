@@ -1,4 +1,11 @@
-"""Point selection dialog for refining clicked points during track/detection creation and editing"""
+"""
+Point selection dialog for refining clicked points during track/detection creation and editing.
+
+This module provides a non-modal floating dialog that allows users to configure how point
+locations are determined when clicking to add track or detection points. Three modes are
+supported: Verbatim (exact location), Peak (brightest pixel within radius), and CFAR
+(signal blob centroid via CFAR detection).
+"""
 from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtWidgets import (
     QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
@@ -14,12 +21,32 @@ class PointSelectionDialog(QDialog):
     This dialog allows users to choose how point locations are determined when clicking
     to add track or detection points. Three modes are available:
     - Verbatim: Use exact clicked location
-    - Peak: Find peak pixel within radius
+    - Peak: Find brightest pixel within radius
     - CFAR: Use CFAR algorithm to find signal blob centroid
+
+    The dialog is non-modal and stays on top of other windows. Settings are persisted
+    across sessions using QSettings.
+
+    Parameters
+    ----------
+    parent : QWidget, optional
+        Parent widget, by default None
+
+    Attributes
+    ----------
+    settings : QSettings
+        Settings object for persisting user preferences
+    tab_widget : QTabWidget
+        Tab widget containing the three mode tabs
+    peak_radius_spinbox : QSpinBox
+        Spinbox for peak mode search radius
+    cfar_search_radius_spinbox : QSpinBox
+        Spinbox for CFAR mode search radius
+    cfar_config : CFARConfigWidget
+        Widget for CFAR configuration parameters
     """
 
     def __init__(self, parent=None):
-        """Initialize the point selection dialog"""
         super().__init__(parent)
         self.settings = QSettings("VISTA", "PointSelection")
 
@@ -37,7 +64,12 @@ class PointSelectionDialog(QDialog):
         self.load_settings()
 
     def init_ui(self):
-        """Initialize the user interface"""
+        """
+        Initialize the user interface.
+
+        Creates a tabbed interface with three tabs (Verbatim, Peak, CFAR), each
+        containing mode-specific information and configuration controls.
+        """
         layout = QVBoxLayout()
 
         # Information label
@@ -149,8 +181,10 @@ class PointSelectionDialog(QDialog):
         """
         Get the currently selected mode.
 
-        Returns:
-            str: One of 'verbatim', 'peak', or 'cfar'
+        Returns
+        -------
+        str
+            One of 'verbatim', 'peak', or 'cfar'
         """
         index = self.tab_widget.currentIndex()
         if index == 0:
@@ -162,10 +196,22 @@ class PointSelectionDialog(QDialog):
 
     def get_parameters(self):
         """
-        Get the current mode parameters.
+        Get the current mode and its associated parameters.
 
-        Returns:
-            dict: Dictionary containing mode and associated parameters
+        Returns
+        -------
+        dict
+            Dictionary containing mode and mode-specific parameters:
+            - 'mode' : str - One of 'verbatim', 'peak', or 'cfar'
+            - For 'peak' mode:
+                - 'radius' : int - Search radius in pixels
+            - For 'cfar' mode:
+                - 'background_radius' : int
+                - 'ignore_radius' : int
+                - 'threshold_deviation' : float
+                - 'annulus_shape' : str
+                - 'detection_mode' : str
+                - 'search_radius' : int
         """
         mode = self.get_mode()
         params = {'mode': mode}
@@ -179,7 +225,12 @@ class PointSelectionDialog(QDialog):
         return params
 
     def load_settings(self):
-        """Load previously saved settings"""
+        """
+        Load previously saved settings from QSettings.
+
+        Restores the last selected tab, peak radius, CFAR search radius, and all
+        CFAR configuration parameters from the previous session.
+        """
         # Load last selected tab
         last_tab = self.settings.value("selected_tab", 0, type=int)
         self.tab_widget.setCurrentIndex(last_tab)
@@ -205,7 +256,12 @@ class PointSelectionDialog(QDialog):
         self.cfar_config.set_parameters(cfar_params)
 
     def save_settings(self):
-        """Save current settings"""
+        """
+        Save current settings to QSettings.
+
+        Persists the selected tab, peak radius, CFAR search radius, and all CFAR
+        configuration parameters for the next session.
+        """
         # Save selected tab
         self.settings.setValue("selected_tab", self.tab_widget.currentIndex())
 
@@ -224,6 +280,15 @@ class PointSelectionDialog(QDialog):
         self.settings.setValue("cfar_detection_mode", cfar_params['detection_mode'])
 
     def closeEvent(self, event):
-        """Handle dialog close event"""
+        """
+        Handle dialog close event.
+
+        Saves settings before closing the dialog.
+
+        Parameters
+        ----------
+        event : QCloseEvent
+            Close event from Qt framework
+        """
         self.save_settings()
         event.accept()

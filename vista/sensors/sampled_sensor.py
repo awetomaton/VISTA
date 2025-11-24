@@ -1,7 +1,10 @@
-"""Module that contains the SampledSensor class
+"""
+Sampled sensor with interpolated position and geodetic conversion capabilities.
 
-The SampledSensor class provides sensor position retrieval via interpolation/extrapolation
-from sampled position data.
+This module defines the SampledSensor class, which extends the base Sensor class to provide
+position retrieval via interpolation/extrapolation from discrete position samples. It also
+supports geodetic coordinate conversion using 4th-order 2D polynomial coefficients and
+radiometric gain calibration.
 """
 
 import h5py
@@ -146,17 +149,24 @@ class SampledSensor(Sensor):
         """
         Evaluate a 2D 4th order polynomial.
 
-        The polynomial is: f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 +
-                                    c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 +
-                                    c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4
+        The polynomial has 15 terms:
+        f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 +
+                 c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 +
+                 c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4
 
-        Args:
-            x: X coordinates (can be scalar or array)
-            y: Y coordinates (can be scalar or array)
-            coeffs: Array of 15 coefficients
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates (can be scalar or array)
+        y : np.ndarray
+            Y coordinates (can be scalar or array)
+        coeffs : np.ndarray
+            Array of 15 polynomial coefficients
 
-        Returns:
-            Evaluated polynomial values
+        Returns
+        -------
+        np.ndarray
+            Evaluated polynomial values with same shape as input x and y
         """
         return (
             coeffs[0] +
@@ -233,13 +243,29 @@ class SampledSensor(Sensor):
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 
-        Args:
-            frame: Frame number
-            rows: Array of row pixel coordinates
-            columns: Array of column pixel coordinates
+        Uses 4th-order 2D polynomials to map (row, column) pixel coordinates to
+        (latitude, longitude) geodetic coordinates. Assumes altitude = 0 km.
 
-        Returns:
-            EarthLocation objects with lat/lon coordinates (or zeros if no polynomials)
+        Parameters
+        ----------
+        frame : int
+            Frame number for which to perform the conversion
+        rows : np.ndarray
+            Array of row pixel coordinates
+        columns : np.ndarray
+            Array of column pixel coordinates
+
+        Returns
+        -------
+        EarthLocation
+            Astropy EarthLocation object(s) with geodetic coordinates at 0 km altitude.
+            Returns zero coordinates if polynomials are not available or frame not found.
+
+        Notes
+        -----
+        - Requires poly_row_col_to_lat and poly_row_col_to_lon to be defined
+        - Frame must exist in self.frames array
+        - Altitude is always set to 0 km (ground projection)
         """
         # If no polynomial coefficients provided, return zeros
         if (self.poly_row_col_to_lat is None or
@@ -276,12 +302,28 @@ class SampledSensor(Sensor):
         """
         Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
 
-        Args:
-            frame: Frame number
-            loc: EarthLocation object(s) with lat/lon coordinates
+        Uses 4th-order 2D polynomials to map (latitude, longitude) geodetic coordinates
+        to (row, column) pixel coordinates.
 
-        Returns:
-            Tuple of (rows, columns) pixel coordinates (or zeros if no polynomials)
+        Parameters
+        ----------
+        frame : int
+            Frame number for which to perform the conversion
+        loc : EarthLocation
+            Astropy EarthLocation object(s) containing geodetic coordinates
+
+        Returns
+        -------
+        rows : np.ndarray
+            Array of row pixel coordinates (zeros if polynomials unavailable)
+        columns : np.ndarray
+            Array of column pixel coordinates (zeros if polynomials unavailable)
+
+        Notes
+        -----
+        - Requires poly_lat_lon_to_row and poly_lat_lon_to_col to be defined
+        - Frame must exist in self.frames array
+        - Returns zero coordinates if polynomials are not available or frame not found
         """
         # If no polynomial coefficients provided, return zeros
         if (self.poly_lat_lon_to_row is None or

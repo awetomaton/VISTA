@@ -9,6 +9,65 @@ from vista.sensors.sensor import Sensor
 
 @dataclass
 class Detector:
+    """
+    Collection of detection points from a detection algorithm or manual creation.
+
+    A Detector represents a set of detected objects or points of interest across
+    multiple frames. Unlike Tracks, detections are unassociated points without
+    temporal continuity. Each detection point can have its own set of labels.
+
+    Parameters
+    ----------
+    name : str
+        Unique identifier for this detector
+    frames : NDArray[np.int_]
+        Frame numbers where detections occur
+    rows : NDArray[np.float64]
+        Row (vertical) pixel coordinates for each detection
+    columns : NDArray[np.float64]
+        Column (horizontal) pixel coordinates for each detection
+    sensor : Sensor
+        Sensor object associated with these detections
+    description : str, optional
+        Description of detection algorithm or method, by default ""
+
+    Attributes
+    ----------
+    color : str, optional
+        Color for detection markers, by default 'r' (red)
+    marker : str, optional
+        Marker style ('o', 's', 't', 'd', '+', 'x', 'star'), by default 'o' (circle)
+    marker_size : int, optional
+        Size of detection markers, by default 10
+    line_thickness : int, optional
+        Thickness of marker outline, by default 2
+    visible : bool, optional
+        Whether detections are visible in viewer, by default True
+    labels : list[set[str]], optional
+        List of label sets, one set per detection point, by default empty list
+
+    Methods
+    -------
+    __getitem__(slice)
+        Slice detector by index or boolean mask
+    from_dataframe(df, sensor, name)
+        Create Detector from pandas DataFrame
+    copy()
+        Create a deep copy of the detector
+    to_csv(file)
+        Save detector to CSV file
+    to_dataframe()
+        Convert detector to pandas DataFrame
+    get_unique_labels()
+        Get all unique labels across all detections
+
+    Notes
+    -----
+    - Detections are unassociated points (unlike tracks which represent trajectories)
+    - Multiple detections can exist at the same frame
+    - Labels are per-detection, allowing individual detection categorization
+    - Detection coordinates are always in pixel space (row/column)
+    """
     name: str
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
@@ -55,6 +114,31 @@ class Detector:
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, sensor, name: str = None):
+        """
+        Create Detector from pandas DataFrame.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame containing detection data with required columns:
+            "Detector", "Frames", "Rows", "Columns"
+        sensor : Sensor
+            Sensor object for these detections
+        name : str, optional
+            Detector name, by default taken from df["Detector"]
+
+        Returns
+        -------
+        Detector
+            New Detector object
+
+        Notes
+        -----
+        Optional styling columns: "Color", "Marker", "Marker Size",
+        "Line Thickness", "Visible", "Labels"
+
+        Labels should be comma-separated strings in the "Labels" column.
+        """
         if name is None:
             name = df["Detector"][0]
         kwargs = {}
@@ -87,7 +171,14 @@ class Detector:
         )
 
     def copy(self):
-        """Create a full copy of this detector object"""
+        """
+        Create a deep copy of this detector object.
+
+        Returns
+        -------
+        Detector
+            New Detector object with copied arrays and styling attributes
+        """
         return self.__class__(
             name = self.name,
             frames = self.frames.copy(),
@@ -128,7 +219,14 @@ class Detector:
         })
 
     def get_unique_labels(self) -> set[str]:
-        """Get all unique labels across all detections in this detector"""
+        """
+        Get all unique labels across all detections in this detector.
+
+        Returns
+        -------
+        set[str]
+            Set of all unique label strings used by any detection point
+        """
         unique_labels = set()
         for label_set in self.labels:
             unique_labels.update(label_set)

@@ -1,6 +1,10 @@
-"""Module that contains the base Sensor class
+"""
+Base sensor class for position, line-of-sight, geodetic conversion, and radiometric modeling.
 
-The Sensor class provides an base interface for sensor modeling.
+This module defines the Sensor base class which provides a framework for representing
+sensor platforms and their characteristics. Sensors support position queries, geodetic
+coordinate conversion, radiometric calibration data (bias, gain, bad pixels), and
+optional point spread function modeling.
 """
 
 from astropy.coordinates import EarthLocation
@@ -73,7 +77,12 @@ class Sensor:
     _instance_count: int = 0
 
     def __post_init__(self):
-        """Increment the instance counter when a new Sensor is created."""
+        """
+        Initialize sensor instance and increment global counter.
+
+        Generates a unique UUID for this sensor instance and initializes internal
+        data structures for tracking associated imagery.
+        """
         # Increment the class-level counter
         Sensor._instance_count += 1
         # Generate UUID if not set
@@ -86,11 +95,41 @@ class Sensor:
         })
     
     def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
-        """All unique imagery frames and corresponding times in increasing order"""
+        """
+        Get all unique imagery frames and corresponding times in increasing order.
+
+        Returns
+        -------
+        frames : NDArray[np.int_]
+            Sorted array of unique frame numbers
+        times : NDArray[np.datetime64]
+            Sorted array of corresponding timestamps
+
+        Notes
+        -----
+        This method aggregates frames and times from all imagery objects that have
+        been registered with this sensor via add_imagery().
+        """
         return self._imagery_frames_dataframe["frames"].to_numpy(), self._imagery_frames_dataframe["times"].to_numpy()
     
     def add_imagery(self, imagery):
-        """Make this sensor aware of a new imagery that it associated with it, and update unique imagery frames / times
+        """
+        Register imagery with this sensor and update frame/time tracking.
+
+        Adds the imagery's frames and times to the sensor's internal registry
+        for coordinate conversion and time-to-frame mapping. Duplicate imagery
+        (by UUID) or imagery without times is ignored.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to register with this sensor
+
+        Notes
+        -----
+        - Only imagery with non-None times are tracked
+        - Duplicate frame/time pairs are automatically removed
+        - This method is typically called automatically when Imagery is created
         """
         if (imagery.uuid in self._added_imagery_uuids) or (imagery.times is None):
             return
@@ -203,15 +242,25 @@ class Sensor:
         """
         Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
 
-        Note:
-            This function may be implemented bysubclasses
+        Parameters
+        ----------
+        frame : int
+            Frame number for which to perform the conversion
+        loc : EarthLocation
+            Astropy EarthLocation object(s) containing geodetic coordinates
 
-        Args:
-            frame: Frame number
-            loc: EarthLocation object(s) with lat/lon coordinates
+        Returns
+        -------
+        rows : np.ndarray
+            Array of row pixel coordinates (NaN for base implementation)
+        columns : np.ndarray
+            Array of column pixel coordinates (NaN for base implementation)
 
-        Returns:
-            Tuple of (rows, columns) pixel coordinates (or zeros if no polynomials)
+        Notes
+        -----
+        The default implementation returns NaN arrays. Subclasses should override
+        this method to provide geodetic-to-pixel conversion using their specific
+        projection model (e.g., polynomial coefficients).
         """
         empty = np.empty_like(loc.x.values)
         empty.fill(np.nan)
@@ -222,16 +271,26 @@ class Sensor:
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 
-        Note:
-            This function may be implemented bysubclasses
+        Parameters
+        ----------
+        frame : int
+            Frame number for which to perform the conversion
+        rows : np.ndarray
+            Array of row pixel coordinates
+        columns : np.ndarray
+            Array of column pixel coordinates
 
-        Args:
-            frame: Frame number
-            rows: Array of row pixel coordinates
-            columns: Array of column pixel coordinates
+        Returns
+        -------
+        EarthLocation
+            Astropy EarthLocation object(s) with geodetic coordinates
+            (zeros for base implementation)
 
-        Returns:
-            EarthLocation objects with lat/lon coordinates (or zeros if no polynomials)
+        Notes
+        -----
+        The default implementation returns EarthLocation with zero coordinates.
+        Subclasses should override this method to provide pixel-to-geodetic
+        conversion using their specific projection model.
         """
         return EarthLocation.from_geodetic(
             lon=np.zeros_like(rows) * units.deg,

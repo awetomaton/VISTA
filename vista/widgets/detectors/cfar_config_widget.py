@@ -1,4 +1,10 @@
-"""Reusable CFAR configuration widget for detector and point selection"""
+"""
+Reusable CFAR configuration widget for detector and point selection.
+
+This module provides a reusable Qt widget for configuring CFAR (Constant False Alarm Rate)
+detection parameters. The widget can be used in multiple contexts including full-frame
+detection and point refinement during track/detection creation.
+"""
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
@@ -7,7 +13,27 @@ from PyQt6.QtWidgets import (
 
 
 class NeighborhoodVisualization(QLabel):
-    """Widget to visualize the CFAR neighborhood (annular ring)"""
+    """
+    Widget to visualize the CFAR neighborhood (annular ring).
+
+    This widget provides a visual representation of the CFAR annulus showing the
+    background region (outer ring), ignore region (inner ring), and test pixel (center).
+    Supports both circular and square annulus shapes.
+
+    Parameters
+    ----------
+    parent : QWidget, optional
+        Parent widget, by default None
+
+    Attributes
+    ----------
+    background_radius : int
+        Outer radius for background region
+    ignore_radius : int
+        Inner radius for ignore region
+    annulus_shape : str
+        Shape of annulus, either 'circular' or 'square'
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -18,18 +44,45 @@ class NeighborhoodVisualization(QLabel):
         self.setMaximumSize(200, 200)
 
     def set_radii(self, background_radius, ignore_radius):
-        """Update the radii and repaint"""
+        """
+        Update the radii and trigger repaint.
+
+        Parameters
+        ----------
+        background_radius : int
+            Outer radius for background region
+        ignore_radius : int
+            Inner radius for ignore region
+        """
         self.background_radius = background_radius
         self.ignore_radius = ignore_radius
         self.update()
 
     def set_shape(self, annulus_shape):
-        """Update the annulus shape and repaint"""
+        """
+        Update the annulus shape and trigger repaint.
+
+        Parameters
+        ----------
+        annulus_shape : str
+            Shape of annulus, either 'circular' or 'square'
+        """
         self.annulus_shape = annulus_shape
         self.update()
 
     def paintEvent(self, event):
-        """Draw the neighborhood visualization"""
+        """
+        Draw the neighborhood visualization.
+
+        Renders a visual representation of the CFAR annulus showing the background
+        region (blue), ignore region (gray), and test pixel (red). The visualization
+        automatically scales to fit the widget size.
+
+        Parameters
+        ----------
+        event : QPaintEvent
+            Paint event from Qt framework
+        """
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -110,22 +163,50 @@ class CFARConfigWidget(QWidget):
     """
     Reusable widget for CFAR configuration parameters.
 
-    This widget contains all CFAR configuration controls and can be used in:
-    - CFARWidget for full-frame detection
-    - PointSelectionDialog for point refinement
+    This widget contains all CFAR configuration controls and can be used in multiple
+    contexts including full-frame detection (CFARWidget) and point refinement
+    (PointSelectionDialog). It provides controls for annulus shape, background/ignore
+    radii, threshold deviation, and optional area filters.
+
+    Parameters
+    ----------
+    parent : QWidget, optional
+        Parent widget, by default None
+    show_visualization : bool, optional
+        Whether to show the neighborhood visualization, by default True
+    show_area_filters : bool, optional
+        Whether to show min/max area filters, by default True
+    show_detection_mode : bool, optional
+        Whether to show detection mode selector, by default True
+
+    Attributes
+    ----------
+    show_visualization : bool
+        Whether visualization is shown
+    show_area_filters : bool
+        Whether area filters are shown
+    show_detection_mode : bool
+        Whether detection mode selector is shown
+    shape_combo : QComboBox
+        Combo box for annulus shape selection
+    mode_combo : QComboBox
+        Combo box for detection mode selection (if show_detection_mode)
+    background_spinbox : QSpinBox
+        Spinbox for background radius
+    ignore_spinbox : QSpinBox
+        Spinbox for ignore radius
+    threshold_spinbox : QDoubleSpinBox
+        Spinbox for threshold deviation
+    min_area_spinbox : QSpinBox
+        Spinbox for minimum area (if show_area_filters)
+    max_area_spinbox : QSpinBox
+        Spinbox for maximum area (if show_area_filters)
+    neighborhood_viz : NeighborhoodVisualization
+        Visualization widget (if show_visualization)
     """
 
     def __init__(self, parent=None, show_visualization=True, show_area_filters=True,
                  show_detection_mode=True):
-        """
-        Initialize the CFAR configuration widget.
-
-        Args:
-            parent: Parent widget
-            show_visualization: Whether to show the neighborhood visualization (default: True)
-            show_area_filters: Whether to show min/max area filters (default: True)
-            show_detection_mode: Whether to show detection mode selector (default: True)
-        """
         super().__init__(parent)
         self.show_visualization = show_visualization
         self.show_area_filters = show_area_filters
@@ -133,7 +214,13 @@ class CFARConfigWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        """Initialize the user interface"""
+        """
+        Initialize the user interface.
+
+        Creates all UI controls including annulus shape selection, detection mode,
+        background/ignore radius spinboxes, threshold deviation spinbox, optional
+        area filters, and optional neighborhood visualization.
+        """
         layout = QHBoxLayout()
 
         # Left side: parameters
@@ -295,7 +382,12 @@ class CFARConfigWidget(QWidget):
         self.setLayout(layout)
 
     def update_visualization(self):
-        """Update the neighborhood visualization when parameters change"""
+        """
+        Update the neighborhood visualization when parameters change.
+
+        Called automatically when background radius, ignore radius, or annulus
+        shape is modified. Only active if show_visualization is True.
+        """
         if self.show_visualization:
             self.neighborhood_viz.set_radii(
                 self.background_spinbox.value(),
@@ -309,8 +401,17 @@ class CFARConfigWidget(QWidget):
         """
         Get the current CFAR parameter values.
 
-        Returns:
-            dict: Dictionary containing CFAR parameters
+        Returns
+        -------
+        dict
+            Dictionary containing CFAR parameters with keys:
+            - 'background_radius' : int
+            - 'ignore_radius' : int
+            - 'threshold_deviation' : float
+            - 'annulus_shape' : str ('circular' or 'square')
+            - 'detection_mode' : str (if show_detection_mode is True)
+            - 'min_area' : int (if show_area_filters is True)
+            - 'max_area' : int (if show_area_filters is True)
         """
         params = {
             'background_radius': self.background_spinbox.value(),
@@ -332,8 +433,17 @@ class CFARConfigWidget(QWidget):
         """
         Set CFAR parameter values.
 
-        Args:
-            params (dict): Dictionary containing CFAR parameters
+        Parameters
+        ----------
+        params : dict
+            Dictionary containing CFAR parameters. Supported keys:
+            - 'background_radius' : int
+            - 'ignore_radius' : int
+            - 'threshold_deviation' : float
+            - 'annulus_shape' : str
+            - 'detection_mode' : str (only if show_detection_mode is True)
+            - 'min_area' : int (only if show_area_filters is True)
+            - 'max_area' : int (only if show_area_filters is True)
         """
         if 'background_radius' in params:
             self.background_spinbox.setValue(params['background_radius'])
