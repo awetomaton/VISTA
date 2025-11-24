@@ -31,7 +31,9 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 - **Sensor calibration data support**: bias/dark frames, uniformity gain corrections, bad pixel masks, and radiometric gain values
 - Interactive image histogram with dynamic range adjustment
 - Frame-by-frame navigation with keyboard shortcuts
-- Click-to-create manual tracks on imagery
+- **Interactive AOI (Area of Interest) Drawing**: Right-click context menu to draw rectangular regions for focused processing
+- **Geolocation tooltip**: Display latitude/longitude coordinates when hovering over imagery (requires geodetic polynomials)
+- **Pixel value tooltip**: Display pixel intensity values when hovering over imagery
 
 ### Advanced Track Support
 - **Multiple coordinate systems**:
@@ -42,7 +44,14 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
   - Times → Frames using imagery timestamps
   - Geodetic coordinates (Lat/Lon/Alt) → Pixel coordinates using 4th-order polynomials
 - **Priority system**: Row/Column takes precedence over geodetic; Frames takes precedence over times
-- **Manual track creation**: Click on imagery to create custom tracks with automatic frame tracking
+- **Manual track creation and editing**:
+  - Click-to-create tracks with automatic frame tracking
+  - Edit existing tracks by adding/removing points
+  - **Intelligent point selection modes** for precise point placement:
+    - **Verbatim**: Use exact clicked location
+    - **Peak**: Automatically snap to brightest pixel within configurable radius
+    - **CFAR**: Use CFAR detection algorithm to find signal blob centroid with full parameter control
+  - Point selection settings persist across sessions
 - Track path rendering with customizable colors and line widths
 - Current position markers with selectable styles
 - Tail length control (show full history or last N frames)
@@ -51,10 +60,12 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 
 ### Detection Overlay
 - Load detection CSV files with multiple detector support
+- **Manual detection creation and editing**: Click-to-add detection points at current frame with intelligent point selection modes (Verbatim, Peak, CFAR)
 - Customizable markers (circle, square, triangle, diamond, plus, cross, star)
 - Adjustable colors, marker sizes, and line thickness
 - Show/hide individual detectors
 - Detection styling persistence across sessions
+- Detection selection and deletion
 
 ### Built-in Detection Algorithms
 - **CFAR (Constant False Alarm Rate)**: Adaptive threshold detector with guard and background windows
@@ -565,26 +576,116 @@ app.exec()  # Window will open; close it to continue notebook execution
 
 **Example Script:** See `scripts/example_programmatic_loading.py` for a complete working example that creates synthetic imagery with a moving bright spot, detections, and tracks.
 
-### Creating Manual Tracks
+### Creating and Editing Manual Tracks and Detections
+
+VISTA provides powerful tools for manual track and detection creation with intelligent point placement.
+
+#### Point Selection Modes
+
+When creating or editing tracks/detections, a **Point Selection Dialog** appears with three modes for determining point locations:
+
+**1. Verbatim Mode**
+- Uses the exact pixel location where you click
+- Best for: Precise manual placement with full control
+- No automatic adjustments
+
+**2. Peak Mode**
+- Automatically finds the brightest pixel within a configurable radius of your click
+- **Configurable Parameters:**
+  - Search Radius: 1-50 pixels (default: 5)
+- **Best for:** Bright objects like stars, satellites, or aircraft
+- Points are placed at pixel center (+0.5 offset) for sub-pixel accuracy
+
+**3. CFAR Mode**
+- Runs CFAR detection algorithm in a local region around your click
+- Finds the centroid of the detected signal blob
+- **Configurable Parameters:**
+  - Search Radius: 10-200 pixels (defines local processing area)
+  - Background Radius: Outer radius for neighborhood statistics
+  - Ignore Radius: Inner radius excluded from statistics
+  - Threshold Deviation: Number of standard deviations for detection
+  - Annulus Shape: Circular or Square neighborhood
+  - Detection Mode: Above (bright), Below (dark), or Both
+  - Includes visual preview of CFAR annulus
+- **Best for:** Precise blob centroid location in varying backgrounds
+- All settings persist across sessions
+
+#### Creating Manual Tracks
 
 1. **Enable Track Creation Mode**:
    - Click the "Create Track" icon in the toolbar
-   - A track creation dialog will appear
+   - The Point Selection Dialog appears automatically
 
-2. **Create Track Points**:
+2. **Configure Point Selection**:
+   - Choose your preferred mode (Verbatim, Peak, or CFAR) by selecting the appropriate tab
+   - Adjust parameters as needed
+   - Settings are saved and remembered for future use
+
+3. **Create Track Points**:
    - Click on the imagery to add points to the current track
+   - The point location is refined based on your selected mode
    - Each click creates a new point at the current frame
-   - Points are automatically associated with the current frame
+   - Click near an existing point to remove it
 
-3. **Navigate and Add Points**:
-   - Change frames using playback controls or arrow keys
+4. **Navigate and Add Points**:
+   - Change frames using playback controls, arrow keys, or **A**/**D** keys
    - Continue clicking to add points at different frames
    - The system tracks which frame each point belongs to
+   - Temporary visualization shows your track as you build it
 
-4. **Finish Track**:
+5. **Finish Track**:
    - Click "Finish Track" in the dialog to save
    - The new track is added to the Data Manager
-   - Track is automatically saved when the dialog is closed
+   - Point Selection Dialog closes automatically
+
+#### Editing Existing Tracks
+
+1. **Enable Track Editing Mode**:
+   - In the Data Manager's Tracks panel, select a track
+   - Click the "Edit Track" button
+   - The Point Selection Dialog appears with current track data
+
+2. **Modify Track Points**:
+   - Navigate to any frame and click to add new points
+   - Click near existing points to remove them
+   - Use your preferred point selection mode for precise placement
+
+3. **Finish Editing**:
+   - Click "Finish Editing" to save changes
+   - Updated track appears in the Data Manager
+
+#### Creating and Editing Manual Detections
+
+The same workflow applies to detections:
+
+1. **Create Detections**: Use "Create Detection" toolbar icon
+2. **Edit Detections**: Select detector in Data Manager and click "Edit Detection"
+3. **Add Multiple Points**: Unlike tracks, you can add multiple detection points per frame
+4. **Point Selection**: All three modes (Verbatim, Peak, CFAR) work identically for detections
+
+### Drawing Areas of Interest (AOI)
+
+AOIs allow you to define rectangular regions for focused algorithm processing (background removal, treatments, etc.).
+
+**Creating an AOI:**
+1. **Access the Draw AOI Tool**:
+   - Right-click on the imagery viewer
+   - Select "Draw AOI" from the context menu
+
+2. **Draw the Rectangle**:
+   - Click and drag to define the rectangular region
+   - The AOI is created immediately upon mouse release
+
+3. **Use AOI in Algorithms**:
+   - Many algorithms (Temporal Median, Robust PCA, Bias Removal, NUC) support AOI selection
+   - Select your AOI from the dropdown in the algorithm dialog
+   - Processing is restricted to the selected region
+   - Output imagery inherits the AOI boundaries (with row/column offsets)
+
+**Managing AOIs:**
+- AOIs appear in the Data Manager
+- Toggle visibility to show/hide AOI rectangles on the display
+- Delete unwanted AOIs from the Data Manager
 
 ### Detection Algorithms
 
@@ -757,9 +858,19 @@ All tracking algorithms take detections as input and produce tracks as output.
 
 ### Keyboard Shortcuts
 
-- **Left Arrow / A**: Previous frame
-- **Right Arrow / D**: Next frame
-- **Space**: Play/Pause (when playback controls have focus)
+VISTA provides convenient keyboard shortcuts for efficient navigation and control:
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| **Left Arrow** or **A** | Previous Frame | Navigate backward one frame in the sequence |
+| **Right Arrow** or **D** | Next Frame | Navigate forward one frame in the sequence |
+| **Spacebar** | Play/Pause | Toggle playback on/off |
+
+**Notes:**
+- Keyboard shortcuts work when the main window has focus
+- The **A** and **D** keys provide an alternative to arrow keys, useful when your hand is on the mouse
+- Use **Spacebar** for quick playback control without reaching for the play button
+- During playback, use the FPS slider to control playback speed (supports negative values for reverse playback)
 
 ## Generating Test Data
 
@@ -875,11 +986,15 @@ Vista/
 │   │   │   ├── imagery_viewer.py    # Image display with pyqtgraph
 │   │   │   ├── playback_controls.py # Playback UI
 │   │   │   ├── imagery_selection_dialog.py  # Imagery picker for conversions
+│   │   │   ├── point_selection_dialog.py    # Point selection mode dialog
 │   │   │   └── data/
 │   │   │       ├── data_manager.py  # Data panel with editing
-│   │   │       └── data_loader.py   # Background loading thread
+│   │   │       ├── data_loader.py   # Background loading thread
+│   │   │       ├── tracks_panel.py  # Track editing panel
+│   │   │       └── detections_panel.py  # Detection editing panel
 │   │   ├── detectors/               # Detection algorithm widgets
 │   │   │   ├── cfar_widget.py       # CFAR detector UI
+│   │   │   ├── cfar_config_widget.py # Reusable CFAR configuration widget
 │   │   │   └── simple_threshold_widget.py  # Threshold detector UI
 │   │   ├── trackers/                # Tracking algorithm widgets
 │   │   │   ├── simple_tracking_dialog.py
@@ -924,7 +1039,8 @@ Vista/
 │   │   ├── color.py                 # Color conversion helpers
 │   │   ├── random_walk.py           # Random walk simulation
 │   │   ├── time_mapping.py          # Time-to-frame conversion
-│   │   └── geodetic_mapping.py      # Geodetic-to-pixel conversion
+│   │   ├── geodetic_mapping.py      # Geodetic-to-pixel conversion
+│   │   └── point_refinement.py      # Point selection algorithms
 │   ├── simulate/                    # Data generation utilities
 │   │   ├── simulation.py            # Synthetic data simulator
 │   │   └── data.py                  # Earth image and other simulation data
