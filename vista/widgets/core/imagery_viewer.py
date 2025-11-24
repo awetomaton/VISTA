@@ -9,6 +9,8 @@ from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
+from vista.utils.point_refinement import refine_point
+from vista.widgets.core.point_selection_dialog import PointSelectionDialog
 
 
 class CustomViewBox(pg.ViewBox):
@@ -117,6 +119,9 @@ class ImageryViewer(QWidget):
 
         # Last mouse position for updating tooltips on frame change
         self.last_mouse_pos = None  # Store last mouse position in scene coordinates
+
+        # Point selection dialog for refining clicked points
+        self.point_selection_dialog = None
 
         self.init_ui()
 
@@ -987,6 +992,8 @@ class ImageryViewer(QWidget):
         self.temp_track_plot = None
         # Change cursor to crosshair
         self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Show point selection dialog
+        self._show_point_selection_dialog()
 
     def start_track_editing(self, track):
         """Start track editing mode for a specific track"""
@@ -999,12 +1006,16 @@ class ImageryViewer(QWidget):
         self.temp_track_plot = None
         # Change cursor to crosshair
         self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Show point selection dialog
+        self._show_point_selection_dialog()
         # Update display to show current track being edited
         self._update_temp_track_display()
 
     def finish_track_creation(self):
         """Finish track creation and return the Track object"""
         self.track_creation_mode = False
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
         # Restore cursor
         self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -1044,6 +1055,8 @@ class ImageryViewer(QWidget):
         self.track_editing_mode = False
         editing_track = self.editing_track
         self.editing_track = None
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
         # Restore cursor
         self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -1079,6 +1092,8 @@ class ImageryViewer(QWidget):
         self.temp_detection_plot = None
         # Change cursor to crosshair
         self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Show point selection dialog
+        self._show_point_selection_dialog()
 
     def start_detection_editing(self, detector):
         """Start detection editing mode for a specific detector"""
@@ -1094,12 +1109,16 @@ class ImageryViewer(QWidget):
         self.temp_detection_plot = None
         # Change cursor to crosshair
         self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Show point selection dialog
+        self._show_point_selection_dialog()
         # Update display to show current detections being edited
         self._update_temp_detection_display()
 
     def finish_detection_creation(self):
         """Finish detection creation and return the Detector object"""
         self.detection_creation_mode = False
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
         # Restore cursor
         self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -1144,6 +1163,8 @@ class ImageryViewer(QWidget):
         self.detection_editing_mode = False
         editing_detector = self.editing_detector
         self.editing_detector = None
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
         # Restore cursor
         self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -1180,6 +1201,56 @@ class ImageryViewer(QWidget):
         else:
             self.current_detection_data = {}
             return None
+
+    def _show_point_selection_dialog(self):
+        """Show the point selection dialog (non-modal, floating)"""
+        if self.point_selection_dialog is None:
+            self.point_selection_dialog = PointSelectionDialog(parent=self)
+        self.point_selection_dialog.show()
+        self.point_selection_dialog.raise_()
+        self.point_selection_dialog.activateWindow()
+
+    def _hide_point_selection_dialog(self):
+        """Hide the point selection dialog"""
+        if self.point_selection_dialog is not None:
+            self.point_selection_dialog.hide()
+
+    def _refine_clicked_point(self, row, col):
+        """
+        Refine a clicked point location using the selected mode from the point selection dialog.
+
+        Args:
+            row (float): Clicked row coordinate
+            col (float): Clicked column coordinate
+
+        Returns:
+            tuple: (refined_row, refined_col) - refined coordinates
+        """
+        if self.point_selection_dialog is None or self.imagery is None:
+            # No dialog or no imagery, return verbatim
+            return row, col
+
+        # Get the current frame index
+        frame_index = np.where(self.imagery.frames == self.current_frame_number)[0]
+        if len(frame_index) == 0:
+            # Current frame not in imagery, return verbatim
+            return row, col
+        frame_index = frame_index[0]
+
+        # Get parameters from dialog
+        params = self.point_selection_dialog.get_parameters()
+        mode = params.pop('mode')  # Remove mode from params to avoid duplicate keyword argument
+
+        # Call refine_point with appropriate parameters
+        try:
+            refined_row, refined_col = refine_point(
+                row, col, self.imagery, frame_index, mode=mode, **params
+            )
+            return refined_row, refined_col
+        except Exception as e:
+            # If refinement fails, return original coordinates
+            print(f"Warning: Point refinement failed: {e}")
+            return row, col
 
     def on_mouse_clicked(self, event):
         """Handle mouse click events for track/detection creation/editing/selection"""
@@ -1222,8 +1293,11 @@ class ImageryViewer(QWidget):
                         self._update_temp_track_display()
                         return
 
+                # Refine the point using the selected mode
+                refined_row, refined_col = self._refine_clicked_point(row, col)
+
                 # Add or update track point for current frame
-                self.current_track_data[self.current_frame_number] = (row, col)
+                self.current_track_data[self.current_frame_number] = (refined_row, refined_col)
 
                 # Update temporary track display
                 self._update_temp_track_display()
@@ -1249,8 +1323,11 @@ class ImageryViewer(QWidget):
                         self._update_temp_detection_display()
                         return
 
+                # Refine the point using the selected mode
+                refined_row, refined_col = self._refine_clicked_point(row, col)
+
                 # Add new detection point for current frame
-                self.current_detection_data[self.current_frame_number].append((row, col))
+                self.current_detection_data[self.current_frame_number].append((refined_row, refined_col))
 
                 # Update temporary detection display
                 self._update_temp_detection_display()
