@@ -71,8 +71,6 @@ class DetectionsPanel(QWidget):
 
         # Create track from selected detections section
         track_from_detections_layout = QHBoxLayout()
-        self.selected_detections_label = QLabel("Selected: 0 detections")
-        track_from_detections_layout.addWidget(self.selected_detections_label)
 
         self.create_track_from_detections_btn = QPushButton("Create Track from Selected Detections")
         self.create_track_from_detections_btn.clicked.connect(self.create_track_from_selected_detections)
@@ -85,11 +83,6 @@ class DetectionsPanel(QWidget):
         self.add_to_existing_track_btn.setEnabled(False)
         self.add_to_existing_track_btn.setToolTip("Add selected detections to an existing track (click track in viewer after)")
         track_from_detections_layout.addWidget(self.add_to_existing_track_btn)
-
-        self.clear_detection_selection_btn = QPushButton("Clear Selection")
-        self.clear_detection_selection_btn.clicked.connect(self.clear_detection_selection)
-        self.clear_detection_selection_btn.setEnabled(False)
-        track_from_detections_layout.addWidget(self.clear_detection_selection_btn)
 
         track_from_detections_layout.addStretch()
         layout.addLayout(track_from_detections_layout)
@@ -609,22 +602,8 @@ class DetectionsPanel(QWidget):
         """Handle detection selection from viewer"""
         if not self.waiting_for_track_selection:
             self.selected_detections = detections
-            self.selected_detections_label.setText(f"Selected: {len(detections)} detection(s)")
             self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)
             self.add_to_existing_track_btn.setEnabled(len(detections) >= 1)
-            self.clear_detection_selection_btn.setEnabled(len(detections) > 0)
-
-    def clear_detection_selection(self):
-        """Clear detection selection"""
-        self.selected_detections = []
-        self.viewer.selected_detections = []
-        self.selected_detections_label.setText("Selected: 0 detections")
-        self.create_track_from_detections_btn.setEnabled(False)
-        self.add_to_existing_track_btn.setEnabled(False)
-        self.clear_detection_selection_btn.setEnabled(False)
-        # Reset waiting state if active
-        if self.waiting_for_track_selection:
-            self.cancel_add_to_existing_track()
 
     def create_track_from_selected_detections(self):
         """Create a track from selected detections"""
@@ -722,7 +701,6 @@ class DetectionsPanel(QWidget):
         self.viewer.set_track_selection_mode(True)
 
         # Update UI
-        self.selected_detections_label.setText(f"Selected: {len(self.selected_detections)} detection(s) - Click a track to add to")
         self.add_to_existing_track_btn.setText("Cancel")
         self.add_to_existing_track_btn.clicked.disconnect()
         self.add_to_existing_track_btn.clicked.connect(self.cancel_add_to_existing_track)
@@ -744,7 +722,6 @@ class DetectionsPanel(QWidget):
         self.viewer.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
 
         # Restore UI
-        self.selected_detections_label.setText(f"Selected: {len(self.selected_detections)} detection(s)")
         self.add_to_existing_track_btn.setText("Add to Existing Track")
         self.add_to_existing_track_btn.clicked.disconnect()
         self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
