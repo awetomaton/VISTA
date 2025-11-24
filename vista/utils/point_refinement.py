@@ -85,8 +85,8 @@ def refine_peak(row, col, imagery, frame_index, radius=5):
     frame_data = imagery.images[frame_index]
 
     # Convert to integer pixel coordinates for indexing
-    center_row = int(round(row))
-    center_col = int(round(col))
+    center_row = int(round(row)) - imagery.row_offset
+    center_col = int(round(col)) - imagery.column_offset
 
     # Define search region bounds (clipped to image boundaries)
     row_min = max(0, center_row - radius)
@@ -101,8 +101,8 @@ def refine_peak(row, col, imagery, frame_index, radius=5):
     max_idx = np.unravel_index(np.argmax(search_region), search_region.shape)
 
     # Convert back to full image coordinates and add 0.5 offset to center in pixel
-    peak_row = row_min + max_idx[0] + 0.5
-    peak_col = col_min + max_idx[1] + 0.5
+    peak_row = row_min + max_idx[0] + 0.5 + imagery.row_offset
+    peak_col = col_min + max_idx[1] + 0.5 + imagery.column_offset
 
     return float(peak_row), float(peak_col)
 
@@ -163,8 +163,8 @@ def refine_cfar(row, col, imagery, frame_index, background_radius=10, ignore_rad
     frame_data = imagery.images[frame_index]
 
     # Convert to integer pixel coordinates for indexing
-    center_row = int(round(row))
-    center_col = int(round(col))
+    center_row = int(round(row)) - imagery.row_offset
+    center_col = int(round(col)) - imagery.column_offset
 
     # Define local region size based on search radius
     # Must be large enough for CFAR neighborhood plus search area
@@ -215,8 +215,8 @@ def refine_cfar(row, col, imagery, frame_index, background_radius=10, ignore_rad
         closest_idx = np.argmin(distances)
 
         # Get the closest detection and convert back to full image coordinates
-        refined_row = det_rows[closest_idx] + row_min
-        refined_col = det_columns[closest_idx] + col_min
+        refined_row = det_rows[closest_idx] + row_min + imagery.row_offset
+        refined_col = det_columns[closest_idx] + col_min + imagery.column_offset
 
         return float(refined_row), float(refined_col)
 
