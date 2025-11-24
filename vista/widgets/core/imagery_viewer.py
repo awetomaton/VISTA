@@ -359,6 +359,10 @@ class ImageryViewer(QWidget):
                 # No pixel value, position at bottom-right
                 self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
 
+    def update_detection_display(self):
+        """Update detection display (e.g., when filters change)"""
+        self.update_overlays()
+
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
         # Get current frame number
@@ -386,10 +390,26 @@ class ImageryViewer(QWidget):
                 continue
 
             # Update data for current frame
-            mask = detector.frames == frame_num
-            if np.any(mask):
-                rows = detector.rows[mask]
-                cols = detector.columns[mask]
+            frame_mask = detector.frames == frame_num
+
+            # Apply label filter if detections panel has active filters
+            try:
+                if hasattr(self, 'data_manager') and self.data_manager is not None:
+                    if hasattr(self.data_manager, 'detections_panel'):
+                        label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                        # Combine frame mask with label filter mask
+                        combined_mask = frame_mask & label_mask
+                    else:
+                        combined_mask = frame_mask
+                else:
+                    combined_mask = frame_mask
+            except AttributeError:
+                # If anything goes wrong, just use frame mask
+                combined_mask = frame_mask
+
+            if np.any(combined_mask):
+                rows = detector.rows[combined_mask]
+                cols = detector.columns[combined_mask]
                 scatter.setData(
                     x=cols, y=rows,
                     pen=pg.mkPen(color=detector.color, width=detector.line_thickness),
@@ -398,7 +418,7 @@ class ImageryViewer(QWidget):
                     symbol=detector.marker
                 )
             else:
-                scatter.setData(x=[], y=[])  # No data at this frame
+                scatter.setData(x=[], y=[])  # No data at this frame or filtered out
 
         # Update tracks for current frame
         for tracker in self.trackers:

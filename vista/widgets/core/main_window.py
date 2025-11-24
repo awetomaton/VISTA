@@ -87,6 +87,9 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.data_changed.connect(self.on_data_changed)
         self.data_manager.setMinimumWidth(400)
 
+        # Set data_manager reference on viewer for label filtering
+        self.viewer.data_manager = self.data_manager
+
         # Connect viewer signals to data manager
         self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
@@ -939,6 +942,7 @@ class VistaMainWindow(QMainWindow):
         dialog.exec()
         # Refresh the data manager to show any label changes
         self.data_manager.tracks_panel.refresh_tracks_table()
+        self.data_manager.detections_panel.refresh_detections_table()
 
     def on_data_dock_visibility_changed(self, visible):
         """Update menu action when dock visibility changes"""

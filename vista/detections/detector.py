@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
 import pathlib
 import numpy as np
@@ -15,13 +15,14 @@ class Detector:
     columns: NDArray[np.float64]
     sensor: Sensor
     description: str = ""
-    
+
     # Styling attributes
     color: str = 'r'  # Red by default
     marker: str = 'o'  # Circle by default
     marker_size: int = 10
     line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
+    labels: list[set[str]] = field(default_factory=list)  # List of label sets, one per detection point
 
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
@@ -30,6 +31,12 @@ class Detector:
             detector_slice.frames = detector_slice.frames[s]
             detector_slice.rows = detector_slice.rows[s]
             detector_slice.columns = detector_slice.columns[s]
+            # Subset labels if they exist
+            if len(detector_slice.labels) > 0:
+                if isinstance(s, slice):
+                    detector_slice.labels = detector_slice.labels[s]
+                else:  # numpy array boolean mask or indices
+                    detector_slice.labels = [detector_slice.labels[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labels[i] for i in s]
             return detector_slice
         else:
             raise TypeError("Invalid index or slice type.")
@@ -61,6 +68,15 @@ class Detector:
             kwargs["line_thickness"] = df["Line Thickness"].iloc[0]
         if "Visible" in df.columns:
             kwargs["visible"] = df["Visible"].iloc[0]
+        if "Labels" in df.columns:
+            # Parse labels from comma-separated string for each detection
+            labels_list = []
+            for labels_str in df["Labels"]:
+                if pd.notna(labels_str) and labels_str:
+                    labels_list.append(set(label.strip() for label in labels_str.split(',')))
+                else:
+                    labels_list.append(set())
+            kwargs["labels"] = labels_list
         return cls(
             name = name,
             frames = df["Frames"].to_numpy(),
@@ -71,7 +87,7 @@ class Detector:
         )
 
     def copy(self):
-        """Create a full copy of this track object"""
+        """Create a full copy of this detector object"""
         return self.__class__(
             name = self.name,
             frames = self.frames.copy(),
@@ -83,12 +99,21 @@ class Detector:
             marker_size = self.marker_size,
             line_thickness = self.line_thickness,
             visible = self.visible,
+            labels = [label_set.copy() for label_set in self.labels],
         )
     
     def to_csv(self, file: Union[str, pathlib.Path]):
         self.to_dataframe().to_csv(file, index=None)
       
     def to_dataframe(self) -> pd.DataFrame:
+        # Prepare labels column - one entry per detection
+        labels_column = []
+        for i in range(len(self.frames)):
+            if i < len(self.labels) and self.labels[i]:
+                labels_column.append(', '.join(sorted(self.labels[i])))
+            else:
+                labels_column.append('')
+
         return pd.DataFrame({
             "Detector": len(self)*[self.name],
             "Frames": self.frames,
@@ -99,4 +124,12 @@ class Detector:
             "Marker Size": self.marker_size,
             "Line Thickness": self.line_thickness,
             "Visible": self.visible,
+            "Labels": labels_column,
         })
+
+    def get_unique_labels(self) -> set[str]:
+        """Get all unique labels across all detections in this detector"""
+        unique_labels = set()
+        for label_set in self.labels:
+            unique_labels.update(label_set)
+        return unique_labels

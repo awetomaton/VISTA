@@ -13,7 +13,7 @@ class LabelsManagerDialog(QDialog):
 
         Args:
             parent: Parent widget
-            viewer: ImageryViewer instance to remove labels from tracks
+            viewer: ImageryViewer instance to remove labels from tracks and detections
         """
         super().__init__(parent)
         self.viewer = viewer
@@ -28,7 +28,7 @@ class LabelsManagerDialog(QDialog):
         layout = QVBoxLayout()
 
         # Information label
-        info_label = QLabel("Create and manage labels that can be applied to tracks.")
+        info_label = QLabel("Create and manage labels that can be applied to tracks and detections.")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
 
@@ -130,13 +130,23 @@ class LabelsManagerDialog(QDialog):
                 self.labels_list.takeItem(self.labels_list.row(item))
             self.save_labels()
 
-            # Remove deleted labels from all tracks if viewer is available
+            # Remove deleted labels from all tracks and detections if viewer is available
             if self.viewer is not None:
                 deleted_labels_set = set(label_names)
+                # Remove from tracks
                 for tracker in self.viewer.trackers:
                     for track in tracker.tracks:
                         # Remove any deleted labels from this track's label set
                         track.labels = track.labels - deleted_labels_set
+                # Remove from detections (per-detection labels)
+                for detector in self.viewer.detectors:
+                    # Remove deleted labels from each detection point in this detector
+                    for label_set in detector.labels:
+                        label_set -= deleted_labels_set
+
+                # Update viewer display if detection filters are active
+                if hasattr(self.viewer, 'update_detection_display'):
+                    self.viewer.update_detection_display()
 
     @staticmethod
     def get_available_labels():
