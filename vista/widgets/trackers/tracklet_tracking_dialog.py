@@ -105,9 +105,12 @@ class TrackletTrackingDialog(QDialog):
         self.detector_list = QListWidget()
         self.detector_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
 
-        # Populate detector list
+        # Populate detector list - only show detectors from selected sensor
+        selected_sensor = self.viewer.selected_sensor
         for detector in self.viewer.detectors:
-            self.detector_list.addItem(detector.name)
+            # Only add detectors from the selected sensor (or all if no sensor selected)
+            if selected_sensor is None or detector.sensor == selected_sensor:
+                self.detector_list.addItem(detector.name)
 
         detector_layout.addWidget(self.detector_list)
         detector_group.setLayout(detector_layout)

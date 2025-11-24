@@ -11,10 +11,10 @@ from .background_removal import TemporalMedianWidget, RobustPCADialog
 
 # Tracker widgets
 from .trackers import (
-    TrackingDialog,
     KalmanTrackingDialog,
     NetworkFlowTrackingDialog,
-    SimpleTrackingDialog
+    SimpleTrackingDialog,
+    TrackletTrackingDialog,
 )
 
 # Enhancement widgets
@@ -35,10 +35,10 @@ __all__ = [
     'TemporalMedianWidget',
     'RobustPCADialog',
     # Trackers
-    'TrackingDialog',
     'KalmanTrackingDialog',
     'NetworkFlowTrackingDialog',
     'SimpleTrackingDialog',
+    'TrackletTrackingDialog',
     # Enhancement
     'CoadditionWidget',
 ]
