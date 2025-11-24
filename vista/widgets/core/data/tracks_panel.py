@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
+from vista.widgets.core.data.delegates import LabelsSelectionDialog
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineStyleDelegate, MarkerDelegate
@@ -1029,7 +1030,6 @@ class TracksPanel(QWidget):
 
     def choose_bulk_labels(self):
         """Open labels selection dialog for bulk label assignment"""
-        from vista.widgets.core.data.delegates import LabelsSelectionDialog
 
         # Get all available labels
         available_labels = LabelsManagerDialog.get_available_labels()

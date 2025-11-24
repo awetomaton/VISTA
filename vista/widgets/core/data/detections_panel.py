@@ -5,12 +5,16 @@ import numpy as np
 import pandas as pd
 import pathlib
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
-from PyQt6.QtGui import QBrush, QColor
+from PyQt6.QtGui import QBrush, QColor, QAction
 from PyQt6.QtWidgets import (
     QCheckBox, QColorDialog, QFileDialog, QHBoxLayout, QHeaderView, QMenu,
     QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QScrollArea, QApplication
+from vista.widgets.core.data.delegates import LabelsSelectionDialog
+from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.tracks.track import Track
+from vista.tracks.tracker import Tracker
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineThicknessDelegate, MarkerDelegate
 
@@ -281,8 +285,6 @@ class DetectionsPanel(QWidget):
 
     def on_detections_header_context_menu(self, pos):
         """Show context menu on detections table header"""
-        from PyQt6.QtGui import QAction
-
         header = self.detections_table.horizontalHeader()
         column = header.logicalIndexAt(pos)
 
@@ -310,7 +312,6 @@ class DetectionsPanel(QWidget):
 
     def show_detection_filter_dialog(self, column):
         """Show filter dialog for Labels column"""
-        from PyQt6.QtWidgets import QScrollArea
 
         # Get all unique labels across all detection points in all detectors
         unique_labels = set()
@@ -834,8 +835,6 @@ class DetectionsPanel(QWidget):
 
     def label_selected_detections(self):
         """Add labels to selected detection points"""
-        from vista.widgets.core.data.delegates import LabelsSelectionDialog
-        from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 
         if not self.selected_detections:
             QMessageBox.information(
@@ -929,9 +928,6 @@ class DetectionsPanel(QWidget):
         columns = np.array(columns_list)[sorted_indices]
 
         # Create track
-        from vista.tracks.track import Track
-        from vista.tracks.tracker import Tracker
-
         track_name = f"Track from Detections {len([t for tracker in self.viewer.trackers for t in tracker.tracks]) + 1}"
         track = Track(
             name=track_name,
@@ -997,7 +993,6 @@ class DetectionsPanel(QWidget):
         self.add_to_existing_track_btn.clicked.connect(self.cancel_add_to_existing_track)
 
         # Show status message
-        from PyQt6.QtWidgets import QApplication
         main_window = QApplication.instance().activeWindow()
         if hasattr(main_window, 'statusBar'):
             main_window.statusBar().showMessage("Click on a track in the viewer to add selected detections to it", 0)
@@ -1009,7 +1004,6 @@ class DetectionsPanel(QWidget):
         self.waiting_for_track_selection = False
 
         # Restore detection selection cursor (since we're still in detection selection mode)
-        from PyQt6.QtCore import Qt
         self.viewer.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
 
         # Restore UI
@@ -1018,7 +1012,6 @@ class DetectionsPanel(QWidget):
         self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
 
         # Clear status message
-        from PyQt6.QtWidgets import QApplication
         main_window = QApplication.instance().activeWindow()
         if hasattr(main_window, 'statusBar'):
             main_window.statusBar().showMessage("Add to track cancelled", 3000)
@@ -1115,7 +1108,6 @@ class DetectionsPanel(QWidget):
         self.viewer.set_detection_selection_mode(False)
 
         # Turn off the toolbar action
-        from PyQt6.QtWidgets import QApplication
         main_window = QApplication.instance().activeWindow()
         if hasattr(main_window, 'select_detections_action'):
             main_window.select_detections_action.setChecked(False)

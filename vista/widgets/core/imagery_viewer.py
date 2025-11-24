@@ -1377,9 +1377,6 @@ class ImageryViewer(QWidget):
 
             # Handle detection selection
             elif self.detection_selection_mode:
-                # Find the closest detection to the click position
-                from PyQt6.QtWidgets import QApplication
-
                 closest_detection = None
                 closest_distance = float('inf')
 

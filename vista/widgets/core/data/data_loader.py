@@ -8,6 +8,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
+from vista.sensors.sensor import Sensor
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
@@ -298,7 +299,6 @@ class DataLoaderThread(QThread):
             )
         else:
             # Base Sensor class
-            from vista.sensors.sensor import Sensor
             sensor = Sensor(
                 name=sensor_name,
                 bias_images=bias_images,
