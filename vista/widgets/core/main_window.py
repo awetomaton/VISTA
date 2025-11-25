@@ -37,14 +37,21 @@ from .save_imagery_dialog import SaveImageryDialog
 class VistaMainWindow(QMainWindow):
     """Main application window"""
 
-    def __init__(self, imagery=None, tracks=None, detections=None):
+    def __init__(self, imagery=None, tracks=None, detections=None, sensors=None):
         """
         Initialize the Vista main window.
 
-        Args:
-            imagery: Optional Imagery object or list of Imagery objects to load at startup
-            tracks: Optional Tracker object or list of Tracker objects to load at startup
-            detections: Optional Detector object or list of Detector objects to load at startup
+        Parameters
+        ----------
+        imagery : Imagery or list of Imagery, optional
+            Imagery object(s) to load at startup
+        tracks : Tracker or list of Tracker, optional
+            Tracker object(s) to load at startup
+        detections : Detector or list of Detector, optional
+            Detector object(s) to load at startup
+        sensors : Sensor or list of Sensor, optional
+            Sensor object(s) to load at startup. If not provided, sensors will be
+            extracted from imagery objects that have associated sensors.
         """
         super().__init__()
         self.setWindowTitle(f"VISTA - {vista.__version__}")
@@ -64,8 +71,8 @@ class VistaMainWindow(QMainWindow):
         self.init_ui()
 
         # Load any provided data programmatically
-        if imagery is not None or tracks is not None or detections is not None:
-            self.load_data_programmatically(imagery, tracks, detections)
+        if imagery is not None or tracks is not None or detections is not None or sensors is not None:
+            self.load_data_programmatically(imagery, tracks, detections, sensors)
 
     def init_ui(self):
         # Create main widget and layout
@@ -1309,21 +1316,59 @@ class VistaMainWindow(QMainWindow):
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
 
-    def load_data_programmatically(self, imagery=None, tracks=None, detections=None):
+    def load_data_programmatically(self, imagery=None, tracks=None, detections=None, sensors=None):
         """
         Load data programmatically without file dialogs.
 
-        Args:
-            imagery: Imagery object or list of Imagery objects
-            tracks: Tracker object or list of Tracker objects
-            detections: Detector object or list of Detector objects
+        Parameters
+        ----------
+        imagery : Imagery or list of Imagery, optional
+            Imagery object(s) to load
+        tracks : Tracker or list of Tracker, optional
+            Tracker object(s) to load
+        detections : Detector or list of Detector, optional
+            Detector object(s) to load
+        sensors : Sensor or list of Sensor, optional
+            Sensor object(s) to load. If not provided, sensors will be extracted
+            from imagery objects that have associated sensors.
         """
+        # Load sensors first (if provided)
+        if sensors is not None:
+            # Convert single item to list
+            sensors_list = [sensors] if isinstance(sensors, Sensor) else sensors
+
+            for sensor in sensors_list:
+                # Check if sensor with same name already exists
+                existing_sensor = None
+                for s in self.viewer.sensors:
+                    if s.name == sensor.name:
+                        existing_sensor = s
+                        break
+
+                if existing_sensor is None:
+                    # Add new sensor to viewer
+                    self.viewer.sensors.append(sensor)
+
         # Load imagery
         if imagery is not None:
             # Convert single item to list
             imagery_list = [imagery] if isinstance(imagery, Imagery) else imagery
 
             for img in imagery_list:
+                # If imagery has a sensor, make sure it's in the viewer's sensor list
+                if img.sensor is not None:
+                    sensor_exists = False
+                    for s in self.viewer.sensors:
+                        if s.name == img.sensor.name:
+                            sensor_exists = True
+                            # Reuse existing sensor instead of the one from imagery
+                            img.sensor = s
+                            break
+
+                    if not sensor_exists:
+                        # Add the imagery's sensor to viewer
+                        self.viewer.sensors.append(img.sensor)
+
                 self.viewer.add_imagery(img)
                 # Select the first imagery for viewing
                 if img == imagery_list[0]:
@@ -1355,6 +1400,9 @@ class VistaMainWindow(QMainWindow):
 
         # Update status bar
         status_parts = []
+        if sensors is not None:
+            count = len(sensors_list) if isinstance(sensors_list, list) else 1
+            status_parts.append(f"{count} sensor(s)")
         if imagery is not None:
             count = len(imagery_list) if isinstance(imagery_list, list) else 1
             status_parts.append(f"{count} imagery dataset(s)")

@@ -166,6 +166,10 @@ def main():
     Creates synthetic imagery with a moving bright spot, detections tracking
     the spot (with noise), and a ground truth track. All data is created
     in-memory and loaded programmatically into VISTA.
+
+    This example demonstrates two approaches for programmatic loading:
+    1. Pass sensor explicitly via sensors parameter (shown here)
+    2. Pass sensor implicitly via imagery.sensor (alternative approach)
     """
     print("Creating example sensor...")
     sensor = create_example_sensor()
@@ -180,14 +184,26 @@ def main():
     tracks = create_example_tracks(sensor)
 
     print("Launching VISTA...")
+    # Approach 1: Pass sensor explicitly (recommended when sensor is created separately)
     app = VistaApp(
+        sensors=sensor,        # Explicitly pass the sensor
         imagery=imagery,
         detections=detections,
         tracks=tracks
     )
 
+    # Alternative Approach 2 (commented out):
+    # Since imagery.sensor is already set, you can omit the sensors parameter.
+    # VISTA will automatically extract sensors from imagery objects.
+    # app = VistaApp(
+    #     imagery=imagery,
+    #     detections=detections,
+    #     tracks=tracks
+    # )
+
     print("VISTA launched with example data. Close the window to exit.")
     print("\nExample data includes:")
+    print("  - 1 sensor: Example Sensor")
     print("  - 50 frames of 256x256 imagery with a moving bright spot")
     print("  - Detections tracking the spot (with added noise)")
     print("  - A ground truth track following the circular path")
