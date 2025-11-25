@@ -10,7 +10,7 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
 
 ## Watch the demo!
-[![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=O34wxldMEeg)
+[![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=9eRo5S4yLTs)
 
 ## Important Assumptions
 
