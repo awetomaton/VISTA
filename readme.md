@@ -67,6 +67,15 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 - Detection styling persistence across sessions
 - Detection selection and deletion
 
+### Track and Detection Labeling
+- **Flexible labeling system**: Assign custom text labels to individual tracks and detections for classification and organization
+- **Label management**: Create, rename, and delete labels through the centralized Labels Manager
+- **Bulk label assignment**: Apply labels to multiple tracks or detections simultaneously from the data manager
+- **Label-based filtering**: Filter tracks and detections by label in the data manager tables for focused analysis
+- **Label persistence**: Labels are saved with data and persist across sessions
+- **Classification workflows**: Support for analyst review, ground truth annotation, and multi-class classification tasks
+- **Menu Access**: `Labels` menu item for centralized label management
+
 ### Built-in Detection Algorithms
 - **CFAR (Constant False Alarm Rate)**: Adaptive threshold detector with guard and background windows
   - Supports three detection modes: 'above' (bright objects), 'below' (dark objects), 'both' (absolute deviation)
@@ -117,6 +126,7 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 ### Data Manager Panel
 - Tabbed interface for managing Imagery, Tracks, and Detections
 - Bulk property editing (visibility, colors, markers, sizes, line thickness)
+- **Label assignment and filtering**: Apply labels to tracks/detections and filter by label
 - Column filtering and sorting for tracks and detections
 - Real-time updates synchronized with visualization
 - Track editing with complete track toggle
@@ -662,6 +672,78 @@ The same workflow applies to detections:
 2. **Edit Detections**: Select detector in Data Manager and click "Edit Detection"
 3. **Add Multiple Points**: Unlike tracks, you can add multiple detection points per frame
 4. **Point Selection**: All three modes (Verbatim, Peak, CFAR) work identically for detections
+
+### Managing Track and Detection Labels
+
+VISTA provides a flexible labeling system for organizing, classifying, and filtering tracks and detections. This is useful for ground truth annotation, classification workflows, and analyst review.
+
+#### Opening the Labels Manager
+
+**Menu Path:** `Labels` (in menu bar)
+
+The Labels Manager provides centralized control over all labels in your project:
+- **View all labels**: See all labels currently defined in the project
+- **Create new labels**: Add custom labels for your classification scheme
+- **Rename labels**: Update label names (automatically updates all assigned labels)
+- **Delete labels**: Remove labels (automatically removes from all assigned tracks/detections)
+- **See label usage**: View which tracks and detections are assigned each label
+
+#### Assigning Labels to Tracks
+
+1. **Open the Data Manager**: Ensure the Tracks tab is selected
+2. **Select tracks**: Click on one or more tracks in the table (use Ctrl/Cmd for multiple selection)
+3. **Assign label**:
+   - Right-click on selected tracks
+   - Choose "Assign Label" from context menu
+   - Select an existing label or create a new one
+4. **Verify assignment**: The "Label" column shows the assigned label for each track
+
+#### Assigning Labels to Detections
+
+1. **Open the Data Manager**: Ensure the Detections tab is selected
+2. **Select detections**: Click on one or more detections in the table
+3. **Assign label**: Use the same workflow as tracks (right-click → "Assign Label")
+4. **Bulk assignment**: Select multiple detections to assign the same label to all
+
+#### Filtering by Label
+
+**In the Tracks Panel:**
+1. Click the "Label" column header dropdown filter
+2. Select which labels to display (supports multiple label selection)
+3. Table updates to show only tracks with selected labels
+4. Clear filter to show all tracks again
+
+**In the Detections Panel:**
+1. Use the same filtering workflow as tracks
+2. Quickly isolate detections by classification
+3. Useful for reviewing specific object types or classes
+
+#### Label Persistence
+
+- Labels are saved automatically with track and detection data
+- When exporting tracks/detections to CSV, labels are included in the "Label" column
+- When loading CSV files with a "Label" column, labels are automatically imported
+- Labels persist across VISTA sessions
+
+#### Common Labeling Workflows
+
+**Ground Truth Annotation:**
+1. Load automated tracker results
+2. Review each track and assign labels: "True Positive", "False Positive", "Missed Detection"
+3. Filter by label to review each category
+4. Export labeled data for algorithm validation
+
+**Multi-Class Classification:**
+1. Create labels for each object class: "Aircraft", "Satellite", "Bird", "Debris"
+2. Assign labels to detections or tracks as you review
+3. Use label filtering to focus on specific classes
+4. Generate classification statistics by counting labels
+
+**Analyst Review:**
+1. Create labels for review status: "Reviewed", "Needs Review", "Uncertain"
+2. Assign labels during manual review process
+3. Filter by "Needs Review" to see remaining work
+4. Track review progress through label counts
 
 ### Drawing Areas of Interest (AOI)
 
