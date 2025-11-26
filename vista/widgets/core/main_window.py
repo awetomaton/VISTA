@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
     QDockWidget, QFileDialog, QMainWindow, QMessageBox,
     QProgressDialog, QSplitter, QVBoxLayout, QWidget
@@ -280,6 +280,9 @@ class VistaMainWindow(QMainWindow):
         self.draw_roi_action.toggled.connect(self.on_draw_roi_toggled)
         toolbar.addAction(self.draw_roi_action)
 
+        # Create action group for mutually exclusive interactive modes
+        self.interactive_mode_group = self.create_interactive_mode_action_group()
+
         # Create Track action
         if darkdetect.isDark():
             self.create_track_action = QAction(self.icons.create_track_light, "Create Track", self)
@@ -289,6 +292,7 @@ class VistaMainWindow(QMainWindow):
         self.create_track_action.setChecked(False)
         self.create_track_action.setToolTip("Create a track by clicking on frames")
         self.create_track_action.toggled.connect(self.on_create_track_toggled)
+        self.interactive_mode_group.addAction(self.create_track_action)
         toolbar.addAction(self.create_track_action)
 
         # Create Detection action
@@ -300,6 +304,7 @@ class VistaMainWindow(QMainWindow):
         self.create_detection_action.setChecked(False)
         self.create_detection_action.setToolTip("Create detections by clicking on frames (multiple per frame)")
         self.create_detection_action.toggled.connect(self.on_create_detection_toggled)
+        self.interactive_mode_group.addAction(self.create_detection_action)
         toolbar.addAction(self.create_detection_action)
 
         # Select Track action
@@ -311,6 +316,7 @@ class VistaMainWindow(QMainWindow):
         self.select_track_action.setChecked(False)
         self.select_track_action.setToolTip("Click on a track in the viewer to select it in the table.\nHold Ctrl (Windows/Linux) or Cmd (Mac) to add to selection.")
         self.select_track_action.toggled.connect(self.on_select_track_toggled)
+        self.interactive_mode_group.addAction(self.select_track_action)
         toolbar.addAction(self.select_track_action)
 
         # Select Detections action
@@ -322,7 +328,69 @@ class VistaMainWindow(QMainWindow):
         self.select_detections_action.setChecked(False)
         self.select_detections_action.setToolTip("Click on detections in the viewer to select them. \nUse to create tracks from selected detections.")
         self.select_detections_action.toggled.connect(self.on_select_detections_toggled)
+        self.interactive_mode_group.addAction(self.select_detections_action)
         toolbar.addAction(self.select_detections_action)
+
+    def create_interactive_mode_action_group(self):
+        """
+        Create action group for mutually exclusive interactive modes.
+
+        This ensures only one interactive mode can be active at a time.
+        """
+        action_group = QActionGroup(self)
+        action_group.setExclusive(False)  # We'll handle exclusivity manually for better control
+        return action_group
+
+    def deactivate_all_interactive_modes(self, except_action=None):
+        """
+        Deactivate all interactive mode actions except the specified one.
+
+        This ensures mutual exclusivity of interactive modes across
+        both toolbar actions and data panel edit buttons.
+
+        Parameters
+        ----------
+        except_action : QAction or str, optional
+            The action to keep active (all others will be deactivated).
+            Can be a QAction object or a string identifier for edit buttons.
+        """
+        # Deactivate toolbar actions in the group
+        for action in self.interactive_mode_group.actions():
+            if action != except_action and action.isChecked():
+                # Clean up the mode state before unchecking
+                if action == self.create_track_action:
+                    self.viewer.finish_track_creation()
+                elif action == self.create_detection_action:
+                    self.viewer.finish_detection_creation()
+                elif action == self.select_track_action:
+                    self.viewer.set_track_selection_mode(False)
+                elif action == self.select_detections_action:
+                    self.viewer.set_detection_selection_mode(False)
+                    self.data_manager.detections_panel.clear_detection_selection()
+
+                # Now uncheck the action without triggering signals
+                action.blockSignals(True)
+                action.setChecked(False)
+                action.blockSignals(False)
+
+        # Deactivate edit buttons in data panels
+        if except_action != "edit_track":
+            if self.data_manager.tracks_panel.edit_track_btn.isChecked():
+                # Clean up track editing mode
+                self.viewer.finish_track_editing()
+                # Uncheck the button
+                self.data_manager.tracks_panel.edit_track_btn.blockSignals(True)
+                self.data_manager.tracks_panel.edit_track_btn.setChecked(False)
+                self.data_manager.tracks_panel.edit_track_btn.blockSignals(False)
+
+        if except_action != "edit_detector":
+            if self.data_manager.detections_panel.edit_detector_btn.isChecked():
+                # Clean up detector editing mode
+                self.viewer.finish_detection_editing()
+                # Uncheck the button
+                self.data_manager.detections_panel.edit_detector_btn.blockSignals(True)
+                self.data_manager.detections_panel.edit_detector_btn.setChecked(False)
+                self.data_manager.detections_panel.edit_detector_btn.blockSignals(False)
 
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
@@ -358,6 +426,9 @@ class VistaMainWindow(QMainWindow):
     def on_create_track_toggled(self, checked):
         """Handle Create Track toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.create_track_action)
+
             # Check if imagery is loaded
             if self.viewer.imagery is None:
                 # No imagery, show warning and uncheck
@@ -390,6 +461,9 @@ class VistaMainWindow(QMainWindow):
     def on_create_detection_toggled(self, checked):
         """Handle Create Detection toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.create_detection_action)
+
             # Check if imagery is loaded
             if self.viewer.imagery is None:
                 # No imagery, show warning and uncheck
@@ -421,6 +495,9 @@ class VistaMainWindow(QMainWindow):
     def on_select_track_toggled(self, checked):
         """Handle Select Track toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.select_track_action)
+
             # Enable track selection mode in viewer
             self.viewer.set_track_selection_mode(True)
             self.statusBar().showMessage("Track selection mode: Click on a track to select it. Hold Ctrl/Cmd to add to selection.", 0)
@@ -432,6 +509,9 @@ class VistaMainWindow(QMainWindow):
     def on_select_detections_toggled(self, checked):
         """Handle Select Detections toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.select_detections_action)
+
             # Switch to detections tab
             self.data_manager.tabs.setCurrentIndex(3)  # Detections tab
             # Enable detection selection mode in viewer

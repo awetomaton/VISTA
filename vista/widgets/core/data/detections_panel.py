@@ -617,6 +617,11 @@ class DetectionsPanel(QWidget):
     def on_edit_detector_clicked(self, checked):
         """Handle Edit Detector button click"""
         if checked:
+            # Deactivate all other interactive modes
+            main_window = self.window()
+            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+                main_window.deactivate_all_interactive_modes(except_action="edit_detector")
+
             # Get the selected detector
             selected_rows = list(set(index.row() for index in self.detections_table.selectedIndexes()))
             if len(selected_rows) != 1:

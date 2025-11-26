@@ -1451,6 +1451,11 @@ class TracksPanel(QWidget):
     def on_edit_track_clicked(self, checked):
         """Handle Edit Track button click"""
         if checked:
+            # Deactivate all other interactive modes
+            main_window = self.window()
+            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+                main_window.deactivate_all_interactive_modes(except_action="edit_track")
+
             # Get the selected track
             selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
             if len(selected_rows) != 1:
