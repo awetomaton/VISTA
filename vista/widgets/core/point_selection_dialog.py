@@ -6,7 +6,7 @@ locations are determined when clicking to add track or detection points. Three m
 supported: Verbatim (exact location), Peak (brightest pixel within radius), and CFAR
 (signal blob centroid via CFAR detection).
 """
-from PyQt6.QtCore import QSettings, Qt
+from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 )
@@ -44,7 +44,14 @@ class PointSelectionDialog(QDialog):
         Spinbox for CFAR mode search radius
     cfar_config : CFARConfigWidget
         Widget for CFAR configuration parameters
+
+    Signals
+    -------
+    visibility_changed : pyqtSignal(bool)
+        Emitted when dialog visibility changes (True=shown, False=hidden)
     """
+
+    visibility_changed = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -278,6 +285,34 @@ class PointSelectionDialog(QDialog):
         self.settings.setValue("cfar_threshold_deviation", cfar_params['threshold_deviation'])
         self.settings.setValue("cfar_annulus_shape", cfar_params['annulus_shape'])
         self.settings.setValue("cfar_detection_mode", cfar_params['detection_mode'])
+
+    def showEvent(self, event):
+        """
+        Handle dialog show event.
+
+        Emits visibility_changed signal when dialog is shown.
+
+        Parameters
+        ----------
+        event : QShowEvent
+            Show event from Qt framework
+        """
+        super().showEvent(event)
+        self.visibility_changed.emit(True)
+
+    def hideEvent(self, event):
+        """
+        Handle dialog hide event.
+
+        Emits visibility_changed signal when dialog is hidden.
+
+        Parameters
+        ----------
+        event : QHideEvent
+            Hide event from Qt framework
+        """
+        super().hideEvent(event)
+        self.visibility_changed.emit(False)
 
     def closeEvent(self, event):
         """

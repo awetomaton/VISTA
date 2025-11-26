@@ -172,6 +172,12 @@ class VistaMainWindow(QMainWindow):
         self.toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
         view_menu.addAction(self.toggle_data_manager_action)
 
+        self.toggle_point_selection_action = QAction("Point Selection Mode", self)
+        self.toggle_point_selection_action.setCheckable(True)
+        self.toggle_point_selection_action.setChecked(False)
+        self.toggle_point_selection_action.triggered.connect(self.toggle_point_selection_dialog)
+        view_menu.addAction(self.toggle_point_selection_action)
+
         # Labels action
         manage_labels_action = QAction("Labels", self)
         manage_labels_action.triggered.connect(self.manage_labels)
@@ -942,6 +948,29 @@ class VistaMainWindow(QMainWindow):
     def toggle_data_manager(self, checked):
         """Toggle data manager visibility"""
         self.data_dock.setVisible(checked)
+
+    def toggle_point_selection_dialog(self, checked):
+        """Toggle point selection dialog visibility"""
+        self.viewer.toggle_point_selection_dialog(checked)
+
+    def on_point_selection_dialog_created(self):
+        """
+        Called when the point selection dialog is first created.
+        Connects the dialog's visibility signal to update the menu action.
+        """
+        if self.viewer.point_selection_dialog is not None:
+            try:
+                self.viewer.point_selection_dialog.visibility_changed.disconnect(self.on_point_selection_visibility_changed)
+            except:
+                pass  # Not connected yet
+            self.viewer.point_selection_dialog.visibility_changed.connect(self.on_point_selection_visibility_changed)
+
+    def on_point_selection_visibility_changed(self, visible):
+        """Update menu action when point selection dialog visibility changes"""
+        # Block signals to prevent recursive calls
+        self.toggle_point_selection_action.blockSignals(True)
+        self.toggle_point_selection_action.setChecked(visible)
+        self.toggle_point_selection_action.blockSignals(False)
 
     def manage_labels(self):
         """Open the labels manager dialog"""

@@ -1211,6 +1211,11 @@ class ImageryViewer(QWidget):
         """Show the point selection dialog (non-modal, floating)"""
         if self.point_selection_dialog is None:
             self.point_selection_dialog = PointSelectionDialog(parent=self)
+            # Notify parent (main window) that dialog was created
+            # so it can connect to visibility signals
+            parent_window = self.window()
+            if hasattr(parent_window, 'on_point_selection_dialog_created'):
+                parent_window.on_point_selection_dialog_created()
         self.point_selection_dialog.show()
         self.point_selection_dialog.raise_()
         self.point_selection_dialog.activateWindow()
@@ -1219,6 +1224,29 @@ class ImageryViewer(QWidget):
         """Hide the point selection dialog"""
         if self.point_selection_dialog is not None:
             self.point_selection_dialog.hide()
+
+    def toggle_point_selection_dialog(self, visible):
+        """
+        Show or hide the point selection dialog.
+
+        Args:
+            visible: Boolean indicating whether dialog should be visible
+        """
+        if visible:
+            self._show_point_selection_dialog()
+        else:
+            self._hide_point_selection_dialog()
+
+    def get_point_selection_dialog_visible(self):
+        """
+        Check if point selection dialog is currently visible.
+
+        Returns:
+            Boolean indicating visibility
+        """
+        if self.point_selection_dialog is None:
+            return False
+        return self.point_selection_dialog.isVisible()
 
     def _refine_clicked_point(self, row, col):
         """
