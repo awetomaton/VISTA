@@ -1,120 +1,49 @@
 """Dialog for configuring and running the Tracklet tracker"""
-import traceback
-
-from PyQt6.QtCore import Qt, QSettings, QThread, pyqtSignal
-from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout,
-    QLabel, QListWidget, QMessageBox, QProgressDialog, QPushButton, QSpinBox,
-    QVBoxLayout
-)
+from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox, QFormLayout, QSpinBox
 
 from vista.algorithms.trackers import run_tracklet_tracker
-from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
+from vista.widgets.trackers.base_tracker_dialog import BaseTrackingDialog
 
 
-class TrackletTrackingWorker(QThread):
-    """Worker thread for running Tracklet tracker in background"""
-
-    progress_updated = pyqtSignal(str)  # message
-    tracking_complete = pyqtSignal(object, str)  # Emits (track_data_list, tracker_name)
-    error_occurred = pyqtSignal(str)  # Error message
-
-    def __init__(self, detectors, tracker_config):
-        super().__init__()
-        self.detectors = detectors
-        self.config = tracker_config
-        self._cancelled = False
-
-    def cancel(self):
-        """Request cancellation"""
-        self._cancelled = True
-
-    def run(self):
-        """Execute tracking in background"""
-        try:
-            if self._cancelled:
-                return
-
-            self.progress_updated.emit("Running Tracklet tracker...")
-
-            track_data_list = run_tracklet_tracker(self.detectors, self.config)
-
-            if self._cancelled:
-                return
-
-            self.progress_updated.emit("Complete!")
-            self.tracking_complete.emit(track_data_list, self.config['tracker_name'])
-
-        except Exception as e:
-            tb_str = traceback.format_exc()
-            self.error_occurred.emit(f"Tracking failed: {str(e)}\n\nTraceback:\n{tb_str}")
-
-
-class TrackletTrackingDialog(QDialog):
+class TrackletTrackingDialog(BaseTrackingDialog):
     """Dialog for configuring Tracklet tracker parameters"""
 
     def __init__(self, viewer, parent=None):
-        super().__init__(parent)
-        self.viewer = viewer
-        self.worker = None
-        self.progress_dialog = None
-        self.settings = QSettings("VISTA", "TrackletTracker")
-
-        self.setWindowTitle("Tracklet Tracker")
-        self.setMinimumWidth(500)
-
-        self.setup_ui()
-        self.load_settings()
-
-    def setup_ui(self):
-        """Setup the dialog UI"""
-        layout = QVBoxLayout()
-
-        # Description
-        desc_label = QLabel(
-            "<b>Tracklet-Based Hierarchical Tracker</b><br><br>"
-            "<b>How it works:</b> Uses a two-stage approach optimized for high false alarm scenarios. "
-            "Stage 1 forms high-confidence tracklets using strict association criteria (small search radius, "
-            "velocity consistency) with an 'M out of N' approach that allows small detection gaps. "
-            "Stage 2 links these tracklets using velocity extrapolation and smoothness scoring.<br><br>"
-            "<b>Best for:</b> High false alarm scenarios (100:1 or higher false-to-real ratio) where real tracks "
-            "move smoothly with consistent velocity. Robust to occasional missed detections. "
-            "Ideal for smooth targets with lots of clutter.<br><br>"
-            "<b>Advantages:</b> Filters false alarms early, fast (O(N_tracklets²)), leverages smoothness constraint, "
-            "handles detection gaps.<br>"
-            "<b>Limitations:</b> Requires relatively smooth motion. May struggle with highly maneuvering targets."
+        description = (
+            "<b>Tracklet Tracker (Two-Stage)</b><br><br>"
+            "<b>How it works:</b> Two-stage approach designed for high false alarm scenarios. "
+            "<b>Stage 1:</b> Forms short, reliable 'tracklets' using strict association and smoothness constraints. "
+            "Uses an M-out-of-N approach (allows limited misses) and detection rate filtering to reject false alarms. "
+            "<b>Stage 2:</b> Links tracklets into full tracks using a more permissive search, accounting for velocity and gaps.<br><br>"
+            "<b>Best for:</b> Noisy imagery with many false detections. Excellent for space situational awareness "
+            "and scenarios where initial detections have low confidence. Robust to clutter.<br><br>"
+            "<b>Advantages:</b> Outstanding false alarm rejection, handles intermittent detections, two-stage robustness.<br>"
+            "<b>Limitations:</b> More parameters to tune, may miss very short or erratic tracks, computationally moderate."
         )
-        desc_label.setWordWrap(True)
-        layout.addWidget(desc_label)
 
-        # Tracker name
-        name_layout = QHBoxLayout()
-        name_layout.addWidget(QLabel("Tracker Name:"))
-        self.name_input = QComboBox()
-        self.name_input.setEditable(True)
-        self.name_input.addItems(["Tracker 1", "Tracker 2", "Tracker 3"])
-        name_layout.addWidget(self.name_input)
-        layout.addLayout(name_layout)
+        super().__init__(
+            viewer=viewer,
+            parent=parent,
+            algorithm_function=run_tracklet_tracker,
+            settings_name="TrackletTracker",
+            window_title="Tracklet Tracker",
+            description=description,
+            default_track_color='c',
+            default_track_marker='x',
+            default_track_line_width=2,
+            default_track_marker_size=10
+        )
 
-        # Detector selection
-        detector_group = QGroupBox("Input Detectors")
-        detector_layout = QVBoxLayout()
+    def add_algorithm_parameters(self):
+        """Add Tracklet tracker-specific parameters"""
+        # Override to add custom grouped parameters layout
+        # We'll replace the default params_group with custom groups
 
-        detector_layout.addWidget(QLabel("Select detectors to use as input:"))
-        self.detector_list = QListWidget()
-        self.detector_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        # Remove the default params_group and create custom layout
+        self.params_group.setParent(None)
 
-        # Populate detector list - only show detectors from selected sensor
-        selected_sensor = self.viewer.selected_sensor
-        for detector in self.viewer.detectors:
-            # Only add detectors from the selected sensor (or all if no sensor selected)
-            if selected_sensor is None or detector.sensor == selected_sensor:
-                self.detector_list.addItem(detector.name)
-
-        detector_layout.addWidget(self.detector_list)
-        detector_group.setLayout(detector_layout)
-        layout.addWidget(detector_group)
+        # Get the main layout
+        main_layout = self.layout()
 
         # Stage 1: Tracklet formation parameters
         stage1_group = QGroupBox("Stage 1: Tracklet Formation")
@@ -180,7 +109,8 @@ class TrackletTrackingDialog(QDialog):
         stage1_layout.addRow("Min Detection Rate:", self.min_detection_rate)
 
         stage1_group.setLayout(stage1_layout)
-        layout.addWidget(stage1_group)
+        # Insert before the button layout (which should be the last item)
+        main_layout.insertWidget(main_layout.count() - 1, stage1_group)
 
         # Stage 2: Tracklet linking parameters
         stage2_group = QGroupBox("Stage 2: Tracklet Linking")
@@ -222,7 +152,7 @@ class TrackletTrackingDialog(QDialog):
         stage2_layout.addRow("Smoothness Weight:", self.smoothness_weight)
 
         stage2_group.setLayout(stage2_layout)
-        layout.addWidget(stage2_group)
+        main_layout.insertWidget(main_layout.count() - 1, stage2_group)
 
         # Output filtering parameters
         output_group = QGroupBox("Output Filtering")
@@ -239,178 +169,61 @@ class TrackletTrackingDialog(QDialog):
         output_layout.addRow("Min Track Length:", self.min_track_length)
 
         output_group.setLayout(output_layout)
-        layout.addWidget(output_group)
-
-        # Buttons
-        button_layout = QHBoxLayout()
-
-        self.run_button = QPushButton("Run Tracker")
-        self.run_button.clicked.connect(self.run_tracker)
-        button_layout.addWidget(self.run_button)
-
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(self.cancel_button)
-
-        layout.addLayout(button_layout)
-
-        self.setLayout(layout)
+        main_layout.insertWidget(main_layout.count() - 1, output_group)
 
     def load_settings(self):
         """Load previously saved settings"""
-        self.initial_search_radius.setValue(
-            self.settings.value("initial_search_radius", 10.0, type=float))
-        self.max_velocity_change.setValue(
-            self.settings.value("max_velocity_change", 5.0, type=float))
-        self.min_tracklet_length.setValue(
-            self.settings.value("min_tracklet_length", 3, type=int))
-        self.max_consecutive_misses.setValue(
-            self.settings.value("max_consecutive_misses", 2, type=int))
-        self.min_detection_rate.setValue(
-            self.settings.value("min_detection_rate", 0.6, type=float))
-        self.max_linking_gap.setValue(
-            self.settings.value("max_linking_gap", 10, type=int))
-        self.linking_search_radius.setValue(
-            self.settings.value("linking_search_radius", 30.0, type=float))
-        self.smoothness_weight.setValue(
-            self.settings.value("smoothness_weight", 1.0, type=float))
-        self.min_track_length.setValue(
-            self.settings.value("min_track_length", 5, type=int))
+        super().load_settings()
+        # Stage 1 parameters
+        self.initial_search_radius.setValue(self.settings.value("initial_search_radius", 10.0, type=float))
+        self.max_velocity_change.setValue(self.settings.value("max_velocity_change", 5.0, type=float))
+        self.min_tracklet_length.setValue(self.settings.value("min_tracklet_length", 3, type=int))
+        self.max_consecutive_misses.setValue(self.settings.value("max_consecutive_misses", 2, type=int))
+        self.min_detection_rate.setValue(self.settings.value("min_detection_rate", 0.6, type=float))
 
-        # Restore tracker name if available
-        last_name = self.settings.value("tracker_name", "")
-        if last_name:
-            self.name_input.setCurrentText(last_name)
+        # Stage 2 parameters
+        self.max_linking_gap.setValue(self.settings.value("max_linking_gap", 10, type=int))
+        self.linking_search_radius.setValue(self.settings.value("linking_search_radius", 30.0, type=float))
+        self.smoothness_weight.setValue(self.settings.value("smoothness_weight", 1.0, type=float))
+
+        # Output parameters
+        self.min_track_length.setValue(self.settings.value("min_track_length", 5, type=int))
 
     def save_settings(self):
         """Save current settings for next time"""
+        super().save_settings()
+        # Stage 1 parameters
         self.settings.setValue("initial_search_radius", self.initial_search_radius.value())
         self.settings.setValue("max_velocity_change", self.max_velocity_change.value())
         self.settings.setValue("min_tracklet_length", self.min_tracklet_length.value())
         self.settings.setValue("max_consecutive_misses", self.max_consecutive_misses.value())
         self.settings.setValue("min_detection_rate", self.min_detection_rate.value())
+
+        # Stage 2 parameters
         self.settings.setValue("max_linking_gap", self.max_linking_gap.value())
         self.settings.setValue("linking_search_radius", self.linking_search_radius.value())
         self.settings.setValue("smoothness_weight", self.smoothness_weight.value())
+
+        # Output parameters
         self.settings.setValue("min_track_length", self.min_track_length.value())
-        self.settings.setValue("tracker_name", self.name_input.currentText())
 
-    def run_tracker(self):
-        """Start the tracking process"""
-        # Validate selection
-        selected_items = self.detector_list.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "No Detectors Selected",
-                              "Please select at least one detector.")
-            return
+    def build_config(self):
+        """Build configuration dictionary for Tracklet tracker"""
+        config = super().build_config()
 
-        # Get selected detectors
-        selected_detectors = []
-        for item in selected_items:
-            detector_name = item.text()
-            for detector in self.viewer.detectors:
-                if detector.name == detector_name:
-                    selected_detectors.append(detector)
-                    break
+        # Stage 1 parameters
+        config['initial_search_radius'] = self.initial_search_radius.value()
+        config['max_velocity_change'] = self.max_velocity_change.value()
+        config['min_tracklet_length'] = self.min_tracklet_length.value()
+        config['max_consecutive_misses'] = self.max_consecutive_misses.value()
+        config['min_detection_rate'] = self.min_detection_rate.value()
 
-        # Build configuration
-        config = {
-            'tracker_name': self.name_input.currentText(),
-            'initial_search_radius': self.initial_search_radius.value(),
-            'max_velocity_change': self.max_velocity_change.value(),
-            'min_tracklet_length': self.min_tracklet_length.value(),
-            'max_consecutive_misses': self.max_consecutive_misses.value(),
-            'min_detection_rate': self.min_detection_rate.value(),
-            'max_linking_gap': self.max_linking_gap.value(),
-            'linking_search_radius': self.linking_search_radius.value(),
-            'smoothness_weight': self.smoothness_weight.value(),
-            'min_track_length': self.min_track_length.value()
-        }
+        # Stage 2 parameters
+        config['max_linking_gap'] = self.max_linking_gap.value()
+        config['linking_search_radius'] = self.linking_search_radius.value()
+        config['smoothness_weight'] = self.smoothness_weight.value()
 
-        # Save settings for next time
-        self.save_settings()
+        # Output parameters
+        config['min_track_length'] = self.min_track_length.value()
 
-        # Create progress dialog (indeterminate mode)
-        self.progress_dialog = QProgressDialog("Initializing tracker...", "Cancel", 0, 0, self)
-        self.progress_dialog.setWindowTitle("Running Tracklet Tracker")
-        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        self.progress_dialog.canceled.connect(self.cancel_tracking)
-        self.progress_dialog.show()
-
-        # Create and start worker thread
-        self.worker = TrackletTrackingWorker(selected_detectors, config)
-        self.worker.progress_updated.connect(self.on_progress)
-        self.worker.tracking_complete.connect(self.on_complete)
-        self.worker.error_occurred.connect(self.on_error)
-        self.worker.start()
-
-    def on_progress(self, message):
-        """Update progress dialog"""
-        if self.progress_dialog:
-            self.progress_dialog.setLabelText(message)
-
-    def on_complete(self, track_data_list, tracker_name):
-        """Handle tracking completion"""
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
-
-        # Get sensor from selected detectors
-        selected_items = self.detector_list.selectedItems()
-        sensor = None
-        for item in selected_items:
-            detector_name = item.text()
-            for detector in self.viewer.detectors:
-                if detector.name == detector_name:
-                    sensor = detector.sensor
-                    break
-            if sensor is not None:
-                break
-
-        if sensor is None:
-            QMessageBox.critical(self, "Tracking Error",
-                "Could not determine sensor from selected detectors.")
-            return
-
-        # Create Track objects from raw track data
-        vista_tracks = []
-        for i, track_data in enumerate(track_data_list):
-            vista_track = Track(
-                name=f"Track {i + 1}",
-                frames=track_data['frames'],
-                rows=track_data['rows'],
-                columns=track_data['columns'],
-                sensor=sensor,
-                color='g',
-                marker='o',
-                line_width=2,
-                marker_size=10,
-                visible=True
-            )
-            vista_tracks.append(vista_track)
-
-        # Create Tracker object
-        tracker = Tracker(name=tracker_name, tracks=vista_tracks)
-        self.viewer.trackers.append(tracker)
-
-        QMessageBox.information(self, "Tracking Complete",
-            f"Generated {len(vista_tracks)} track(s).")
-        self.accept()
-
-    def on_error(self, error_msg):
-        """Handle tracking error"""
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
-
-        QMessageBox.critical(self, "Tracking Error", error_msg)
-
-    def cancel_tracking(self):
-        """Cancel the tracking process"""
-        if self.worker and self.worker.isRunning():
-            self.worker.cancel()
-            self.worker.wait()
-
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
+        return config
