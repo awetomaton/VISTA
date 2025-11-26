@@ -121,6 +121,11 @@ class Imagery:
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
     uuid: str = field(init=None, default=None)
 
+    # Performance optimization: cached data structures
+    _frame_index: Optional[dict] = field(default=None, init=False, repr=False)  # Frame number -> index
+    _frames_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether frames are sorted
+    _histogram_bins: Optional[NDArray] = field(default=None, init=False, repr=False)  # Pre-computed histogram bin edges
+
     def __post_init__(self):
         if self.row_offset is None:
             self.row_offset = 0
@@ -152,6 +157,79 @@ class Imagery:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name}, {self.images.shape})"
 
+    def _check_frames_sorted(self):
+        """Check if frames array is sorted for binary search optimization."""
+        if self._frames_sorted is None:
+            self._frames_sorted = np.all(self.frames[:-1] <= self.frames[1:])
+        return self._frames_sorted
+
+    def _build_frame_index(self):
+        """Build index mapping frame numbers to indices for O(1) lookup."""
+        if self._frame_index is None:
+            self._frame_index = {}
+            for i, frame in enumerate(self.frames):
+                self._frame_index[frame] = i
+
+    def get_frame_index(self, frame_num):
+        """
+        Get array index for a specific frame number using efficient lookup.
+
+        Uses binary search if frames are sorted (O(log n)), otherwise uses
+        cached dictionary lookup (O(1)).
+
+        Parameters
+        ----------
+        frame_num : int
+            Frame number to find
+
+        Returns
+        -------
+        int or None
+            Array index for the frame, or None if frame not found
+        """
+        # If frames are sorted, use binary search
+        if self._check_frames_sorted():
+            idx = np.searchsorted(self.frames, frame_num)
+            if idx < len(self.frames) and self.frames[idx] == frame_num:
+                return idx
+            return None
+        else:
+            # Use dictionary lookup for unsorted frames
+            self._build_frame_index()
+            return self._frame_index.get(frame_num)
+
+    def invalidate_caches(self):
+        """Invalidate cached data structures when imagery data changes."""
+        self._frame_index = None
+        self._frames_sorted = None
+        self._histograms = None
+        self._histogram_bins = None
+
+    def _compute_histogram_bins(self, bins=256):
+        """
+        Compute global histogram bin edges based on data range across all frames.
+
+        This is computed once and cached for performance, providing consistent
+        binning across all frames.
+
+        Parameters
+        ----------
+        bins : int
+            Number of histogram bins (default: 256)
+
+        Returns
+        -------
+        NDArray
+            Array of bin edges
+        """
+        if self._histogram_bins is None:
+            # Compute global data range across all frames
+            global_min = np.min(self.images)
+            global_max = np.max(self.images)
+            # Create bin edges spanning the global range
+            self._histogram_bins = np.linspace(global_min, global_max, bins + 1)
+        return self._histogram_bins
+
     def copy(self):
         """Create a (soft) copy of this imagery"""
         return self.__class__(
@@ -166,31 +244,67 @@ class Imagery:
         )
     
     def compute_histograms(self, bins=256):
-        """Pre-compute histograms for all frames (lazy caching)"""
+        """
+        Pre-compute histograms for all frames using consistent bin edges.
+
+        Uses cached global bin edges for consistent histogram computation across
+        all frames, which is both faster and provides better visual consistency.
+
+        Parameters
+        ----------
+        bins : int
+            Number of histogram bins (default: 256)
+
+        Returns
+        -------
+        dict
+            Dictionary mapping frame_index -> (hist_y, bin_centers)
+        """
         if self._histograms is None:
             self._histograms = {}
 
-        # Compute histograms for all frames
+        # Get pre-computed bin edges (computed once for all frames)
+        bin_edges = self._compute_histogram_bins(bins)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+        # Compute histograms for all frames using the same bin edges
         for i in range(len(self.images)):
             if i not in self._histograms:
                 image = self.images[i]
-                hist_y, hist_x = np.histogram(image, bins=bins)
-                # Convert bin edges to bin centers for plotting
-                bin_centers = (hist_x[:-1] + hist_x[1:]) / 2
+                hist_y, _ = np.histogram(image, bins=bin_edges)
                 self._histograms[i] = (hist_y, bin_centers)
 
         return self._histograms
 
     def get_histogram(self, frame_index, bins=256):
-        """Get histogram for a specific frame (computes if not cached)"""
+        """
+        Get histogram for a specific frame using consistent bin edges.
+
+        Computes histogram if not cached, using pre-computed global bin edges
+        for consistency across frames.
+
+        Parameters
+        ----------
+        frame_index : int
+            Index of frame to get histogram for
+        bins : int
+            Number of histogram bins (default: 256)
+
+        Returns
+        -------
+        tuple
+            (hist_y, bin_centers) - histogram counts and bin center values
+        """
         if self._histograms is None:
             self._histograms = {}
 
         if frame_index not in self._histograms:
+            # Get pre-computed bin edges (computed once for all frames)
+            bin_edges = self._compute_histogram_bins(bins)
+            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
             image = self.images[frame_index]
-            hist_y, hist_x = np.histogram(image, bins=bins)
-            # Convert bin edges to bin centers for plotting
-            bin_centers = (hist_x[:-1] + hist_x[1:]) / 2
+            hist_y, _ = np.histogram(image, bins=bin_edges)
             self._histograms[frame_index] = (hist_y, bin_centers)
 
         return self._histograms[frame_index]

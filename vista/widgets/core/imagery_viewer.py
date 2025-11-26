@@ -1,6 +1,8 @@
 """ImageryViewer widget for displaying imagery with overlays"""
 import numpy as np
+import os
 import pyqtgraph as pg
+import time
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
@@ -11,6 +13,9 @@ from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
+
+# Performance monitoring (enabled via environment variable)
+ENABLE_PERF_MONITORING = os.environ.get('VISTA_PERF_MONITOR', '0') == '1'
 
 
 class CustomViewBox(pg.ViewBox):
@@ -123,6 +128,10 @@ class ImageryViewer(QWidget):
         # Point selection dialog for refining clicked points
         self.point_selection_dialog = None
 
+        # Performance monitoring
+        self.perf_frame_times = []  # List of frame update times
+        self.perf_last_print = time.time() if ENABLE_PERF_MONITORING else None
+
         self.init_ui()
 
     def init_ui(self):
@@ -145,8 +154,8 @@ class ImageryViewer(QWidget):
         #self.plot_item.hideAxis('left')
         #self.plot_item.hideAxis('bottom')
 
-        # Create image item
-        self.image_item = pg.ImageItem()
+        # Create image item with OpenGL acceleration enabled
+        self.image_item = pg.ImageItem(useOpenGL=True)
         self.plot_item.addItem(self.image_item)
 
         # Create geolocation text overlay using TextItem positioned in scene coordinates
@@ -217,8 +226,10 @@ class ImageryViewer(QWidget):
 
             self.current_frame_number = frame_to_display
 
-            # Display the selected frame
-            frame_index = np.where(imagery.frames == frame_to_display)[0][0] if frame_to_display in imagery.frames else 0
+            # Display the selected frame using optimized lookup
+            frame_index = imagery.get_frame_index(frame_to_display)
+            if frame_index is None:
+                frame_index = 0
             self.setting_imagery = True
             self.image_item.setImage(imagery.images[frame_index])
             self.setting_imagery = False
@@ -236,17 +247,24 @@ class ImageryViewer(QWidget):
 
     def set_frame_number(self, frame_number: int):
         """Set the current frame to display by frame number"""
+        perf_start = time.time() if ENABLE_PERF_MONITORING else None
+
         self.current_frame_number = frame_number
 
         # Update imagery if available
         if self.imagery is not None and len(self.imagery.frames) > 0:
-            # Find the index in the imagery array that corresponds to this frame number
-            # Use the closest frame number that is <= the requested frame number
-            valid_indices = np.where(self.imagery.frames <= frame_number)[0]
+            # Try exact frame match first using optimized lookup
+            image_index = self.imagery.get_frame_index(frame_number)
 
-            if len(valid_indices) > 0:
-                # Get the index of the closest frame that is <= frame_number
-                image_index = valid_indices[-1]
+            # If exact match not found, find closest frame <= frame_number
+            if image_index is None:
+                valid_indices = np.where(self.imagery.frames <= frame_number)[0]
+                if len(valid_indices) > 0:
+                    image_index = valid_indices[-1]
+                else:
+                    image_index = None
+
+            if image_index is not None:
 
                 # Get user histogram limits if set
                 user_histogram_bounds = None
@@ -290,15 +308,33 @@ class ImageryViewer(QWidget):
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
             self._update_tooltips_at_position(self.last_mouse_pos)
 
+        # Performance monitoring
+        if ENABLE_PERF_MONITORING and perf_start is not None:
+            frame_time = time.time() - perf_start
+            self.perf_frame_times.append(frame_time)
+
+            # Print stats every 60 frames
+            if len(self.perf_frame_times) >= 60:
+                avg_time = np.mean(self.perf_frame_times)
+                fps = 1.0 / avg_time if avg_time > 0 else 0
+                print(f"[PERF] Frame update: {avg_time*1000:.2f}ms avg, {fps:.1f} FPS (last 60 frames)")
+                self.perf_frame_times = []
+
     def get_current_time(self):
         """Get the current time for the displayed frame (if available)"""
         if self.imagery is not None and self.imagery.times is not None and len(self.imagery.frames) > 0:
-            # Find the index in the imagery array that corresponds to current frame number
-            valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+            # Try exact frame match first using optimized lookup
+            image_index = self.imagery.get_frame_index(self.current_frame_number)
 
-            if len(valid_indices) > 0:
-                # Get the index of the closest frame
-                image_index = valid_indices[-1]
+            # If exact match not found, find closest frame <= current_frame_number
+            if image_index is None:
+                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+                if len(valid_indices) > 0:
+                    image_index = valid_indices[-1]
+                else:
+                    image_index = None
+
+            if image_index is not None:
                 return self.imagery.times[image_index]
 
         return None
@@ -394,30 +430,30 @@ class ImageryViewer(QWidget):
                 scatter.setData(x=[], y=[])  # Hide by setting empty data
                 continue
 
-            # Update data for current frame
-            frame_mask = detector.frames == frame_num
+            # Get detections at current frame using optimized O(1) lookup
+            rows, cols = detector.get_detections_at_frame(frame_num)
 
             # Apply label filter if detections panel has active filters
-            try:
-                if hasattr(self, 'data_manager') and self.data_manager is not None:
-                    if hasattr(self.data_manager, 'detections_panel'):
-                        label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
-                        # Combine frame mask with label filter mask
-                        combined_mask = frame_mask & label_mask
-                    else:
-                        combined_mask = frame_mask
-                else:
-                    combined_mask = frame_mask
-            except AttributeError:
-                # If anything goes wrong, just use frame mask
-                combined_mask = frame_mask
+            if len(rows) > 0:
+                try:
+                    if hasattr(self, 'data_manager') and self.data_manager is not None:
+                        if hasattr(self.data_manager, 'detections_panel'):
+                            # Get full frame mask for label filtering
+                            frame_mask = detector.frames == frame_num
+                            label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                            combined_mask = frame_mask & label_mask
+                            if np.any(combined_mask):
+                                rows = detector.rows[combined_mask]
+                                cols = detector.columns[combined_mask]
+                            else:
+                                rows, cols = np.array([]), np.array([])
+                except AttributeError:
+                    pass  # Use unfiltered rows/cols from get_detections_at_frame
 
-            if np.any(combined_mask):
-                rows = detector.rows[combined_mask]
-                cols = detector.columns[combined_mask]
+            if len(rows) > 0:
                 scatter.setData(
                     x=cols, y=rows,
-                    pen=pg.mkPen(color=detector.color, width=detector.line_thickness),
+                    pen=detector.get_pen(),  # Use cached pen
                     brush=None,
                     size=detector.marker_size,
                     symbol=detector.marker
@@ -453,16 +489,6 @@ class ImageryViewer(QWidget):
                     marker.setData(x=[], y=[])
                     continue
 
-                # Map line style string to Qt.PenStyle
-                line_style_map = {
-                    'SolidLine': Qt.PenStyle.SolidLine,
-                    'DashLine': Qt.PenStyle.DashLine,
-                    'DotLine': Qt.PenStyle.DotLine,
-                    'DashDotLine': Qt.PenStyle.DashDotLine,
-                    'DashDotDotLine': Qt.PenStyle.DashDotDotLine
-                }
-                pen_style = line_style_map.get(track.line_style, Qt.PenStyle.SolidLine)
-
                 # Check if track is selected for highlighting
                 is_selected = track_id in self.selected_track_ids
                 line_width = track.line_width + 5 if is_selected else track.line_width
@@ -472,60 +498,54 @@ class ImageryViewer(QWidget):
                 if track.complete:
                     rows = track.rows
                     cols = track.columns
-                    frames = track.frames
 
                     # Update track path with entire track (only if show_line is True)
                     if track.show_line:
                         path.setData(
                             x=cols, y=rows,
-                            pen=pg.mkPen(color=track.color, width=line_width, style=pen_style)
+                            pen=track.get_pen(width=line_width)  # Use cached pen
                         )
                     else:
                         path.setData(x=[], y=[])  # Hide line
 
                     # Update current position marker (show marker at current frame if it exists)
-                    if frame_num in track.frames:
-                        idx = np.where(frames == frame_num)[0][0]
+                    track_data = track.get_track_data_at_frame(frame_num)
+                    if track_data is not None:
+                        row, col = track_data
                         marker.setData(
-                            x=[cols[idx]], y=[rows[idx]],
-                            pen=pg.mkPen(color=track.color, width=2),
-                            brush=pg.mkBrush(color=track.color),
+                            x=[col], y=[row],
+                            pen=track.get_pen(width=2),  # Use cached pen
+                            brush=track.get_brush(),  # Use cached brush
                             size=marker_size,
                             symbol=track.marker
                         )
                     else:
                         marker.setData(x=[], y=[])  # No current position
                 else:
-                    # Show track history up to current frame
-                    mask = track.frames <= frame_num
-                    if np.any(mask):
-                        rows = track.rows[mask]
-                        cols = track.columns[mask]
-                        frames = track.frames[mask]
+                    # Show track history up to current frame using optimized method
+                    visible_indices = track.get_visible_indices(frame_num)
 
-                        # Apply tail length if specified
-                        if track.tail_length > 0 and len(rows) > track.tail_length:
-                            # Only show the last N points
-                            rows = rows[-track.tail_length:]
-                            cols = cols[-track.tail_length:]
-                            frames = frames[-track.tail_length:]
+                    if visible_indices is not None and len(visible_indices) > 0:
+                        rows = track.rows[visible_indices]
+                        cols = track.columns[visible_indices]
 
                         # Update track path (only if show_line is True)
                         if track.show_line:
                             path.setData(
                                 x=cols, y=rows,
-                                pen=pg.mkPen(color=track.color, width=line_width, style=pen_style)
+                                pen=track.get_pen(width=line_width)  # Use cached pen
                             )
                         else:
                             path.setData(x=[], y=[])  # Hide line
 
                         # Update current position marker
-                        if frame_num in track.frames:
-                            idx = np.where(frames == frame_num)[0][0]
+                        track_data = track.get_track_data_at_frame(frame_num)
+                        if track_data is not None:
+                            row, col = track_data
                             marker.setData(
-                                x=[cols[idx]], y=[rows[idx]],
-                                pen=pg.mkPen(color=track.color, width=2),
-                                brush=pg.mkBrush(color=track.color),
+                                x=[col], y=[row],
+                                pen=track.get_pen(width=2),  # Use cached pen
+                                brush=track.get_brush(),  # Use cached brush
                                 size=marker_size,
                                 symbol=track.marker
                             )

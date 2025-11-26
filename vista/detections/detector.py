@@ -83,6 +83,73 @@ class Detector:
     visible: bool = True
     labels: list[set[str]] = field(default_factory=list)  # List of label sets, one per detection point
 
+    # Performance optimization: cached data structures
+    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
+    _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
+    _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
+
+    def _build_frame_index(self):
+        """Build index mapping frame numbers to detection indices for O(1) lookup."""
+        if self._frame_index is None:
+            self._frame_index = {}
+            for i, frame in enumerate(self.frames):
+                if frame not in self._frame_index:
+                    self._frame_index[frame] = []
+                self._frame_index[frame].append(i)
+
+    def get_detections_at_frame(self, frame_num):
+        """
+        Get detection coordinates at a specific frame using O(1) cached lookup.
+
+        Parameters
+        ----------
+        frame_num : int
+            Frame number to query
+
+        Returns
+        -------
+        rows : NDArray
+            Row coordinates of detections at this frame
+        cols : NDArray
+            Column coordinates of detections at this frame
+        """
+        self._build_frame_index()
+        indices = self._frame_index.get(frame_num, [])
+        if len(indices) > 0:
+            return self.rows[indices], self.columns[indices]
+        return np.array([]), np.array([])
+
+    def invalidate_caches(self):
+        """Invalidate cached data structures when detector data changes."""
+        self._frame_index = None
+        self._cached_pen = None
+        self._pen_params = None
+
+    def get_pen(self, width=None, **kwargs):
+        """
+        Get cached PyQtGraph pen object, creating only if parameters changed.
+
+        Parameters
+        ----------
+        width : int, optional
+            Line width override, uses self.line_thickness if None
+
+        Returns
+        -------
+        pg.mkPen
+            PyQtGraph pen object
+        """
+        import pyqtgraph as pg
+
+        actual_width = width if width is not None else self.line_thickness
+        params = (self.color, actual_width)
+
+        if self._pen_params != params:
+            self._cached_pen = pg.mkPen(color=self.color, width=actual_width)
+            self._pen_params = params
+
+        return self._cached_pen
+
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects

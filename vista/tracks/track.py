@@ -104,6 +104,13 @@ class Track:
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
     # Private attributes
     _length: int = field(init=False, default=None)
+
+    # Performance optimization: cached data structures
+    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> index
+    _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
+    _cached_brush: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph brush
+    _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
+    _brush_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached brush
     
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
@@ -127,6 +134,130 @@ class Track:
         s += "\n" + len(s) * "-" + "\n"
         s += str(self.to_dataframe())
         return s
+
+    def _build_frame_index(self):
+        """Build index mapping frame numbers to track indices for O(1) lookup."""
+        if self._frame_index is None:
+            self._frame_index = {}
+            for i, frame in enumerate(self.frames):
+                self._frame_index[frame] = i
+
+    def get_track_data_at_frame(self, frame_num):
+        """
+        Get track position at a specific frame using O(1) cached lookup.
+
+        Parameters
+        ----------
+        frame_num : int
+            Frame number to query
+
+        Returns
+        -------
+        tuple or None
+            (row, column) coordinates at this frame, or None if frame not in track
+        """
+        self._build_frame_index()
+        idx = self._frame_index.get(frame_num)
+        if idx is not None:
+            return self.rows[idx], self.columns[idx]
+        return None
+
+    def get_visible_indices(self, current_frame):
+        """
+        Get indices of track points that should be visible at the current frame.
+
+        Parameters
+        ----------
+        current_frame : int
+            Current frame number
+
+        Returns
+        -------
+        NDArray or None
+            Array of indices for visible track points, or None if no points visible
+        """
+        if self.complete:
+            # Show entire track
+            return np.arange(len(self.frames))
+
+        # Find points up to current frame
+        mask = self.frames <= current_frame
+
+        if self.tail_length > 0:
+            # Only show last N frames
+            frame_diff = current_frame - self.frames
+            mask &= (frame_diff <= self.tail_length) & (frame_diff >= 0)
+
+        indices = np.where(mask)[0]
+        return indices if len(indices) > 0 else None
+
+    def invalidate_caches(self):
+        """Invalidate cached data structures when track data changes."""
+        self._frame_index = None
+        self._cached_pen = None
+        self._cached_brush = None
+        self._pen_params = None
+        self._brush_params = None
+        self._length = None
+
+    def get_pen(self, width=None, style=None):
+        """
+        Get cached PyQtGraph pen object, creating only if parameters changed.
+
+        Parameters
+        ----------
+        width : int, optional
+            Line width override, uses self.line_width if None
+        style : str, optional
+            Line style override, uses self.line_style if None
+
+        Returns
+        -------
+        pg.mkPen
+            PyQtGraph pen object
+        """
+        import pyqtgraph as pg
+        from PyQt6.QtCore import Qt
+
+        actual_width = width if width is not None else self.line_width
+        actual_style = style if style is not None else self.line_style
+
+        # Map string style to Qt constant
+        style_map = {
+            'SolidLine': Qt.PenStyle.SolidLine,
+            'DashLine': Qt.PenStyle.DashLine,
+            'DotLine': Qt.PenStyle.DotLine,
+            'DashDotLine': Qt.PenStyle.DashDotLine,
+            'DashDotDotLine': Qt.PenStyle.DashDotDotLine,
+        }
+        qt_style = style_map.get(actual_style, Qt.PenStyle.SolidLine)
+
+        params = (self.color, actual_width, qt_style)
+
+        if self._pen_params != params:
+            self._cached_pen = pg.mkPen(color=self.color, width=actual_width, style=qt_style)
+            self._pen_params = params
+
+        return self._cached_pen
+
+    def get_brush(self):
+        """
+        Get cached PyQtGraph brush object for marker fill, creating only if parameters changed.
+
+        Returns
+        -------
+        pg.mkBrush
+            PyQtGraph brush object
+        """
+        import pyqtgraph as pg
+
+        params = (self.color,)
+
+        if self._brush_params != params:
+            self._cached_brush = pg.mkBrush(color=self.color)
+            self._brush_params = params
+
+        return self._cached_brush
 
     def get_times(self) -> NDArray[np.datetime64]:
         """
