@@ -17,16 +17,16 @@ from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.tracks.tracker import Tracker
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
-from ..background_removal.robust_pca_dialog import RobustPCADialog
-from ..background_removal.temporal_median_widget import TemporalMedianWidget
-from ..detectors.cfar_widget import CFARWidget
-from ..detectors.simple_threshold_widget import SimpleThresholdWidget
-from ..enhancement.coaddition_widget import CoadditionWidget
-from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
-from ..trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
-from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
-from ..trackers.tracklet_tracking_dialog import TrackletTrackingDialog
-from ..treatments import BiasRemovalWidget, NonUniformityCorrectionRemovalWidget
+from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
+from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
+from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
+from vista.widgets.algorithms.detectors.simple_threshold_widget import SimpleThresholdWidget
+from vista.widgets.algorithms.enhancement.coaddition_widget import CoadditionWidget
+from vista.widgets.algorithms.trackers.kalman_tracking_dialog import KalmanTrackingDialog
+from vista.widgets.algorithms.trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
+from vista.widgets.algorithms.trackers.simple_tracking_dialog import SimpleTrackingDialog
+from vista.widgets.algorithms.trackers.tracklet_tracking_dialog import TrackletTrackingDialog
+from vista.widgets.algorithms.treatments import BiasRemovalWidget, NonUniformityCorrectionWidget
 from .data.data_loader import DataLoaderThread
 from .data.data_manager import DataManagerPanel
 from .imagery_viewer import ImageryViewer
@@ -1129,7 +1129,7 @@ class VistaMainWindow(QMainWindow):
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = NonUniformityCorrectionRemovalWidget(self, current_imagery, aois)
+        widget = NonUniformityCorrectionWidget(self, current_imagery, aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 

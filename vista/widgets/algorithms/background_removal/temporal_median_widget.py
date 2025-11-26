@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSpinBox
 
 from vista.algorithms.background_removal.temporal_median import TemporalMedian
-from vista.widgets.background_removal.base_background_removal_widget import BaseBackgroundRemovalWidget
+from vista.widgets.algorithms.background_removal.base_background_removal_widget import BaseBackgroundRemovalWidget
 
 
 class TemporalMedianWidget(BaseBackgroundRemovalWidget):

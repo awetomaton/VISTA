@@ -1,7 +1,7 @@
 """ImageryViewer widget for displaying imagery with overlays"""
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from vista.aoi.aoi import AOI

@@ -409,7 +409,6 @@ class PlaybackControls(QWidget):
         self.bounce_mode = state == Qt.CheckState.Checked.value
         self.bounce_start_spinbox.setEnabled(self.bounce_mode)
         self.bounce_end_spinbox.setEnabled(self.bounce_mode)
-        self.set_bounce_button.setEnabled(self.bounce_mode)
 
     def on_bounce_range_changed(self):
         """Handle bounce range change"""

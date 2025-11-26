@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 )
 
-from vista.widgets.detectors.cfar_config_widget import CFARConfigWidget
+from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 
 
 class PointSelectionDialog(QDialog):

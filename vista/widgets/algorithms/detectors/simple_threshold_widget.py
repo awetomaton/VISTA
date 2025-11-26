@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QSpinBox
 
 from vista.algorithms.detectors.threshold import SimpleThreshold
-from vista.widgets.detectors.base_detector_widget import BaseDetectorWidget
+from vista.widgets.algorithms.detectors.base_detector_widget import BaseDetectorWidget
 
 
 class SimpleThresholdWidget(BaseDetectorWidget):

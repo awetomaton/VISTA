@@ -1,7 +1,7 @@
 """Widget for configuring and running the Bias Removal treatment"""
 import numpy as np
 
-from vista.widgets.treatments.base_treatment_widget import BaseTreatmentThread, BaseTreatmentWidget
+from vista.widgets.algorithms.treatments.base_treatment_widget import BaseTreatmentThread, BaseTreatmentWidget
 
 
 class BiasRemovalProcessingThread(BaseTreatmentThread):

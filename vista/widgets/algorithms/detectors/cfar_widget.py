@@ -1,7 +1,7 @@
 """Widget for configuring and running the CFAR detector algorithm"""
 from vista.algorithms.detectors.cfar import CFAR
-from vista.widgets.detectors.base_detector_widget import BaseDetectorWidget
-from vista.widgets.detectors.cfar_config_widget import CFARConfigWidget
+from vista.widgets.algorithms.detectors.base_detector_widget import BaseDetectorWidget
+from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 
 
 class CFARWidget(BaseDetectorWidget):

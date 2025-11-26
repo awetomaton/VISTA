@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import QDoubleSpinBox, QSpinBox
 
 from vista.algorithms.trackers import run_network_flow_tracker
-from vista.widgets.trackers.base_tracker_dialog import BaseTrackingDialog
+from vista.widgets.algorithms.trackers.base_tracker_dialog import BaseTrackingDialog
 
 
 class NetworkFlowTrackingDialog(BaseTrackingDialog):
