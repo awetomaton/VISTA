@@ -604,12 +604,8 @@ class ImageryViewer(QWidget):
             enabled: Boolean indicating whether track selection mode is enabled
         """
         self.track_selection_mode = enabled
-        if enabled:
-            # Change cursor to crosshair
-            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
-        else:
-            # Restore cursor
-            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
     def set_detection_selection_mode(self, enabled):
         """
@@ -620,13 +616,9 @@ class ImageryViewer(QWidget):
         """
         self.detection_selection_mode = enabled
         if enabled:
-            # Change cursor to crosshair
-            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
             # Clear any previous selections
             self.selected_detections = []
         else:
-            # Restore cursor
-            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
             # Clear selections
             self.selected_detections = []
             # Clear highlighting
@@ -637,29 +629,42 @@ class ImageryViewer(QWidget):
                 else:
                     self.plot_item.removeItem(self.selected_detections_plot)
                 self.selected_detections_plot = None
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+
+    def update_cursor(self):
+        """Update cursor based on enabled interactive modes"""
+        # Check if any interactive mode is active that requires a crosshair cursor
+        if (self.geolocation_enabled or self.pixel_value_enabled or
+            self.track_creation_mode or self.track_editing_mode or
+            self.detection_creation_mode or self.detection_editing_mode or
+            self.track_selection_mode or self.detection_selection_mode):
+            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        else:
+            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
     def set_geolocation_enabled(self, enabled):
         """Enable or disable geolocation tooltip"""
         self.geolocation_enabled = enabled
-        if not enabled:
-            self.geolocation_text.setVisible(False)
-        else:
+        if enabled:
             # Update positions when enabling
             self.update_text_positions()
+        else:
+            self.geolocation_text.setVisible(False)
+        # Update cursor based on both tooltip states
+        self.update_cursor()
 
     def set_pixel_value_enabled(self, enabled):
         """Enable or disable pixel value tooltip"""
         self.pixel_value_enabled = enabled
         if enabled:
-            # Change cursor to crosshair
-            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
             # Update positions when enabling
             self.update_text_positions()
         else:
             self.pixel_value_text.setVisible(False)
             self.pixel_value_text.setText("")
-            # Restore cursor
-            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on both tooltip states
+        self.update_cursor()
 
     def on_mouse_moved(self, pos):
         """Handle mouse movement over the image"""
@@ -990,8 +995,8 @@ class ImageryViewer(QWidget):
         self.track_creation_mode = True
         self.current_track_data = {}
         self.temp_track_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
         # Show point selection dialog
         self._show_point_selection_dialog()
 
@@ -1004,8 +1009,8 @@ class ImageryViewer(QWidget):
         for i in range(len(track.frames)):
             self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
         self.temp_track_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
         # Show point selection dialog
         self._show_point_selection_dialog()
         # Update display to show current track being edited
@@ -1016,8 +1021,8 @@ class ImageryViewer(QWidget):
         self.track_creation_mode = False
         # Hide point selection dialog
         self._hide_point_selection_dialog()
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_track_plot:
@@ -1057,8 +1062,8 @@ class ImageryViewer(QWidget):
         self.editing_track = None
         # Hide point selection dialog
         self._hide_point_selection_dialog()
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_track_plot:
@@ -1090,8 +1095,8 @@ class ImageryViewer(QWidget):
         self.detection_creation_mode = True
         self.current_detection_data = {}
         self.temp_detection_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
         # Show point selection dialog
         self._show_point_selection_dialog()
 
@@ -1107,8 +1112,8 @@ class ImageryViewer(QWidget):
                 self.current_detection_data[frame] = []
             self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
         self.temp_detection_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
         # Show point selection dialog
         self._show_point_selection_dialog()
         # Update display to show current detections being edited
@@ -1119,8 +1124,8 @@ class ImageryViewer(QWidget):
         self.detection_creation_mode = False
         # Hide point selection dialog
         self._hide_point_selection_dialog()
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_detection_plot:
@@ -1165,8 +1170,8 @@ class ImageryViewer(QWidget):
         self.editing_detector = None
         # Hide point selection dialog
         self._hide_point_selection_dialog()
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_detection_plot:
