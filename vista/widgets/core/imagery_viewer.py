@@ -1102,6 +1102,9 @@ class ImageryViewer(QWidget):
             editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
             editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
 
+            # Invalidate caches since track data was modified
+            editing_track.invalidate_caches()
+
             self.current_track_data = {}
             # Refresh track display
             self.update_overlays()
@@ -1218,6 +1221,9 @@ class ImageryViewer(QWidget):
             editing_detector.frames = np.array(frames_list, dtype=np.int_)
             editing_detector.rows = np.array(rows_list)
             editing_detector.columns = np.array(columns_list)
+
+            # Invalidate caches since detector data was modified
+            editing_detector.invalidate_caches()
 
             self.current_detection_data = {}
             # Refresh detection display

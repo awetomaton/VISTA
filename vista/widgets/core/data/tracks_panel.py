@@ -946,6 +946,10 @@ class TracksPanel(QWidget):
             item = self.tracks_table.item(row, column)
             track.line_style = item.text()
 
+        # Invalidate caches if styling properties were modified
+        if column in [5, 6, 7, 8, 12]:  # Color, Marker, Line Width, Marker Size, Line Style
+            track.invalidate_caches()
+
         self.data_changed.emit()
 
     def on_tracks_cell_clicked(self, row, column):
@@ -983,6 +987,9 @@ class TracksPanel(QWidget):
             if color.isValid():
                 # Update track color
                 track.color = qcolor_to_pg_color(color)
+
+                # Invalidate caches since color was modified
+                track.invalidate_caches()
 
                 # Update table cell
                 item = self.tracks_table.item(row, column)
@@ -1091,13 +1098,17 @@ class TracksPanel(QWidget):
                 track.tail_length = self.bulk_tail_spinbox.value()
             elif property_name == "Color":
                 track.color = qcolor_to_pg_color(self.bulk_color)
+                track.invalidate_caches()  # Color affects cached pen/brush
             elif property_name == "Marker":
                 marker_name = self.bulk_marker_combo.currentText()
                 track.marker = marker_map.get(marker_name, 'o')
+                track.invalidate_caches()  # Marker affects rendering
             elif property_name == "Line Width":
                 track.line_width = self.bulk_line_width_spinbox.value()
+                track.invalidate_caches()  # Line width affects cached pen
             elif property_name == "Marker Size":
                 track.marker_size = self.bulk_marker_size_spinbox.value()
+                track.invalidate_caches()  # Marker size affects rendering
             elif property_name == "Labels":
                 track.labels = self.bulk_labels.copy()
 

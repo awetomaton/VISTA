@@ -523,6 +523,10 @@ class DetectionsPanel(QWidget):
             except ValueError:
                 pass
 
+        # Invalidate caches if styling properties were modified
+        if column in [3, 4, 5, 6]:  # Color, Marker, Size, Line thickness
+            detector.invalidate_caches()
+
         self.data_changed.emit()
 
     def on_detections_cell_clicked(self, row, column):
@@ -542,6 +546,9 @@ class DetectionsPanel(QWidget):
             if color.isValid():
                 # Update detector color
                 detector.color = qcolor_to_pg_color(color)
+
+                # Invalidate caches since color was modified
+                detector.invalidate_caches()
 
                 # Update table cell
                 item = self.detections_table.item(row, column)
@@ -1087,6 +1094,9 @@ class DetectionsPanel(QWidget):
             track.frames = frames
             track.rows = rows
             track.columns = columns
+
+            # Invalidate caches since track data was modified
+            track.invalidate_caches()
 
             # Clear selection and reset state
             self.clear_detection_selection()
