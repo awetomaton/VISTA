@@ -372,7 +372,7 @@ class ImageryViewer(QWidget):
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
         # Store the user's selected bounds
-        if self.setting_imagery:
+        if (self.setting_imagery) or (self.imagery is None):
             return
         self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
 
