@@ -1210,10 +1210,16 @@ Vista/
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## Building an Executable
-Users can build an executable version of this tool with `pyinstaller` using the command below:
+Users can build an executable version of this tool with `pyinstaller` using the commands below:
 
+**Windows:**
 ```bash
 pyinstaller vista/app.py --onefile -n vista --icon=vista/icons/logo.ico --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons*;vista"
+```
+
+**MacOS/Linux:**
+```bash
+pyinstaller vista/app.py --onefile --windowed -n vista --icon=vista/icons/logo.icns --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons:vista/icons/"
 ```
 
 ## License
