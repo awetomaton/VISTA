@@ -34,7 +34,7 @@ class KalmanTrackingDialog(BaseTrackingDialog):
             default_track_marker_size=10
         )
 
-    def add_algorithm_parameters(self):
+    def add_algorithm_parameters(self, main_layout):
         """Add Kalman tracker-specific parameters"""
         # Process noise
         self.process_noise = QDoubleSpinBox()

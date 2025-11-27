@@ -34,7 +34,7 @@ class NetworkFlowTrackingDialog(BaseTrackingDialog):
             default_track_marker_size=10
         )
 
-    def add_algorithm_parameters(self):
+    def add_algorithm_parameters(self, main_layout):
         """Add Network Flow tracker-specific parameters"""
         self.max_gap = QSpinBox()
         self.max_gap.setRange(1, 20)

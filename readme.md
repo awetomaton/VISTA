@@ -1074,23 +1074,24 @@ Vista/
 │   │   │       ├── data_loader.py   # Background loading thread
 │   │   │       ├── tracks_panel.py  # Track editing panel
 │   │   │       └── detections_panel.py  # Detection editing panel
-│   │   ├── detectors/               # Detection algorithm widgets
-│   │   │   ├── cfar_widget.py       # CFAR detector UI
-│   │   │   ├── cfar_config_widget.py # Reusable CFAR configuration widget
-│   │   │   └── simple_threshold_widget.py  # Threshold detector UI
-│   │   ├── trackers/                # Tracking algorithm widgets
-│   │   │   ├── simple_tracking_dialog.py
-│   │   │   ├── kalman_tracking_dialog.py
-│   │   │   ├── network_flow_tracking_dialog.py
-│   │   │   └── tracklet_tracking_dialog.py
-│   │   ├── background_removal/      # Background removal widgets
-│   │   │   ├── temporal_median_widget.py
-│   │   │   └── robust_pca_dialog.py
-│   │   ├── enhancement/             # Enhancement widgets
-│   │   │   └── coaddition_widget.py
-│   │   └── treatments/              # Sensor calibration widgets
-│   │       ├── bias_removal.py
-│   │       └── non_uniformity_correction.py
+|   |   ├── algorithms/             
+│   │   |   ├── detectors/                      # Detection algorithm widgets
+│   │   |   │   ├── cfar_widget.py              # CFAR detector UI
+│   │   |   │   ├── cfar_config_widget.py       # Reusable CFAR configuration widget
+│   │   |   │   └── simple_threshold_widget.py  # Threshold detector UI
+│   │   |   ├── trackers/                       # Tracking algorithm widgets
+│   │   |   │   ├── simple_tracking_dialog.py
+│   │   |   │   ├── kalman_tracking_dialog.py
+│   │   |   │   ├── network_flow_tracking_dialog.py
+│   │   |   │   └── tracklet_tracking_dialog.py
+│   │   |   ├── background_removal/             # Background removal widgets
+│   │   |   │   ├── temporal_median_widget.py
+│   │   |   │   └── robust_pca_dialog.py
+│   │   |   ├── enhancement/                    # Enhancement widgets
+│   │   |   │   └── coaddition_widget.py
+│   │   |   └── treatments/                     # Sensor calibration widgets
+│   │   |       ├── bias_removal.py
+│   │   |       └── non_uniformity_correction.py
 │   ├── imagery/                     # Image data models
 │   │   └── imagery.py               # Imagery class with geodetic support
 │   ├── tracks/                      # Track data models

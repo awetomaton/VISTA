@@ -34,7 +34,7 @@ class SimpleTrackingDialog(BaseTrackingDialog):
             default_track_marker_size=10
         )
 
-    def add_algorithm_parameters(self):
+    def add_algorithm_parameters(self, main_layout):
         """Add Simple tracker-specific parameters"""
         self.min_track_length = QSpinBox()
         self.min_track_length.setRange(2, 50)

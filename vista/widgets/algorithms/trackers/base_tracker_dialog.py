@@ -139,7 +139,7 @@ class BaseTrackingDialog(QDialog):
         # Algorithm-specific parameters (to be added by subclasses)
         self.params_group = QGroupBox("Tracker Parameters")
         self.params_layout = QFormLayout()
-        self.add_algorithm_parameters()
+        self.add_algorithm_parameters(layout)
         self.params_group.setLayout(self.params_layout)
         layout.addWidget(self.params_group)
 
@@ -158,10 +158,14 @@ class BaseTrackingDialog(QDialog):
 
         self.setLayout(layout)
 
-    def add_algorithm_parameters(self):
+    def add_algorithm_parameters(self, main_layout):
         """
         Add algorithm-specific parameters to the form layout.
         Override this method in subclasses to add custom parameters.
+
+        Args:
+            main_layout: The main QVBoxLayout - use this if you need to add custom group boxes.
+                        For simple parameters, add to self.params_layout (QFormLayout).
         """
         pass
 

@@ -34,16 +34,13 @@ class TrackletTrackingDialog(BaseTrackingDialog):
             default_track_marker_size=10
         )
 
-    def add_algorithm_parameters(self):
+    def add_algorithm_parameters(self, main_layout):
         """Add Tracklet tracker-specific parameters"""
         # Override to add custom grouped parameters layout
         # We'll replace the default params_group with custom groups
 
         # Remove the default params_group and create custom layout
         self.params_group.setParent(None)
-
-        # Get the main layout
-        main_layout = self.layout()
 
         # Stage 1: Tracklet formation parameters
         stage1_group = QGroupBox("Stage 1: Tracklet Formation")
