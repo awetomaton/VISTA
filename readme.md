@@ -956,7 +956,9 @@ VISTA provides convenient keyboard shortcuts for efficient navigation and contro
 
 ## Generating Test Data
 
-Use the simulation module to generate test datasets with various configurations:
+Users can create simulated data to get familiar with the tool by clicking `File` > `Simulate`.
+
+use the simulation module to generate test datasets with various configurations:
 
 ```python
 from vista.simulate.simulation import Simulation
