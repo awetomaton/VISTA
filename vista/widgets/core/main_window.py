@@ -126,6 +126,17 @@ class VistaMainWindow(QMainWindow):
 
         main_widget.setLayout(main_layout)
 
+        # Restore histogram gradient state from settings
+        histogram_state = self.settings.value("histogram_gradient_state")
+        if histogram_state:
+            self.viewer.user_histogram_state = histogram_state
+            # Apply the state to the histogram immediately
+            try:
+                self.viewer.histogram.restoreState(histogram_state)
+            except Exception:
+                # If restoration fails, just continue with defaults
+                pass
+
     def create_menu_bar(self):
         """Create menu bar with file loading options"""
         menubar = self.menuBar()
@@ -1536,9 +1547,14 @@ class VistaMainWindow(QMainWindow):
             self.setGeometry(100, 100, 1200, 800)
 
     def closeEvent(self, event):
-        """Handle window close event - save window geometry"""
+        """Handle window close event - save window geometry and histogram state"""
         # Save window geometry (position and size)
         self.settings.setValue("window_geometry", self.saveGeometry())
+
+        # Save histogram gradient state
+        if self.viewer.user_histogram_state is not None:
+            self.settings.setValue("histogram_gradient_state", self.viewer.user_histogram_state)
+
         # Accept the close event
         event.accept()
 

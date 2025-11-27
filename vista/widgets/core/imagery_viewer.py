@@ -116,8 +116,11 @@ class ImageryViewer(QWidget):
         self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
         self.selected_detections_plot = None  # ScatterPlotItem for highlighting selected detections
 
-        # Histogram bounds persistence
+        # Histogram bounds persistence (session only)
         self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
+
+        # Histogram gradient state persistence (across sessions, managed by main window)
+        self.user_histogram_state = None  # Single global gradient state
 
         # Imagery selection
         self.setting_imagery = False
@@ -193,6 +196,9 @@ class ImageryViewer(QWidget):
 
         # Connect to histogram level change signals to track user adjustments
         self.histogram.sigLevelChangeFinished.connect(self.on_histogram_levels_changed)
+
+        # Connect to gradient change signals to track gradient adjustments
+        self.histogram.sigLookupTableChanged.connect(self.on_histogram_gradient_changed)
 
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
@@ -369,6 +375,13 @@ class ImageryViewer(QWidget):
         if self.setting_imagery:
             return
         self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
+
+    def on_histogram_gradient_changed(self):
+        """Called when user manually adjusts histogram gradient (color mapping)"""
+        # Store the full histogram state (gradient only, not levels)
+        if self.setting_imagery:
+            return
+        self.user_histogram_state = self.histogram.saveState()
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
