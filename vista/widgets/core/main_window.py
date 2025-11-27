@@ -15,6 +15,7 @@ from vista.detections.detector import Detector
 from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.simulate.simulation import Simulation
 from vista.tracks.tracker import Tracker
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
@@ -155,6 +156,12 @@ class VistaMainWindow(QMainWindow):
         load_tracks_action = QAction("Load Tracks (CSV)", self)
         load_tracks_action.triggered.connect(self.load_tracks_file)
         file_menu.addAction(load_tracks_action)
+
+        file_menu.addSeparator()
+
+        simulate_action = QAction("Simulate", self)
+        simulate_action.triggered.connect(self.run_simulation)
+        file_menu.addAction(simulate_action)
 
         file_menu.addSeparator()
 
@@ -928,6 +935,74 @@ class VistaMainWindow(QMainWindow):
 
             # Update status with total count
             self.statusBar().showMessage(f"Loaded {self.tracks_loaded_count} track file(s)", 3000)
+
+    def run_simulation(self):
+        """Run a simulation with default settings and save to a user-selected directory"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_simulation_dir", "")
+
+        # Prompt user to select a directory
+        dir_path = QFileDialog.getExistingDirectory(
+            self, "Select Directory for Simulation Output", last_dir
+        )
+
+        if dir_path:
+            # Save the directory for next time
+            self.settings.setValue("last_simulation_dir", dir_path)
+
+            # Create progress dialog
+            progress_dialog = QProgressDialog("Running simulation...", None, 0, 0, self)
+            progress_dialog.setWindowTitle("VISTA - Simulation")
+            progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            progress_dialog.setCancelButton(None)
+            progress_dialog.show()
+
+            try:
+                # Create simulation with default settings
+                simulation = Simulation(name="Simulation")
+                simulation.simulate()
+
+                # Update progress dialog
+                progress_dialog.setLabelText("Saving simulation data...")
+
+                # Save simulation to selected directory
+                simulation.save(dir_path)
+
+                # Close progress dialog
+                progress_dialog.close()
+
+                # Ask user if they want to load the simulation data
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Question)
+                msg.setWindowTitle("Simulation Complete")
+                msg.setText("Simulation completed successfully!")
+                msg.setInformativeText("Would you like to load the simulated data into VISTA?")
+                msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+
+                if msg.exec() == QMessageBox.StandardButton.Yes:
+                    # Load the simulation data
+                    self.load_data_programmatically(
+                        imagery=simulation.imagery,
+                        tracks=simulation.trackers,
+                        detections=simulation.detectors,
+                        sensors=simulation.imagery.sensor if simulation.imagery else None
+                    )
+
+                self.statusBar().showMessage(f"Simulation saved to: {dir_path}", 5000)
+
+            except Exception as e:
+                # Close progress dialog on error
+                progress_dialog.close()
+
+                # Show error message
+                QMessageBox.critical(
+                    self,
+                    "Simulation Error",
+                    f"Failed to run simulation:\n\n{str(e)}",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.statusBar().showMessage("Simulation failed", 3000)
 
     def on_trackers_loaded(self, trackers):
         """Handle trackers loaded in background thread"""
