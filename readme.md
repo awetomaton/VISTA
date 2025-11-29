@@ -1214,12 +1214,12 @@ Users can build an executable version of this tool with `pyinstaller` using the 
 
 **Windows:**
 ```bash
-pyinstaller vista/app.py --onefile -n vista --icon=vista/icons/logo.ico --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons*;vista"
+pyinstaller vista/app.py --onefile -n vista --icon=vista/icons/logo.ico --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons*;vista" --add-data="vista/simulate/data*;vista"
 ```
 
 **MacOS/Linux:**
 ```bash
-pyinstaller vista/app.py --onefile --windowed -n vista --icon=vista/icons/logo.icns --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons:vista/icons/"
+pyinstaller vista/app.py --onefile --windowed -n vista --icon=vista/icons/logo.icns --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons:vista/icons/" --add-data="vista/simulate/data:vista/simulate/data/;
 ```
 
 ## License
