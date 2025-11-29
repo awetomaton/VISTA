@@ -1,0 +1,140 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.6.2] - 2025-11-29
+
+### Improvements
+- Removed unncessary `requirements.txt`
+- Added `vista/simulate/data/earth_image.png` to manifest
+- Added `CHANGELOG.md`
+- Updated TOML to prevent installing non `vista` directories.
+
+## [1.6.1] - 2025-11-25
+
+### New Features
+ - Added new `File` menu option to `Simulate` data to make it easier for new users to get familiar with the tool.
+
+### Improvements
+ - Greatly improved playback efficiency for tracks and detections by caching more data to prevent costly lookups
+ - Consolidated hundreds of lines of duplicative code
+ - Consolidated algorithms widgets into new `algorithms` sub-package under `widgets`
+ - Added the ability to re-open the point selection dialog after closing it 
+ - Updated Robust PCA to have an indefinite progressbar rather than a four part progress bar that would hang at 25%
+ - Histogram gradient settings are now saved across sessions
+ - Added logo ICO file to enable create executable distributions with `pyinstaller`.
+
+### Bug Fixes
+ - Fixed bug with threshold detector when run on an AOI
+ - Fixed bugs with cursor type where it could be an arrow when it should be a crosshair and vice versa.
+ - Added logic to prevent being in several states that take actions when the viewer is clicked simultaneously such as track creation and detection editing.
+
+## [1.6.0] - 2025-11-25
+
+### New Features
+
+- Added multi-sensor support
+- Added the ability to export imagery data
+- Added the ability to label tracks and detections
+- Select one or more tracks by clicking in viewer
+- Added the ability to use features to aid in point selection
+- Added the ability to add selected detections to track
+
+### Improvements
+ - Updated detections table line-width and marker size columns so that they have a larger width. 
+ - Updated marker symbol columns in detections and tracks table to use full name rather than pyqtgraph abbreviations
+ - Improved imagery HDF5 format to enable providing multiple sensors and imagery in a single file. Added warning dialog when user's loads deprecated v1.5 format
+ - Improved app sizing
+ - Improved geospatial tooltip icon 
+ - File exporters now remember last exported location for subsequent exports
+ - Removed unnecessary detection selection count and clear selection button
+ - Improved the way detector editing works to enable removing or adding detections and only showing detections on each frame rather than all detections across all time
+
+## [1.5.0] - 2025-11-15
+
+### New Features
+
+- Updated as installable Python package
+- Updated player so that current frame is kept when switching between imagery (when possible)
+- Improved app space utilization
+- Added copy and slice methods to `Track` object
+- Updated Kalman tracker so that it's resulting tracks have the default track styling
+- Added more `Imagery` radiometric properties.
+
+### Fixed Bugs
+- Fixed bug with refreshing the tracks table
+
+## [1.4.0] - 2025-11-14
+
+### New Features
+
+- Updated the pixel value tooltip to show coorindates of hover as well as pixel value
+- Updated robust PCA to work more like the other image processing algorithms
+- refactored data manager
+- Added imagery treatments
+- Add radiometric imagery components
+- Consolidated some duplicative callbacks in the main window
+- Updated detectors so that they only run on the currently selected imagery
+- Updated how histogram limits are set on imagery so that user defined limits are remembered for each imagery separately
+- Added the ability to select tracks by clicking the viewer
+- Added the ability to click on the imagery viewer to select tracks
+- Added the ability to split tracks
+- Added the ability to merge tracks
+- Made it easier to know what track in the viewer is selected in the tracks table by temporarily increasing the line width and marker size
+ - Updated how track and detection row selection work and how rows are highlighted to be more intuitive
+ - Moved track action buttons to their own row. Move clear filters button into the table conext menu
+
+
+## [1.3.0] - 2025-11-12
+
+### New Features
+
+- Added the ability to run VISTA programmatically
+- Updated the documentation to make clear that it is assumed that tracks are at zero altitude.
+- Updated tracks export so that it can include track times and geolocation
+- Added a multi-stage tracker
+- Updated all trackers to use indeterminate progressbars.
+
+## [1.2.0] - 2025-11-12
+
+### New Features
+
+- Updated CFAR and threshold detectors to enable finding pixel groups that are darker, brighter, or both than their threshold.
+
+### Fixes
+
+- Updated documentation to clarify that it is assumed that the x,y least square polynomial arguments correspond to column, row or longitude, latitude.
+- Fixed bug where detectors failed to take into account the 0.5, 0.5 pixel offset required to be centered on the detected pixel / pixel group.
+- Fixed bug where row / col offsets were being applied to geospatial tooltip arguments to LSQ Polynomials when they shouldn't have been
+- Fixed bug where coaddition did not carry forward least square polynomials for geolocation
+
+## [1.1.0] - 2025-11-11
+
+### New Features
+
+- Added the ability to show and hide track table columns in the data manager by right clicking on the track header.
+- Added the ability to turn on / off track lines altogether leaving only the marker.
+- Added the ability to set the track line style.
+- Updated the application so that it remembers it's previous screen location and size
+- Improved the behavior of the data manager width and track table column sizing
+- Updated several algorithms that do not provide incremental progress to show an indeterminate progress bar instead.
+- Updated application so that spacebar can be used to pause / play application even if play button is not in focus.
+- Added a citation file.
+
+### Fixes
+
+- Fixed bug where imagery projection least squares polynomials did not carry forward into processed imagery created by the application.
+- Fixed bug where tooltips did not take into account imagery row / column offsets.
+- Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
+
+[1.6.2]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.2
+[1.6.1]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.1
+[1.6.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.0
+[1.5.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.5.0
+[1.4.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.4.0
+[1.3.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.3.0
+[1.2.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.2.0
+[1.1.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.1.0
