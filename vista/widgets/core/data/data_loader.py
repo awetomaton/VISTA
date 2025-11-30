@@ -374,9 +374,10 @@ class DataLoaderThread(QThread):
             return images
 
         # For larger datasets, read in blocks
-        block_size = 100
-        total_blocks = (num_images + block_size - 1) // block_size
-        progress_interval = max(1, total_blocks // 20)  # Update every ~5%
+        block_size = max(10, num_images // 100)
+        
+        #total_blocks = (num_images + block_size - 1) // block_size
+        progress_interval = 1 # max(1, total_blocks // 20)  # Update every ~5%
 
         self.progress_updated.emit("Loading imagery...", 0, num_images)
 

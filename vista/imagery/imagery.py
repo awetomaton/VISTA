@@ -276,7 +276,7 @@ class Imagery:
 
         return self._histograms
 
-    def get_histogram(self, frame_index, bins=256):
+    def get_histogram(self, frame_index, bins=256, max_rowcol=512):
         """
         Get histogram for a specific frame using consistent bin edges.
 
@@ -289,12 +289,20 @@ class Imagery:
             Index of frame to get histogram for
         bins : int
             Number of histogram bins (default: 256)
+        max_rowcol : int
+            Maximum number of rows or columns to search over. Downsamples imagery larger than this for the purpose of
+            computing the histogram.
 
         Returns
         -------
         tuple
             (hist_y, bin_centers) - histogram counts and bin center values
         """
+
+        rows = self.images.shape[1]
+        cols = self.images.shape[2]
+        row_downsample = max(1, rows // max_rowcol)
+        col_downsample = max(1, cols // max_rowcol)
         if self._histograms is None:
             self._histograms = {}
 
@@ -303,7 +311,7 @@ class Imagery:
             bin_edges = self._compute_histogram_bins(bins)
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-            image = self.images[frame_index]
+            image = self.images[frame_index, ::row_downsample, ::col_downsample]
             hist_y, _ = np.histogram(image, bins=bin_edges)
             self._histograms[frame_index] = (hist_y, bin_centers)
 
