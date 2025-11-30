@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from PyQt6.QtCore import QThread, pyqtSignal
+import time
 
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
@@ -318,6 +319,7 @@ class DataLoaderThread(QThread):
 
     def _load_imagery_from_group(self, img_group: h5py.Group, sensor):
         """Load an Imagery object from an HDF5 group"""
+        start_time = time.time()
         # Load attributes
         name = img_group.attrs.get('name', 'Unknown')
         description = img_group.attrs.get('description', '')
@@ -352,7 +354,7 @@ class DataLoaderThread(QThread):
         if imagery_uuid is not None:
             import uuid
             imagery.uuid = uuid.UUID(imagery_uuid)
-
+        print(time.time() - start_time)
         return imagery
 
     def _load_images_dataset(self, images_dataset: h5py.Dataset) -> np.ndarray:
