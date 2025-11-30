@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QDockWidget, QFileDialog, QMainWindow, QMessageBox,
     QProgressDialog, QSplitter, QVBoxLayout, QWidget
 )
+import time
 
 import vista
 from vista.detections.detector import Detector
@@ -568,6 +569,7 @@ class VistaMainWindow(QMainWindow):
             self.progress_dialog.show()
 
             # Create and start loader thread
+            print(time.time())
             self.loader_thread = DataLoaderThread(file_path, 'imagery')
             self.loader_thread.imagery_loaded.connect(self.on_imagery_loaded)
             self.loader_thread.error_occurred.connect(self.on_loading_error)
@@ -583,6 +585,7 @@ class VistaMainWindow(QMainWindow):
     def on_imagery_loaded(self, imagery, sensor):
         """Handle imagery loaded in background thread"""
         # Check for duplicate imagery name
+        print(time.time())
         existing_names = [img.name for img in self.viewer.imageries if img.sensor is sensor]
         if imagery.name in existing_names:
             QMessageBox.critical(

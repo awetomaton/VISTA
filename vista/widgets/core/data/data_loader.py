@@ -356,27 +356,44 @@ class DataLoaderThread(QThread):
         return imagery
 
     def _load_images_dataset(self, images_dataset: h5py.Dataset) -> np.ndarray:
-        """Load images dataset with progress tracking"""
-        is_chunked = images_dataset.chunks is not None
+        """Load images dataset using direct read with block reading for optimal performance"""
         num_images = images_dataset.shape[0]
 
-        if is_chunked:
-            self.progress_updated.emit("Loading imagery...", 0, num_images)
-            images = np.empty(images_dataset.shape, dtype=images_dataset.dtype)
+        # Pre-allocate the output array
+        images = np.empty(images_dataset.shape, dtype=images_dataset.dtype)
 
-            images_loaded = 0
-            for chunk_slice in images_dataset.iter_chunks():
-                if self._cancelled:
-                    return None
-                images[chunk_slice] = images_dataset[chunk_slice]
-                images_loaded = chunk_slice[0].stop if chunk_slice[0].stop else num_images
-                self.progress_updated.emit("Loading imagery...", images_loaded, num_images)
-        else:
+        # For small datasets, read all at once
+        if num_images < 10:
             self.progress_updated.emit("Loading imagery...", 0, 1)
             if self._cancelled:
                 return None
-            images = images_dataset[:]
+            images_dataset.read_direct(images)
             self.progress_updated.emit("Loading imagery...", 1, 1)
+            return images
+
+        # For larger datasets, read in blocks
+        block_size = 100
+        total_blocks = (num_images + block_size - 1) // block_size
+        progress_interval = max(1, total_blocks // 20)  # Update every ~5%
+
+        self.progress_updated.emit("Loading imagery...", 0, num_images)
+
+        for block_idx, start_idx in enumerate(range(0, num_images, block_size)):
+            if self._cancelled:
+                return None
+
+            end_idx = min(start_idx + block_size, num_images)
+
+            # Direct read into pre-allocated array slice
+            images_dataset.read_direct(
+                images,
+                source_sel=np.s_[start_idx:end_idx],  # What to read from HDF5
+                dest_sel=np.s_[start_idx:end_idx]     # Where to write in output
+            )
+
+            # Update progress every ~5% or at completion
+            if block_idx % progress_interval == 0 or end_idx == num_images:
+                self.progress_updated.emit("Loading imagery...", end_idx, num_images)
 
         return images
 
