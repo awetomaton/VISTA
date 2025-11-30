@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2025-11-30
+
+### Improvements
+- Improved imagery read speed by ~30%.
+
 ## [1.6.2] - 2025-11-29
 
 ### Improvements
@@ -130,6 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[1.6.3]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.3
 [1.6.2]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.2
 [1.6.1]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.1
 [1.6.0]: https://github.com/hartzell-stephen-me/vista/releases/tag/1.6.0
