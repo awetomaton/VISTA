@@ -563,6 +563,7 @@ class VistaMainWindow(QMainWindow):
 
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading imagery...", "Cancel", 0, 100, self)
+            self.progress_dialog.setAutoClose(False)
             self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
             self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
             self.progress_dialog.show()

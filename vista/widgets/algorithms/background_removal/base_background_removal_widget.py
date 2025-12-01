@@ -2,7 +2,7 @@
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import QSettings, QThread, pyqtSignal
+from PyQt6.QtCore import QSettings, QThread, pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
     QPushButton, QVBoxLayout
@@ -15,7 +15,7 @@ class BaseBackgroundRemovalThread(QThread):
     """Base worker thread for running background removal algorithms"""
 
     # Signals
-    progress_updated = pyqtSignal(int, int)  # (current_step, total_steps)
+    progress_updated = pyqtSignal(int, int, str)  # (current_step, total_steps, label)
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
@@ -76,7 +76,7 @@ class BaseBackgroundRemovalThread(QThread):
                 processed_images[frame_idx] = processed_frame
 
                 # Emit progress
-                self.progress_updated.emit(i + 1, num_frames)
+                self.progress_updated.emit(i + 1, num_frames, "Processing frames...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -96,7 +96,7 @@ class BaseBackgroundRemovalThread(QThread):
                     return  # Exit early if cancelled
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
-                self.progress_updated.emit(num_frames + i + 1, num_frames + len(processed_imagery.images))
+                self.progress_updated.emit(i + 1, len(processed_imagery.images), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -191,6 +191,10 @@ class BaseBackgroundRemovalWidget(QDialog):
         layout.addLayout(end_frame_layout)
 
         # Progress bar
+        self.progress_bar_label = QLabel()
+        self.progress_bar_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.progress_bar_label)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -285,11 +289,12 @@ class BaseBackgroundRemovalWidget(QDialog):
         self.run_button.setEnabled(False)
         self.close_button.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
         # Progress includes processing + histogram computation
         num_frames = end_frame - start_frame
-        self.progress_bar.setMaximum(num_frames * 2)
+        self.progress_bar.setMaximum(num_frames)
 
         # Disable all parameter widgets
         self.set_parameters_enabled(False)
@@ -325,8 +330,11 @@ class BaseBackgroundRemovalWidget(QDialog):
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelling...")
 
-    def on_progress_updated(self, current, total):
+    def on_progress_updated(self, current, total, label=None):
         """Handle progress updates from the processing thread"""
+        if label is not None:
+            self.progress_bar_label.setText(label)
+        self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
 
     def on_processing_complete(self, processed_imagery):
@@ -385,6 +393,8 @@ class BaseBackgroundRemovalWidget(QDialog):
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.progress_bar_label.setVisible(False)
+        self.progress_bar_label.setText("")
         self.progress_bar.setVisible(False)
         self.set_parameters_enabled(True)
 

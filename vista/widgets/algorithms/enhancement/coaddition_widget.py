@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
 )
-from PyQt6.QtCore import QThread, pyqtSignal, QSettings
+from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt
 import numpy as np
 import traceback
 
@@ -14,7 +14,7 @@ class CoadditionProcessingThread(QThread):
     """Worker thread for running Coaddition algorithm"""
 
     # Signals
-    progress_updated = pyqtSignal(int, int)  # (current_frame, total_frames)
+    progress_updated = pyqtSignal(int, int, str)  # (current_frame, total_frames, label)
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
@@ -67,7 +67,7 @@ class CoadditionProcessingThread(QThread):
                 processed_images[frame_idx] = processed_frame
 
                 # Emit progress
-                self.progress_updated.emit(i + 1, num_frames)
+                self.progress_updated.emit(i + 1, num_frames, "Processing frames...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -88,7 +88,7 @@ class CoadditionProcessingThread(QThread):
                     return  # Exit early if cancelled
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
-                self.progress_updated.emit(num_frames + i + 1, num_frames + len(processed_imagery.images))
+                self.progress_updated.emit(i + 1, len(processed_imagery.images), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -179,6 +179,10 @@ class CoadditionWidget(QDialog):
         layout.addLayout(window_layout)
 
         # Progress bar
+        self.progress_bar_label = QLabel()
+        self.progress_bar_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.progress_bar_label)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -246,10 +250,11 @@ class CoadditionWidget(QDialog):
         self.window_spinbox.setEnabled(False)
         self.aoi_combo.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
         # Set max to include both processing and histogram computation
-        self.progress_bar.setMaximum(2 * len(self.imagery))
+        self.progress_bar.setMaximum(len(self.imagery))
 
         # Create and start processing thread
         self.processing_thread = CoadditionProcessingThread(
@@ -269,8 +274,11 @@ class CoadditionWidget(QDialog):
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelling...")
 
-    def on_progress_updated(self, current, total):
+    def on_progress_updated(self, current, total, label=None):
         """Handle progress updates from the processing thread"""
+        if label is not None:
+            self.progress_bar_label.setText(label)
+        self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
 
     def on_processing_complete(self, processed_imagery):
@@ -329,6 +337,8 @@ class CoadditionWidget(QDialog):
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.progress_bar_label.setVisible(False)
+        self.progress_bar_label.setText("")
         self.progress_bar.setVisible(False)
 
     def closeEvent(self, event):

@@ -360,7 +360,7 @@ class DataLoaderThread(QThread):
         num_images = images_dataset.shape[0]
 
         # Pre-allocate the output array
-        images = np.empty(images_dataset.shape, dtype=images_dataset.dtype)
+        images = np.empty(images_dataset.shape, dtype=np.float32)
 
         # For small datasets, read all at once
         if num_images < 10:

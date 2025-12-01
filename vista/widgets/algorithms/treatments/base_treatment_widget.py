@@ -2,7 +2,7 @@
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
     QPushButton, QVBoxLayout
@@ -15,7 +15,7 @@ class BaseTreatmentThread(QThread):
     """Base worker thread for running treatment algorithms"""
 
     # Signals
-    progress_updated = pyqtSignal(int, int)  # (current_step, total_steps)
+    progress_updated = pyqtSignal(int, int, str)  # (current_step, total_steps, label)
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
@@ -84,7 +84,7 @@ class BaseTreatmentThread(QThread):
                 )
 
                 # Emit progress
-                self.progress_updated.emit(i + 1, len(temp_imagery))
+                self.progress_updated.emit(i + 1, len(temp_imagery), "Treating frames...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -107,8 +107,9 @@ class BaseTreatmentThread(QThread):
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
                 self.progress_updated.emit(
-                    len(temp_imagery) + i + 1,
-                    len(temp_imagery) * 2
+                    i + 1,
+                    len(temp_imagery),
+                    "Computing histograms..."
                 )
 
             if self._cancelled:
@@ -182,6 +183,10 @@ class BaseTreatmentWidget(QDialog):
         self.add_treatment_ui(layout)
 
         # Progress bar
+        self.progress_bar_label = QLabel()
+        self.progress_bar_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.progress_bar_label)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -272,15 +277,10 @@ class BaseTreatmentWidget(QDialog):
         self.close_button.setEnabled(False)
         self.aoi_combo.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        # Progress includes processing + histogram computation
-        num_frames = len(self.imagery.frames)
-        if selected_aoi:
-            # Estimate frames in AOI (use full count as upper bound)
-            self.progress_bar.setMaximum(num_frames * 2)
-        else:
-            self.progress_bar.setMaximum(num_frames * 2)
+        self.progress_bar.setMaximum(len(self.imagery.frames))
 
         # Disable treatment-specific UI
         self.set_treatment_ui_enabled(False)
@@ -311,8 +311,10 @@ class BaseTreatmentWidget(QDialog):
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelling...")
 
-    def on_progress_updated(self, current, total):
+    def on_progress_updated(self, current, total, label=None):
         """Handle progress updates from the processing thread"""
+        if label is not None:
+            self.progress_bar_label.setText(label)
         self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
 
@@ -373,6 +375,8 @@ class BaseTreatmentWidget(QDialog):
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.progress_bar_label.setVisible(False)
+        self.progress_bar_label.setText("")
         self.progress_bar.setVisible(False)
         self.set_treatment_ui_enabled(True)
 

@@ -205,12 +205,9 @@ class Imagery:
         self._histograms = None
         self._histogram_bins = None
 
-    def _compute_histogram_bins(self, bins=256):
+    def _compute_histogram_bins(self, image, min_percentile=1, max_percentile=99, bins=256):
         """
-        Compute global histogram bin edges based on data range across all frames.
-
-        This is computed once and cached for performance, providing consistent
-        binning across all frames.
+        Compute histogram bin edges based on image data range.
 
         Parameters
         ----------
@@ -223,11 +220,16 @@ class Imagery:
             Array of bin edges
         """
         if self._histogram_bins is None:
-            # Compute global data range across all frames
-            global_min = np.min(self.images)
-            global_max = np.max(self.images)
-            # Create bin edges spanning the global range
-            self._histogram_bins = np.linspace(global_min, global_max, bins + 1)
+            # Remove zero values since there are often many of these values
+            nonzero_image = image[image != 0]
+
+            # Compute data range 
+            min = np.percentile(nonzero_image, 1)
+            max = np.percentile(nonzero_image, 99)
+
+            # Create bin edges spanning the range
+            self._histogram_bins = np.linspace(min, max, bins + 1)
+        
         return self._histogram_bins
 
     def copy(self):
@@ -242,39 +244,6 @@ class Imagery:
             times = self.times,
             description = self.description,
         )
-    
-    def compute_histograms(self, bins=256):
-        """
-        Pre-compute histograms for all frames using consistent bin edges.
-
-        Uses cached global bin edges for consistent histogram computation across
-        all frames, which is both faster and provides better visual consistency.
-
-        Parameters
-        ----------
-        bins : int
-            Number of histogram bins (default: 256)
-
-        Returns
-        -------
-        dict
-            Dictionary mapping frame_index -> (hist_y, bin_centers)
-        """
-        if self._histograms is None:
-            self._histograms = {}
-
-        # Get pre-computed bin edges (computed once for all frames)
-        bin_edges = self._compute_histogram_bins(bins)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-        # Compute histograms for all frames using the same bin edges
-        for i in range(len(self.images)):
-            if i not in self._histograms:
-                image = self.images[i]
-                hist_y, _ = np.histogram(image, bins=bin_edges)
-                self._histograms[i] = (hist_y, bin_centers)
-
-        return self._histograms
 
     def get_histogram(self, frame_index, bins=256, max_rowcol=512):
         """
@@ -307,13 +276,15 @@ class Imagery:
             self._histograms = {}
 
         if frame_index not in self._histograms:
+            image = self.images[frame_index, ::row_downsample, ::col_downsample]
+            
             # Get pre-computed bin edges (computed once for all frames)
-            bin_edges = self._compute_histogram_bins(bins)
+            bin_edges = self._compute_histogram_bins(image, bins)
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-            image = self.images[frame_index, ::row_downsample, ::col_downsample]
             hist_y, _ = np.histogram(image, bins=bin_edges)
-            self._histograms[frame_index] = (hist_y, bin_centers)
+            nonzero_hist = hist_y > 0
+            self._histograms[frame_index] = (hist_y[nonzero_hist], bin_centers[nonzero_hist])
 
         return self._histograms[frame_index]
 
