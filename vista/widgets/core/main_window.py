@@ -23,6 +23,7 @@ from vista.widgets.algorithms.background_removal.temporal_median_widget import T
 from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
 from vista.widgets.algorithms.detectors.simple_threshold_widget import SimpleThresholdWidget
 from vista.widgets.algorithms.enhancement.coaddition_widget import CoadditionWidget
+from vista.widgets.algorithms.subset_frames_widget import SubsetFramesWidget
 from vista.widgets.algorithms.trackers.kalman_tracking_dialog import KalmanTrackingDialog
 from vista.widgets.algorithms.trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
 from vista.widgets.algorithms.trackers.simple_tracking_dialog import SimpleTrackingDialog
@@ -203,6 +204,11 @@ class VistaMainWindow(QMainWindow):
 
         # Image Processing menu
         image_processing_menu = menubar.addMenu("Image Processing")
+
+        # Frame subset button
+        subset_frames_action = QAction("Subset frames", self)
+        subset_frames_action.triggered.connect(self.open_subset_frames_widget)
+        image_processing_menu.addAction(subset_frames_action)
 
         # Background Removal submenu
         background_removal_menu = image_processing_menu.addMenu("Background Removal")
@@ -1349,6 +1355,29 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the widget
         widget = CoadditionWidget(self, current_imagery, aois)
+        widget.imagery_processed.connect(self.on_single_imagery_created)
+        widget.exec()
+
+    def open_subset_frames_widget(self):
+        """Open the Subset Frames configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running the subset frames algorithm.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = SubsetFramesWidget(self, current_imagery, aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
