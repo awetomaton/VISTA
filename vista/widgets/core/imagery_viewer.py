@@ -61,6 +61,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when detections are selected (emits list of tuples: [(detector, frame, index), ...])
     detections_selected = pyqtSignal(list)
 
+    # Signal emitted when extraction editing mode ends
+    extraction_editing_ended = pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -115,6 +118,17 @@ class ImageryViewer(QWidget):
         self.detection_selection_mode = False
         self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
         self.selected_detections_plot = None  # ScatterPlotItem for highlighting selected detections
+
+        # Extraction view mode
+        self.extraction_view_mode = False
+        self.viewing_extraction_track = None  # Track object whose extraction is being viewed
+        self.extraction_overlay = None  # ImageItem for displaying extraction signal pixels
+
+        # Extraction editing mode
+        self.extraction_editing_mode = False
+        self.extraction_editor = None  # ExtractionEditorWidget
+        self.editing_extraction_track = None  # Track being edited
+        self.editing_extraction_imagery = None  # Imagery for extraction editing
 
         # Histogram bounds persistence (session only)
         self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
@@ -311,6 +325,12 @@ class ImageryViewer(QWidget):
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
+
+        # Update extraction overlay if in extraction view or edit mode
+        if self.extraction_view_mode:
+            self._update_extraction_overlay()
+        elif self.extraction_editing_mode:
+            self._update_extraction_overlay_from_editor()
 
         # Update tooltips if mouse was previously hovering and tooltips are enabled
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
@@ -673,7 +693,8 @@ class ImageryViewer(QWidget):
         if (self.geolocation_enabled or self.pixel_value_enabled or
             self.track_creation_mode or self.track_editing_mode or
             self.detection_creation_mode or self.detection_editing_mode or
-            self.track_selection_mode or self.detection_selection_mode):
+            self.track_selection_mode or self.detection_selection_mode or
+            self.extraction_editing_mode):
             self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
         else:
             self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
@@ -1128,6 +1149,173 @@ class ImageryViewer(QWidget):
             self.current_track_data = {}
             return None
 
+    def start_extraction_viewing(self, track):
+        """Start extraction viewing mode for a specific track"""
+        if track.extraction_metadata is None:
+            return False
+
+        self.extraction_view_mode = True
+        self.viewing_extraction_track = track
+
+        # Create extraction overlay if it doesn't exist
+        if self.extraction_overlay is None:
+            self.extraction_overlay = pg.ImageItem()
+            self.extraction_overlay.setZValue(10)  # Show on top of imagery
+            self.extraction_overlay.setOpacity(0.5)  # Semi-transparent
+            self.plot_item.addItem(self.extraction_overlay)
+
+        # Update display
+        self._update_extraction_overlay()
+        return True
+
+    def finish_extraction_viewing(self):
+        """Finish extraction viewing mode"""
+        self.extraction_view_mode = False
+        self.viewing_extraction_track = None
+
+        # Remove overlay
+        if self.extraction_overlay is not None:
+            self.plot_item.removeItem(self.extraction_overlay)
+            self.extraction_overlay = None
+
+    def _update_extraction_overlay(self):
+        """Update the extraction overlay for the current frame"""
+        if not self.extraction_view_mode or self.viewing_extraction_track is None:
+            return
+
+        track = self.viewing_extraction_track
+        if track.extraction_metadata is None:
+            return
+
+        # Find track point index for current frame
+        frame_mask = track.frames == self.current_frame_number
+        if not np.any(frame_mask):
+            # No track point at current frame
+            if self.extraction_overlay is not None:
+                self.extraction_overlay.setImage(np.zeros((1, 1)))
+            return
+
+        track_idx = np.where(frame_mask)[0][0]
+
+        # Get signal mask for this track point
+        signal_mask = track.extraction_metadata['signal_masks'][track_idx]
+        chip_size = track.extraction_metadata['chip_size']
+
+        # Create RGBA overlay (red for signal pixels)
+        overlay = np.zeros((chip_size, chip_size, 4), dtype=np.uint8)
+        overlay[signal_mask, 0] = 255  # Red channel
+        overlay[signal_mask, 3] = 180  # Alpha channel (semi-transparent)
+
+        # Get track point position
+        track_row = track.rows[track_idx]
+        track_col = track.columns[track_idx]
+
+        # Calculate chip top-left corner
+        radius = chip_size // 2
+        chip_top = int(np.round(track_row)) - radius
+        chip_left = int(np.round(track_col)) - radius
+
+        # Update overlay image
+        self.extraction_overlay.setImage(overlay, autoLevels=False)
+        self.extraction_overlay.setPos(chip_left, chip_top)
+
+    def start_extraction_editing(self, track, imagery):
+        """Start extraction editing mode for a specific track"""
+        if track.extraction_metadata is None:
+            return False
+
+        self.extraction_editing_mode = True
+        self.editing_extraction_track = track
+        self.editing_extraction_imagery = imagery
+
+        # Create extraction editor widget if it doesn't exist
+        if self.extraction_editor is None:
+            from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
+            self.extraction_editor = ExtractionEditorWidget(self)
+            self.extraction_editor.frame_changed.connect(self.on_extraction_editor_frame_changed)
+            self.extraction_editor.signal_mask_updated.connect(self._update_extraction_overlay_from_editor)
+            self.extraction_editor.extraction_saved.connect(self.on_extraction_saved)
+            self.extraction_editor.extraction_cancelled.connect(self.on_extraction_cancelled)
+
+        # Show editor widget as floating window
+        self.extraction_editor.show()
+
+        # Start editing
+        self.extraction_editor.start_editing(track, imagery, self.current_frame_number)
+
+        # Create or update extraction overlay
+        if self.extraction_overlay is None:
+            self.extraction_overlay = pg.ImageItem()
+            self.extraction_overlay.setZValue(10)
+            self.extraction_overlay.setOpacity(0.5)
+            self.plot_item.addItem(self.extraction_overlay)
+
+        # Update overlay
+        self._update_extraction_overlay_from_editor()
+
+        # Update cursor
+        self.update_cursor()
+
+        return True
+
+    def finish_extraction_editing(self):
+        """Finish extraction editing mode"""
+        self.extraction_editing_mode = False
+        self.editing_extraction_track = None
+        self.editing_extraction_imagery = None
+
+        # Hide editor widget
+        if self.extraction_editor is not None:
+            self.extraction_editor.hide()
+
+        # Remove overlay
+        if self.extraction_overlay is not None:
+            self.plot_item.removeItem(self.extraction_overlay)
+            self.extraction_overlay = None
+
+        # Update cursor
+        self.update_cursor()
+
+        # Emit signal so UI can update (e.g., uncheck Edit Extraction button)
+        self.extraction_editing_ended.emit()
+
+    def on_extraction_editor_frame_changed(self, frame_number):
+        """Handle frame change from extraction editor"""
+        self.set_frame_number(frame_number)
+
+    def on_extraction_saved(self, _extraction_data):
+        """Handle save from extraction editor"""
+        # Extraction data is already saved in track by editor
+        pass
+
+    def on_extraction_cancelled(self):
+        """Handle cancel from extraction editor"""
+        # Finish editing without saving
+        # (The editor doesn't modify the track until save is clicked)
+        self.finish_extraction_editing()
+
+    def _update_extraction_overlay_from_editor(self):
+        """Update extraction overlay from editor's current state"""
+        if not self.extraction_editing_mode or self.extraction_editor is None:
+            return
+
+        signal_mask = self.extraction_editor.get_current_signal_mask()
+        chip_position = self.extraction_editor.get_current_chip_position()
+
+        if signal_mask is None or chip_position is None:
+            return
+
+        chip_size = signal_mask.shape[0]
+
+        # Create RGBA overlay (red for signal pixels)
+        overlay = np.zeros((chip_size, chip_size, 4), dtype=np.uint8)
+        overlay[signal_mask, 0] = 255  # Red channel
+        overlay[signal_mask, 3] = 180  # Alpha channel
+
+        # Update overlay image
+        self.extraction_overlay.setImage(overlay, autoLevels=False)
+        self.extraction_overlay.setPos(chip_position[1], chip_position[0])  # (left, top)
+
     def start_detection_creation(self):
         """Start detection creation mode"""
         self.detection_creation_mode = True
@@ -1331,7 +1519,8 @@ class ImageryViewer(QWidget):
         # Only handle left clicks in creation/editing/selection mode
         if not (self.track_creation_mode or self.track_editing_mode or
                 self.detection_creation_mode or self.detection_editing_mode or
-                self.track_selection_mode or self.detection_selection_mode):
+                self.track_selection_mode or self.detection_selection_mode or
+                self.extraction_editing_mode):
             return
 
         if event.button() != Qt.MouseButton.LeftButton:
@@ -1405,6 +1594,28 @@ class ImageryViewer(QWidget):
 
                 # Update temporary detection display
                 self._update_temp_detection_display()
+
+            # Handle extraction editing
+            elif self.extraction_editing_mode:
+                if self.extraction_editor is None or self.editing_extraction_track is None:
+                    return
+
+                # Get chip position
+                chip_position = self.extraction_editor.get_current_chip_position()
+                if chip_position is None:
+                    return
+
+                chip_top, chip_left = chip_position
+                chip_size = self.extraction_editor.working_extraction['chip_size']
+
+                # Convert click position to chip coordinates
+                chip_row = int(row - chip_top)
+                chip_col = int(col - chip_left)
+
+                # Check if click is within chip bounds
+                if 0 <= chip_row < chip_size and 0 <= chip_col < chip_size:
+                    # Paint or erase pixel
+                    self.extraction_editor.paint_pixel(chip_row, chip_col)
 
             # Handle track selection
             elif self.track_selection_mode:

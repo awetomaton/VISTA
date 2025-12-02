@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
+from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
 from vista.widgets.core.data.delegates import LabelsSelectionDialog
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
@@ -28,6 +29,10 @@ class TracksPanel(QWidget):
         super().__init__()
         self.viewer = viewer
         self.settings = QSettings("VISTA", "DataManager")
+
+        # Connect to viewer signals
+        self.viewer.extraction_editing_ended.connect(self.on_extraction_editing_ended)
+
         self.init_ui()
 
     def init_ui(self):
@@ -136,6 +141,28 @@ class TracksPanel(QWidget):
         self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
         tracks_actions_layout.addWidget(self.edit_track_btn)
 
+        # Add extract track button
+        self.extract_track_btn = QPushButton("Extract")
+        self.extract_track_btn.clicked.connect(self.on_extract_tracks_clicked)
+        self.extract_track_btn.setToolTip("Extract image chips and detect signal pixels for selected tracks")
+        tracks_actions_layout.addWidget(self.extract_track_btn)
+
+        # Add view extraction button
+        self.view_extraction_btn = QPushButton("View Extraction")
+        self.view_extraction_btn.setCheckable(True)
+        self.view_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
+        self.view_extraction_btn.clicked.connect(self.on_view_extraction_clicked)
+        self.view_extraction_btn.setToolTip("View signal pixel overlay for selected extracted track")
+        tracks_actions_layout.addWidget(self.view_extraction_btn)
+
+        # Add edit extraction button
+        self.edit_extraction_btn = QPushButton("Edit Extraction")
+        self.edit_extraction_btn.setCheckable(True)
+        self.edit_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
+        self.edit_extraction_btn.clicked.connect(self.on_edit_extraction_clicked)
+        self.edit_extraction_btn.setToolTip("Fine-tune extraction by painting signal pixels")
+        tracks_actions_layout.addWidget(self.edit_extraction_btn)
+
         # Add copy to sensor button
         self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
         self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
@@ -160,7 +187,9 @@ class TracksPanel(QWidget):
             9: True,   # Tail Length
             10: True,  # Complete
             11: True,  # Show Line
-            12: True   # Line Style
+            12: True,  # Line Style
+            13: True,  # Extracted
+            14: True   # Avg SNR
         }
 
         # Load saved column visibility settings
@@ -168,9 +197,9 @@ class TracksPanel(QWidget):
 
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
-        self.tracks_table.setColumnCount(13)  # Added Show Line, Line Style, and Labels columns
+        self.tracks_table.setColumnCount(15)  # Added Extracted and Avg SNR columns
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"
+            "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"
         ])
 
         # Enable row selection via vertical header
@@ -197,6 +226,8 @@ class TracksPanel(QWidget):
         header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
         #header.setSectionResizeMode(12, QHeaderView.ResizeMode.ResizeToContents)  # Line Style (dropdown)
         self.tracks_table.setColumnWidth(12, 120)  # Set reasonably large width to accommodate delegate
+        header.setSectionResizeMode(13, QHeaderView.ResizeMode.ResizeToContents)  # Extracted (checkbox)
+        header.setSectionResizeMode(14, QHeaderView.ResizeMode.ResizeToContents)  # Avg SNR (numeric)
 
         # Set minimum widths for Tracker and Name columns to ensure headers are never truncated
         # Calculate minimum width based on header text plus padding
@@ -340,6 +371,45 @@ class TracksPanel(QWidget):
             # Line Style
             self.tracks_table.setItem(row, 12, QTableWidgetItem(track.line_style))
 
+            # Extracted checkbox (read-only)
+            extracted_item = QTableWidgetItem()
+            extracted_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            has_extraction = track.extraction_metadata is not None
+            extracted_item.setCheckState(Qt.CheckState.Checked if has_extraction else Qt.CheckState.Unchecked)
+            self.tracks_table.setItem(row, 13, extracted_item)
+
+            # Avg SNR (read-only)
+            avg_snr_item = QTableWidgetItem()
+            avg_snr_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            if has_extraction:
+                # Calculate average SNR from extraction metadata
+                noise_stds = track.extraction_metadata.get('noise_stds')
+                chips = track.extraction_metadata.get('chips')
+                signal_masks = track.extraction_metadata.get('signal_masks')
+                if noise_stds is not None and chips is not None and signal_masks is not None:
+                    # Calculate signal strength for each point
+                    snrs = []
+                    for i in range(len(noise_stds)):
+                        if noise_stds[i] > 0 and np.any(signal_masks[i]):
+                            # Get signal pixel values
+                            signal_pixels = chips[i][signal_masks[i]]
+                            # Remove NaN values
+                            signal_pixels = signal_pixels[~np.isnan(signal_pixels)]
+                            if len(signal_pixels) > 0:
+                                mean_signal = np.mean(signal_pixels)
+                                snr = mean_signal / noise_stds[i]
+                                snrs.append(snr)
+                    if snrs:
+                        avg_snr = np.mean(snrs)
+                        avg_snr_item.setText(f"{avg_snr:.2f}")
+                    else:
+                        avg_snr_item.setText("N/A")
+                else:
+                    avg_snr_item.setText("N/A")
+            else:
+                avg_snr_item.setText("")
+            self.tracks_table.setItem(row, 14, avg_snr_item)
+
         # Apply column visibility
         self._apply_track_column_visibility()
 
@@ -353,7 +423,7 @@ class TracksPanel(QWidget):
     def _update_track_header_icons(self):
         """Update header labels to show filter and sort indicators"""
         # Base column names
-        base_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
+        base_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -1409,6 +1479,24 @@ class TracksPanel(QWidget):
         if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
             self.edit_track_btn.setChecked(False)
 
+        # Enable View Extraction and Edit Extraction buttons only if exactly one track with extraction is selected
+        has_extraction = False
+        if len(selected_rows) == 1:
+            row = list(selected_rows)[0]
+            # Check if extracted checkbox is checked
+            extracted_item = self.tracks_table.item(row, 13)  # Extracted column
+            if extracted_item and extracted_item.checkState() == Qt.CheckState.Checked:
+                has_extraction = True
+        self.view_extraction_btn.setEnabled(has_extraction)
+        self.edit_extraction_btn.setEnabled(has_extraction)
+        # If buttons are checked but selection changed, uncheck them and clean up viewer modes
+        if self.view_extraction_btn.isChecked() and not has_extraction:
+            self.viewer.finish_extraction_viewing()
+            self.view_extraction_btn.setChecked(False)
+        if self.edit_extraction_btn.isChecked() and not has_extraction:
+            self.viewer.finish_extraction_editing()
+            self.edit_extraction_btn.setChecked(False)
+
         # Collect selected track IDs for highlighting in the viewer
         selected_track_ids = set()
         for row in selected_rows:
@@ -1537,6 +1625,256 @@ class TracksPanel(QWidget):
         dialog.exec()
         # After closing the dialog, refresh the table to show any label changes
         self.refresh_tracks_table()
+
+    def on_extract_tracks_clicked(self):
+        """Handle Extract button click"""
+        # Get selected tracks
+        selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
+
+        if not selected_rows:
+            QMessageBox.information(
+                self,
+                "No Selection",
+                "Please select one or more tracks to extract.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Find the selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+
+            if not tracker_item or not track_name_item:
+                continue
+
+            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+            # Find the track
+            for tracker in self.viewer.trackers:
+                if id(tracker) == tracker_id:
+                    for t in tracker.tracks:
+                        if id(t) == track_id:
+                            selected_tracks.append(t)
+                            break
+                    break
+
+        if not selected_tracks:
+            QMessageBox.warning(
+                self,
+                "No Tracks Found",
+                "Could not find the selected tracks.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Check if imagery is available for the selected sensor
+        # Get the sensor from the first selected track (all selected tracks should have the same sensor)
+        sensor = selected_tracks[0].sensor
+        imagery = None
+        for img in self.viewer.imageries:
+            if img.sensor == sensor:
+                imagery = img
+                break
+
+        if imagery is None:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                f"No imagery available for sensor '{sensor.name}'.\n"
+                "Please load imagery for this sensor before extracting tracks.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Open extraction dialog
+        dialog = TrackExtractionDialog(
+            parent=self,
+            tracks=selected_tracks,
+            imagery=imagery
+        )
+        dialog.extraction_complete.connect(self.on_extraction_complete)
+        dialog.exec()
+
+    def on_extraction_complete(self, tracks, results_list):
+        """Handle completion of track extraction"""
+        # Update each track with extraction results
+        for track, results in zip(tracks, results_list):
+            # Store extraction metadata in track
+            track.extraction_metadata = {
+                'chip_size': results['chips'].shape[1],  # Diameter of chips
+                'chips': results['chips'],
+                'signal_masks': results['signal_masks'],
+                'noise_stds': results['noise_stds'],
+            }
+
+            # Update track coordinates if they were refined
+            if not np.array_equal(track.rows, results['updated_rows']) or \
+               not np.array_equal(track.columns, results['updated_columns']):
+                track.rows = results['updated_rows']
+                track.columns = results['updated_columns']
+                track.invalidate_caches()
+
+        # Refresh the table and emit data changed signal
+        self.refresh_tracks_table()
+        self.data_changed.emit()
+
+        # Show status message
+        main_window = self.window()
+        if hasattr(main_window, 'statusBar'):
+            main_window.statusBar().showMessage(
+                f"Successfully extracted {len(tracks)} track(s)",
+                3000
+            )
+
+    def on_view_extraction_clicked(self, checked):
+        """Handle View Extraction button click"""
+        if checked:
+            # Deactivate all other interactive modes
+            main_window = self.window()
+            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+                main_window.deactivate_all_interactive_modes(except_action="view_extraction")
+
+            # Get the selected track
+            selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
+            if len(selected_rows) != 1:
+                self.view_extraction_btn.setChecked(False)
+                return
+
+            row = selected_rows[0]
+            tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+
+            if not tracker_item or not track_name_item:
+                self.view_extraction_btn.setChecked(False)
+                return
+
+            # Find the track
+            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+            track = None
+            for tracker in self.viewer.trackers:
+                if id(tracker) == tracker_id:
+                    for t in tracker.tracks:
+                        if id(t) == track_id:
+                            track = t
+                            break
+                    break
+
+            if track is None or track.extraction_metadata is None:
+                self.view_extraction_btn.setChecked(False)
+                return
+
+            # Start extraction viewing mode
+            success = self.viewer.start_extraction_viewing(track)
+            if not success:
+                self.view_extraction_btn.setChecked(False)
+                return
+
+            # Update main window status
+            if hasattr(main_window, 'statusBar'):
+                main_window.statusBar().showMessage(
+                    f"Viewing extraction for '{track.name}'. Signal pixels shown in red. Uncheck 'View Extraction' when finished.",
+                    0
+                )
+        else:
+            # Finish extraction viewing
+            self.viewer.finish_extraction_viewing()
+
+            # Update main window status
+            main_window = self.window()
+            if hasattr(main_window, 'statusBar'):
+                main_window.statusBar().showMessage("Extraction viewing ended", 3000)
+
+    def on_edit_extraction_clicked(self, checked):
+        """Handle Edit Extraction button click"""
+        if checked:
+            # Deactivate all other interactive modes
+            main_window = self.window()
+            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+                main_window.deactivate_all_interactive_modes(except_action="edit_extraction")
+
+            # Get the selected track
+            selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
+            if len(selected_rows) != 1:
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            row = selected_rows[0]
+            tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+
+            if not tracker_item or not track_name_item:
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            # Find the track
+            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+            track = None
+            for tracker in self.viewer.trackers:
+                if id(tracker) == tracker_id:
+                    for t in tracker.tracks:
+                        if id(t) == track_id:
+                            track = t
+                            break
+                    break
+
+            if track is None or track.extraction_metadata is None:
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            # Get imagery for this track
+            imagery = None
+            for img in self.viewer.imageries:
+                if img.sensor == track.sensor:
+                    imagery = img
+                    break
+
+            if imagery is None:
+                QMessageBox.warning(
+                    self,
+                    "No Imagery",
+                    f"No imagery available for sensor '{track.sensor.name}'.",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            # Start extraction editing mode
+            success = self.viewer.start_extraction_editing(track, imagery)
+            if not success:
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            # Update main window status
+            if hasattr(main_window, 'statusBar'):
+                main_window.statusBar().showMessage(
+                    f"Editing extraction for '{track.name}'. Click to paint/erase signal pixels. Use the editor panel to adjust settings.",
+                    0
+                )
+        else:
+            # Finish extraction editing
+            self.viewer.finish_extraction_editing()
+
+            # Refresh the table to update SNR if changed
+            self.refresh_tracks_table()
+            self.data_changed.emit()
+
+            # Update main window status
+            main_window = self.window()
+            if hasattr(main_window, 'statusBar'):
+                main_window.statusBar().showMessage("Extraction editing ended", 3000)
+
+    def on_extraction_editing_ended(self):
+        """Handle extraction editing ended signal from viewer"""
+        # Uncheck the Edit Extraction button if it's checked
+        if self.edit_extraction_btn.isChecked():
+            self.edit_extraction_btn.setChecked(False)
 
     def export_tracks(self):
         """Export all tracks to CSV file"""
