@@ -18,6 +18,7 @@ class ExtractionEditorWidget(QDialog):
     extraction_cancelled = pyqtSignal()  # Emitted when editing is cancelled
     signal_mask_updated = pyqtSignal()  # Emitted when signal mask changes (for viewer update)
     centroid_preview_updated = pyqtSignal(float, float)  # Emitted with (row_offset, col_offset)
+    lock_pan_zoom_changed = pyqtSignal(bool)  # Emitted when lock pan/zoom checkbox changes (True = locked)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -30,7 +31,6 @@ class ExtractionEditorWidget(QDialog):
         self.imagery = None
         self.working_extraction = None  # Working copy of extraction metadata
         self.current_track_idx = 0  # Index in track arrays
-        self.paint_mode = True  # True = paint, False = erase
         self.brush_size = 1
 
         # CFAR kernel cache
@@ -101,21 +101,13 @@ class ExtractionEditorWidget(QDialog):
         cfar_group.setLayout(cfar_layout)
         layout.addWidget(cfar_group)
 
-        # Paint/Erase mode
+        # Paint mode
         paint_group = QGroupBox("Paint Mode")
         paint_layout = QVBoxLayout()
 
-        mode_layout = QHBoxLayout()
-        self.paint_radio = QRadioButton("Paint (Add)")
-        self.erase_radio = QRadioButton("Erase (Remove)")
-        self.paint_radio.setChecked(True)
-        paint_mode_group = QButtonGroup(self)
-        paint_mode_group.addButton(self.paint_radio)
-        paint_mode_group.addButton(self.erase_radio)
-        self.paint_radio.toggled.connect(self.on_paint_mode_changed)
-        mode_layout.addWidget(self.paint_radio)
-        mode_layout.addWidget(self.erase_radio)
-        paint_layout.addLayout(mode_layout)
+        info_label = QLabel("Click to toggle signal pixels.\nHold and drag to paint multiple pixels.")
+        info_label.setWordWrap(True)
+        paint_layout.addWidget(info_label)
 
         brush_layout = QFormLayout()
         self.brush_size_spin = QSpinBox()
@@ -124,6 +116,14 @@ class ExtractionEditorWidget(QDialog):
         self.brush_size_spin.valueChanged.connect(self.on_brush_size_changed)
         brush_layout.addRow("Brush Size:", self.brush_size_spin)
         paint_layout.addLayout(brush_layout)
+
+        self.lock_pan_zoom_check = QCheckBox("Lock Pan/Zoom (Enable Drag Painting)")
+        self.lock_pan_zoom_check.setToolTip(
+            "When checked, disables image panning/zooming to allow drag painting.\n"
+            "Uncheck to restore normal pan/zoom behavior."
+        )
+        self.lock_pan_zoom_check.stateChanged.connect(self.on_lock_pan_zoom_changed)
+        paint_layout.addWidget(self.lock_pan_zoom_check)
 
         paint_group.setLayout(paint_layout)
         layout.addWidget(paint_group)
@@ -231,12 +231,10 @@ class ExtractionEditorWidget(QDialog):
             self.update_ui()
             self.frame_changed.emit(self.track.frames[self.current_track_idx])
 
-    def on_paint_mode_changed(self, checked):
-        """Handle paint/erase mode change"""
-        if self.paint_radio.isChecked():
-            self.paint_mode = True
-        else:
-            self.paint_mode = False
+    def on_lock_pan_zoom_changed(self, state):
+        """Handle lock pan/zoom checkbox change"""
+        is_locked = state == Qt.CheckState.Checked.value
+        self.lock_pan_zoom_changed.emit(is_locked)
 
     def on_brush_size_changed(self, value):
         """Handle brush size change"""
@@ -386,7 +384,10 @@ class ExtractionEditorWidget(QDialog):
 
     def paint_pixel(self, row, col):
         """
-        Paint or erase a pixel in the signal mask.
+        Toggle signal pixel at the specified location.
+
+        The center pixel determines the action: if it's currently a signal pixel,
+        the brush area will be erased. If it's background, the brush area will be painted.
 
         Parameters
         ----------
@@ -401,6 +402,10 @@ class ExtractionEditorWidget(QDialog):
         chip_size = self.working_extraction['chip_size']
         signal_mask = self.working_extraction['signal_masks'][self.current_track_idx]
 
+        # Determine toggle action based on center pixel
+        # If center is signal (True), we erase. If center is background (False), we paint.
+        toggle_to = not signal_mask[row, col]
+
         # Apply brush
         for dr in range(-self.brush_size + 1, self.brush_size):
             for dc in range(-self.brush_size + 1, self.brush_size):
@@ -409,7 +414,7 @@ class ExtractionEditorWidget(QDialog):
                 if 0 <= r < chip_size and 0 <= c < chip_size:
                     # Check if within circular brush
                     if dr**2 + dc**2 < self.brush_size**2:
-                        signal_mask[r, c] = self.paint_mode
+                        signal_mask[r, c] = toggle_to
 
         # Emit signal to update viewer
         self.signal_mask_updated.emit()

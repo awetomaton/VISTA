@@ -129,6 +129,8 @@ class ImageryViewer(QWidget):
         self.extraction_editor = None  # ExtractionEditorWidget
         self.editing_extraction_track = None  # Track being edited
         self.editing_extraction_imagery = None  # Imagery for extraction editing
+        self.extraction_painting = False  # True when mouse is held down for drag painting
+        self.pan_zoom_locked = False  # True when pan/zoom is disabled for painting
 
         # Histogram bounds persistence (session only)
         self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
@@ -727,6 +729,35 @@ class ImageryViewer(QWidget):
         # Store the last mouse position for frame change updates
         self.last_mouse_pos = pos
 
+        # Handle drag painting during extraction editing
+        if self.extraction_editing_mode and self.pan_zoom_locked:
+            from PyQt6.QtWidgets import QApplication
+            # Check if left mouse button is pressed
+            if QApplication.mouseButtons() & Qt.MouseButton.LeftButton:
+                # Paint pixel at current position
+                if self.extraction_editor is not None and self.editing_extraction_track is not None:
+                    # Check if position is within the plot item
+                    if self.plot_item.sceneBoundingRect().contains(pos):
+                        # Map to data coordinates
+                        mouse_point = self.plot_item.vb.mapSceneToView(pos)
+                        col = mouse_point.x()
+                        row = mouse_point.y()
+
+                        # Get chip position
+                        chip_position = self.extraction_editor.get_current_chip_position()
+                        if chip_position is not None:
+                            chip_top, chip_left = chip_position
+                            chip_size = self.extraction_editor.working_extraction['chip_size']
+
+                            # Convert to chip coordinates
+                            chip_row = int(row - chip_top)
+                            chip_col = int(col - chip_left)
+
+                            # Check if within chip bounds
+                            if 0 <= chip_row < chip_size and 0 <= chip_col < chip_size:
+                                # Paint pixel
+                                self.extraction_editor.paint_pixel(chip_row, chip_col)
+
         # Update tooltips for the current position
         self._update_tooltips_at_position(pos)
 
@@ -1236,6 +1267,7 @@ class ImageryViewer(QWidget):
             self.extraction_editor.signal_mask_updated.connect(self._update_extraction_overlay_from_editor)
             self.extraction_editor.extraction_saved.connect(self.on_extraction_saved)
             self.extraction_editor.extraction_cancelled.connect(self.on_extraction_cancelled)
+            self.extraction_editor.lock_pan_zoom_changed.connect(self.on_lock_pan_zoom_changed)
 
         # Show editor widget as floating window
         self.extraction_editor.show()
@@ -1263,6 +1295,12 @@ class ImageryViewer(QWidget):
         self.extraction_editing_mode = False
         self.editing_extraction_track = None
         self.editing_extraction_imagery = None
+        self.extraction_painting = False
+
+        # Re-enable pan/zoom if it was locked
+        if self.pan_zoom_locked:
+            self.pan_zoom_locked = False
+            self.plot_item.vb.setMouseEnabled(x=True, y=True)
 
         # Hide editor widget
         if self.extraction_editor is not None:
@@ -1293,6 +1331,16 @@ class ImageryViewer(QWidget):
         # Finish editing without saving
         # (The editor doesn't modify the track until save is clicked)
         self.finish_extraction_editing()
+
+    def on_lock_pan_zoom_changed(self, is_locked):
+        """Handle lock pan/zoom checkbox change from extraction editor"""
+        self.pan_zoom_locked = is_locked
+        if is_locked:
+            # Disable pan/zoom
+            self.plot_item.vb.setMouseEnabled(x=False, y=False)
+        else:
+            # Re-enable pan/zoom
+            self.plot_item.vb.setMouseEnabled(x=True, y=True)
 
     def _update_extraction_overlay_from_editor(self):
         """Update extraction overlay from editor's current state"""
