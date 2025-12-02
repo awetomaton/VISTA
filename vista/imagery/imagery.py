@@ -274,10 +274,32 @@ class Imagery:
             (hist_y, bin_centers) - histogram counts and bin center values
         """
 
+        # Try to load histogram settings from QSettings (if PyQt6 is available)
+        # Fall back to defaults if not in a PyQt context
+        min_percentile = 1.0
+        max_percentile = 99.0
+        settings_bins = 256
+        settings_max_rowcol = 512
+
+        try:
+            from PyQt6.QtCore import QSettings
+            settings = QSettings("Vista", "VistaApp")
+            min_percentile = settings.value("imagery/histogram_min_percentile", 1.0, type=float)
+            max_percentile = settings.value("imagery/histogram_max_percentile", 99.0, type=float)
+            settings_bins = settings.value("imagery/histogram_bins", 256, type=int)
+            settings_max_rowcol = settings.value("imagery/histogram_max_rowcol", 512, type=int)
+        except (ImportError, RuntimeError):
+            # PyQt6 not available or no QApplication - use defaults
+            pass
+
+        # Use settings values if not explicitly specified
+        bins_to_use = bins if bins != 256 else settings_bins
+        max_rowcol_to_use = max_rowcol if max_rowcol != 512 else settings_max_rowcol
+
         rows = self.images.shape[1]
         cols = self.images.shape[2]
-        row_downsample = max(1, rows // max_rowcol)
-        col_downsample = max(1, cols // max_rowcol)
+        row_downsample = max(1, rows // max_rowcol_to_use)
+        col_downsample = max(1, cols // max_rowcol_to_use)
         if self._histograms is None:
             self._histograms = {}
 
@@ -285,7 +307,12 @@ class Imagery:
             image = self.images[frame_index, ::row_downsample, ::col_downsample]
 
             # Get pre-computed bin edges (computed once for all frames)
-            bin_edges = self._compute_histogram_bins(image, bins)
+            bin_edges = self._compute_histogram_bins(
+                image,
+                min_percentile=min_percentile,
+                max_percentile=max_percentile,
+                bins=bins_to_use
+            )
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
             hist_y, _ = np.histogram(image, bins=bin_edges)

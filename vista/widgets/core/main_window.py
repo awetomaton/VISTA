@@ -18,6 +18,7 @@ from vista.sensors.sensor import Sensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.tracker import Tracker
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.widgets.core.settings_dialog import SettingsDialog
 from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
 from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
 from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
@@ -178,7 +179,15 @@ class VistaMainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
+        settings_action = QAction("Settings", self)
+        #settings_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
+        settings_action.triggered.connect(self.open_settings)
+        file_menu.addAction(settings_action)
+
+        file_menu.addSeparator()
+
         exit_action = QAction("Exit", self)
+        #exit_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
@@ -1144,6 +1153,11 @@ class VistaMainWindow(QMainWindow):
         self.toggle_point_selection_action.blockSignals(True)
         self.toggle_point_selection_action.setChecked(visible)
         self.toggle_point_selection_action.blockSignals(False)
+
+    def open_settings(self):
+        """Open the settings dialog"""
+        dialog = SettingsDialog(self)
+        dialog.exec()
 
     def manage_labels(self):
         """Open the labels manager dialog"""
