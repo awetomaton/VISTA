@@ -333,6 +333,16 @@ class ImageryViewer(QWidget):
             self._update_extraction_overlay()
         elif self.extraction_editing_mode:
             self._update_extraction_overlay_from_editor()
+            # Update extraction editor's current track index to match the new frame
+            if self.extraction_editor is not None and self.editing_extraction_track is not None:
+                track = self.editing_extraction_track
+                # Find the track point index for the new frame
+                frame_mask = track.frames == frame_number
+                if np.any(frame_mask):
+                    new_idx = int(np.where(frame_mask)[0][0])
+                    if new_idx != self.extraction_editor.current_track_idx:
+                        self.extraction_editor.current_track_idx = new_idx
+                        self.extraction_editor.update_ui()
 
         # Update tooltips if mouse was previously hovering and tooltips are enabled
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
@@ -755,8 +765,8 @@ class ImageryViewer(QWidget):
 
                             # Check if within chip bounds
                             if 0 <= chip_row < chip_size and 0 <= chip_col < chip_size:
-                                # Paint pixel
-                                self.extraction_editor.paint_pixel(chip_row, chip_col)
+                                # Paint pixel (drag mode)
+                                self.extraction_editor.paint_pixel(chip_row, chip_col, is_drag=True)
 
         # Update tooltips for the current position
         self._update_tooltips_at_position(pos)

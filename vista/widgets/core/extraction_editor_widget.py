@@ -32,6 +32,7 @@ class ExtractionEditorWidget(QDialog):
         self.working_extraction = None  # Working copy of extraction metadata
         self.current_track_idx = 0  # Index in track arrays
         self.brush_size = 1
+        self.paint_mode = True  # True = paint (add), False = clear (remove)
 
         # CFAR kernel cache
         self._kernel = None
@@ -48,26 +49,10 @@ class ExtractionEditorWidget(QDialog):
         info_layout = QFormLayout()
         self.track_name_label = QLabel("None")
         self.track_points_label = QLabel("0")
-        self.current_frame_label = QLabel("N/A")
-        self.current_point_label = QLabel("0 / 0")
         info_layout.addRow("Track:", self.track_name_label)
         info_layout.addRow("Total Points:", self.track_points_label)
-        info_layout.addRow("Current Frame:", self.current_frame_label)
-        info_layout.addRow("Point:", self.current_point_label)
         info_group.setLayout(info_layout)
         layout.addWidget(info_group)
-
-        # Frame navigation
-        nav_group = QGroupBox("Navigation")
-        nav_layout = QHBoxLayout()
-        self.prev_button = QPushButton("◀ Prev")
-        self.prev_button.clicked.connect(self.on_prev_frame)
-        self.next_button = QPushButton("Next ▶")
-        self.next_button.clicked.connect(self.on_next_frame)
-        nav_layout.addWidget(self.prev_button)
-        nav_layout.addWidget(self.next_button)
-        nav_group.setLayout(nav_layout)
-        layout.addWidget(nav_group)
 
         # CFAR parameters
         cfar_group = QGroupBox("CFAR Parameters")
@@ -105,9 +90,22 @@ class ExtractionEditorWidget(QDialog):
         paint_group = QGroupBox("Paint Mode")
         paint_layout = QVBoxLayout()
 
-        info_label = QLabel("Click to toggle signal pixels.\nHold and drag to paint multiple pixels.")
+        info_label = QLabel("Click: toggle pixel\nClick and drag: paint or clear based on mode below")
         info_label.setWordWrap(True)
         paint_layout.addWidget(info_label)
+
+        # Paint/Clear mode selection
+        mode_layout = QHBoxLayout()
+        self.paint_radio = QRadioButton("Paint (Add)")
+        self.clear_radio = QRadioButton("Clear (Remove)")
+        self.paint_radio.setChecked(True)
+        paint_mode_group = QButtonGroup(self)
+        paint_mode_group.addButton(self.paint_radio)
+        paint_mode_group.addButton(self.clear_radio)
+        self.paint_radio.toggled.connect(self.on_paint_mode_changed)
+        mode_layout.addWidget(self.paint_radio)
+        mode_layout.addWidget(self.clear_radio)
+        paint_layout.addLayout(mode_layout)
 
         brush_layout = QFormLayout()
         self.brush_size_spin = QSpinBox()
@@ -200,36 +198,20 @@ class ExtractionEditorWidget(QDialog):
         self.update_ui()
 
     def update_ui(self):
-        """Update UI with current track and frame info"""
+        """Update UI with current track info"""
         if self.track is None:
             return
 
         self.track_name_label.setText(self.track.name)
         self.track_points_label.setText(str(len(self.track)))
-        self.current_frame_label.setText(str(self.track.frames[self.current_track_idx]))
-        self.current_point_label.setText(f"{self.current_track_idx + 1} / {len(self.track)}")
-
-        # Enable/disable navigation buttons
-        self.prev_button.setEnabled(self.current_track_idx > 0)
-        self.next_button.setEnabled(self.current_track_idx < len(self.track) - 1)
 
         # Update centroid preview if enabled
         if self.show_centroid_check.isChecked():
             self.update_centroid_preview()
 
-    def on_prev_frame(self):
-        """Navigate to previous track point"""
-        if self.current_track_idx > 0:
-            self.current_track_idx -= 1
-            self.update_ui()
-            self.frame_changed.emit(self.track.frames[self.current_track_idx])
-
-    def on_next_frame(self):
-        """Navigate to next track point"""
-        if self.current_track_idx < len(self.track) - 1:
-            self.current_track_idx += 1
-            self.update_ui()
-            self.frame_changed.emit(self.track.frames[self.current_track_idx])
+    def on_paint_mode_changed(self, checked):
+        """Handle paint/clear mode change"""
+        self.paint_mode = self.paint_radio.isChecked()
 
     def on_lock_pan_zoom_changed(self, state):
         """Handle lock pan/zoom checkbox change"""
@@ -382,12 +364,14 @@ class ExtractionEditorWidget(QDialog):
 
         return signal_mask
 
-    def paint_pixel(self, row, col):
+    def paint_pixel(self, row, col, is_drag=False):
         """
-        Toggle signal pixel at the specified location.
+        Paint or toggle signal pixel at the specified location.
 
-        The center pixel determines the action: if it's currently a signal pixel,
-        the brush area will be erased. If it's background, the brush area will be painted.
+        Single clicks (is_drag=False) always toggle the center pixel.
+        Drag operations (is_drag=True) use the current paint_mode:
+        - Paint mode: sets pixels to True (adds signal)
+        - Clear mode: sets pixels to False (removes signal)
 
         Parameters
         ----------
@@ -395,6 +379,8 @@ class ExtractionEditorWidget(QDialog):
             Row coordinate in chip
         col : int
             Column coordinate in chip
+        is_drag : bool, optional
+            If True, use paint_mode. If False, toggle center pixel. Default is False.
         """
         if self.working_extraction is None:
             return
@@ -402,9 +388,13 @@ class ExtractionEditorWidget(QDialog):
         chip_size = self.working_extraction['chip_size']
         signal_mask = self.working_extraction['signal_masks'][self.current_track_idx]
 
-        # Determine toggle action based on center pixel
-        # If center is signal (True), we erase. If center is background (False), we paint.
-        toggle_to = not signal_mask[row, col]
+        # Determine action
+        if is_drag:
+            # Drag painting: use paint_mode (True = add, False = remove)
+            paint_to = self.paint_mode
+        else:
+            # Single click: toggle center pixel
+            paint_to = not signal_mask[row, col]
 
         # Apply brush
         for dr in range(-self.brush_size + 1, self.brush_size):
@@ -414,7 +404,7 @@ class ExtractionEditorWidget(QDialog):
                 if 0 <= r < chip_size and 0 <= c < chip_size:
                     # Check if within circular brush
                     if dr**2 + dc**2 < self.brush_size**2:
-                        signal_mask[r, c] = toggle_to
+                        signal_mask[r, c] = paint_to
 
         # Emit signal to update viewer
         self.signal_mask_updated.emit()
