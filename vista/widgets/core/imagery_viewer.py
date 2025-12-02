@@ -304,7 +304,9 @@ class ImageryViewer(QWidget):
                     pass
 
                 # Restore user's histogram bounds if they were manually set
-                if user_histogram_bounds is not None:
+                if user_histogram_bounds is None:
+                    self.histogram.setLevels(self.histogram.plot.xData[0], self.histogram.plot.xData[-1])
+                else:
                     self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
