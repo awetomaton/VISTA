@@ -1,10 +1,12 @@
 # Include documentation and metadata files
 include README.md
 include readme.md
+include CHANGELOG.md
 include LICENSE
 include CITATION.cff
-include CLAUDE.md
-include requirements.txt
+
+# Include package data files
+include vista/simulate/data/earth_image.png
 
 # Include icon files
 recursive-include vista/icons *.png

@@ -1,29 +1,37 @@
-"""Dialog for configuring and running the Simple tracker"""
+"""Base classes for tracker dialogs to reduce code duplication"""
 import traceback
 
 from PyQt6.QtCore import Qt, QSettings, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout,
-    QLabel, QListWidget, QMessageBox, QProgressDialog, QPushButton, QSpinBox,
-    QVBoxLayout
+    QComboBox, QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+    QListWidget, QMessageBox, QProgressDialog, QPushButton, QVBoxLayout
 )
 
-from vista.algorithms.trackers import run_simple_tracker
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
+from vista.widgets.utils.algorithm_utils import populate_detector_list_by_sensor
 
 
-class SimpleTrackingWorker(QThread):
-    """Worker thread for running Simple tracker in background"""
+class BaseTrackingWorker(QThread):
+    """Base worker thread for running trackers in background"""
 
     progress_updated = pyqtSignal(str)  # message
     tracking_complete = pyqtSignal(object, str)  # Emits (track_data_list, tracker_name)
     error_occurred = pyqtSignal(str)  # Error message
 
-    def __init__(self, detectors, tracker_config):
+    def __init__(self, detectors, tracker_config, algorithm_function):
+        """
+        Initialize the tracking worker.
+
+        Args:
+            detectors: List of Detector objects to use for tracking
+            tracker_config: Dictionary of tracker configuration parameters
+            algorithm_function: Function to call for tracking (e.g., run_simple_tracker)
+        """
         super().__init__()
         self.detectors = detectors
         self.config = tracker_config
+        self.algorithm_function = algorithm_function
         self._cancelled = False
 
     def cancel(self):
@@ -36,9 +44,9 @@ class SimpleTrackingWorker(QThread):
             if self._cancelled:
                 return
 
-            self.progress_updated.emit("Running Simple tracker...")
+            self.progress_updated.emit(f"Running {self.config.get('tracker_name', 'tracker')}...")
 
-            track_data_list = run_simple_tracker(self.detectors, self.config)
+            track_data_list = self.algorithm_function(self.detectors, self.config)
 
             if self._cancelled:
                 return
@@ -51,40 +59,58 @@ class SimpleTrackingWorker(QThread):
             self.error_occurred.emit(f"Tracking failed: {str(e)}\n\nTraceback:\n{tb_str}")
 
 
-class SimpleTrackingDialog(QDialog):
-    """Dialog for configuring Simple tracker parameters"""
+class BaseTrackingDialog(QDialog):
+    """Base dialog for configuring tracker parameters"""
 
-    def __init__(self, viewer, parent=None):
+    def __init__(self, viewer, parent=None, algorithm_function=None, settings_name="BaseTracker",
+                 window_title="Tracker", description="", default_track_color='b',
+                 default_track_marker='s', default_track_line_width=2, default_track_marker_size=10):
+        """
+        Initialize the base tracking dialog.
+
+        Args:
+            viewer: VISTA viewer object
+            parent: Parent widget (default: None)
+            algorithm_function: Function to call for tracking (e.g., run_simple_tracker)
+            settings_name: Name for QSettings storage (default: "BaseTracker")
+            window_title: Window title (default: "Tracker")
+            description: HTML description text for the tracker
+            default_track_color: Default color for created tracks (default: 'b')
+            default_track_marker: Default marker for created tracks (default: 's')
+            default_track_line_width: Default line width for created tracks (default: 2)
+            default_track_marker_size: Default marker size for created tracks (default: 10)
+        """
         super().__init__(parent)
         self.viewer = viewer
+        self.algorithm_function = algorithm_function
         self.worker = None
         self.progress_dialog = None
-        self.settings = QSettings("VISTA", "SimpleTracker")
+        self.settings = QSettings("VISTA", settings_name)
 
-        self.setWindowTitle("Simple Tracker")
+        # Track styling defaults
+        self.default_track_color = default_track_color
+        self.default_track_marker = default_track_marker
+        self.default_track_line_width = default_track_line_width
+        self.default_track_marker_size = default_track_marker_size
+
+        self.setWindowTitle(window_title)
         self.setMinimumWidth(500)
+
+        # Store description for subclass use
+        self.description = description
 
         self.setup_ui()
         self.load_settings()
 
     def setup_ui(self):
-        """Setup the dialog UI"""
+        """Setup the dialog UI - can be overridden by subclasses"""
         layout = QVBoxLayout()
 
         # Description
-        desc_label = QLabel(
-            "<b>Simple Tracker</b><br><br>"
-            "<b>How it works:</b> Uses nearest-neighbor data association with adaptive velocity prediction. "
-            "For each new detection, finds the closest existing track within a search radius, "
-            "accounting for predicted motion. Automatically tunes search radius and track lifespan "
-            "based on detection statistics.<br><br>"
-            "<b>Best for:</b> Fast-moving objects with relatively smooth motion. Good for real-time tracking "
-            "and scenarios where computational efficiency is important.<br><br>"
-            "<b>Advantages:</b> Fast, automatic parameter tuning, handles moderate occlusions.<br>"
-            "<b>Limitations:</b> Greedy nearest-neighbor can fail with dense detections or crossing paths."
-        )
-        desc_label.setWordWrap(True)
-        layout.addWidget(desc_label)
+        if self.description:
+            desc_label = QLabel(self.description)
+            desc_label.setWordWrap(True)
+            layout.addWidget(desc_label)
 
         # Tracker name
         name_layout = QHBoxLayout()
@@ -103,54 +129,19 @@ class SimpleTrackingDialog(QDialog):
         self.detector_list = QListWidget()
         self.detector_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
 
-        # Populate detector list
-        for detector in self.viewer.detectors:
-            self.detector_list.addItem(detector.name)
+        # Populate detector list using utility function
+        populate_detector_list_by_sensor(self.detector_list, self.viewer)
 
         detector_layout.addWidget(self.detector_list)
         detector_group.setLayout(detector_layout)
         layout.addWidget(detector_group)
 
-        # Simple tracker parameters
-        params_group = QGroupBox("Tracker Parameters")
-        params_layout = QFormLayout()
-
-        self.min_track_length = QSpinBox()
-        self.min_track_length.setRange(2, 50)
-        self.min_track_length.setValue(5)
-        self.min_track_length.setToolTip(
-            "Minimum number of detections required for a valid track.\n"
-            "Tracks shorter than this will be filtered out.\n"
-            "Higher values reduce false tracks but may miss short-lived targets."
-        )
-        params_layout.addRow("Min Track Length:", self.min_track_length)
-
-        self.max_search_radius = QDoubleSpinBox()
-        self.max_search_radius.setRange(0.0, 500.0)
-        self.max_search_radius.setValue(0.0)
-        self.max_search_radius.setSingleStep(5.0)
-        self.max_search_radius.setDecimals(1)
-        self.max_search_radius.setSpecialValueText("Auto")
-        self.max_search_radius.setToolTip(
-            "Maximum distance to search for detection associations (pixels).\n"
-            "Set to 0 (Auto) to automatically estimate from data.\n"
-            "Increase for fast-moving targets, decrease for dense scenarios."
-        )
-        params_layout.addRow("Max Search Radius:", self.max_search_radius)
-
-        self.max_age = QSpinBox()
-        self.max_age.setRange(0, 20)
-        self.max_age.setValue(0)
-        self.max_age.setSpecialValueText("Auto")
-        self.max_age.setToolTip(
-            "Maximum frames a track can survive without detections.\n"
-            "Set to 0 (Auto) to automatically estimate from data.\n"
-            "Higher values allow tracks to persist through occlusions."
-        )
-        params_layout.addRow("Max Age:", self.max_age)
-
-        params_group.setLayout(params_layout)
-        layout.addWidget(params_group)
+        # Algorithm-specific parameters (to be added by subclasses)
+        self.params_group = QGroupBox("Tracker Parameters")
+        self.params_layout = QFormLayout()
+        self.add_algorithm_parameters(layout)
+        self.params_group.setLayout(self.params_layout)
+        layout.addWidget(self.params_group)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -167,23 +158,44 @@ class SimpleTrackingDialog(QDialog):
 
         self.setLayout(layout)
 
-    def load_settings(self):
-        """Load previously saved settings"""
-        self.min_track_length.setValue(self.settings.value("min_track_length", 5, type=int))
-        self.max_search_radius.setValue(self.settings.value("max_search_radius", 0.0, type=float))
-        self.max_age.setValue(self.settings.value("max_age", 0, type=int))
+    def add_algorithm_parameters(self, main_layout):
+        """
+        Add algorithm-specific parameters to the form layout.
+        Override this method in subclasses to add custom parameters.
 
+        Args:
+            main_layout: The main QVBoxLayout - use this if you need to add custom group boxes.
+                        For simple parameters, add to self.params_layout (QFormLayout).
+        """
+        pass
+
+    def load_settings(self):
+        """
+        Load previously saved settings.
+        Override this method in subclasses to load custom parameters.
+        """
         # Restore tracker name if available
         last_name = self.settings.value("tracker_name", "")
         if last_name:
             self.name_input.setCurrentText(last_name)
 
     def save_settings(self):
-        """Save current settings for next time"""
-        self.settings.setValue("min_track_length", self.min_track_length.value())
-        self.settings.setValue("max_search_radius", self.max_search_radius.value())
-        self.settings.setValue("max_age", self.max_age.value())
+        """
+        Save current settings for next time.
+        Override this method in subclasses to save custom parameters.
+        """
         self.settings.setValue("tracker_name", self.name_input.currentText())
+
+    def build_config(self):
+        """
+        Build configuration dictionary for the tracker.
+        Override this method in subclasses to add custom parameters.
+
+        Returns:
+            Dictionary of tracker configuration parameters
+        """
+        config = {'tracker_name': self.name_input.currentText()}
+        return config
 
     def run_tracker(self):
         """Start the tracking process"""
@@ -204,27 +216,20 @@ class SimpleTrackingDialog(QDialog):
                     break
 
         # Build configuration
-        config = {'tracker_name': self.name_input.currentText()}
-        config['min_track_length'] = self.min_track_length.value()
-
-        # Only include if not auto (0)
-        if self.max_search_radius.value() > 0:
-            config['max_search_radius'] = self.max_search_radius.value()
-        if self.max_age.value() > 0:
-            config['max_age'] = self.max_age.value()
+        config = self.build_config()
 
         # Save settings for next time
         self.save_settings()
 
         # Create progress dialog (indeterminate mode)
         self.progress_dialog = QProgressDialog("Initializing tracker...", "Cancel", 0, 0, self)
-        self.progress_dialog.setWindowTitle("Running Simple Tracker")
+        self.progress_dialog.setWindowTitle(f"Running {self.windowTitle()}")
         self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.canceled.connect(self.cancel_tracking)
         self.progress_dialog.show()
 
         # Create and start worker thread
-        self.worker = SimpleTrackingWorker(selected_detectors, config)
+        self.worker = BaseTrackingWorker(selected_detectors, config, self.algorithm_function)
         self.worker.progress_updated.connect(self.on_progress)
         self.worker.tracking_complete.connect(self.on_complete)
         self.worker.error_occurred.connect(self.on_error)
@@ -270,10 +275,10 @@ class SimpleTrackingDialog(QDialog):
                 rows=track_data['rows'],
                 columns=track_data['columns'],
                 sensor=sensor,
-                color='b',
-                marker='s',
-                line_width=2,
-                marker_size=10,
+                color=self.default_track_color,
+                marker=self.default_track_marker,
+                line_width=self.default_track_line_width,
+                marker_size=self.default_track_marker_size,
                 visible=True
             )
             vista_tracks.append(vista_track)

@@ -20,3 +20,5 @@ class VistaIcons(object):
         self.create_detection_dark = QIcon(str(ICON_DIR / "create_detection_dark.png"))
         self.select_track_light = QIcon(str(ICON_DIR / "select_track_light.png"))
         self.select_track_dark = QIcon(str(ICON_DIR / "select_track_dark.png"))
+        self.select_detections_light = QIcon(str(ICON_DIR / "select_detections_light.png"))
+        self.select_detections_dark = QIcon(str(ICON_DIR / "select_detections_dark.png"))

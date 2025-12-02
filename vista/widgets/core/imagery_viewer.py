@@ -1,7 +1,9 @@
 """ImageryViewer widget for displaying imagery with overlays"""
 import numpy as np
+import os
 import pyqtgraph as pg
-from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+import time
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from vista.aoi.aoi import AOI
@@ -9,6 +11,11 @@ from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
+from vista.utils.point_refinement import refine_point
+from vista.widgets.core.point_selection_dialog import PointSelectionDialog
+
+# Performance monitoring (enabled via environment variable)
+ENABLE_PERF_MONITORING = os.environ.get('VISTA_PERF_MONITOR', '0') == '1'
 
 
 class CustomViewBox(pg.ViewBox):
@@ -50,6 +57,9 @@ class ImageryViewer(QWidget):
 
     # Signal emitted when a track is selected (emits track object)
     track_selected = pyqtSignal(object)
+
+    # Signal emitted when detections are selected (emits list of tuples: [(detector, frame, index), ...])
+    detections_selected = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -101,14 +111,29 @@ class ImageryViewer(QWidget):
         # Track selection mode
         self.track_selection_mode = False
 
-        # Histogram bounds persistence
+        # Detection selection mode
+        self.detection_selection_mode = False
+        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.selected_detections_plot = None  # ScatterPlotItem for highlighting selected detections
+
+        # Histogram bounds persistence (session only)
         self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
+
+        # Histogram gradient state persistence (across sessions, managed by main window)
+        self.user_histogram_state = None  # Single global gradient state
 
         # Imagery selection
         self.setting_imagery = False
 
         # Last mouse position for updating tooltips on frame change
         self.last_mouse_pos = None  # Store last mouse position in scene coordinates
+
+        # Point selection dialog for refining clicked points
+        self.point_selection_dialog = None
+
+        # Performance monitoring
+        self.perf_frame_times = []  # List of frame update times
+        self.perf_last_print = time.time() if ENABLE_PERF_MONITORING else None
 
         self.init_ui()
 
@@ -132,8 +157,8 @@ class ImageryViewer(QWidget):
         #self.plot_item.hideAxis('left')
         #self.plot_item.hideAxis('bottom')
 
-        # Create image item
-        self.image_item = pg.ImageItem()
+        # Create image item with OpenGL acceleration enabled
+        self.image_item = pg.ImageItem(useOpenGL=True)
         self.plot_item.addItem(self.image_item)
 
         # Create geolocation text overlay using TextItem positioned in scene coordinates
@@ -172,6 +197,9 @@ class ImageryViewer(QWidget):
         # Connect to histogram level change signals to track user adjustments
         self.histogram.sigLevelChangeFinished.connect(self.on_histogram_levels_changed)
 
+        # Connect to gradient change signals to track gradient adjustments
+        self.histogram.sigLookupTableChanged.connect(self.on_histogram_gradient_changed)
+
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
         layout.addWidget(self.hist_widget)
@@ -204,8 +232,10 @@ class ImageryViewer(QWidget):
 
             self.current_frame_number = frame_to_display
 
-            # Display the selected frame
-            frame_index = np.where(imagery.frames == frame_to_display)[0][0] if frame_to_display in imagery.frames else 0
+            # Display the selected frame using optimized lookup
+            frame_index = imagery.get_frame_index(frame_to_display)
+            if frame_index is None:
+                frame_index = 0
             self.setting_imagery = True
             self.image_item.setImage(imagery.images[frame_index])
             self.setting_imagery = False
@@ -223,17 +253,24 @@ class ImageryViewer(QWidget):
 
     def set_frame_number(self, frame_number: int):
         """Set the current frame to display by frame number"""
+        perf_start = time.time() if ENABLE_PERF_MONITORING else None
+
         self.current_frame_number = frame_number
 
         # Update imagery if available
         if self.imagery is not None and len(self.imagery.frames) > 0:
-            # Find the index in the imagery array that corresponds to this frame number
-            # Use the closest frame number that is <= the requested frame number
-            valid_indices = np.where(self.imagery.frames <= frame_number)[0]
+            # Try exact frame match first using optimized lookup
+            image_index = self.imagery.get_frame_index(frame_number)
 
-            if len(valid_indices) > 0:
-                # Get the index of the closest frame that is <= frame_number
-                image_index = valid_indices[-1]
+            # If exact match not found, find closest frame <= frame_number
+            if image_index is None:
+                valid_indices = np.where(self.imagery.frames <= frame_number)[0]
+                if len(valid_indices) > 0:
+                    image_index = valid_indices[-1]
+                else:
+                    image_index = None
+
+            if image_index is not None:
 
                 # Get user histogram limits if set
                 user_histogram_bounds = None
@@ -267,7 +304,9 @@ class ImageryViewer(QWidget):
                     pass
 
                 # Restore user's histogram bounds if they were manually set
-                if user_histogram_bounds is not None:
+                if user_histogram_bounds is None:
+                    self.histogram.setLevels(self.histogram.plot.xData[0], self.histogram.plot.xData[-1])
+                else:
                     self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
@@ -277,15 +316,33 @@ class ImageryViewer(QWidget):
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
             self._update_tooltips_at_position(self.last_mouse_pos)
 
+        # Performance monitoring
+        if ENABLE_PERF_MONITORING and perf_start is not None:
+            frame_time = time.time() - perf_start
+            self.perf_frame_times.append(frame_time)
+
+            # Print stats every 60 frames
+            if len(self.perf_frame_times) >= 60:
+                avg_time = np.mean(self.perf_frame_times)
+                fps = 1.0 / avg_time if avg_time > 0 else 0
+                print(f"[PERF] Frame update: {avg_time*1000:.2f}ms avg, {fps:.1f} FPS (last 60 frames)")
+                self.perf_frame_times = []
+
     def get_current_time(self):
         """Get the current time for the displayed frame (if available)"""
         if self.imagery is not None and self.imagery.times is not None and len(self.imagery.frames) > 0:
-            # Find the index in the imagery array that corresponds to current frame number
-            valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+            # Try exact frame match first using optimized lookup
+            image_index = self.imagery.get_frame_index(self.current_frame_number)
 
-            if len(valid_indices) > 0:
-                # Get the index of the closest frame
-                image_index = valid_indices[-1]
+            # If exact match not found, find closest frame <= current_frame_number
+            if image_index is None:
+                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+                if len(valid_indices) > 0:
+                    image_index = valid_indices[-1]
+                else:
+                    image_index = None
+
+            if image_index is not None:
                 return self.imagery.times[image_index]
 
         return None
@@ -317,9 +374,16 @@ class ImageryViewer(QWidget):
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
         # Store the user's selected bounds
-        if self.setting_imagery:
+        if (self.setting_imagery) or (self.imagery is None):
             return
         self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
+
+    def on_histogram_gradient_changed(self):
+        """Called when user manually adjusts histogram gradient (color mapping)"""
+        # Store the full histogram state (gradient only, not levels)
+        if self.setting_imagery:
+            return
+        self.user_histogram_state = self.histogram.saveState()
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
@@ -351,6 +415,10 @@ class ImageryViewer(QWidget):
                 # No pixel value, position at bottom-right
                 self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
 
+    def update_detection_display(self):
+        """Update detection display (e.g., when filters change)"""
+        self.update_overlays()
+
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
         # Get current frame number
@@ -377,20 +445,36 @@ class ImageryViewer(QWidget):
                 scatter.setData(x=[], y=[])  # Hide by setting empty data
                 continue
 
-            # Update data for current frame
-            mask = detector.frames == frame_num
-            if np.any(mask):
-                rows = detector.rows[mask]
-                cols = detector.columns[mask]
+            # Get detections at current frame using optimized O(1) lookup
+            rows, cols = detector.get_detections_at_frame(frame_num)
+
+            # Apply label filter if detections panel has active filters
+            if len(rows) > 0:
+                try:
+                    if hasattr(self, 'data_manager') and self.data_manager is not None:
+                        if hasattr(self.data_manager, 'detections_panel'):
+                            # Get full frame mask for label filtering
+                            frame_mask = detector.frames == frame_num
+                            label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                            combined_mask = frame_mask & label_mask
+                            if np.any(combined_mask):
+                                rows = detector.rows[combined_mask]
+                                cols = detector.columns[combined_mask]
+                            else:
+                                rows, cols = np.array([]), np.array([])
+                except AttributeError:
+                    pass  # Use unfiltered rows/cols from get_detections_at_frame
+
+            if len(rows) > 0:
                 scatter.setData(
                     x=cols, y=rows,
-                    pen=pg.mkPen(color=detector.color, width=detector.line_thickness),
+                    pen=detector.get_pen(),  # Use cached pen
                     brush=None,
                     size=detector.marker_size,
                     symbol=detector.marker
                 )
             else:
-                scatter.setData(x=[], y=[])  # No data at this frame
+                scatter.setData(x=[], y=[])  # No data at this frame or filtered out
 
         # Update tracks for current frame
         for tracker in self.trackers:
@@ -420,16 +504,6 @@ class ImageryViewer(QWidget):
                     marker.setData(x=[], y=[])
                     continue
 
-                # Map line style string to Qt.PenStyle
-                line_style_map = {
-                    'SolidLine': Qt.PenStyle.SolidLine,
-                    'DashLine': Qt.PenStyle.DashLine,
-                    'DotLine': Qt.PenStyle.DotLine,
-                    'DashDotLine': Qt.PenStyle.DashDotLine,
-                    'DashDotDotLine': Qt.PenStyle.DashDotDotLine
-                }
-                pen_style = line_style_map.get(track.line_style, Qt.PenStyle.SolidLine)
-
                 # Check if track is selected for highlighting
                 is_selected = track_id in self.selected_track_ids
                 line_width = track.line_width + 5 if is_selected else track.line_width
@@ -439,60 +513,54 @@ class ImageryViewer(QWidget):
                 if track.complete:
                     rows = track.rows
                     cols = track.columns
-                    frames = track.frames
 
                     # Update track path with entire track (only if show_line is True)
                     if track.show_line:
                         path.setData(
                             x=cols, y=rows,
-                            pen=pg.mkPen(color=track.color, width=line_width, style=pen_style)
+                            pen=track.get_pen(width=line_width)  # Use cached pen
                         )
                     else:
                         path.setData(x=[], y=[])  # Hide line
 
                     # Update current position marker (show marker at current frame if it exists)
-                    if frame_num in track.frames:
-                        idx = np.where(frames == frame_num)[0][0]
+                    track_data = track.get_track_data_at_frame(frame_num)
+                    if track_data is not None:
+                        row, col = track_data
                         marker.setData(
-                            x=[cols[idx]], y=[rows[idx]],
-                            pen=pg.mkPen(color=track.color, width=2),
-                            brush=pg.mkBrush(color=track.color),
+                            x=[col], y=[row],
+                            pen=track.get_pen(width=2),  # Use cached pen
+                            brush=track.get_brush(),  # Use cached brush
                             size=marker_size,
                             symbol=track.marker
                         )
                     else:
                         marker.setData(x=[], y=[])  # No current position
                 else:
-                    # Show track history up to current frame
-                    mask = track.frames <= frame_num
-                    if np.any(mask):
-                        rows = track.rows[mask]
-                        cols = track.columns[mask]
-                        frames = track.frames[mask]
+                    # Show track history up to current frame using optimized method
+                    visible_indices = track.get_visible_indices(frame_num)
 
-                        # Apply tail length if specified
-                        if track.tail_length > 0 and len(rows) > track.tail_length:
-                            # Only show the last N points
-                            rows = rows[-track.tail_length:]
-                            cols = cols[-track.tail_length:]
-                            frames = frames[-track.tail_length:]
+                    if visible_indices is not None and len(visible_indices) > 0:
+                        rows = track.rows[visible_indices]
+                        cols = track.columns[visible_indices]
 
                         # Update track path (only if show_line is True)
                         if track.show_line:
                             path.setData(
                                 x=cols, y=rows,
-                                pen=pg.mkPen(color=track.color, width=line_width, style=pen_style)
+                                pen=track.get_pen(width=line_width)  # Use cached pen
                             )
                         else:
                             path.setData(x=[], y=[])  # Hide line
 
                         # Update current position marker
-                        if frame_num in track.frames:
-                            idx = np.where(frames == frame_num)[0][0]
+                        track_data = track.get_track_data_at_frame(frame_num)
+                        if track_data is not None:
+                            row, col = track_data
                             marker.setData(
-                                x=[cols[idx]], y=[rows[idx]],
-                                pen=pg.mkPen(color=track.color, width=2),
-                                brush=pg.mkBrush(color=track.color),
+                                x=[col], y=[row],
+                                pen=track.get_pen(width=2),  # Use cached pen
+                                brush=track.get_brush(),  # Use cached brush
                                 size=marker_size,
                                 symbol=track.marker
                             )
@@ -508,6 +576,10 @@ class ImageryViewer(QWidget):
             self._update_temp_track_display()
         if self.detection_creation_mode or self.detection_editing_mode:
             self._update_temp_detection_display()
+
+        # Update selected detections highlighting
+        if self.detection_selection_mode:
+            self._update_selected_detections_display()
 
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
@@ -567,35 +639,67 @@ class ImageryViewer(QWidget):
             enabled: Boolean indicating whether track selection mode is enabled
         """
         self.track_selection_mode = enabled
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+
+    def set_detection_selection_mode(self, enabled):
+        """
+        Enable or disable detection selection mode.
+
+        Args:
+            enabled: Boolean indicating whether detection selection mode is enabled
+        """
+        self.detection_selection_mode = enabled
         if enabled:
-            # Change cursor to crosshair
+            # Clear any previous selections
+            self.selected_detections = []
+        else:
+            # Clear selections
+            self.selected_detections = []
+            # Clear highlighting
+            if self.selected_detections_plot is not None:
+                if isinstance(self.selected_detections_plot, list):
+                    for plot in self.selected_detections_plot:
+                        self.plot_item.removeItem(plot)
+                else:
+                    self.plot_item.removeItem(self.selected_detections_plot)
+                self.selected_detections_plot = None
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+
+    def update_cursor(self):
+        """Update cursor based on enabled interactive modes"""
+        # Check if any interactive mode is active that requires a crosshair cursor
+        if (self.geolocation_enabled or self.pixel_value_enabled or
+            self.track_creation_mode or self.track_editing_mode or
+            self.detection_creation_mode or self.detection_editing_mode or
+            self.track_selection_mode or self.detection_selection_mode):
             self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
         else:
-            # Restore cursor
             self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
 
     def set_geolocation_enabled(self, enabled):
         """Enable or disable geolocation tooltip"""
         self.geolocation_enabled = enabled
-        if not enabled:
-            self.geolocation_text.setVisible(False)
-        else:
+        if enabled:
             # Update positions when enabling
             self.update_text_positions()
+        else:
+            self.geolocation_text.setVisible(False)
+        # Update cursor based on both tooltip states
+        self.update_cursor()
 
     def set_pixel_value_enabled(self, enabled):
         """Enable or disable pixel value tooltip"""
         self.pixel_value_enabled = enabled
         if enabled:
-            # Change cursor to crosshair
-            self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
             # Update positions when enabling
             self.update_text_positions()
         else:
             self.pixel_value_text.setVisible(False)
             self.pixel_value_text.setText("")
-            # Restore cursor
-            self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Update cursor based on both tooltip states
+        self.update_cursor()
 
     def on_mouse_moved(self, pos):
         """Handle mouse movement over the image"""
@@ -926,8 +1030,10 @@ class ImageryViewer(QWidget):
         self.track_creation_mode = True
         self.current_track_data = {}
         self.temp_track_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+        # Show point selection dialog
+        self._show_point_selection_dialog()
 
     def start_track_editing(self, track):
         """Start track editing mode for a specific track"""
@@ -938,16 +1044,20 @@ class ImageryViewer(QWidget):
         for i in range(len(track.frames)):
             self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
         self.temp_track_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+        # Show point selection dialog
+        self._show_point_selection_dialog()
         # Update display to show current track being edited
         self._update_temp_track_display()
 
     def finish_track_creation(self):
         """Finish track creation and return the Track object"""
         self.track_creation_mode = False
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_track_plot:
@@ -970,7 +1080,8 @@ class ImageryViewer(QWidget):
                 name=f"Track {len([t for tracker in self.trackers for t in tracker.tracks]) + 1}",
                 frames=frames,
                 rows=rows,
-                columns=columns
+                columns=columns,
+                sensor=self.selected_sensor
             )
 
             self.current_track_data = {}
@@ -984,8 +1095,10 @@ class ImageryViewer(QWidget):
         self.track_editing_mode = False
         editing_track = self.editing_track
         self.editing_track = None
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_track_plot:
@@ -1004,6 +1117,9 @@ class ImageryViewer(QWidget):
             editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
             editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
 
+            # Invalidate caches since track data was modified
+            editing_track.invalidate_caches()
+
             self.current_track_data = {}
             # Refresh track display
             self.update_overlays()
@@ -1017,8 +1133,10 @@ class ImageryViewer(QWidget):
         self.detection_creation_mode = True
         self.current_detection_data = {}
         self.temp_detection_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+        # Show point selection dialog
+        self._show_point_selection_dialog()
 
     def start_detection_editing(self, detector):
         """Start detection editing mode for a specific detector"""
@@ -1032,16 +1150,20 @@ class ImageryViewer(QWidget):
                 self.current_detection_data[frame] = []
             self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
         self.temp_detection_plot = None
-        # Change cursor to crosshair
-        self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on all interactive modes
+        self.update_cursor()
+        # Show point selection dialog
+        self._show_point_selection_dialog()
         # Update display to show current detections being edited
         self._update_temp_detection_display()
 
     def finish_detection_creation(self):
         """Finish detection creation and return the Detector object"""
         self.detection_creation_mode = False
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_detection_plot:
@@ -1069,7 +1191,8 @@ class ImageryViewer(QWidget):
                 name=f"Detector {len(self.detectors) + 1}",
                 frames=np.array(frames_list, dtype=np.int_),
                 rows=np.array(rows_list),
-                columns=np.array(columns_list)
+                columns=np.array(columns_list),
+                sensor=self.selected_sensor
             )
 
             self.current_detection_data = {}
@@ -1083,8 +1206,10 @@ class ImageryViewer(QWidget):
         self.detection_editing_mode = False
         editing_detector = self.editing_detector
         self.editing_detector = None
-        # Restore cursor
-        self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
+        # Hide point selection dialog
+        self._hide_point_selection_dialog()
+        # Update cursor based on all interactive modes
+        self.update_cursor()
 
         # Remove temporary plot
         if self.temp_detection_plot:
@@ -1112,6 +1237,9 @@ class ImageryViewer(QWidget):
             editing_detector.rows = np.array(rows_list)
             editing_detector.columns = np.array(columns_list)
 
+            # Invalidate caches since detector data was modified
+            editing_detector.invalidate_caches()
+
             self.current_detection_data = {}
             # Refresh detection display
             self.update_overlays()
@@ -1120,12 +1248,90 @@ class ImageryViewer(QWidget):
             self.current_detection_data = {}
             return None
 
+    def _show_point_selection_dialog(self):
+        """Show the point selection dialog (non-modal, floating)"""
+        if self.point_selection_dialog is None:
+            self.point_selection_dialog = PointSelectionDialog(parent=self)
+            # Notify parent (main window) that dialog was created
+            # so it can connect to visibility signals
+            parent_window = self.window()
+            if hasattr(parent_window, 'on_point_selection_dialog_created'):
+                parent_window.on_point_selection_dialog_created()
+        self.point_selection_dialog.show()
+        self.point_selection_dialog.raise_()
+        self.point_selection_dialog.activateWindow()
+
+    def _hide_point_selection_dialog(self):
+        """Hide the point selection dialog"""
+        if self.point_selection_dialog is not None:
+            self.point_selection_dialog.hide()
+
+    def toggle_point_selection_dialog(self, visible):
+        """
+        Show or hide the point selection dialog.
+
+        Args:
+            visible: Boolean indicating whether dialog should be visible
+        """
+        if visible:
+            self._show_point_selection_dialog()
+        else:
+            self._hide_point_selection_dialog()
+
+    def get_point_selection_dialog_visible(self):
+        """
+        Check if point selection dialog is currently visible.
+
+        Returns:
+            Boolean indicating visibility
+        """
+        if self.point_selection_dialog is None:
+            return False
+        return self.point_selection_dialog.isVisible()
+
+    def _refine_clicked_point(self, row, col):
+        """
+        Refine a clicked point location using the selected mode from the point selection dialog.
+
+        Args:
+            row (float): Clicked row coordinate
+            col (float): Clicked column coordinate
+
+        Returns:
+            tuple: (refined_row, refined_col) - refined coordinates
+        """
+        if self.point_selection_dialog is None or self.imagery is None:
+            # No dialog or no imagery, return verbatim
+            return row, col
+
+        # Get the current frame index
+        frame_index = np.where(self.imagery.frames == self.current_frame_number)[0]
+        if len(frame_index) == 0:
+            # Current frame not in imagery, return verbatim
+            return row, col
+        frame_index = frame_index[0]
+
+        # Get parameters from dialog
+        params = self.point_selection_dialog.get_parameters()
+        mode = params.pop('mode')  # Remove mode from params to avoid duplicate keyword argument
+
+        # Call refine_point with appropriate parameters
+        try:
+            refined_row, refined_col = refine_point(
+                row, col, self.imagery, frame_index, mode=mode, **params
+            )
+            return refined_row, refined_col
+        except Exception as e:
+            # If refinement fails, return original coordinates
+            print(f"Warning: Point refinement failed: {e}")
+            return row, col
+
     def on_mouse_clicked(self, event):
         """Handle mouse click events for track/detection creation/editing/selection"""
         # Only handle left clicks in creation/editing/selection mode
         if not (self.track_creation_mode or self.track_editing_mode or
                 self.detection_creation_mode or self.detection_editing_mode or
-                self.track_selection_mode):
+                self.track_selection_mode or self.detection_selection_mode):
             return
 
         if event.button() != Qt.MouseButton.LeftButton:
@@ -1161,8 +1367,11 @@ class ImageryViewer(QWidget):
                         self._update_temp_track_display()
                         return
 
+                # Refine the point using the selected mode
+                refined_row, refined_col = self._refine_clicked_point(row, col)
+
                 # Add or update track point for current frame
-                self.current_track_data[self.current_frame_number] = (row, col)
+                self.current_track_data[self.current_frame_number] = (refined_row, refined_col)
 
                 # Update temporary track display
                 self._update_temp_track_display()
@@ -1188,8 +1397,11 @@ class ImageryViewer(QWidget):
                         self._update_temp_detection_display()
                         return
 
+                # Refine the point using the selected mode
+                refined_row, refined_col = self._refine_clicked_point(row, col)
+
                 # Add new detection point for current frame
-                self.current_detection_data[self.current_frame_number].append((row, col))
+                self.current_detection_data[self.current_frame_number].append((refined_row, refined_col))
 
                 # Update temporary detection display
                 self._update_temp_detection_display()
@@ -1236,6 +1448,53 @@ class ImageryViewer(QWidget):
                 # If we found a track, emit signal
                 if closest_track:
                     self.track_selected.emit(closest_track)
+
+            # Handle detection selection
+            elif self.detection_selection_mode:
+                closest_detection = None
+                closest_distance = float('inf')
+
+                for detector in self.detectors:
+                    if not detector.visible:
+                        continue
+
+                    # Filter by sensor if one is selected
+                    if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
+                        continue
+
+                    # Find detections at current frame
+                    mask = detector.frames == self.current_frame_number
+                    if not np.any(mask):
+                        continue
+
+                    rows = detector.rows[mask]
+                    cols = detector.columns[mask]
+                    indices = np.where(mask)[0]
+
+                    # Calculate distances to all detections at this frame
+                    distances = np.sqrt((cols - col)**2 + (rows - row)**2)
+                    min_idx = np.argmin(distances)
+                    min_distance = distances[min_idx]
+
+                    # Check if this is the closest detection so far
+                    if min_distance < tolerance and min_distance < closest_distance:
+                        closest_distance = min_distance
+                        original_index = indices[min_idx]
+                        closest_detection = (detector, self.current_frame_number, int(original_index))
+
+                # If we found a detection, add/toggle in selection
+                if closest_detection:
+                    # Toggle selection
+                    if closest_detection in self.selected_detections:
+                        self.selected_detections.remove(closest_detection)
+                    else:
+                        self.selected_detections.append(closest_detection)
+
+                    # Update highlighting display
+                    self._update_selected_detections_display()
+
+                    # Emit signal with current selections
+                    self.detections_selected.emit(self.selected_detections)
 
     def _update_temp_track_display(self):
         """Update the temporary track plot during creation/editing"""
@@ -1311,20 +1570,62 @@ class ImageryViewer(QWidget):
             self.temp_detection_plot = None
             return
 
-        # Separate points into current frame and other frames
+        # Only show detections for the current frame
+        current_frame_rows = []
+        current_frame_cols = []
+
+        # Get detections for current frame only
+        if self.current_frame_number in self.current_detection_data:
+            for row, col in self.current_detection_data[self.current_frame_number]:
+                current_frame_rows.append(row)
+                current_frame_cols.append(col)
+
+        # Draw current frame detections
+        if len(current_frame_rows) > 0:
+            current_plot = pg.ScatterPlotItem(
+                x=np.array(current_frame_cols),
+                y=np.array(current_frame_rows),
+                pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
+                brush=pg.mkBrush('c'),
+                size=14,  # Larger size for visibility
+                symbol='o'
+            )
+            self.plot_item.addItem(current_plot)
+            self.temp_detection_plot = current_plot
+        else:
+            self.temp_detection_plot = None
+
+    def _update_selected_detections_display(self):
+        """Update the selected detections highlighting overlay"""
+        # Remove old plot if it exists
+        if self.selected_detections_plot is not None:
+            if isinstance(self.selected_detections_plot, list):
+                for plot in self.selected_detections_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.selected_detections_plot)
+            self.selected_detections_plot = None
+
+        # If no detections selected, nothing to draw
+        if len(self.selected_detections) == 0:
+            return
+
+        # Separate detections into current frame and other frames
         current_frame_rows = []
         current_frame_cols = []
         other_frame_rows = []
         other_frame_cols = []
 
-        for frame, detections in self.current_detection_data.items():
-            for row, col in detections:
-                if frame == self.current_frame_number:
-                    current_frame_rows.append(row)
-                    current_frame_cols.append(col)
-                else:
-                    other_frame_rows.append(row)
-                    other_frame_cols.append(col)
+        for detector, frame, index in self.selected_detections:
+            row = detector.rows[index]
+            col = detector.columns[index]
+
+            if frame == self.current_frame_number:
+                current_frame_rows.append(row)
+                current_frame_cols.append(col)
+            else:
+                other_frame_rows.append(row)
+                other_frame_cols.append(col)
 
         # Create scatter plots with different sizes
         plots = []
@@ -1334,9 +1635,9 @@ class ImageryViewer(QWidget):
             other_plot = pg.ScatterPlotItem(
                 x=np.array(other_frame_cols),
                 y=np.array(other_frame_rows),
-                pen=pg.mkPen('c', width=1),  # Cyan color to distinguish from tracks
-                brush=pg.mkBrush('c'),
-                size=6,  # Smaller size for other frames
+                pen=pg.mkPen('m', width=2),  # Dark purple border
+                brush=None,  # No fill, just border
+                size=10,  # Smaller size for other frames
                 symbol='o'
             )
             self.plot_item.addItem(other_plot)
@@ -1347,14 +1648,14 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_cols),
                 y=np.array(current_frame_rows),
-                pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
-                brush=pg.mkBrush('c'),
-                size=14,  # Larger size for current frame
+                pen=pg.mkPen('m', width=3),  # Thick dark purple border
+                brush=None,  # No fill, just border
+                size=16,  # Larger size for current frame
                 symbol='o'
             )
             self.plot_item.addItem(current_plot)
             plots.append(current_plot)
 
-        self.temp_detection_plot = plots if len(plots) > 0 else None
+        self.selected_detections_plot = plots if len(plots) > 0 else None
 
 

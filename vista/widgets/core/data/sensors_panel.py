@@ -145,13 +145,20 @@ class SensorsPanel(QWidget):
             self.viewer.imageries = [img for img in self.viewer.imageries if img.sensor != sensor]
 
             # Delete all tracks for this sensor
-            tracks_to_delete = [track for track in self.viewer.tracks if track.sensor == sensor]
-            for track in tracks_to_delete:
-                track_id = id(track)
-                if track_id in self.viewer.track_plot_items:
-                    self.viewer.plot_item.removeItem(self.viewer.track_plot_items[track_id])
-                    del self.viewer.track_plot_items[track_id]
-            self.viewer.tracks = [track for track in self.viewer.tracks if track.sensor != sensor]
+            for tracker in self.viewer.trackers:
+                tracks_to_delete = [track for track in tracker.tracks if track.sensor == sensor]
+                for track in tracks_to_delete:
+                    track_id = id(track)
+                    if track_id in self.viewer.track_path_items:
+                        self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
+                        del self.viewer.track_path_items[track_id]
+                    if track_id in self.viewer.track_marker_items:
+                        self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
+                        del self.viewer.track_marker_items[track_id]
+                # Remove tracks from tracker
+                tracker.tracks = [track for track in tracker.tracks if track.sensor != sensor]
+            # Clean up empty trackers
+            self.viewer.trackers = [t for t in self.viewer.trackers if len(t.tracks) > 0]
 
             # Delete all detectors for this sensor
             detectors_to_delete = [detector for detector in self.viewer.detectors if detector.sensor == sensor]
@@ -167,6 +174,20 @@ class SensorsPanel(QWidget):
 
             # Clear selected sensor
             self.selected_sensor = None
+
+            # Update viewer display if it was showing imagery from the deleted sensor
+            if self.viewer.imagery is not None and self.viewer.imagery.sensor == sensor:
+                # Clear current imagery reference
+                self.viewer.imagery = None
+                # Try to find imagery from another sensor
+                if len(self.viewer.imageries) > 0:
+                    # Select first available imagery from remaining sensors
+                    self.viewer.select_imagery(self.viewer.imageries[0])
+                else:
+                    # No imagery left, clear the display
+                    self.viewer.image_item.clear()
+                    # Clear the histogram plot
+                    self.viewer.histogram.plot.setData([], [])
 
             # Refresh all panels
             self.data_changed.emit()

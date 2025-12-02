@@ -1,4 +1,14 @@
-"""Constant False Alarm Rate (CFAR) detector algorithm for finding bright blobs in imagery"""
+"""
+Constant False Alarm Rate (CFAR) detector algorithm for finding bright blobs in imagery.
+
+This module implements a CFAR (Constant False Alarm Rate) detector that uses local
+standard deviation-based thresholding to find signal blobs. The algorithm compares
+each pixel to the statistics of its local neighborhood (defined as an annular ring)
+to maintain a constant false alarm rate across images with varying backgrounds.
+
+The implementation uses FFT-based convolution for efficient computation of local
+statistics across large images.
+"""
 import numpy as np
 from scipy import fft
 from skimage.measure import label, regionprops
@@ -14,8 +24,61 @@ class CFAR:
     defined as an annular ring (background radius excluding ignore radius).
 
     Can detect pixels above threshold, below threshold, or both (absolute deviation).
+    Uses FFT-based convolution for efficient computation of local statistics.
 
-    Uses FFT-based convolution for efficient computation.
+    Parameters
+    ----------
+    imagery : Imagery
+        Imagery object to process
+    background_radius : int
+        Outer radius for neighborhood statistics calculation (pixels)
+    ignore_radius : int
+        Inner radius to exclude from neighborhood (pixels)
+    threshold_deviation : float
+        Number of standard deviations above/below mean for detection threshold
+    min_area : int, optional
+        Minimum detection blob area in pixels, by default 1
+    max_area : int, optional
+        Maximum detection blob area in pixels, by default 1000
+    annulus_shape : str, optional
+        Shape of the annulus ('circular' or 'square'), by default 'circular'
+    detection_mode : str, optional
+        Detection mode, by default 'above':
+        - 'above': Detect pixels brighter than threshold (mean + threshold*std)
+        - 'below': Detect pixels darker than threshold (mean - threshold*std)
+        - 'both': Detect pixels deviating from mean in either direction
+
+    Attributes
+    ----------
+    name : str
+        Algorithm name ("Constant False Alarm Rate")
+    kernel : ndarray
+        Pre-computed annular kernel for convolution
+    n_pixels : int
+        Number of pixels in the annular neighborhood
+    current_frame_idx : int
+        Index of frame currently being processed
+
+    Methods
+    -------
+    __call__()
+        Process all frames and return detections as (frame_numbers, rows, columns)
+
+    Notes
+    -----
+    - Detection threshold formula (above mode): pixel > mean + threshold_deviation * std
+    - Detection threshold formula (below mode): pixel < mean - threshold_deviation * std
+    - Detection threshold formula (both mode): |pixel - mean| > threshold_deviation * std
+    - Detected pixels are grouped into connected blobs using 8-connectivity
+    - Blobs are filtered by area (min_area <= area <= max_area)
+    - Blob centroids are returned as sub-pixel coordinates
+
+    Examples
+    --------
+    >>> from vista.algorithms.detectors.cfar import CFAR
+    >>> cfar = CFAR(imagery, background_radius=10, ignore_radius=3,
+    ...             threshold_deviation=3.0, min_area=1, max_area=100)
+    >>> frame_numbers, rows, columns = cfar()
     """
 
     name = "Constant False Alarm Rate"
@@ -23,22 +86,6 @@ class CFAR:
     def __init__(self, imagery: Imagery, background_radius: int, ignore_radius: int,
                  threshold_deviation: float, min_area: int = 1, max_area: int = 1000,
                  annulus_shape: str = 'circular', detection_mode: str = 'above'):
-        """
-        Initialize the CFAR detector.
-
-        Args:
-            imagery: Imagery object to process
-            background_radius: Outer radius for neighborhood calculation
-            ignore_radius: Inner radius to exclude from neighborhood
-            threshold_deviation: Number of standard deviations for threshold
-            min_area: Minimum detection area in pixels
-            max_area: Maximum detection area in pixels
-            annulus_shape: Shape of the annulus ('circular' or 'square')
-            detection_mode: Detection mode - 'above', 'below', or 'both'
-                'above': Detect pixels brighter than threshold (default)
-                'below': Detect pixels darker than threshold
-                'both': Detect pixels deviating from mean in either direction
-        """
         self.imagery = imagery
         self.background_radius = background_radius
         self.ignore_radius = ignore_radius
@@ -62,7 +109,9 @@ class CFAR:
         """
         Create an annular kernel (ring) for neighborhood calculation.
 
-        Returns:
+        Returns
+        -------
+        ndarray
             2D array with 1s in the annular region, 0s elsewhere
         """
         if self.annulus_shape == 'square':
@@ -74,7 +123,9 @@ class CFAR:
         """
         Create a circular annular kernel (ring) for neighborhood calculation.
 
-        Returns:
+        Returns
+        -------
+        ndarray
             2D array with 1s in the annular region, 0s elsewhere
         """
         size = 2 * self.background_radius + 1
@@ -96,7 +147,9 @@ class CFAR:
         """
         Create a square annular kernel for neighborhood calculation.
 
-        Returns:
+        Returns
+        -------
+        ndarray
             2D array with 1s in the square annular region, 0s elsewhere
         """
         size = 2 * self.background_radius + 1

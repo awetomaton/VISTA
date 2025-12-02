@@ -1,32 +1,44 @@
-"""Widget for configuring and running the Non-Uniformity Correction treatment"""
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QProgressBar, QMessageBox, QComboBox
-)
-from PyQt6.QtCore import QThread, pyqtSignal
-import numpy as np
+"""Base classes for background removal widgets to reduce code duplication"""
 import traceback
 
+import numpy as np
+from PyQt6.QtCore import QSettings, QThread, pyqtSignal, Qt
+from PyQt6.QtWidgets import (
+    QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
+    QPushButton, QVBoxLayout
+)
 
-class NonUniformityCorrectionProcessingThread(QThread):
-    """Worker thread for running the Non-Uniformity Correction treatment"""
+from vista.widgets.utils.algorithm_utils import create_aoi_selector, create_frame_range_spinboxes
+
+
+class BaseBackgroundRemovalThread(QThread):
+    """Base worker thread for running background removal algorithms"""
 
     # Signals
-    progress_updated = pyqtSignal(int, int)  # (current_frame, total_frames)
+    progress_updated = pyqtSignal(int, int, str)  # (current_step, total_steps, label)
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, aoi=None):
+    def __init__(self, imagery, algorithm_class, algorithm_params, aoi=None,
+                 start_frame=0, end_frame=None):
         """
-        Initialize the processing thread
+        Initialize the processing thread.
 
         Args:
             imagery: Imagery object to process
+            algorithm_class: Background removal algorithm class to instantiate
+            algorithm_params: Dictionary of parameters to pass to algorithm constructor
             aoi: Optional AOI object to process subset of imagery
+            start_frame: Starting frame index (default: 0)
+            end_frame: Ending frame index exclusive (default: None for all frames)
         """
         super().__init__()
         self.imagery = imagery
+        self.algorithm_class = algorithm_class
+        self.algorithm_params = algorithm_params
         self.aoi = aoi
+        self.start_frame = start_frame
+        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
         self._cancelled = False
 
     def cancel(self):
@@ -34,47 +46,49 @@ class NonUniformityCorrectionProcessingThread(QThread):
         self._cancelled = True
 
     def run(self):
-        """Execute the non-uniformity correction in background thread"""
+        """Execute the background removal algorithm in background thread"""
         try:
             # Determine the region to process
             if self.aoi:
+                # Create temporary imagery object for the cropped region
                 temp_imagery = self.imagery.get_aoi(self.aoi)
             else:
-                # Process entire imagery
+                # Process frame range of imagery
                 temp_imagery = self.imagery
 
+            # Apply frame range
+            temp_imagery = temp_imagery[self.start_frame:self.end_frame]
+
+            # Create the algorithm instance
+            algorithm = self.algorithm_class(imagery=temp_imagery, **self.algorithm_params)
+
             # Pre-allocate result array
+            num_frames = len(temp_imagery)
             processed_images = np.empty_like(temp_imagery.images)
 
             # Process each frame
-            nuc_image_frame_bounds = self.imagery.uniformity_gain_image_frames.tolist() + [np.inf]
-            current_nuc_image = self.imagery.uniformity_gain_images[0]
-            current_nuc_image_index = 0
-            for i, frame in enumerate(temp_imagery.frames):
+            for i in range(num_frames):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                if frame >= nuc_image_frame_bounds[current_nuc_image_index + 1]:
-                    current_nuc_image_index += 1
-                    current_nuc_image = self.imagery.uniformity_gain_images[current_nuc_image_index]
-                
-                # Correct the non-uniform responsivity by multiplying by the uniformity gain 
-                processed_images[i] = temp_imagery.images[i] * current_nuc_image
+
+                # Call the algorithm to get the next result
+                frame_idx, processed_frame = algorithm()
+                processed_images[frame_idx] = processed_frame
 
                 # Emit progress
-                self.progress_updated.emit(i + 1, len(temp_imagery))
+                self.progress_updated.emit(i + 1, num_frames, "Processing frames...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
 
             # Create new Imagery object with processed data
-            new_name = f"{self.imagery.name} NUC"
+            new_name = f"{self.imagery.name} {algorithm.name}"
             if self.aoi:
                 new_name += f" (AOI: {self.aoi.name})"
-            
+
             processed_imagery = temp_imagery.copy()
             processed_imagery.images = processed_images
             processed_imagery.name = new_name
-            processed_imagery.description = f"Processed with NUC",
 
             # Pre-compute histograms for performance
             for i in range(len(processed_imagery.images)):
@@ -82,7 +96,7 @@ class NonUniformityCorrectionProcessingThread(QThread):
                     return  # Exit early if cancelled
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
-                self.progress_updated.emit(i + 1, len(processed_imagery))
+                self.progress_updated.emit(i + 1, len(processed_imagery.images), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -97,42 +111,51 @@ class NonUniformityCorrectionProcessingThread(QThread):
             self.error_occurred.emit(error_msg)
 
 
-class NonUniformityCorrectionRemovalWidget(QDialog):
-    """Configuration widget for Non-Uniformity Correction"""
+class BaseBackgroundRemovalWidget(QDialog):
+    """Base configuration widget for background removal algorithms"""
 
     # Signal emitted when processing is complete
     imagery_processed = pyqtSignal(object)  # Emits processed Imagery object
 
-    def __init__(self, parent=None, imagery=None, aois=None):
+    def __init__(self, parent=None, imagery=None, aois=None, algorithm_class=None,
+                 settings_name="BaseBackgroundRemoval", window_title="Background Removal",
+                 description=""):
         """
-        Initialize the Non-Uniformity Correction configuration widget
+        Initialize the base background removal configuration widget.
 
         Args:
             parent: Parent widget
             imagery: Imagery object to process
             aois: List of AOI objects to choose from (optional)
+            algorithm_class: Background removal algorithm class
+            settings_name: Name for QSettings storage (default: "BaseBackgroundRemoval")
+            window_title: Window title (default: "Background Removal")
+            description: Description text for the algorithm
         """
         super().__init__(parent)
         self.imagery = imagery
         self.aois = aois if aois is not None else []
+        self.algorithm_class = algorithm_class
         self.processing_thread = None
+        self.settings = QSettings("VISTA", settings_name)
+        self.description = description
 
-        self.setWindowTitle("Non-Uniformity Correction Treatment")
+        self.setWindowTitle(window_title)
         self.setModal(True)
         self.setMinimumWidth(400)
 
         self.init_ui()
+        self.load_settings()
 
     def init_ui(self):
         """Initialize the user interface"""
         layout = QVBoxLayout()
 
         # Information label
-        info_label = QLabel(
-            "Correct for image non-uniform responsivity using the imagery uniformity gain frames"
-        )
-        info_label.setWordWrap(True)
-        layout.addWidget(info_label)
+        if self.description:
+            info_label = QLabel(self.description)
+            info_label.setWordWrap(True)
+            layout.addWidget(info_label)
 
         # AOI selection
         aoi_layout = QHBoxLayout()
@@ -141,17 +164,37 @@ class NonUniformityCorrectionRemovalWidget(QDialog):
             "Select an Area of Interest (AOI) to process only a subset of the imagery.\n"
             "The resulting imagery will have offsets to position it correctly."
         )
-        self.aoi_combo = QComboBox()
-        self.aoi_combo.addItem("Full Image", None)
-        for aoi in self.aois:
-            self.aoi_combo.addItem(aoi.name, aoi)
+        self.aoi_combo = create_aoi_selector(self.aois)
         self.aoi_combo.setToolTip(aoi_label.toolTip())
         aoi_layout.addWidget(aoi_label)
         aoi_layout.addWidget(self.aoi_combo)
         aoi_layout.addStretch()
         layout.addLayout(aoi_layout)
 
+        # Algorithm-specific parameters (to be added by subclasses)
+        self.add_algorithm_parameters(layout)
+
+        # Frame range selection
+        start_frame_layout = QHBoxLayout()
+        start_frame_label = QLabel("Start Frame:")
+        self.start_frame_spinbox, self.end_frame_spinbox = create_frame_range_spinboxes()
+        start_frame_layout.addWidget(start_frame_label)
+        start_frame_layout.addWidget(self.start_frame_spinbox)
+        start_frame_layout.addStretch()
+        layout.addLayout(start_frame_layout)
+
+        end_frame_layout = QHBoxLayout()
+        end_frame_label = QLabel("End Frame:")
+        end_frame_layout.addWidget(end_frame_label)
+        end_frame_layout.addWidget(self.end_frame_spinbox)
+        end_frame_layout.addStretch()
+        layout.addLayout(end_frame_layout)
+
         # Progress bar
+        self.progress_bar_label = QLabel()
+        self.progress_bar_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.progress_bar_label)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -177,33 +220,89 @@ class NonUniformityCorrectionRemovalWidget(QDialog):
 
         self.setLayout(layout)
 
+    def add_algorithm_parameters(self, layout):
+        """
+        Add algorithm-specific parameters to the layout.
+        Override this method in subclasses to add custom parameters.
+
+        Args:
+            layout: QVBoxLayout to add parameters to
+        """
+        pass
+
+    def load_settings(self):
+        """
+        Load previously saved settings.
+        Override this method in subclasses to load custom parameters.
+        """
+        self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
+        self.end_frame_spinbox.setValue(self.settings.value("end_frame", 999999, type=int))
+
+    def save_settings(self):
+        """
+        Save current settings for next time.
+        Override this method in subclasses to save custom parameters.
+        """
+        self.settings.setValue("start_frame", self.start_frame_spinbox.value())
+        self.settings.setValue("end_frame", self.end_frame_spinbox.value())
+
+    def build_algorithm_params(self):
+        """
+        Build parameter dictionary for the algorithm.
+        Override this method in subclasses to add custom parameters.
+
+        Returns:
+            Dictionary of algorithm parameters
+        """
+        return {}
+
+    def validate_parameters(self):
+        """
+        Validate algorithm parameters before running.
+        Override this method in subclasses for custom validation.
+
+        Returns:
+            Tuple of (is_valid: bool, error_message: str)
+        """
+        return True, ""
+
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
-        if self.imagery is None:
-            QMessageBox.warning(
-                self,
-                "No Imagery",
-                "No imagery is currently loaded. Please load imagery first.",
-                QMessageBox.StandardButton.Ok
-            )
+        # Get common parameter values
+        selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
+        start_frame = self.start_frame_spinbox.value()
+        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
+
+        # Get algorithm-specific parameters
+        algorithm_params = self.build_algorithm_params()
+
+        # Validate parameters
+        is_valid, error_message = self.validate_parameters()
+        if not is_valid:
+            QMessageBox.warning(self, "Invalid Parameters", error_message, QMessageBox.StandardButton.Ok)
             return
 
-        # Get parameter values
-        selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
+        # Save settings for next time
+        self.save_settings()
 
         # Update UI for processing state
         self.run_button.setEnabled(False)
         self.close_button.setEnabled(False)
-        self.aoi_combo.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        # Set max to include both processing and histogram computation
-        self.progress_bar.setMaximum(2 * len(self.imagery))
+        # Progress includes processing + histogram computation
+        num_frames = end_frame - start_frame
+        self.progress_bar.setMaximum(num_frames)
+
+        # Disable all parameter widgets
+        self.set_parameters_enabled(False)
 
         # Create and start processing thread
-        self.processing_thread = NonUniformityCorrectionProcessingThread(
-            self.imagery, selected_aoi
+        self.processing_thread = BaseBackgroundRemovalThread(
+            self.imagery, self.algorithm_class, algorithm_params, selected_aoi,
+            start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -212,6 +311,18 @@ class NonUniformityCorrectionRemovalWidget(QDialog):
 
         self.processing_thread.start()
 
+    def set_parameters_enabled(self, enabled):
+        """
+        Enable or disable parameter widgets.
+        Override to handle custom parameter widgets.
+
+        Args:
+            enabled: True to enable, False to disable
+        """
+        self.aoi_combo.setEnabled(enabled)
+        self.start_frame_spinbox.setEnabled(enabled)
+        self.end_frame_spinbox.setEnabled(enabled)
+
     def cancel_processing(self):
         """Cancel the ongoing processing"""
         if self.processing_thread:
@@ -219,8 +330,11 @@ class NonUniformityCorrectionRemovalWidget(QDialog):
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelling...")
 
-    def on_progress_updated(self, current, total):
+    def on_progress_updated(self, current, total, label=None):
         """Handle progress updates from the processing thread"""
+        if label is not None:
+            self.progress_bar_label.setText(label)
+        self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
 
     def on_processing_complete(self, processed_imagery):
@@ -232,7 +346,9 @@ class NonUniformityCorrectionRemovalWidget(QDialog):
         QMessageBox.information(
             self,
             "Processing Complete",
-            f"Successfully processed imagery.\n\nNew imagery: {processed_imagery.name}",
+            f"Successfully processed imagery.\n\n"
+            f"Name: {processed_imagery.name}\n"
+            f"Frames: {len(processed_imagery.frames)}",
             QMessageBox.StandardButton.Ok
         )
 
@@ -274,11 +390,13 @@ class NonUniformityCorrectionRemovalWidget(QDialog):
         """Reset UI to initial state"""
         self.run_button.setEnabled(True)
         self.close_button.setEnabled(True)
-        self.aoi_combo.setEnabled(True)
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.progress_bar_label.setVisible(False)
+        self.progress_bar_label.setText("")
         self.progress_bar.setVisible(False)
+        self.set_parameters_enabled(True)
 
     def closeEvent(self, event):
         """Handle dialog close event"""

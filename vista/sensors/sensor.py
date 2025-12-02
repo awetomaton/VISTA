@@ -1,14 +1,21 @@
-"""Module that contains the base Sensor class
+"""
+Base sensor class for position, line-of-sight, geodetic conversion, and radiometric modeling.
 
-The Sensor class provides an base interface for sensor modeling.
+This module defines the Sensor base class which provides a framework for representing
+sensor platforms and their characteristics. Sensors support position queries, geodetic
+coordinate conversion, radiometric calibration data (bias, gain, bad pixels), and
+optional point spread function modeling.
 """
 
 from astropy.coordinates import EarthLocation
 from astropy import units
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import h5py
 import numpy as np
 from numpy.typing import NDArray
+import pandas as pd
 from typing import Optional, Tuple
+import uuid
 
 
 @dataclass
@@ -61,14 +68,79 @@ class Sensor:
     uniformity_gain_image_frames: Optional[NDArray] = None
     bad_pixel_masks: Optional[NDArray] = None
     bad_pixel_mask_frames: Optional[NDArray] = None
+    uuid: str = field(init=None, default=None)
+    _added_imagery_uuids: list = field(init=None, default=None)
+    # Private class attributes
+    _imagery_frames_dataframe: pd.DataFrame = field(init=None, default=None)
 
     # Class variable to track total number of sensor instances created
     _instance_count: int = 0
 
     def __post_init__(self):
-        """Increment the instance counter when a new Sensor is created."""
+        """
+        Initialize sensor instance and increment global counter.
+
+        Generates a unique UUID for this sensor instance and initializes internal
+        data structures for tracking associated imagery.
+        """
         # Increment the class-level counter
         Sensor._instance_count += 1
+        # Generate UUID if not set
+        if self.uuid is None:
+            self.uuid = uuid.uuid4()
+        self._added_imagery_uuids = []
+        self._imagery_frames_dataframe = pd.DataFrame({
+            "frames": pd.Series([], dtype=int), 
+            "times": pd.Series([], dtype='datetime64[ns]')
+        })
+    
+    def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
+        """
+        Get all unique imagery frames and corresponding times in increasing order.
+
+        Returns
+        -------
+        frames : NDArray[np.int_]
+            Sorted array of unique frame numbers
+        times : NDArray[np.datetime64]
+            Sorted array of corresponding timestamps
+
+        Notes
+        -----
+        This method aggregates frames and times from all imagery objects that have
+        been registered with this sensor via add_imagery().
+        """
+        return self._imagery_frames_dataframe["frames"].to_numpy(), self._imagery_frames_dataframe["times"].to_numpy()
+    
+    def add_imagery(self, imagery):
+        """
+        Register imagery with this sensor and update frame/time tracking.
+
+        Adds the imagery's frames and times to the sensor's internal registry
+        for coordinate conversion and time-to-frame mapping. Duplicate imagery
+        (by UUID) or imagery without times is ignored.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to register with this sensor
+
+        Notes
+        -----
+        - Only imagery with non-None times are tracked
+        - Duplicate frame/time pairs are automatically removed
+        - This method is typically called automatically when Imagery is created
+        """
+        if (imagery.uuid in self._added_imagery_uuids) or (imagery.times is None):
+            return
+        self._imagery_frames_dataframe = pd.concat((
+            self._imagery_frames_dataframe,
+            pd.DataFrame({
+                "frames": imagery.frames, 
+                "times": imagery.times
+            })
+        ))
+        self._imagery_frames_dataframe = self._imagery_frames_dataframe.drop_duplicates()
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
@@ -170,15 +242,25 @@ class Sensor:
         """
         Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
 
-        Note:
-            This function may be implemented bysubclasses
+        Parameters
+        ----------
+        frame : int
+            Frame number for which to perform the conversion
+        loc : EarthLocation
+            Astropy EarthLocation object(s) containing geodetic coordinates
 
-        Args:
-            frame: Frame number
-            loc: EarthLocation object(s) with lat/lon coordinates
+        Returns
+        -------
+        rows : np.ndarray
+            Array of row pixel coordinates (NaN for base implementation)
+        columns : np.ndarray
+            Array of column pixel coordinates (NaN for base implementation)
 
-        Returns:
-            Tuple of (rows, columns) pixel coordinates (or zeros if no polynomials)
+        Notes
+        -----
+        The default implementation returns NaN arrays. Subclasses should override
+        this method to provide geodetic-to-pixel conversion using their specific
+        projection model (e.g., polynomial coefficients).
         """
         empty = np.empty_like(loc.x.values)
         empty.fill(np.nan)
@@ -188,20 +270,74 @@ class Sensor:
     def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
-        
-        Note:
-            This function may be implemented bysubclasses
-        
-        Args:
-            frame: Frame number
-            rows: Array of row pixel coordinates
-            columns: Array of column pixel coordinates
 
-        Returns:
-            EarthLocation objects with lat/lon coordinates (or zeros if no polynomials)
+        Parameters
+        ----------
+        frame : int
+            Frame number for which to perform the conversion
+        rows : np.ndarray
+            Array of row pixel coordinates
+        columns : np.ndarray
+            Array of column pixel coordinates
+
+        Returns
+        -------
+        EarthLocation
+            Astropy EarthLocation object(s) with geodetic coordinates
+            (zeros for base implementation)
+
+        Notes
+        -----
+        The default implementation returns EarthLocation with zero coordinates.
+        Subclasses should override this method to provide pixel-to-geodetic
+        conversion using their specific projection model.
         """
         return EarthLocation.from_geodetic(
             lon=np.zeros_like(rows) * units.deg,
             lat=np.zeros_like(rows) * units.deg,
             height=np.zeros_like(rows) * units.km
         )
+
+    def to_hdf5(self, group: h5py.Group):
+        """
+        Save sensor radiometric calibration data to an HDF5 group.
+
+        Parameters
+        ----------
+        group : h5py.Group
+            HDF5 group to write sensor data to (typically sensors/<sensor_uuid>/)
+
+        Notes
+        -----
+        This method writes radiometric calibration data to the HDF5 group:
+        - bias_images and bias_image_frames
+        - uniformity_gain_images and uniformity_gain_image_frames
+        - bad_pixel_masks and bad_pixel_mask_frames
+
+        Subclasses should call super().to_hdf5(group) and then add their own data.
+        """
+        # Set sensor type and identification attributes
+        group.attrs['sensor_type'] = 'Sensor'
+        group.attrs['name'] = self.name
+        group.attrs['uuid'] = str(self.uuid)
+
+        # Create radiometric calibration subgroup
+        if (self.bias_images is not None or
+            self.uniformity_gain_images is not None or
+            self.bad_pixel_masks is not None):
+            radiometric_group = group.create_group('radiometric')
+
+            # Save bias images if present
+            if self.bias_images is not None:
+                radiometric_group.create_dataset('bias_images', data=self.bias_images)
+                radiometric_group.create_dataset('bias_image_frames', data=self.bias_image_frames)
+
+            # Save uniformity gain images if present
+            if self.uniformity_gain_images is not None:
+                radiometric_group.create_dataset('uniformity_gain_images', data=self.uniformity_gain_images)
+                radiometric_group.create_dataset('uniformity_gain_image_frames', data=self.uniformity_gain_image_frames)
+
+            # Save bad pixel masks if present
+            if self.bad_pixel_masks is not None:
+                radiometric_group.create_dataset('bad_pixel_masks', data=self.bad_pixel_masks)
+                radiometric_group.create_dataset('bad_pixel_mask_frames', data=self.bad_pixel_mask_frames)

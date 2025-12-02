@@ -1,106 +1,116 @@
-"""Widget for configuring and running the Temporal Median background removal algorithm"""
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
-)
-from PyQt6.QtCore import QThread, pyqtSignal, QSettings
-import numpy as np
+"""Base classes for treatment widgets to reduce code duplication"""
 import traceback
 
-from vista.imagery.imagery import Imagery
-from vista.algorithms.background_removal.temporal_median import TemporalMedian
-from vista.aoi.aoi import AOI
+import numpy as np
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtWidgets import (
+    QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
+    QPushButton, QVBoxLayout
+)
+
+from vista.widgets.utils.algorithm_utils import create_aoi_selector
 
 
-class TemporalMedianProcessingThread(QThread):
-    """Worker thread for running Temporal Median algorithm"""
+class BaseTreatmentThread(QThread):
+    """Base worker thread for running treatment algorithms"""
 
     # Signals
-    progress_updated = pyqtSignal(int, int)  # (current_frame, total_frames)
+    progress_updated = pyqtSignal(int, int, str)  # (current_step, total_steps, label)
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, background, offset, aoi=None, start_frame=0, end_frame=None):
+    def __init__(self, imagery, aoi=None):
         """
-        Initialize the processing thread
+        Initialize the processing thread.
 
         Args:
             imagery: Imagery object to process
-            background: Background parameter for TemporalMedian
-            offset: Offset parameter for TemporalMedian
             aoi: Optional AOI object to process subset of imagery
-            start_frame: Starting frame index (default: 0)
-            end_frame: Ending frame index exclusive (default: None for all frames)
         """
         super().__init__()
         self.imagery = imagery
-        self.background = background
-        self.offset = offset
         self.aoi = aoi
-        self.start_frame = start_frame
-        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
         self._cancelled = False
 
     def cancel(self):
         """Request cancellation of the processing operation"""
         self._cancelled = True
 
+    def process_frame(self, frame_data, frame_index, frame_number):
+        """
+        Process a single frame. Override this method in subclasses.
+
+        Args:
+            frame_data: The image data for this frame
+            frame_index: Index in the temp_imagery arrays
+            frame_number: Actual frame number from original imagery
+
+        Returns:
+            Processed frame data
+        """
+        raise NotImplementedError("Subclasses must implement process_frame()")
+
+    def get_processed_name_suffix(self):
+        """
+        Get the suffix to add to the processed imagery name.
+        Override in subclasses (e.g., "BR", "NUC").
+
+        Returns:
+            String suffix for processed imagery name
+        """
+        return "Processed"
+
     def run(self):
-        """Execute the temporal median algorithm in background thread"""
+        """Execute the treatment in background thread"""
         try:
             # Determine the region to process
             if self.aoi:
-                # Create temporary imagery object for the cropped region
                 temp_imagery = self.imagery.get_aoi(self.aoi)
             else:
-                # Process frame range of imagery
+                # Process entire imagery
                 temp_imagery = self.imagery
 
-            # Apply frame range
-            temp_imagery = temp_imagery[self.start_frame:self.end_frame]
-
-            # Create the algorithm instance
-            algorithm = TemporalMedian(
-                imagery=temp_imagery,
-                background=self.background,
-                offset=self.offset
-            )
-
             # Pre-allocate result array
-            num_frames = len(temp_imagery)
             processed_images = np.empty_like(temp_imagery.images)
 
             # Process each frame
-            for i in range(num_frames):
+            for i, frame in enumerate(temp_imagery.frames):
                 if self._cancelled:
                     return  # Exit early if cancelled
 
-                # Call the algorithm to get the next result
-                frame_idx, processed_frame = algorithm()
-                processed_images[frame_idx] = processed_frame
+                # Process this frame (implemented by subclass)
+                processed_images[i] = self.process_frame(
+                    temp_imagery.images[i], i, frame
+                )
 
                 # Emit progress
-                self.progress_updated.emit(i + 1, num_frames)
+                self.progress_updated.emit(i + 1, len(temp_imagery), "Treating frames...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
 
             # Create new Imagery object with processed data
-            new_name = f"{self.imagery.name} {algorithm.name}"
+            suffix = self.get_processed_name_suffix()
+            new_name = f"{self.imagery.name} {suffix}"
             if self.aoi:
                 new_name += f" (AOI: {self.aoi.name})"
 
             processed_imagery = temp_imagery.copy()
             processed_imagery.images = processed_images
             processed_imagery.name = new_name
-            
+            processed_imagery.description = f"Processed with {suffix}"
+
             # Pre-compute histograms for performance
             for i in range(len(processed_imagery.images)):
                 if self._cancelled:
                     return  # Exit early if cancelled
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
-                self.progress_updated.emit(num_frames + i + 1, num_frames + len(processed_imagery.images))
+                self.progress_updated.emit(
+                    i + 1,
+                    len(temp_imagery),
+                    "Computing histograms..."
+                )
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -115,46 +125,45 @@ class TemporalMedianProcessingThread(QThread):
             self.error_occurred.emit(error_msg)
 
 
-class TemporalMedianWidget(QDialog):
-    """Configuration widget for Temporal Median algorithm"""
+class BaseTreatmentWidget(QDialog):
+    """Base configuration widget for treatment algorithms"""
 
     # Signal emitted when processing is complete
     imagery_processed = pyqtSignal(object)  # Emits processed Imagery object
 
-    def __init__(self, parent=None, imagery=None, aois=None):
+    def __init__(self, parent=None, imagery=None, aois=None, window_title="Treatment",
+                 description=""):
         """
-        Initialize the Temporal Median configuration widget
+        Initialize the base treatment configuration widget.
 
         Args:
             parent: Parent widget
             imagery: Imagery object to process
             aois: List of AOI objects to choose from (optional)
+            window_title: Window title (default: "Treatment")
+            description: Description text for the treatment
         """
         super().__init__(parent)
         self.imagery = imagery
         self.aois = aois if aois is not None else []
         self.processing_thread = None
-        self.settings = QSettings("VISTA", "TemporalMedian")
+        self.description = description
 
-        self.setWindowTitle("Temporal Median Background Removal")
+        self.setWindowTitle(window_title)
         self.setModal(True)
         self.setMinimumWidth(400)
 
         self.init_ui()
-        self.load_settings()
 
     def init_ui(self):
         """Initialize the user interface"""
         layout = QVBoxLayout()
 
         # Information label
-        info_label = QLabel(
-            "Configure the Temporal Median algorithm parameters.\n\n"
-            "The algorithm removes background by computing the median\n"
-            "of nearby frames, excluding a temporal offset window."
-        )
-        info_label.setWordWrap(True)
-        layout.addWidget(info_label)
+        if self.description:
+            info_label = QLabel(self.description)
+            info_label.setWordWrap(True)
+            layout.addWidget(info_label)
 
         # AOI selection
         aoi_layout = QHBoxLayout()
@@ -163,79 +172,21 @@ class TemporalMedianWidget(QDialog):
             "Select an Area of Interest (AOI) to process only a subset of the imagery.\n"
             "The resulting imagery will have offsets to position it correctly."
         )
-        self.aoi_combo = QComboBox()
-        self.aoi_combo.addItem("Full Image", None)
-        for aoi in self.aois:
-            self.aoi_combo.addItem(aoi.name, aoi)
+        self.aoi_combo = create_aoi_selector(self.aois)
         self.aoi_combo.setToolTip(aoi_label.toolTip())
         aoi_layout.addWidget(aoi_label)
         aoi_layout.addWidget(self.aoi_combo)
         aoi_layout.addStretch()
         layout.addLayout(aoi_layout)
 
-        # Background parameter
-        background_layout = QHBoxLayout()
-        background_label = QLabel("Background Frames:")
-        background_label.setToolTip(
-            "Number of frames to use for computing the median background.\n"
-            "Higher values provide more robust estimates but require more memory."
-        )
-        self.background_spinbox = QSpinBox()
-        self.background_spinbox.setMinimum(1)
-        self.background_spinbox.setMaximum(100)
-        self.background_spinbox.setValue(5)
-        self.background_spinbox.setToolTip(background_label.toolTip())
-        background_layout.addWidget(background_label)
-        background_layout.addWidget(self.background_spinbox)
-        background_layout.addStretch()
-        layout.addLayout(background_layout)
-
-        # Offset parameter
-        offset_layout = QHBoxLayout()
-        offset_label = QLabel("Temporal Offset:")
-        offset_label.setToolTip(
-            "Number of frames to skip before/after the current frame.\n"
-            "This prevents the current frame from contaminating the background estimate."
-        )
-        self.offset_spinbox = QSpinBox()
-        self.offset_spinbox.setMinimum(0)
-        self.offset_spinbox.setMaximum(50)
-        self.offset_spinbox.setValue(2)
-        self.offset_spinbox.setToolTip(offset_label.toolTip())
-        offset_layout.addWidget(offset_label)
-        offset_layout.addWidget(self.offset_spinbox)
-        offset_layout.addStretch()
-        layout.addLayout(offset_layout)
-
-        # Frame range selection
-        start_frame_layout = QHBoxLayout()
-        start_frame_label = QLabel("Start Frame:")
-        start_frame_label.setToolTip("First frame to process (0-indexed)")
-        self.start_frame_spinbox = QSpinBox()
-        self.start_frame_spinbox.setMinimum(0)
-        self.start_frame_spinbox.setMaximum(999999)
-        self.start_frame_spinbox.setValue(0)
-        self.start_frame_spinbox.setToolTip(start_frame_label.toolTip())
-        start_frame_layout.addWidget(start_frame_label)
-        start_frame_layout.addWidget(self.start_frame_spinbox)
-        start_frame_layout.addStretch()
-        layout.addLayout(start_frame_layout)
-
-        end_frame_layout = QHBoxLayout()
-        end_frame_label = QLabel("End Frame:")
-        end_frame_label.setToolTip("Last frame to process (exclusive). Set to max for all frames.")
-        self.end_frame_spinbox = QSpinBox()
-        self.end_frame_spinbox.setMinimum(0)
-        self.end_frame_spinbox.setMaximum(999999)
-        self.end_frame_spinbox.setValue(999999)
-        self.end_frame_spinbox.setSpecialValueText("End")
-        self.end_frame_spinbox.setToolTip(end_frame_label.toolTip())
-        end_frame_layout.addWidget(end_frame_label)
-        end_frame_layout.addWidget(self.end_frame_spinbox)
-        end_frame_layout.addStretch()
-        layout.addLayout(end_frame_layout)
+        # Treatment-specific UI (optional, for subclasses to override)
+        self.add_treatment_ui(layout)
 
         # Progress bar
+        self.progress_bar_label = QLabel()
+        self.progress_bar_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.progress_bar_label)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -245,7 +196,7 @@ class TemporalMedianWidget(QDialog):
         button_layout.addStretch()
 
         self.run_button = QPushButton("Run")
-        self.run_button.clicked.connect(self.run_algorithm)
+        self.run_button.clicked.connect(self.run_treatment)
         button_layout.addWidget(self.run_button)
 
         self.cancel_button = QPushButton("Cancel")
@@ -261,22 +212,43 @@ class TemporalMedianWidget(QDialog):
 
         self.setLayout(layout)
 
-    def load_settings(self):
-        """Load previously saved settings"""
-        self.background_spinbox.setValue(self.settings.value("background", 5, type=int))
-        self.offset_spinbox.setValue(self.settings.value("offset", 2, type=int))
-        self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
-        self.end_frame_spinbox.setValue(self.settings.value("end_frame", 999999, type=int))
+    def add_treatment_ui(self, layout):
+        """
+        Add treatment-specific UI elements.
+        Override this method in subclasses if needed.
 
-    def save_settings(self):
-        """Save current settings for next time"""
-        self.settings.setValue("background", self.background_spinbox.value())
-        self.settings.setValue("offset", self.offset_spinbox.value())
-        self.settings.setValue("start_frame", self.start_frame_spinbox.value())
-        self.settings.setValue("end_frame", self.end_frame_spinbox.value())
+        Args:
+            layout: QVBoxLayout to add elements to
+        """
+        pass
 
-    def run_algorithm(self):
-        """Start processing the imagery with the configured parameters"""
+    def create_processing_thread(self, imagery, aoi):
+        """
+        Create the processing thread for this treatment.
+        Must be implemented by subclasses.
+
+        Args:
+            imagery: Imagery object to process
+            aoi: Optional AOI object
+
+        Returns:
+            BaseTreatmentThread instance
+        """
+        raise NotImplementedError("Subclasses must implement create_processing_thread()")
+
+    def validate_sensor_requirements(self):
+        """
+        Validate that the sensor has required data for this treatment.
+        Override in subclasses to check for specific sensor properties.
+
+        Returns:
+            Tuple of (is_valid: bool, error_message: str)
+        """
+        return True, ""
+
+    def run_treatment(self):
+        """Start processing the imagery"""
+        # Check if imagery is loaded
         if self.imagery is None:
             QMessageBox.warning(
                 self,
@@ -286,40 +258,51 @@ class TemporalMedianWidget(QDialog):
             )
             return
 
-        # Get parameter values
-        background = self.background_spinbox.value()
-        offset = self.offset_spinbox.value()
-        selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
-        start_frame = self.start_frame_spinbox.value()
-        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
+        # Validate sensor requirements
+        is_valid, error_message = self.validate_sensor_requirements()
+        if not is_valid:
+            QMessageBox.warning(
+                self,
+                "Sensor Requirements Not Met",
+                error_message,
+                QMessageBox.StandardButton.Ok
+            )
+            return
 
-        # Save settings for next time
-        self.save_settings()
+        # Get parameters
+        selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
 
         # Update UI for processing state
         self.run_button.setEnabled(False)
         self.close_button.setEnabled(False)
-        self.background_spinbox.setEnabled(False)
-        self.offset_spinbox.setEnabled(False)
         self.aoi_combo.setEnabled(False)
-        self.start_frame_spinbox.setEnabled(False)
-        self.end_frame_spinbox.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        # Set max to include both processing and histogram computation
-        self.progress_bar.setMaximum(2 * (end_frame - start_frame))
+        self.progress_bar.setMaximum(len(self.imagery.frames))
+
+        # Disable treatment-specific UI
+        self.set_treatment_ui_enabled(False)
 
         # Create and start processing thread
-        self.processing_thread = TemporalMedianProcessingThread(
-            self.imagery, background, offset, selected_aoi, start_frame, end_frame
-        )
+        self.processing_thread = self.create_processing_thread(self.imagery, selected_aoi)
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
         self.processing_thread.error_occurred.connect(self.on_error_occurred)
         self.processing_thread.finished.connect(self.on_thread_finished)
 
         self.processing_thread.start()
+
+    def set_treatment_ui_enabled(self, enabled):
+        """
+        Enable or disable treatment-specific UI elements.
+        Override in subclasses if there are custom UI elements.
+
+        Args:
+            enabled: True to enable, False to disable
+        """
+        pass
 
     def cancel_processing(self):
         """Cancel the ongoing processing"""
@@ -328,8 +311,11 @@ class TemporalMedianWidget(QDialog):
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelling...")
 
-    def on_progress_updated(self, current, total):
+    def on_progress_updated(self, current, total, label=None):
         """Handle progress updates from the processing thread"""
+        if label is not None:
+            self.progress_bar_label.setText(label)
+        self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
 
     def on_processing_complete(self, processed_imagery):
@@ -341,7 +327,9 @@ class TemporalMedianWidget(QDialog):
         QMessageBox.information(
             self,
             "Processing Complete",
-            f"Successfully processed imagery.\n\nNew imagery: {processed_imagery.name}",
+            f"Successfully processed imagery.\n\n"
+            f"Name: {processed_imagery.name}\n"
+            f"Frames: {len(processed_imagery.frames)}",
             QMessageBox.StandardButton.Ok
         )
 
@@ -383,15 +371,14 @@ class TemporalMedianWidget(QDialog):
         """Reset UI to initial state"""
         self.run_button.setEnabled(True)
         self.close_button.setEnabled(True)
-        self.background_spinbox.setEnabled(True)
-        self.offset_spinbox.setEnabled(True)
         self.aoi_combo.setEnabled(True)
-        self.start_frame_spinbox.setEnabled(True)
-        self.end_frame_spinbox.setEnabled(True)
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.progress_bar_label.setVisible(False)
+        self.progress_bar_label.setText("")
         self.progress_bar.setVisible(False)
+        self.set_treatment_ui_enabled(True)
 
     def closeEvent(self, event):
         """Handle dialog close event"""

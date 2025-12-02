@@ -4,22 +4,22 @@
 
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
-![Version](https://img.shields.io/badge/version-1.5.0-blue)
+![Version](https://img.shields.io/badge/version-1.6.4-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
 
 ## Watch the demo!
-[![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=O34wxldMEeg)
+[![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=9eRo5S4yLTs)
 
 ## Important Assumptions
 
-**Frame Synchronization Across Imagery Datasets:**
+**Frame Synchronization Across Imagery Datasets per Sensor:**
 
-VISTA assumes that all loaded imagery datasets are captured from the same sensor or are temporally synchronized. Specifically:
+VISTA assumes that all loaded imagery datasets for a given sensor are temporally synchronized. Specifically:
 
-- Frame numbers represent the same temporal moments across all loaded imagery
-- Frame 10 in one imagery dataset corresponds to the exact same time as frame 10 in any other loaded imagery
+- Frame numbers represent the same temporal moments across all imagery
+- Frame 10 in one imagery dataset corresponds to the exact same time as frame 10 in any other imagery for the same sensor
 - This assumption is critical for proper visualization and analysis when multiple imagery datasets are loaded simultaneously
 - When loading tracks with time-based mapping, the selected imagery's time-to-frame mapping is used as the reference
 
@@ -31,7 +31,9 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 - **Sensor calibration data support**: bias/dark frames, uniformity gain corrections, bad pixel masks, and radiometric gain values
 - Interactive image histogram with dynamic range adjustment
 - Frame-by-frame navigation with keyboard shortcuts
-- Click-to-create manual tracks on imagery
+- **Interactive AOI (Area of Interest) Drawing**: Right-click context menu to draw rectangular regions for focused processing
+- **Geolocation tooltip**: Display latitude/longitude coordinates when hovering over imagery (requires geodetic polynomials)
+- **Pixel value tooltip**: Display pixel intensity values when hovering over imagery
 
 ### Advanced Track Support
 - **Multiple coordinate systems**:
@@ -42,7 +44,14 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
   - Times → Frames using imagery timestamps
   - Geodetic coordinates (Lat/Lon/Alt) → Pixel coordinates using 4th-order polynomials
 - **Priority system**: Row/Column takes precedence over geodetic; Frames takes precedence over times
-- **Manual track creation**: Click on imagery to create custom tracks with automatic frame tracking
+- **Manual track creation and editing**:
+  - Click-to-create tracks with automatic frame tracking
+  - Edit existing tracks by adding/removing points
+  - **Intelligent point selection modes** for precise point placement:
+    - **Verbatim**: Use exact clicked location
+    - **Peak**: Automatically snap to brightest pixel within configurable radius
+    - **CFAR**: Use CFAR detection algorithm to find signal blob centroid with full parameter control
+  - Point selection settings persist across sessions
 - Track path rendering with customizable colors and line widths
 - Current position markers with selectable styles
 - Tail length control (show full history or last N frames)
@@ -51,10 +60,21 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 
 ### Detection Overlay
 - Load detection CSV files with multiple detector support
+- **Manual detection creation and editing**: Click-to-add detection points at current frame with intelligent point selection modes (Verbatim, Peak, CFAR)
 - Customizable markers (circle, square, triangle, diamond, plus, cross, star)
 - Adjustable colors, marker sizes, and line thickness
 - Show/hide individual detectors
 - Detection styling persistence across sessions
+- Detection selection and deletion
+
+### Track and Detection Labeling
+- **Flexible labeling system**: Assign custom text labels to individual tracks and detections for classification and organization
+- **Label management**: Create, rename, and delete labels through the centralized Labels Manager
+- **Bulk label assignment**: Apply labels to multiple tracks or detections simultaneously from the data manager
+- **Label-based filtering**: Filter tracks and detections by label in the data manager tables for focused analysis
+- **Label persistence**: Labels are saved with data and persist across sessions
+- **Classification workflows**: Support for analyst review, ground truth annotation, and multi-class classification tasks
+- **Menu Access**: `Labels` menu item for centralized label management
 
 ### Built-in Detection Algorithms
 - **CFAR (Constant False Alarm Rate)**: Adaptive threshold detector with guard and background windows
@@ -106,6 +126,7 @@ VISTA assumes that all loaded imagery datasets are captured from the same sensor
 ### Data Manager Panel
 - Tabbed interface for managing Imagery, Tracks, and Detections
 - Bulk property editing (visibility, colors, markers, sizes, line thickness)
+- **Label assignment and filtering**: Apply labels to tracks/detections and filter by label
 - Column filtering and sorting for tracks and detections
 - Real-time updates synchronized with visualization
 - Track editing with complete track toggle
@@ -392,7 +413,7 @@ Track,Times,Rows,Columns,Color,Marker,Line Width,Marker Size
 
 **Geodetic Format:**
 ```csv
-Track,Frames,Latitude,Longitude,Altitude,Color
+Track,Frames,Latitude (deg),Longitude (deg),Altitude (km),Color
 "Track 1",0,40.0128,-105.0156,0.0,g
 "Track 1",1,40.0129,-105.0157,0.0,g
 "Track 1",2,40.0130,-105.0158,0.0,g
@@ -400,7 +421,7 @@ Track,Frames,Latitude,Longitude,Altitude,Color
 
 **Time + Geodetic Format:**
 ```csv
-Track,Times,Latitude,Longitude,Altitude
+Track,Times,Latitude (deg),Longitude (deg),Altitude (km)
 "Track 1",2024-01-01T12:00:00.000000,40.0128,-105.0156,0.0
 "Track 1",2024-01-01T12:00:00.100000,40.0129,-105.0157,0.0
 "Track 1",2024-01-01T12:00:00.200000,40.0130,-105.0158,0.0
@@ -565,26 +586,188 @@ app.exec()  # Window will open; close it to continue notebook execution
 
 **Example Script:** See `scripts/example_programmatic_loading.py` for a complete working example that creates synthetic imagery with a moving bright spot, detections, and tracks.
 
-### Creating Manual Tracks
+### Creating and Editing Manual Tracks and Detections
+
+VISTA provides powerful tools for manual track and detection creation with intelligent point placement.
+
+#### Point Selection Modes
+
+When creating or editing tracks/detections, a **Point Selection Dialog** appears with three modes for determining point locations:
+
+**1. Verbatim Mode**
+- Uses the exact pixel location where you click
+- Best for: Precise manual placement with full control
+- No automatic adjustments
+
+**2. Peak Mode**
+- Automatically finds the brightest pixel within a configurable radius of your click
+- **Configurable Parameters:**
+  - Search Radius: 1-50 pixels (default: 5)
+- **Best for:** Bright objects like stars, satellites, or aircraft
+- Points are placed at pixel center (+0.5 offset) for sub-pixel accuracy
+
+**3. CFAR Mode**
+- Runs CFAR detection algorithm in a local region around your click
+- Finds the centroid of the detected signal blob
+- **Configurable Parameters:**
+  - Search Radius: 10-200 pixels (defines local processing area)
+  - Background Radius: Outer radius for neighborhood statistics
+  - Ignore Radius: Inner radius excluded from statistics
+  - Threshold Deviation: Number of standard deviations for detection
+  - Annulus Shape: Circular or Square neighborhood
+  - Detection Mode: Above (bright), Below (dark), or Both
+  - Includes visual preview of CFAR annulus
+- **Best for:** Precise blob centroid location in varying backgrounds
+- All settings persist across sessions
+
+#### Creating Manual Tracks
 
 1. **Enable Track Creation Mode**:
    - Click the "Create Track" icon in the toolbar
-   - A track creation dialog will appear
+   - The Point Selection Dialog appears automatically
 
-2. **Create Track Points**:
+2. **Configure Point Selection**:
+   - Choose your preferred mode (Verbatim, Peak, or CFAR) by selecting the appropriate tab
+   - Adjust parameters as needed
+   - Settings are saved and remembered for future use
+
+3. **Create Track Points**:
    - Click on the imagery to add points to the current track
+   - The point location is refined based on your selected mode
    - Each click creates a new point at the current frame
-   - Points are automatically associated with the current frame
+   - Click near an existing point to remove it
 
-3. **Navigate and Add Points**:
-   - Change frames using playback controls or arrow keys
+4. **Navigate and Add Points**:
+   - Change frames using playback controls, arrow keys, or **A**/**D** keys
    - Continue clicking to add points at different frames
    - The system tracks which frame each point belongs to
+   - Temporary visualization shows your track as you build it
 
-4. **Finish Track**:
+5. **Finish Track**:
    - Click "Finish Track" in the dialog to save
    - The new track is added to the Data Manager
-   - Track is automatically saved when the dialog is closed
+   - Point Selection Dialog closes automatically
+
+#### Editing Existing Tracks
+
+1. **Enable Track Editing Mode**:
+   - In the Data Manager's Tracks panel, select a track
+   - Click the "Edit Track" button
+   - The Point Selection Dialog appears with current track data
+
+2. **Modify Track Points**:
+   - Navigate to any frame and click to add new points
+   - Click near existing points to remove them
+   - Use your preferred point selection mode for precise placement
+
+3. **Finish Editing**:
+   - Click "Finish Editing" to save changes
+   - Updated track appears in the Data Manager
+
+#### Creating and Editing Manual Detections
+
+The same workflow applies to detections:
+
+1. **Create Detections**: Use "Create Detection" toolbar icon
+2. **Edit Detections**: Select detector in Data Manager and click "Edit Detection"
+3. **Add Multiple Points**: Unlike tracks, you can add multiple detection points per frame
+4. **Point Selection**: All three modes (Verbatim, Peak, CFAR) work identically for detections
+
+### Managing Track and Detection Labels
+
+VISTA provides a flexible labeling system for organizing, classifying, and filtering tracks and detections. This is useful for ground truth annotation, classification workflows, and analyst review.
+
+#### Opening the Labels Manager
+
+**Menu Path:** `Labels` (in menu bar)
+
+The Labels Manager provides centralized control over all labels in your project:
+- **View all labels**: See all labels currently defined in the project
+- **Create new labels**: Add custom labels for your classification scheme
+- **Rename labels**: Update label names (automatically updates all assigned labels)
+- **Delete labels**: Remove labels (automatically removes from all assigned tracks/detections)
+- **See label usage**: View which tracks and detections are assigned each label
+
+#### Assigning Labels to Tracks
+
+1. **Open the Data Manager**: Ensure the Tracks tab is selected
+2. **Select tracks**: Click on one or more tracks in the table (use Ctrl/Cmd for multiple selection)
+3. **Assign label**:
+   - Right-click on selected tracks
+   - Choose "Assign Label" from context menu
+   - Select an existing label or create a new one
+4. **Verify assignment**: The "Label" column shows the assigned label for each track
+
+#### Assigning Labels to Detections
+
+1. **Open the Data Manager**: Ensure the Detections tab is selected
+2. **Select detections**: Click on one or more detections in the table
+3. **Assign label**: Use the same workflow as tracks (right-click → "Assign Label")
+4. **Bulk assignment**: Select multiple detections to assign the same label to all
+
+#### Filtering by Label
+
+**In the Tracks Panel:**
+1. Click the "Label" column header dropdown filter
+2. Select which labels to display (supports multiple label selection)
+3. Table updates to show only tracks with selected labels
+4. Clear filter to show all tracks again
+
+**In the Detections Panel:**
+1. Use the same filtering workflow as tracks
+2. Quickly isolate detections by classification
+3. Useful for reviewing specific object types or classes
+
+#### Label Persistence
+
+- Labels are saved automatically with track and detection data
+- When exporting tracks/detections to CSV, labels are included in the "Label" column
+- When loading CSV files with a "Label" column, labels are automatically imported
+- Labels persist across VISTA sessions
+
+#### Common Labeling Workflows
+
+**Ground Truth Annotation:**
+1. Load automated tracker results
+2. Review each track and assign labels: "True Positive", "False Positive", "Missed Detection"
+3. Filter by label to review each category
+4. Export labeled data for algorithm validation
+
+**Multi-Class Classification:**
+1. Create labels for each object class: "Aircraft", "Satellite", "Bird", "Debris"
+2. Assign labels to detections or tracks as you review
+3. Use label filtering to focus on specific classes
+4. Generate classification statistics by counting labels
+
+**Analyst Review:**
+1. Create labels for review status: "Reviewed", "Needs Review", "Uncertain"
+2. Assign labels during manual review process
+3. Filter by "Needs Review" to see remaining work
+4. Track review progress through label counts
+
+### Drawing Areas of Interest (AOI)
+
+AOIs allow you to define rectangular regions for focused algorithm processing (background removal, treatments, etc.).
+
+**Creating an AOI:**
+1. **Access the Draw AOI Tool**:
+   - Right-click on the imagery viewer
+   - Select "Draw AOI" from the context menu
+
+2. **Draw the Rectangle**:
+   - Click and drag to define the rectangular region
+   - The AOI is created immediately upon mouse release
+
+3. **Use AOI in Algorithms**:
+   - Many algorithms (Temporal Median, Robust PCA, Bias Removal, NUC) support AOI selection
+   - Select your AOI from the dropdown in the algorithm dialog
+   - Processing is restricted to the selected region
+   - Output imagery inherits the AOI boundaries (with row/column offsets)
+
+**Managing AOIs:**
+- AOIs appear in the Data Manager
+- Toggle visibility to show/hide AOI rectangles on the display
+- Delete unwanted AOIs from the Data Manager
 
 ### Detection Algorithms
 
@@ -757,13 +940,25 @@ All tracking algorithms take detections as input and produce tracks as output.
 
 ### Keyboard Shortcuts
 
-- **Left Arrow / A**: Previous frame
-- **Right Arrow / D**: Next frame
-- **Space**: Play/Pause (when playback controls have focus)
+VISTA provides convenient keyboard shortcuts for efficient navigation and control:
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| **Left Arrow** or **A** | Previous Frame | Navigate backward one frame in the sequence |
+| **Right Arrow** or **D** | Next Frame | Navigate forward one frame in the sequence |
+| **Spacebar** | Play/Pause | Toggle playback on/off |
+
+**Notes:**
+- Keyboard shortcuts work when the main window has focus
+- The **A** and **D** keys provide an alternative to arrow keys, useful when your hand is on the mouse
+- Use **Spacebar** for quick playback control without reaching for the play button
+- During playback, use the FPS slider to control playback speed (supports negative values for reverse playback)
 
 ## Generating Test Data
 
-Use the simulation module to generate test datasets with various configurations:
+Users can create simulated data to get familiar with the tool by clicking `File` > `Simulate`.
+
+use the simulation module to generate test datasets with various configurations:
 
 ```python
 from vista.simulate.simulation import Simulation
@@ -875,25 +1070,30 @@ Vista/
 │   │   │   ├── imagery_viewer.py    # Image display with pyqtgraph
 │   │   │   ├── playback_controls.py # Playback UI
 │   │   │   ├── imagery_selection_dialog.py  # Imagery picker for conversions
+│   │   │   ├── point_selection_dialog.py    # Point selection mode dialog
 │   │   │   └── data/
 │   │   │       ├── data_manager.py  # Data panel with editing
-│   │   │       └── data_loader.py   # Background loading thread
-│   │   ├── detectors/               # Detection algorithm widgets
-│   │   │   ├── cfar_widget.py       # CFAR detector UI
-│   │   │   └── simple_threshold_widget.py  # Threshold detector UI
-│   │   ├── trackers/                # Tracking algorithm widgets
-│   │   │   ├── simple_tracking_dialog.py
-│   │   │   ├── kalman_tracking_dialog.py
-│   │   │   ├── network_flow_tracking_dialog.py
-│   │   │   └── tracklet_tracking_dialog.py
-│   │   ├── background_removal/      # Background removal widgets
-│   │   │   ├── temporal_median_widget.py
-│   │   │   └── robust_pca_dialog.py
-│   │   ├── enhancement/             # Enhancement widgets
-│   │   │   └── coaddition_widget.py
-│   │   └── treatments/              # Sensor calibration widgets
-│   │       ├── bias_removal.py
-│   │       └── non_uniformity_correction.py
+│   │   │       ├── data_loader.py   # Background loading thread
+│   │   │       ├── tracks_panel.py  # Track editing panel
+│   │   │       └── detections_panel.py  # Detection editing panel
+|   |   ├── algorithms/             
+│   │   |   ├── detectors/                      # Detection algorithm widgets
+│   │   |   │   ├── cfar_widget.py              # CFAR detector UI
+│   │   |   │   ├── cfar_config_widget.py       # Reusable CFAR configuration widget
+│   │   |   │   └── simple_threshold_widget.py  # Threshold detector UI
+│   │   |   ├── trackers/                       # Tracking algorithm widgets
+│   │   |   │   ├── simple_tracking_dialog.py
+│   │   |   │   ├── kalman_tracking_dialog.py
+│   │   |   │   ├── network_flow_tracking_dialog.py
+│   │   |   │   └── tracklet_tracking_dialog.py
+│   │   |   ├── background_removal/             # Background removal widgets
+│   │   |   │   ├── temporal_median_widget.py
+│   │   |   │   └── robust_pca_dialog.py
+│   │   |   ├── enhancement/                    # Enhancement widgets
+│   │   |   │   └── coaddition_widget.py
+│   │   |   └── treatments/                     # Sensor calibration widgets
+│   │   |       ├── bias_removal.py
+│   │   |       └── non_uniformity_correction.py
 │   ├── imagery/                     # Image data models
 │   │   └── imagery.py               # Imagery class with geodetic support
 │   ├── tracks/                      # Track data models
@@ -924,7 +1124,8 @@ Vista/
 │   │   ├── color.py                 # Color conversion helpers
 │   │   ├── random_walk.py           # Random walk simulation
 │   │   ├── time_mapping.py          # Time-to-frame conversion
-│   │   └── geodetic_mapping.py      # Geodetic-to-pixel conversion
+│   │   ├── geodetic_mapping.py      # Geodetic-to-pixel conversion
+│   │   └── point_refinement.py      # Point selection algorithms
 │   ├── simulate/                    # Data generation utilities
 │   │   ├── simulation.py            # Synthetic data simulator
 │   │   └── data.py                  # Earth image and other simulation data
@@ -1007,6 +1208,19 @@ Vista/
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Building an Executable
+Users can build an executable version of this tool with `pyinstaller` using the commands below:
+
+**Windows:**
+```bash
+pyinstaller vista/app.py --onefile -n vista --icon=vista/icons/logo.ico --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons*;vista" --add-data="vista/simulate/data*;vista"
+```
+
+**MacOS/Linux:**
+```bash
+pyinstaller vista/app.py --onefile --windowed -n vista --icon=vista/icons/logo.icns --hidden-import pyqtgraph.graphicsItems.PlotItem.plotConfigTemplate_pyqt6 --hidden-import pyqtgraph.imageview.ImageViewTemplate_pyqt6 --hidden-import pyqtgraph.graphicsItems.ViewBox.axisCtrlTemplate_pyqt6 --add-data="vista/icons:vista/icons/" --add-data="vista/simulate/data:vista/simulate/data/"
+```
 
 ## License
 

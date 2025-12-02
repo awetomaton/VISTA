@@ -14,7 +14,8 @@ from vista.algorithms.background_removal.robust_pca import run_robust_pca
 class RobustPCAProcessingThread(QThread):
     """Worker thread for running Robust PCA in background"""
 
-    progress_updated = pyqtSignal(int, int)  # (current, total)
+    progress_updated = pyqtSignal(int, int)  # (current, total) - use (0, 0) for indeterminate
+    status_updated = pyqtSignal(str)  # Status message
     processing_complete = pyqtSignal(object, object)  # Emits (background_imagery, foreground_imagery)
     error_occurred = pyqtSignal(str)
 
@@ -45,6 +46,25 @@ class RobustPCAProcessingThread(QThread):
         """Request cancellation"""
         self._cancelled = True
 
+    def _iteration_callback(self, iteration, max_iter, rel_error):
+        """
+        Callback function called after each RPCA iteration.
+
+        Args:
+            iteration: Current iteration number (1-indexed)
+            max_iter: Maximum number of iterations
+            rel_error: Current relative error
+
+        Returns:
+            bool: True to continue processing, False to cancel
+        """
+        # Update progress - use determinate progress bar during iterations
+        self.progress_updated.emit(iteration, max_iter)
+        self.status_updated.emit(f"RPCA iteration {iteration}/{max_iter} (error: {rel_error:.2e})")
+
+        # Return False if cancellation was requested
+        return not self._cancelled
+
     def run(self):
         """Execute Robust PCA in background"""
         try:
@@ -63,22 +83,24 @@ class RobustPCAProcessingThread(QThread):
             if self._cancelled:
                 return
 
-            # Update progress - starting RPCA
-            self.progress_updated.emit(1, 4)
+            # Set determinate progress for RPCA processing
+            self.progress_updated.emit(0, self.max_iter)
+            self.status_updated.emit("Running Robust PCA decomposition...")
 
-            # Apply Robust PCA to the image array
+            # Apply Robust PCA to the image array with callback for cancellation and progress
             background_images, foreground_images = run_robust_pca(
                 imagery_to_process.images,
                 lambda_param=self.lambda_param,
                 tol=self.tolerance,
-                max_iter=self.max_iter
+                max_iter=self.max_iter,
+                callback=self._iteration_callback
             )
 
             if self._cancelled:
                 return
 
-            # Update progress - RPCA complete, creating imagery objects
-            self.progress_updated.emit(2, 4)
+            # Update status - creating imagery objects
+            self.status_updated.emit("Creating imagery objects...")
 
             # Create background Imagery object using metadata from processed imagery
             background_imagery = imagery_to_process.copy()
@@ -94,29 +116,40 @@ class RobustPCAProcessingThread(QThread):
             foreground_imagery.name = f"{self.imagery.name} - Foreground (RPCA)" + (f" (AOI: {self.aoi.name})" if self.aoi else "")
             foreground_imagery.images = foreground_images
             foreground_imagery.description = f"Sparse foreground component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
-            
-            # Update progress - computing histograms
-            self.progress_updated.emit(3, 4)
+
+            # Switch to determinate progress for histogram computation
+            total_histograms = len(background_imagery.images) + len(foreground_imagery.images)
+            self.status_updated.emit("Computing histograms...")
+            self.progress_updated.emit(0, total_histograms)
 
             # Pre-compute histograms for performance
+            histogram_count = 0
             for i in range(len(background_imagery.images)):
                 if self._cancelled:
                     return
                 background_imagery.get_histogram(i)
+                histogram_count += 1
+                self.progress_updated.emit(histogram_count, total_histograms)
 
             for i in range(len(foreground_imagery.images)):
                 if self._cancelled:
                     return
                 foreground_imagery.get_histogram(i)
+                histogram_count += 1
+                self.progress_updated.emit(histogram_count, total_histograms)
 
             if self._cancelled:
                 return
 
-            # Update progress - complete
-            self.progress_updated.emit(4, 4)
+            self.status_updated.emit("Complete")
 
             # Emit the processed imagery
             self.processing_complete.emit(background_imagery, foreground_imagery)
+
+        except InterruptedError:
+            # Processing was cancelled by user - this is expected, not an error
+            # Just return silently and let the thread finish
+            return
 
         except Exception as e:
             # Get full traceback
@@ -279,6 +312,11 @@ class RobustPCADialog(QDialog):
         output_group.setLayout(output_layout)
         layout.addWidget(output_group)
 
+        # Status label
+        self.status_label = QLabel("")
+        self.status_label.setVisible(False)
+        layout.addWidget(self.status_label)
+
         # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
@@ -367,15 +405,20 @@ class RobustPCADialog(QDialog):
         self.add_background.setEnabled(False)
         self.add_foreground.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.status_label.setVisible(True)
+        self.status_label.setText("Initializing...")
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.progress_bar.setMaximum(4)
+        # Start with indeterminate progress bar
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(0)
 
         # Create and start worker thread
         self.worker = RobustPCAProcessingThread(
             self.imagery, lambda_param, tolerance, max_iter, selected_aoi, start_frame, end_frame
         )
         self.worker.progress_updated.connect(self.on_progress_updated)
+        self.worker.status_updated.connect(self.on_status_updated)
         self.worker.processing_complete.connect(self.on_processing_complete)
         self.worker.error_occurred.connect(self.on_error_occurred)
         self.worker.finished.connect(self.on_thread_finished)
@@ -391,7 +434,19 @@ class RobustPCADialog(QDialog):
 
     def on_progress_updated(self, current, total):
         """Handle progress updates from the processing thread"""
-        self.progress_bar.setValue(current)
+        if total == 0:
+            # Indeterminate progress (busy indicator)
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(0)
+        else:
+            # Determinate progress
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+
+    def on_status_updated(self, status_message):
+        """Handle status updates from the processing thread"""
+        self.status_label.setText(status_message)
 
     def on_processing_complete(self, background_imagery, foreground_imagery):
         """Handle successful completion of processing"""
@@ -465,6 +520,7 @@ class RobustPCADialog(QDialog):
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.status_label.setVisible(False)
         self.progress_bar.setVisible(False)
 
     def closeEvent(self, event):

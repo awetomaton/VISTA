@@ -1,35 +1,34 @@
-"""Widget for configuring and running the Coaddition enhancement algorithm"""
+"""Widget for configuring and running the Subset Frames algorithm"""
+from PyQt6.QtCore import QSettings, QThread, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
+    QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox,
+    QProgressBar, QPushButton, QSpinBox, QVBoxLayout
 )
-from PyQt6.QtCore import QThread, pyqtSignal, QSettings
-import numpy as np
 import traceback
 
-from vista.algorithms.enhancement.coadd import Coaddition
 
-
-class CoadditionProcessingThread(QThread):
-    """Worker thread for running Coaddition algorithm"""
+class SubsetFramesProcessingThread(QThread):
+    """Worker thread for running Subset Frames algorithm"""
 
     # Signals
-    progress_updated = pyqtSignal(int, int)  # (current_frame, total_frames)
+    progress_updated = pyqtSignal(int, int, str)  # (current_frame, total_frames, label)
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, window_size, aoi=None):
+    def __init__(self, imagery, start_frame, end_frame, aoi=None):
         """
         Initialize the processing thread
 
         Args:
             imagery: Imagery object to process
-            window_size: Number of frames to sum in the running window
+            start_frame: Starting frame index (inclusive)
+            end_frame: Ending frame index (inclusive)
             aoi: Optional AOI object to process subset of imagery
         """
         super().__init__()
         self.imagery = imagery
-        self.window_size = window_size
+        self.start_frame = start_frame
+        self.end_frame = end_frame
         self.aoi = aoi
         self._cancelled = False
 
@@ -38,7 +37,7 @@ class CoadditionProcessingThread(QThread):
         self._cancelled = True
 
     def run(self):
-        """Execute the coaddition algorithm in background thread"""
+        """Execute the subset frames algorithm in background thread"""
         try:
             # Determine the region to process
             if self.aoi:
@@ -47,54 +46,34 @@ class CoadditionProcessingThread(QThread):
                 # Process entire imagery
                 temp_imagery = self.imagery
 
-            # Create the algorithm instance
-            algorithm = Coaddition(
-                imagery=temp_imagery,
-                window_size=self.window_size
-            )
-
-            # Pre-allocate result array
-            num_frames = len(temp_imagery)
-            processed_images = np.empty_like(temp_imagery.images)
-
-            # Process each frame
-            for i in range(num_frames):
-                if self._cancelled:
-                    return  # Exit early if cancelled
-
-                # Call the algorithm to get the next result
-                frame_idx, processed_frame = algorithm()
-                processed_images[frame_idx] = processed_frame
-
-                # Emit progress
-                self.progress_updated.emit(i + 1, num_frames)
+            # Slice the imagery using __getitem__
+            # Convert start and end frames to slice indices
+            sliced_imagery = temp_imagery[self.start_frame:self.end_frame + 1]
 
             if self._cancelled:
                 return  # Exit early if cancelled
 
-            # Create new Imagery object with processed data
-            new_name = f"{self.imagery.name} {algorithm.name}"
+            # Create new name for the processed imagery
+            new_name = f"{self.imagery.name} Subset (frames {self.start_frame}-{self.end_frame})"
             if self.aoi:
                 new_name += f" (AOI: {self.aoi.name})"
-            
-            processed_imagery = temp_imagery.copy()
-            processed_imagery.images = processed_images
-            processed_imagery.name = new_name
-            processed_imagery.description = f"Processed with {algorithm.name} (window_size={self.window_size})",
+
+            sliced_imagery.name = new_name
+            sliced_imagery.description = f"Subset of frames {self.start_frame} to {self.end_frame}"
 
             # Pre-compute histograms for performance
-            for i in range(len(processed_imagery.images)):
+            for i in range(len(sliced_imagery.images)):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                processed_imagery.get_histogram(i)  # Lazy computation and caching
-                # Update progress: processing + histogram computation
-                self.progress_updated.emit(num_frames + i + 1, num_frames + len(processed_imagery.images))
+                sliced_imagery.get_histogram(i)  # Lazy computation and caching
+                # Update progress: histogram computation
+                self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
 
             # Emit the processed imagery
-            self.processing_complete.emit(processed_imagery)
+            self.processing_complete.emit(sliced_imagery)
 
         except Exception as e:
             # Get full traceback
@@ -103,15 +82,15 @@ class CoadditionProcessingThread(QThread):
             self.error_occurred.emit(error_msg)
 
 
-class CoadditionWidget(QDialog):
-    """Configuration widget for Coaddition algorithm"""
+class SubsetFramesWidget(QDialog):
+    """Configuration widget for Subset Frames algorithm"""
 
     # Signal emitted when processing is complete
     imagery_processed = pyqtSignal(object)  # Emits processed Imagery object
 
     def __init__(self, parent=None, imagery=None, aois=None):
         """
-        Initialize the Coaddition configuration widget
+        Initialize the Subset Frames configuration widget
 
         Args:
             parent: Parent widget
@@ -122,9 +101,9 @@ class CoadditionWidget(QDialog):
         self.imagery = imagery
         self.aois = aois if aois is not None else []
         self.processing_thread = None
-        self.settings = QSettings("VISTA", "Coaddition")
+        self.settings = QSettings("VISTA", "SubsetFrames")
 
-        self.setWindowTitle("Coaddition Enhancement")
+        self.setWindowTitle("Subset Frames")
         self.setModal(True)
         self.setMinimumWidth(400)
 
@@ -137,9 +116,9 @@ class CoadditionWidget(QDialog):
 
         # Information label
         info_label = QLabel(
-            "Configure the Coaddition enhancement algorithm parameters.\n\n"
-            "The algorithm sums imagery over a running window to enhance\n"
-            "slowly moving objects by integrating their signal over time."
+            "Configure the frame range to extract from the imagery.\n\n"
+            "Select the starting and ending frame indices to create\n"
+            "a new imagery containing only the specified frames."
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
@@ -161,24 +140,51 @@ class CoadditionWidget(QDialog):
         aoi_layout.addStretch()
         layout.addLayout(aoi_layout)
 
-        # Window size parameter
-        window_layout = QHBoxLayout()
-        window_label = QLabel("Window Size:")
-        window_label.setToolTip(
-            "Number of frames to sum in the running window.\n"
-            "Higher values integrate more signal but may blur fast-moving objects."
+        # Start frame parameter
+        start_frame_layout = QHBoxLayout()
+        start_frame_label = QLabel("Start Frame:")
+        start_frame_label.setToolTip(
+            "The starting frame index (inclusive).\n"
+            "This frame will be included in the subset."
         )
-        self.window_spinbox = QSpinBox()
-        self.window_spinbox.setMinimum(1)
-        self.window_spinbox.setMaximum(100)
-        self.window_spinbox.setValue(5)
-        self.window_spinbox.setToolTip(window_label.toolTip())
-        window_layout.addWidget(window_label)
-        window_layout.addWidget(self.window_spinbox)
-        window_layout.addStretch()
-        layout.addLayout(window_layout)
+        self.start_frame_spinbox = QSpinBox()
+        self.start_frame_spinbox.setMinimum(0)
+        if self.imagery:
+            self.start_frame_spinbox.setMaximum(len(self.imagery) - 1)
+            self.start_frame_spinbox.setValue(0)
+        else:
+            self.start_frame_spinbox.setMaximum(0)
+        self.start_frame_spinbox.setToolTip(start_frame_label.toolTip())
+        start_frame_layout.addWidget(start_frame_label)
+        start_frame_layout.addWidget(self.start_frame_spinbox)
+        start_frame_layout.addStretch()
+        layout.addLayout(start_frame_layout)
+
+        # End frame parameter
+        end_frame_layout = QHBoxLayout()
+        end_frame_label = QLabel("End Frame:")
+        end_frame_label.setToolTip(
+            "The ending frame index (inclusive).\n"
+            "This frame will be included in the subset."
+        )
+        self.end_frame_spinbox = QSpinBox()
+        self.end_frame_spinbox.setMinimum(0)
+        if self.imagery:
+            self.end_frame_spinbox.setMaximum(len(self.imagery) - 1)
+            self.end_frame_spinbox.setValue(len(self.imagery) - 1)
+        else:
+            self.end_frame_spinbox.setMaximum(0)
+        self.end_frame_spinbox.setToolTip(end_frame_label.toolTip())
+        end_frame_layout.addWidget(end_frame_label)
+        end_frame_layout.addWidget(self.end_frame_spinbox)
+        end_frame_layout.addStretch()
+        layout.addLayout(end_frame_layout)
 
         # Progress bar
+        self.progress_bar_label = QLabel()
+        self.progress_bar_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.progress_bar_label)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -206,11 +212,13 @@ class CoadditionWidget(QDialog):
 
     def load_settings(self):
         """Load previously saved settings"""
-        self.window_spinbox.setValue(self.settings.value("window_size", 5, type=int))
+        # Note: We don't save start/end frame since they depend on loaded imagery
+        pass
 
     def save_settings(self):
         """Save current settings for next time"""
-        self.settings.setValue("window_size", self.window_spinbox.value())
+        # Note: We don't save start/end frame since they depend on loaded imagery
+        pass
 
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
@@ -224,18 +232,28 @@ class CoadditionWidget(QDialog):
             return
 
         # Get parameter values
-        window_size = self.window_spinbox.value()
+        start_frame = self.start_frame_spinbox.value()
+        end_frame = self.end_frame_spinbox.value()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
 
         # Save settings for next time
         self.save_settings()
 
         # Validate parameters
-        if window_size > len(self.imagery):
+        if start_frame > end_frame:
             QMessageBox.warning(
                 self,
                 "Invalid Parameters",
-                f"Window size ({window_size}) cannot exceed number of frames ({len(self.imagery)}).",
+                f"Start frame ({start_frame}) cannot be greater than end frame ({end_frame}).",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        if start_frame < 0 or end_frame >= len(self.imagery):
+            QMessageBox.warning(
+                self,
+                "Invalid Parameters",
+                f"Frame indices must be between 0 and {len(self.imagery) - 1}.",
                 QMessageBox.StandardButton.Ok
             )
             return
@@ -243,17 +261,20 @@ class CoadditionWidget(QDialog):
         # Update UI for processing state
         self.run_button.setEnabled(False)
         self.close_button.setEnabled(False)
-        self.window_spinbox.setEnabled(False)
+        self.start_frame_spinbox.setEnabled(False)
+        self.end_frame_spinbox.setEnabled(False)
         self.aoi_combo.setEnabled(False)
         self.cancel_button.setVisible(True)
+        self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        # Set max to include both processing and histogram computation
-        self.progress_bar.setMaximum(2 * len(self.imagery))
+        # Set max to the number of frames in the subset
+        num_frames = end_frame - start_frame + 1
+        self.progress_bar.setMaximum(num_frames)
 
         # Create and start processing thread
-        self.processing_thread = CoadditionProcessingThread(
-            self.imagery, window_size, selected_aoi
+        self.processing_thread = SubsetFramesProcessingThread(
+            self.imagery, start_frame, end_frame, selected_aoi
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -269,8 +290,11 @@ class CoadditionWidget(QDialog):
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelling...")
 
-    def on_progress_updated(self, current, total):
+    def on_progress_updated(self, current, total, label=None):
         """Handle progress updates from the processing thread"""
+        if label is not None:
+            self.progress_bar_label.setText(label)
+        self.progress_bar.setMaximum(total)
         self.progress_bar.setValue(current)
 
     def on_processing_complete(self, processed_imagery):
@@ -324,11 +348,14 @@ class CoadditionWidget(QDialog):
         """Reset UI to initial state"""
         self.run_button.setEnabled(True)
         self.close_button.setEnabled(True)
-        self.window_spinbox.setEnabled(True)
+        self.start_frame_spinbox.setEnabled(True)
+        self.end_frame_spinbox.setEnabled(True)
         self.aoi_combo.setEnabled(True)
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
+        self.progress_bar_label.setVisible(False)
+        self.progress_bar_label.setText("")
         self.progress_bar.setVisible(False)
 
     def closeEvent(self, event):

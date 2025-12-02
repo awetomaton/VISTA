@@ -11,7 +11,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def simulate_scenario():
     simulation = Simulation(name="Made Up")
-    simulation.frames = 200
+    simulation.frames = 600
     simulation.rows = 2048
     simulation.columns = 2048
     simulation.simulate()

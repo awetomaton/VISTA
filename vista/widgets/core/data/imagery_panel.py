@@ -1,7 +1,7 @@
 """Imagery panel for data manager"""
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QMessageBox
+    QTableWidget, QTableWidgetItem, QHeaderView
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -22,9 +22,6 @@ class ImageryPanel(QWidget):
 
         # Button layout
         button_layout = QHBoxLayout()
-        self.export_imagery_btn = QPushButton("Export Selected")
-        self.export_imagery_btn.clicked.connect(self.export_selected_imagery)
-        button_layout.addWidget(self.export_imagery_btn)
         self.delete_imagery_btn = QPushButton("Delete Selected")
         self.delete_imagery_btn.clicked.connect(self.delete_selected_imagery)
         button_layout.addWidget(self.delete_imagery_btn)
@@ -154,50 +151,3 @@ class ImageryPanel(QWidget):
             # Refresh table
             self.refresh_imagery_table()
             self.data_changed.emit()
-
-    def export_selected_imagery(self):
-        """Export the selected imagery to HDF5 file"""
-        # Get selected imagery
-        selected_rows = self.imagery_table.selectedIndexes()
-        if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select an imagery to export.")
-            return
-
-        row = selected_rows[0].row()
-        name_item = self.imagery_table.item(row, 0)
-        imagery_id = name_item.data(Qt.ItemDataRole.UserRole)
-
-        # Find the imagery object
-        imagery = None
-        for img in self.viewer.imageries:
-            if id(img) == imagery_id:
-                imagery = img
-                break
-
-        if imagery is None:
-            QMessageBox.warning(self, "Error", "Could not find selected imagery.")
-            return
-
-        # Open file dialog
-        default_filename = f"{imagery.name}.h5"
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export Imagery",
-            default_filename,
-            "HDF5 Files (*.h5 *.hdf5);;All Files (*)"
-        )
-
-        if file_path:
-            try:
-                imagery.to_hdf5(file_path)
-                QMessageBox.information(
-                    self,
-                    "Success",
-                    f"Imagery exported successfully to:\n{file_path}"
-                )
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Export Error",
-                    f"Failed to export imagery:\n{str(e)}"
-                )

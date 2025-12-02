@@ -59,8 +59,8 @@ Issues = "https://github.com/hartzell-stephen-me/vista/issues"
 [project.gui-scripts]
 vista = "vista.__main__:main"
 
-[tool.setuptools]
-packages = {find = {}}  # Automatically find all packages under vista
+[tool.setuptools.packages.find]
+exclude = ["scripts*", "notebooks*", "docs*", "data*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "vista.__version__"}

@@ -1,7 +1,0 @@
-astropy
-h5py
-pandas
-PyQt6
-pyqtgraph
-scikit-image
-darkdetect

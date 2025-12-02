@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
     QDockWidget, QFileDialog, QMainWindow, QMessageBox,
     QProgressDialog, QSplitter, QVBoxLayout, QWidget
@@ -15,34 +15,46 @@ from vista.detections.detector import Detector
 from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.simulate.simulation import Simulation
 from vista.tracks.tracker import Tracker
-from ..background_removal.robust_pca_dialog import RobustPCADialog
-from ..background_removal.temporal_median_widget import TemporalMedianWidget
-from ..detectors.cfar_widget import CFARWidget
-from ..detectors.simple_threshold_widget import SimpleThresholdWidget
-from ..enhancement.coaddition_widget import CoadditionWidget
-from ..trackers.kalman_tracking_dialog import KalmanTrackingDialog
-from ..trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
-from ..trackers.simple_tracking_dialog import SimpleTrackingDialog
-from ..trackers.tracklet_tracking_dialog import TrackletTrackingDialog
-from ..treatments import BiasRemovalWidget, NonUniformityCorrectionRemovalWidget
+from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.widgets.core.settings_dialog import SettingsDialog
+from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
+from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
+from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
+from vista.widgets.algorithms.detectors.simple_threshold_widget import SimpleThresholdWidget
+from vista.widgets.algorithms.enhancement.coaddition_widget import CoadditionWidget
+from vista.widgets.algorithms.subset_frames_widget import SubsetFramesWidget
+from vista.widgets.algorithms.trackers.kalman_tracking_dialog import KalmanTrackingDialog
+from vista.widgets.algorithms.trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
+from vista.widgets.algorithms.trackers.simple_tracking_dialog import SimpleTrackingDialog
+from vista.widgets.algorithms.trackers.tracklet_tracking_dialog import TrackletTrackingDialog
+from vista.widgets.algorithms.treatments import BiasRemovalWidget, NonUniformityCorrectionWidget
 from .data.data_loader import DataLoaderThread
 from .data.data_manager import DataManagerPanel
 from .imagery_viewer import ImageryViewer
 from .playback_controls import PlaybackControls
+from .save_imagery_dialog import SaveImageryDialog
 
 
 class VistaMainWindow(QMainWindow):
     """Main application window"""
 
-    def __init__(self, imagery=None, tracks=None, detections=None):
+    def __init__(self, imagery=None, tracks=None, detections=None, sensors=None):
         """
         Initialize the Vista main window.
 
-        Args:
-            imagery: Optional Imagery object or list of Imagery objects to load at startup
-            tracks: Optional Tracker object or list of Tracker objects to load at startup
-            detections: Optional Detector object or list of Detector objects to load at startup
+        Parameters
+        ----------
+        imagery : Imagery or list of Imagery, optional
+            Imagery object(s) to load at startup
+        tracks : Tracker or list of Tracker, optional
+            Tracker object(s) to load at startup
+        detections : Detector or list of Detector, optional
+            Detector object(s) to load at startup
+        sensors : Sensor or list of Sensor, optional
+            Sensor object(s) to load at startup. If not provided, sensors will be
+            extracted from imagery objects that have associated sensors.
         """
         super().__init__()
         self.setWindowTitle(f"VISTA - {vista.__version__}")
@@ -62,8 +74,8 @@ class VistaMainWindow(QMainWindow):
         self.init_ui()
 
         # Load any provided data programmatically
-        if imagery is not None or tracks is not None or detections is not None:
-            self.load_data_programmatically(imagery, tracks, detections)
+        if imagery is not None or tracks is not None or detections is not None or sensors is not None:
+            self.load_data_programmatically(imagery, tracks, detections, sensors)
 
     def init_ui(self):
         # Create main widget and layout
@@ -85,8 +97,12 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.data_changed.connect(self.on_data_changed)
         self.data_manager.setMinimumWidth(400)
 
+        # Set data_manager reference on viewer for label filtering
+        self.viewer.data_manager = self.data_manager
+
         # Connect viewer signals to data manager
         self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
+        self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
 
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
@@ -113,6 +129,17 @@ class VistaMainWindow(QMainWindow):
 
         main_widget.setLayout(main_layout)
 
+        # Restore histogram gradient state from settings
+        histogram_state = self.settings.value("histogram_gradient_state")
+        if histogram_state:
+            self.viewer.user_histogram_state = histogram_state
+            # Apply the state to the histogram immediately
+            try:
+                self.viewer.histogram.restoreState(histogram_state)
+            except Exception:
+                # If restoration fails, just continue with defaults
+                pass
+
     def create_menu_bar(self):
         """Create menu bar with file loading options"""
         menubar = self.menuBar()
@@ -134,13 +161,33 @@ class VistaMainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
+        simulate_action = QAction("Simulate", self)
+        simulate_action.triggered.connect(self.run_simulation)
+        file_menu.addAction(simulate_action)
+
+        file_menu.addSeparator()
+
+        save_imagery_action = QAction("Save Imagery (HDF5)", self)
+        save_imagery_action.triggered.connect(self.save_imagery_file)
+        file_menu.addAction(save_imagery_action)
+
+        file_menu.addSeparator()
+
         clear_overlays_action = QAction("Clear Overlays", self)
         clear_overlays_action.triggered.connect(self.clear_overlays)
         file_menu.addAction(clear_overlays_action)
 
         file_menu.addSeparator()
 
+        settings_action = QAction("Settings", self)
+        #settings_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
+        settings_action.triggered.connect(self.open_settings)
+        file_menu.addAction(settings_action)
+
+        file_menu.addSeparator()
+
         exit_action = QAction("Exit", self)
+        #exit_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
@@ -153,8 +200,24 @@ class VistaMainWindow(QMainWindow):
         self.toggle_data_manager_action.triggered.connect(self.toggle_data_manager)
         view_menu.addAction(self.toggle_data_manager_action)
 
+        self.toggle_point_selection_action = QAction("Point Selection Mode", self)
+        self.toggle_point_selection_action.setCheckable(True)
+        self.toggle_point_selection_action.setChecked(False)
+        self.toggle_point_selection_action.triggered.connect(self.toggle_point_selection_dialog)
+        view_menu.addAction(self.toggle_point_selection_action)
+
+        # Labels action
+        manage_labels_action = QAction("Labels", self)
+        manage_labels_action.triggered.connect(self.manage_labels)
+        menubar.addAction(manage_labels_action)
+
         # Image Processing menu
         image_processing_menu = menubar.addMenu("Image Processing")
+
+        # Frame subset button
+        subset_frames_action = QAction("Subset frames", self)
+        subset_frames_action.triggered.connect(self.open_subset_frames_widget)
+        image_processing_menu.addAction(subset_frames_action)
 
         # Background Removal submenu
         background_removal_menu = image_processing_menu.addMenu("Background Removal")
@@ -250,6 +313,9 @@ class VistaMainWindow(QMainWindow):
         self.draw_roi_action.toggled.connect(self.on_draw_roi_toggled)
         toolbar.addAction(self.draw_roi_action)
 
+        # Create action group for mutually exclusive interactive modes
+        self.interactive_mode_group = self.create_interactive_mode_action_group()
+
         # Create Track action
         if darkdetect.isDark():
             self.create_track_action = QAction(self.icons.create_track_light, "Create Track", self)
@@ -259,6 +325,7 @@ class VistaMainWindow(QMainWindow):
         self.create_track_action.setChecked(False)
         self.create_track_action.setToolTip("Create a track by clicking on frames")
         self.create_track_action.toggled.connect(self.on_create_track_toggled)
+        self.interactive_mode_group.addAction(self.create_track_action)
         toolbar.addAction(self.create_track_action)
 
         # Create Detection action
@@ -270,6 +337,7 @@ class VistaMainWindow(QMainWindow):
         self.create_detection_action.setChecked(False)
         self.create_detection_action.setToolTip("Create detections by clicking on frames (multiple per frame)")
         self.create_detection_action.toggled.connect(self.on_create_detection_toggled)
+        self.interactive_mode_group.addAction(self.create_detection_action)
         toolbar.addAction(self.create_detection_action)
 
         # Select Track action
@@ -279,9 +347,83 @@ class VistaMainWindow(QMainWindow):
             self.select_track_action = QAction(self.icons.select_track_dark, "Select Track", self)
         self.select_track_action.setCheckable(True)
         self.select_track_action.setChecked(False)
-        self.select_track_action.setToolTip("Click on a track in the viewer to select it in the table")
+        self.select_track_action.setToolTip("Click on a track in the viewer to select it in the table.\nHold Ctrl (Windows/Linux) or Cmd (Mac) to add to selection.")
         self.select_track_action.toggled.connect(self.on_select_track_toggled)
+        self.interactive_mode_group.addAction(self.select_track_action)
         toolbar.addAction(self.select_track_action)
+
+        # Select Detections action
+        if darkdetect.isDark():
+            self.select_detections_action = QAction(self.icons.select_detections_light, "Select Detections", self)
+        else:
+            self.select_detections_action = QAction(self.icons.select_detections_dark, "Select Detections", self)
+        self.select_detections_action.setCheckable(True)
+        self.select_detections_action.setChecked(False)
+        self.select_detections_action.setToolTip("Click on detections in the viewer to select them. \nUse to create tracks from selected detections.")
+        self.select_detections_action.toggled.connect(self.on_select_detections_toggled)
+        self.interactive_mode_group.addAction(self.select_detections_action)
+        toolbar.addAction(self.select_detections_action)
+
+    def create_interactive_mode_action_group(self):
+        """
+        Create action group for mutually exclusive interactive modes.
+
+        This ensures only one interactive mode can be active at a time.
+        """
+        action_group = QActionGroup(self)
+        action_group.setExclusive(False)  # We'll handle exclusivity manually for better control
+        return action_group
+
+    def deactivate_all_interactive_modes(self, except_action=None):
+        """
+        Deactivate all interactive mode actions except the specified one.
+
+        This ensures mutual exclusivity of interactive modes across
+        both toolbar actions and data panel edit buttons.
+
+        Parameters
+        ----------
+        except_action : QAction or str, optional
+            The action to keep active (all others will be deactivated).
+            Can be a QAction object or a string identifier for edit buttons.
+        """
+        # Deactivate toolbar actions in the group
+        for action in self.interactive_mode_group.actions():
+            if action != except_action and action.isChecked():
+                # Clean up the mode state before unchecking
+                if action == self.create_track_action:
+                    self.viewer.finish_track_creation()
+                elif action == self.create_detection_action:
+                    self.viewer.finish_detection_creation()
+                elif action == self.select_track_action:
+                    self.viewer.set_track_selection_mode(False)
+                elif action == self.select_detections_action:
+                    self.viewer.set_detection_selection_mode(False)
+                    self.data_manager.detections_panel.clear_detection_selection()
+
+                # Now uncheck the action without triggering signals
+                action.blockSignals(True)
+                action.setChecked(False)
+                action.blockSignals(False)
+
+        # Deactivate edit buttons in data panels
+        if except_action != "edit_track":
+            if self.data_manager.tracks_panel.edit_track_btn.isChecked():
+                # Clean up track editing mode
+                self.viewer.finish_track_editing()
+                # Uncheck the button
+                self.data_manager.tracks_panel.edit_track_btn.blockSignals(True)
+                self.data_manager.tracks_panel.edit_track_btn.setChecked(False)
+                self.data_manager.tracks_panel.edit_track_btn.blockSignals(False)
+
+        if except_action != "edit_detector":
+            if self.data_manager.detections_panel.edit_detector_btn.isChecked():
+                # Clean up detector editing mode
+                self.viewer.finish_detection_editing()
+                # Uncheck the button
+                self.data_manager.detections_panel.edit_detector_btn.blockSignals(True)
+                self.data_manager.detections_panel.edit_detector_btn.setChecked(False)
+                self.data_manager.detections_panel.edit_detector_btn.blockSignals(False)
 
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
@@ -317,13 +459,16 @@ class VistaMainWindow(QMainWindow):
     def on_create_track_toggled(self, checked):
         """Handle Create Track toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.create_track_action)
+
             # Check if imagery is loaded
             if self.viewer.imagery is None:
                 # No imagery, show warning and uncheck
                 QMessageBox.warning(
                     self,
-                    "No Imagery",
-                    "Please load imagery before creating tracks.",
+                    "No Sensor",
+                    "A sensor is required to create tracks.",
                     QMessageBox.StandardButton.Ok
                 )
                 self.create_track_action.setChecked(False)
@@ -349,13 +494,16 @@ class VistaMainWindow(QMainWindow):
     def on_create_detection_toggled(self, checked):
         """Handle Create Detection toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.create_detection_action)
+
             # Check if imagery is loaded
             if self.viewer.imagery is None:
                 # No imagery, show warning and uncheck
                 QMessageBox.warning(
                     self,
-                    "No Imagery",
-                    "Please load imagery before creating detections.",
+                    "No Sensor",
+                    "A sensor is required to create detections.",
                     QMessageBox.StandardButton.Ok
                 )
                 self.create_detection_action.setChecked(False)
@@ -380,13 +528,34 @@ class VistaMainWindow(QMainWindow):
     def on_select_track_toggled(self, checked):
         """Handle Select Track toggle"""
         if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.select_track_action)
+
             # Enable track selection mode in viewer
             self.viewer.set_track_selection_mode(True)
-            self.statusBar().showMessage("Track selection mode: Click on a track in the viewer to select it in the table", 0)
+            self.statusBar().showMessage("Track selection mode: Click on a track to select it. Hold Ctrl/Cmd to add to selection.", 0)
         else:
             # Disable track selection mode
             self.viewer.set_track_selection_mode(False)
             self.statusBar().showMessage("Track selection mode disabled", 3000)
+
+    def on_select_detections_toggled(self, checked):
+        """Handle Select Detections toggle"""
+        if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.select_detections_action)
+
+            # Switch to detections tab
+            self.data_manager.tabs.setCurrentIndex(3)  # Detections tab
+            # Enable detection selection mode in viewer
+            self.viewer.set_detection_selection_mode(True)
+            self.statusBar().showMessage("Detection selection mode: Click on detections to select them.", 0)
+        else:
+            # Disable detection selection mode
+            self.viewer.set_detection_selection_mode(False)
+            # Clear selected detections in panel
+            self.data_manager.detections_panel.clear_detection_selection()
+            self.statusBar().showMessage("Detection selection mode disabled", 3000)
 
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""
@@ -409,6 +578,7 @@ class VistaMainWindow(QMainWindow):
 
             # Create progress dialog
             self.progress_dialog = QProgressDialog("Loading imagery...", "Cancel", 0, 100, self)
+            self.progress_dialog.setAutoClose(False)
             self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
             self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
             self.progress_dialog.show()
@@ -417,6 +587,7 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread = DataLoaderThread(file_path, 'imagery')
             self.loader_thread.imagery_loaded.connect(self.on_imagery_loaded)
             self.loader_thread.error_occurred.connect(self.on_loading_error)
+            self.loader_thread.warning_occurred.connect(self.on_loading_warning)
             self.loader_thread.progress_updated.connect(self.on_loading_progress)
             self.loader_thread.finished.connect(self.on_loading_finished)
 
@@ -564,6 +735,7 @@ class VistaMainWindow(QMainWindow):
         self.loader_thread = DataLoaderThread(file_path, 'detections', 'csv', sensor=self.detections_selected_sensor)
         self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
         self.loader_thread.finished.connect(self._on_detections_file_loaded)
 
@@ -651,16 +823,19 @@ class VistaMainWindow(QMainWindow):
                     overall_needs_geodetic_mapping = overall_needs_geodetic_mapping or needs_geodetic_mapping
 
                 # Build message explaining what will be used for mapping
+                preamble = []
                 mapping_info = []
                 missing_requirements = []
 
                 if overall_needs_time_mapping:
+                    preamble.append(f"Track data is missing frames, but has times. Times must be mapped to frames.")
                     if selected_imagery:
                         mapping_info.append(f"• Time mapping: {selected_imagery.name}")
                     else:
                         missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
 
                 if overall_needs_geodetic_mapping:
+                    preamble.append(f"Track data is missing row / column, but has geospatial coordinates. Geospatial coordinates must be mapped to pixels.")
                     if selected_sensor and hasattr(selected_sensor, 'can_geolocate') and selected_sensor.can_geolocate():
                         mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
                     else:
@@ -686,7 +861,7 @@ class VistaMainWindow(QMainWindow):
                     QMessageBox.critical(
                         self,
                         "Cannot Load Tracks",
-                        "Missing required data for track loading:\n\n" + "\n".join(missing_requirements),
+                        "Missing required data for track loading:\n\n" + "\n\n".join(preamble) + "\n\n" + "\n".join(missing_requirements),
                         QMessageBox.StandardButton.Ok
                     )
                     return
@@ -697,7 +872,7 @@ class VistaMainWindow(QMainWindow):
                     msg.setIcon(QMessageBox.Icon.Information)
                     msg.setWindowTitle("Track Loading Information")
                     msg.setText("The following will be used for track data mapping:")
-                    msg.setInformativeText("\n".join(mapping_info))
+                    msg.setInformativeText("\n".join(preamble) + "\n\n".join(mapping_info))
                     msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                     if msg.exec() != QMessageBox.StandardButton.Ok:
                         return
@@ -743,6 +918,7 @@ class VistaMainWindow(QMainWindow):
         )
         self.loader_thread.trackers_loaded.connect(self.on_trackers_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
         self.loader_thread.finished.connect(self._on_tracks_file_loaded)
 
@@ -775,6 +951,74 @@ class VistaMainWindow(QMainWindow):
 
             # Update status with total count
             self.statusBar().showMessage(f"Loaded {self.tracks_loaded_count} track file(s)", 3000)
+
+    def run_simulation(self):
+        """Run a simulation with default settings and save to a user-selected directory"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_simulation_dir", "")
+
+        # Prompt user to select a directory
+        dir_path = QFileDialog.getExistingDirectory(
+            self, "Select Directory for Simulation Output", last_dir
+        )
+
+        if dir_path:
+            # Save the directory for next time
+            self.settings.setValue("last_simulation_dir", dir_path)
+
+            # Create progress dialog
+            progress_dialog = QProgressDialog("Running simulation...", None, 0, 0, self)
+            progress_dialog.setWindowTitle("VISTA - Simulation")
+            progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            progress_dialog.setCancelButton(None)
+            progress_dialog.show()
+
+            try:
+                # Create simulation with default settings
+                simulation = Simulation(name="Simulation")
+                simulation.simulate()
+
+                # Update progress dialog
+                progress_dialog.setLabelText("Saving simulation data...")
+
+                # Save simulation to selected directory
+                simulation.save(dir_path)
+
+                # Close progress dialog
+                progress_dialog.close()
+
+                # Ask user if they want to load the simulation data
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Question)
+                msg.setWindowTitle("Simulation Complete")
+                msg.setText("Simulation completed successfully!")
+                msg.setInformativeText("Would you like to load the simulated data into VISTA?")
+                msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+
+                if msg.exec() == QMessageBox.StandardButton.Yes:
+                    # Load the simulation data
+                    self.load_data_programmatically(
+                        imagery=simulation.imagery,
+                        tracks=simulation.trackers,
+                        detections=simulation.detectors,
+                        sensors=simulation.imagery.sensor if simulation.imagery else None
+                    )
+
+                self.statusBar().showMessage(f"Simulation saved to: {dir_path}", 5000)
+
+            except Exception as e:
+                # Close progress dialog on error
+                progress_dialog.close()
+
+                # Show error message
+                QMessageBox.critical(
+                    self,
+                    "Simulation Error",
+                    f"Failed to run simulation:\n\n{str(e)}",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.statusBar().showMessage("Simulation failed", 3000)
 
     def on_trackers_loaded(self, trackers):
         """Handle trackers loaded in background thread"""
@@ -819,6 +1063,16 @@ class VistaMainWindow(QMainWindow):
             QMessageBox.StandardButton.Ok
         )
 
+    def on_loading_warning(self, title, message):
+        """Handle warnings from background loading thread"""
+        # Show warning dialog (loading continues, so don't close progress dialog)
+        QMessageBox.warning(
+            self,
+            title,
+            message,
+            QMessageBox.StandardButton.Ok
+        )
+
     def on_loading_finished(self):
         """Handle thread completion"""
         if self.progress_dialog:
@@ -835,6 +1089,36 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread.deleteLater()
             self.loader_thread = None
 
+    def save_imagery_file(self):
+        """Open dialog to save imagery data to HDF5 file"""
+        # Check if any imagery is loaded
+        if not self.viewer.imageries:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "No imagery data is loaded. Please load imagery before saving.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Check if any sensors exist
+        if not self.viewer.sensors:
+            QMessageBox.warning(
+                self,
+                "No Sensors",
+                "No sensors are loaded. Please load imagery with sensors before saving.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Open save imagery dialog
+        dialog = SaveImageryDialog(
+            sensors=self.viewer.sensors,
+            imageries=self.viewer.imageries,
+            parent=self
+        )
+        dialog.exec()
+
     def clear_overlays(self):
         """Clear all overlays and update frame range"""
         frame_range = self.viewer.clear_overlays()
@@ -846,6 +1130,42 @@ class VistaMainWindow(QMainWindow):
     def toggle_data_manager(self, checked):
         """Toggle data manager visibility"""
         self.data_dock.setVisible(checked)
+
+    def toggle_point_selection_dialog(self, checked):
+        """Toggle point selection dialog visibility"""
+        self.viewer.toggle_point_selection_dialog(checked)
+
+    def on_point_selection_dialog_created(self):
+        """
+        Called when the point selection dialog is first created.
+        Connects the dialog's visibility signal to update the menu action.
+        """
+        if self.viewer.point_selection_dialog is not None:
+            try:
+                self.viewer.point_selection_dialog.visibility_changed.disconnect(self.on_point_selection_visibility_changed)
+            except:
+                pass  # Not connected yet
+            self.viewer.point_selection_dialog.visibility_changed.connect(self.on_point_selection_visibility_changed)
+
+    def on_point_selection_visibility_changed(self, visible):
+        """Update menu action when point selection dialog visibility changes"""
+        # Block signals to prevent recursive calls
+        self.toggle_point_selection_action.blockSignals(True)
+        self.toggle_point_selection_action.setChecked(visible)
+        self.toggle_point_selection_action.blockSignals(False)
+
+    def open_settings(self):
+        """Open the settings dialog"""
+        dialog = SettingsDialog(self)
+        dialog.exec()
+
+    def manage_labels(self):
+        """Open the labels manager dialog"""
+        dialog = LabelsManagerDialog(self, viewer=self.viewer)
+        dialog.exec()
+        # Refresh the data manager to show any label changes
+        self.data_manager.tracks_panel.refresh_tracks_table()
+        self.data_manager.detections_panel.refresh_detections_table()
 
     def on_data_dock_visibility_changed(self, visible):
         """Update menu action when dock visibility changes"""
@@ -978,7 +1298,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.bias_images is None:
+        elif self.viewer.imagery.sensor.bias_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with bias images",
@@ -1009,7 +1329,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.uniformity_gain_images is None:
+        elif self.viewer.imagery.sensor.uniformity_gain_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with uniformity gain images",
@@ -1025,7 +1345,7 @@ class VistaMainWindow(QMainWindow):
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = NonUniformityCorrectionRemovalWidget(self, current_imagery, aois)
+        widget = NonUniformityCorrectionWidget(self, current_imagery, aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
@@ -1049,6 +1369,29 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the widget
         widget = CoadditionWidget(self, current_imagery, aois)
+        widget.imagery_processed.connect(self.on_single_imagery_created)
+        widget.exec()
+
+    def open_subset_frames_widget(self):
+        """Open the Subset Frames configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running the subset frames algorithm.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Get the currently selected imagery
+        current_imagery = self.viewer.imagery
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = SubsetFramesWidget(self, current_imagery, aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
@@ -1212,21 +1555,59 @@ class VistaMainWindow(QMainWindow):
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
 
-    def load_data_programmatically(self, imagery=None, tracks=None, detections=None):
+    def load_data_programmatically(self, imagery=None, tracks=None, detections=None, sensors=None):
         """
         Load data programmatically without file dialogs.
 
-        Args:
-            imagery: Imagery object or list of Imagery objects
-            tracks: Tracker object or list of Tracker objects
-            detections: Detector object or list of Detector objects
+        Parameters
+        ----------
+        imagery : Imagery or list of Imagery, optional
+            Imagery object(s) to load
+        tracks : Tracker or list of Tracker, optional
+            Tracker object(s) to load
+        detections : Detector or list of Detector, optional
+            Detector object(s) to load
+        sensors : Sensor or list of Sensor, optional
+            Sensor object(s) to load. If not provided, sensors will be extracted
+            from imagery objects that have associated sensors.
         """
+        # Load sensors first (if provided)
+        if sensors is not None:
+            # Convert single item to list
+            sensors_list = [sensors] if isinstance(sensors, Sensor) else sensors
+
+            for sensor in sensors_list:
+                # Check if sensor with same name already exists
+                existing_sensor = None
+                for s in self.viewer.sensors:
+                    if s.name == sensor.name:
+                        existing_sensor = s
+                        break
+
+                if existing_sensor is None:
+                    # Add new sensor to viewer
+                    self.viewer.sensors.append(sensor)
+
         # Load imagery
         if imagery is not None:
             # Convert single item to list
             imagery_list = [imagery] if isinstance(imagery, Imagery) else imagery
 
             for img in imagery_list:
+                # If imagery has a sensor, make sure it's in the viewer's sensor list
+                if img.sensor is not None:
+                    sensor_exists = False
+                    for s in self.viewer.sensors:
+                        if s.name == img.sensor.name:
+                            sensor_exists = True
+                            # Reuse existing sensor instead of the one from imagery
+                            img.sensor = s
+                            break
+
+                    if not sensor_exists:
+                        # Add the imagery's sensor to viewer
+                        self.viewer.sensors.append(img.sensor)
+
                 self.viewer.add_imagery(img)
                 # Select the first imagery for viewing
                 if img == imagery_list[0]:
@@ -1258,6 +1639,9 @@ class VistaMainWindow(QMainWindow):
 
         # Update status bar
         status_parts = []
+        if sensors is not None:
+            count = len(sensors_list) if isinstance(sensors_list, list) else 1
+            status_parts.append(f"{count} sensor(s)")
         if imagery is not None:
             count = len(imagery_list) if isinstance(imagery_list, list) else 1
             status_parts.append(f"{count} imagery dataset(s)")
@@ -1282,9 +1666,14 @@ class VistaMainWindow(QMainWindow):
             self.setGeometry(100, 100, 1200, 800)
 
     def closeEvent(self, event):
-        """Handle window close event - save window geometry"""
+        """Handle window close event - save window geometry and histogram state"""
         # Save window geometry (position and size)
         self.settings.setValue("window_geometry", self.saveGeometry())
+
+        # Save histogram gradient state
+        if self.viewer.user_histogram_state is not None:
+            self.settings.setValue("histogram_gradient_state", self.viewer.user_histogram_state)
+
         # Accept the close event
         event.accept()
 
