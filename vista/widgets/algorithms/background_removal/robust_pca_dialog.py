@@ -46,6 +46,25 @@ class RobustPCAProcessingThread(QThread):
         """Request cancellation"""
         self._cancelled = True
 
+    def _iteration_callback(self, iteration, max_iter, rel_error):
+        """
+        Callback function called after each RPCA iteration.
+
+        Args:
+            iteration: Current iteration number (1-indexed)
+            max_iter: Maximum number of iterations
+            rel_error: Current relative error
+
+        Returns:
+            bool: True to continue processing, False to cancel
+        """
+        # Update progress - use determinate progress bar during iterations
+        self.progress_updated.emit(iteration, max_iter)
+        self.status_updated.emit(f"RPCA iteration {iteration}/{max_iter} (error: {rel_error:.2e})")
+
+        # Return False if cancellation was requested
+        return not self._cancelled
+
     def run(self):
         """Execute Robust PCA in background"""
         try:
@@ -64,16 +83,17 @@ class RobustPCAProcessingThread(QThread):
             if self._cancelled:
                 return
 
-            # Set indeterminate progress for RPCA processing
-            self.progress_updated.emit(0, 0)
+            # Set determinate progress for RPCA processing
+            self.progress_updated.emit(0, self.max_iter)
             self.status_updated.emit("Running Robust PCA decomposition...")
 
-            # Apply Robust PCA to the image array
+            # Apply Robust PCA to the image array with callback for cancellation and progress
             background_images, foreground_images = run_robust_pca(
                 imagery_to_process.images,
                 lambda_param=self.lambda_param,
                 tol=self.tolerance,
-                max_iter=self.max_iter
+                max_iter=self.max_iter,
+                callback=self._iteration_callback
             )
 
             if self._cancelled:
@@ -125,6 +145,11 @@ class RobustPCAProcessingThread(QThread):
 
             # Emit the processed imagery
             self.processing_complete.emit(background_imagery, foreground_imagery)
+
+        except InterruptedError:
+            # Processing was cancelled by user - this is expected, not an error
+            # Just return silently and let the thread finish
+            return
 
         except Exception as e:
             # Get full traceback

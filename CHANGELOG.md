@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 - Improved the speed and effectiveness of computing the image histograms on realistic data
 - Added subset frames algorithm to trim imagery
+- Updated Robust PCA so that it can be canceled and provides incremental progress updates.
 
 ### Bug Fixes
 - Fixed bug where progress dialog would close when loading imagery before the histogram creationg progress dialog would open 

@@ -41,7 +41,7 @@ def singular_value_threshold(X, tau):
     return U @ np.diag(s_thresh) @ Vt
 
 
-def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=1000):
+def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=1000, callback=None):
     """
     Robust PCA using Inexact Augmented Lagrange Multiplier method.
 
@@ -59,6 +59,9 @@ def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=100
         mu: Augmented Lagrangian parameter (default: auto)
         tol: Convergence tolerance
         max_iter: Maximum iterations
+        callback: Optional callback function called after each iteration.
+                  Called with (iteration, max_iter, rel_error).
+                  Should return False to cancel processing.
 
     Returns:
         L: Low-rank component (background)
@@ -95,13 +98,19 @@ def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=100
         residual = M - L - S
         rel_error = np.linalg.norm(residual, 'fro') / norm_M
 
+        # Call progress callback if provided
+        if callback is not None:
+            if not callback(iteration + 1, max_iter, rel_error):
+                # Callback returned False - user requested cancellation
+                raise InterruptedError("Processing cancelled by user")
+
         if rel_error < tol:
             break
 
     return L, S
 
 
-def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000):
+def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000, callback=None):
     """
     Apply Robust PCA background subtraction to a 3D array of images.
 
@@ -110,6 +119,9 @@ def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000):
         lambda_param: Sparsity parameter (default: auto = 1/sqrt(max(m,n)))
         tol: Convergence tolerance (default: 1e-7)
         max_iter: Maximum iterations (default: 1000)
+        callback: Optional callback function called after each iteration.
+                  Called with (iteration, max_iter, rel_error).
+                  Should return False to cancel processing.
 
     Returns:
         Tuple of (background_images, foreground_images):
@@ -128,7 +140,8 @@ def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000):
         lambda_param=lambda_param,
         mu=None,
         tol=tol,
-        max_iter=max_iter
+        max_iter=max_iter,
+        callback=callback
     )
 
     # Reshape back to image sequences
