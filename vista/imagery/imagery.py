@@ -205,7 +205,7 @@ class Imagery:
         self._histograms = None
         self._histogram_bins = None
 
-    def _compute_histogram_bins(self, image, min_percentile=1, max_percentile=99, bins=256):
+    def _compute_histogram_bins(self, image: NDArray, min_percentile=1, max_percentile=99, bins=256):
         """
         Compute histogram bin edges based on image data range.
 
@@ -213,7 +213,13 @@ class Imagery:
         ----------
         bins : int
             Number of histogram bins (default: 256)
-
+        image: NDArray
+            Image on which to base histogram bins
+        min_percentile: int
+            Minimnum image value to use for choosing histogram bins based on percentile (0-100)
+        max_percentile: int
+            Maximum image value to use for choosing histogram bins based on percentile (0-100)
+            
         Returns
         -------
         NDArray
@@ -224,8 +230,8 @@ class Imagery:
             nonzero_image = image[image != 0]
 
             # Compute data range 
-            min = np.percentile(nonzero_image, 1)
-            max = np.percentile(nonzero_image, 99)
+            min = np.percentile(nonzero_image, min_percentile)
+            max = np.percentile(nonzero_image, max_percentile)
 
             # Create bin edges spanning the range
             self._histogram_bins = np.linspace(min, max, bins + 1)
@@ -277,7 +283,7 @@ class Imagery:
 
         if frame_index not in self._histograms:
             image = self.images[frame_index, ::row_downsample, ::col_downsample]
-            
+
             # Get pre-computed bin edges (computed once for all frames)
             bin_edges = self._compute_histogram_bins(image, bins)
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
