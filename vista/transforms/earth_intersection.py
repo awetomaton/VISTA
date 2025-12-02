@@ -1,8 +1,9 @@
 import numpy as np
 from numpy.typing import NDArray
+from typing import Tuple
 
 
-def los_to_earth(position: NDArray, pointing: NDArray) -> NDArray:
+def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray]:
     """Find the intersection of a pointing vector with the Earth
 
     Finds the intersection of a pointing vector u and starting point s with the WGS-84 geoid
@@ -16,6 +17,8 @@ def los_to_earth(position: NDArray, pointing: NDArray) -> NDArray:
     
     Returns
     -------
+    NDArray : 
+        Distance(s) to the Earth's surface
     NDArray : 
         Length 3 or (3 X N) array of point(s) of intersection with the Earth in kilometers. NaN's represent 
         non-intersection
@@ -57,5 +60,5 @@ def los_to_earth(position: NDArray, pointing: NDArray) -> NDArray:
     ])
 
     if return_singleton:
-        return intersection.squeeze()
-    return intersection
+        return d,  intersection.squeeze()
+    return d, intersection
