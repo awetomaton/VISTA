@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.4] - 2025-12-1
 
 ### Improvements
+- Added settings menu for some global configuration settings
 - Improved the speed and effectiveness of computing the image histograms on realistic data
 - Added subset frames algorithm to trim imagery
 - Updated Robust PCA so that it can be canceled and provides incremental progress updates.
