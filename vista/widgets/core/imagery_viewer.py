@@ -332,17 +332,8 @@ class ImageryViewer(QWidget):
         if self.extraction_view_mode:
             self._update_extraction_overlay()
         elif self.extraction_editing_mode:
+            # Update overlay (will automatically sync track index to current frame)
             self._update_extraction_overlay_from_editor()
-            # Update extraction editor's current track index to match the new frame
-            if self.extraction_editor is not None and self.editing_extraction_track is not None:
-                track = self.editing_extraction_track
-                # Find the track point index for the new frame
-                frame_mask = track.frames == frame_number
-                if np.any(frame_mask):
-                    new_idx = int(np.where(frame_mask)[0][0])
-                    if new_idx != self.extraction_editor.current_track_idx:
-                        self.extraction_editor.current_track_idx = new_idx
-                        self.extraction_editor.update_ui()
 
         # Update tooltips if mouse was previously hovering and tooltips are enabled
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
@@ -1356,6 +1347,16 @@ class ImageryViewer(QWidget):
         """Update extraction overlay from editor's current state"""
         if not self.extraction_editing_mode or self.extraction_editor is None:
             return
+
+        # Ensure the extraction editor's track index matches the current frame
+        # This is a safeguard to prevent desynchronization
+        if self.editing_extraction_track is not None:
+            track = self.editing_extraction_track
+            frame_mask = track.frames == self.current_frame_number
+            if np.any(frame_mask):
+                correct_idx = int(np.where(frame_mask)[0][0])
+                if self.extraction_editor.current_track_idx != correct_idx:
+                    self.extraction_editor.current_track_idx = correct_idx
 
         signal_mask = self.extraction_editor.get_current_signal_mask()
         chip_position = self.extraction_editor.get_current_chip_position()
