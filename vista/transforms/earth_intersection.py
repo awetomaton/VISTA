@@ -25,7 +25,7 @@ def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray
     """
 
     return_singleton = False
-    if len(position.shape) == 1:
+    if (len(position.shape) == 1) and (len(pointing.shape) == 1):
         return_singleton = True
         position = position.reshape((3, 1))
         pointing = pointing.reshape((3, 1))

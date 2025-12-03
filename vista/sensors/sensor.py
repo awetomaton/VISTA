@@ -262,7 +262,7 @@ class Sensor:
         this method to provide geodetic-to-pixel conversion using their specific
         projection model (e.g., polynomial coefficients).
         """
-        empty = np.empty_like(loc.x.values)
+        empty = np.empty_like(loc.x.value)
         empty.fill(np.nan)
         return empty, empty.copy()
     

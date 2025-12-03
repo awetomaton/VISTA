@@ -45,7 +45,7 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
     # We need to normalize the ARF Z-axis to make it a unit vector
     arf_z = arf_z / np.linalg.norm(arf_z)
 
-    arf_y = np.cross(arf_z, arf_x)
+    arf_y = np.cross(arf_x, arf_z)
 
     # Cross products can result in a non-normalized vector even with unit vector inputs, so we normalize this vector
     arf_y = arf_y / np.linalg.norm(arf_y)
