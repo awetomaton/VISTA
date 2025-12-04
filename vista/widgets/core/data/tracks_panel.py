@@ -1673,11 +1673,7 @@ class TracksPanel(QWidget):
         # Check if imagery is available for the selected sensor
         # Get the sensor from the first selected track (all selected tracks should have the same sensor)
         sensor = selected_tracks[0].sensor
-        imagery = None
-        for img in self.viewer.imageries:
-            if img.sensor == sensor:
-                imagery = img
-                break
+        imagery = self.viewer.imagery
 
         if imagery is None:
             QMessageBox.warning(

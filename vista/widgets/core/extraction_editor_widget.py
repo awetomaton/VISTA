@@ -303,10 +303,16 @@ class ExtractionEditorWidget(QDialog):
     def _get_kernel_fft(self, image_shape):
         """Get or compute kernel FFT for given image shape"""
         if image_shape not in self._kernel_fft_cache:
+            # Shift kernel so its center is at position (0, 0) for correct FFT convolution
+            kernel_shifted = fft.ifftshift(self._kernel)
+
+            # Pad shifted kernel to match image shape
             padded_kernel = np.zeros(image_shape, dtype=np.float32)
-            k_rows, k_cols = self._kernel.shape
-            padded_kernel[:k_rows, :k_cols] = self._kernel
-            self._kernel_fft_cache[image_shape] = fft.fft2(fft.ifftshift(padded_kernel))
+            k_rows, k_cols = kernel_shifted.shape
+            padded_kernel[:k_rows, :k_cols] = kernel_shifted
+
+            # Compute and cache FFT
+            self._kernel_fft_cache[image_shape] = fft.fft2(padded_kernel)
         return self._kernel_fft_cache[image_shape]
 
     def _detect_signal_pixels(self, chip, noise_std, threshold_deviation):
