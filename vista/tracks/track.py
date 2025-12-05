@@ -6,6 +6,7 @@ across multiple frames with support for multiple coordinate systems (pixel, geod
 time-based), visualization styling, and data persistence.
 """
 from dataclasses import dataclass, field
+from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
@@ -61,6 +62,11 @@ class Track:
         'DashDotDotLine'), by default 'SolidLine'
     labels : set[str], optional
         Set of text labels for categorizing/filtering tracks, by default empty set
+    extraction_metadata : dict, optional
+        Extraction metadata containing image chips and signal detection results.
+        Dictionary with keys: 'chip_size' (int), 'chips' (NDArray with shape
+        (n_points, diameter, diameter)), 'signal_masks' (boolean NDArray with
+        same shape), 'noise_stds' (NDArray with shape (n_points,)), by default None
 
     Methods
     -------
@@ -102,6 +108,8 @@ class Track:
     show_line: bool = True  # If True, show line connecting track points
     line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
+    # Extraction metadata
+    extraction_metadata: Optional[dict] = None  # Dict containing 'chip_size', 'chips', 'signal_masks', 'noise_stds'
     # Private attributes
     _length: int = field(init=False, default=None)
 
@@ -119,6 +127,16 @@ class Track:
             track_slice.frames = track_slice.frames[s]
             track_slice.rows = track_slice.rows[s]
             track_slice.columns = track_slice.columns[s]
+
+            # Slice extraction metadata if present
+            if track_slice.extraction_metadata is not None:
+                track_slice.extraction_metadata = {
+                    'chip_size': track_slice.extraction_metadata['chip_size'],
+                    'chips': track_slice.extraction_metadata['chips'][s],
+                    'signal_masks': track_slice.extraction_metadata['signal_masks'][s],
+                    'noise_stds': track_slice.extraction_metadata['noise_stds'][s],
+                }
+
             return track_slice
         else:
             raise TypeError("Invalid index or slice type.")
@@ -462,6 +480,16 @@ class Track:
         Track
             New Track object with copied arrays and styling attributes
         """
+        # Deep copy extraction metadata if present
+        extraction_metadata_copy = None
+        if self.extraction_metadata is not None:
+            extraction_metadata_copy = {
+                'chip_size': self.extraction_metadata['chip_size'],
+                'chips': self.extraction_metadata['chips'].copy(),
+                'signal_masks': self.extraction_metadata['signal_masks'].copy(),
+                'noise_stds': self.extraction_metadata['noise_stds'].copy(),
+            }
+
         return self.__class__(
             name = self.name,
             frames = self.frames.copy(),
@@ -478,6 +506,7 @@ class Track:
             show_line = self.show_line,
             line_style = self.line_style,
             labels = self.labels.copy(),
+            extraction_metadata = extraction_metadata_copy,
         )
     
     def to_dataframe(self) -> pd.DataFrame:

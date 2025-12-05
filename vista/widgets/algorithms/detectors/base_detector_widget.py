@@ -70,7 +70,7 @@ class BaseDetectorProcessingThread(QThread):
             temp_imagery = temp_imagery[self.start_frame:self.end_frame]
 
             # Create the algorithm instance
-            algorithm = self.algorithm_class(imagery=temp_imagery, **self.algorithm_params)
+            algorithm = self.algorithm_class(**self.algorithm_params)
 
             # Process all frames
             num_frames = len(temp_imagery)
@@ -82,8 +82,12 @@ class BaseDetectorProcessingThread(QThread):
                 if self._cancelled:
                     return  # Exit early if cancelled
 
+                # Get current frame
+                image = temp_imagery.images[i]
+                frame_number = temp_imagery.frames[i]
+
                 # Call the algorithm to get detections for this frame
-                frame_number, rows, columns = algorithm()
+                rows, columns = algorithm(image)
 
                 # Apply offsets to detection coordinates
                 rows = rows + temp_imagery.row_offset

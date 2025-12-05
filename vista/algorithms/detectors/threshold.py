@@ -1,7 +1,6 @@
 """Simple threshold detector algorithm for finding bright blobs in imagery"""
 import numpy as np
 from skimage.measure import label, regionprops
-from vista.imagery.imagery import Imagery
 
 
 class SimpleThreshold:
@@ -14,13 +13,12 @@ class SimpleThreshold:
 
     name = "Simple Threshold"
 
-    def __init__(self, imagery: Imagery, threshold: float, min_area: int = 1, max_area: int = 1000,
+    def __init__(self, threshold: float, min_area: int = 1, max_area: int = 1000,
                  detection_mode: str = 'above'):
         """
         Initialize the Simple Threshold detector.
 
         Args:
-            imagery: Imagery object to process
             threshold: Intensity threshold for detection
             min_area: Minimum detection area in pixels
             max_area: Maximum detection area in pixels
@@ -29,28 +27,22 @@ class SimpleThreshold:
                 'below': Detect pixels < -threshold (negative values)
                 'both': Detect pixels where |pixel| > threshold (absolute value)
         """
-        self.imagery = imagery
         self.threshold = threshold
         self.min_area = min_area
         self.max_area = max_area
         self.detection_mode = detection_mode
-        self.current_frame_idx = 0
 
-    def __call__(self):
+    def __call__(self, image):
         """
-        Process the next frame and return detections.
+        Process a single image and return detections.
+
+        Args:
+            image: 2D numpy array to process
 
         Returns:
-            Tuple of (frame_number, rows, columns) where rows and columns are arrays
-            of detection centroids for the current frame.
+            Tuple of (rows, columns) where rows and columns are arrays
+            of detection centroids.
         """
-        if self.current_frame_idx >= len(self.imagery):
-            raise StopIteration("No more frames to process")
-
-        # Get current frame
-        image = self.imagery.images[self.current_frame_idx]
-        frame_number = self.imagery.frames[self.current_frame_idx]
-
         # Apply threshold based on detection mode
         if self.detection_mode == 'above':
             # Detect pixels brighter than threshold
@@ -86,11 +78,4 @@ class SimpleThreshold:
         rows = np.array(rows)
         columns = np.array(columns)
 
-        # Move to next frame
-        self.current_frame_idx += 1
-
-        return frame_number, rows, columns
-
-    def __len__(self):
-        """Return the number of frames to process"""
-        return len(self.imagery)
+        return rows, columns

@@ -14,7 +14,6 @@ import numpy as np
 from scipy import ndimage
 
 from vista.algorithms.detectors.cfar import CFAR
-from vista.imagery.imagery import Imagery
 
 
 def refine_verbatim(row, col, imagery, frame_index):
@@ -177,32 +176,23 @@ def refine_cfar(row, col, imagery, frame_index, background_radius=10, ignore_rad
     # Extract local region
     local_region = frame_data[row_min:row_max, col_min:col_max]
 
-    # Create a temporary imagery object for the local region
-    # We need to create a single-frame imagery with the local region
-    local_imagery = Imagery(
-        name="temp_local",
-        frames=np.array([imagery.frames[frame_index]]),
-        images=local_region[np.newaxis, :, :],  # Add frame dimension
-        sensor=imagery.sensor,
-        row_offset=row_min,
-        column_offset=col_min
-    )
-
     try:
-        # Run CFAR on the local region
+        # Create CFAR detector
         cfar = CFAR(
-            imagery=local_imagery,
             background_radius=background_radius,
             ignore_radius=ignore_radius,
             threshold_deviation=threshold_deviation,
             min_area=1,  # Accept any size for point refinement
             max_area=10000,
             annulus_shape=annulus_shape,
-            detection_mode='above'  # Typically looking for bright pixels
+            detection_mode='above',  # Typically looking for bright pixels
+            search_radius=search_radius
         )
 
-        # Process the single frame
-        frame_number, det_rows, det_columns = cfar()
+        # Process the local region
+        # Use the clicked location within the local region as search_center
+        local_search_center = (center_row - row_min, center_col - col_min)
+        det_rows, det_columns = cfar(local_region, search_center=local_search_center)
 
         if len(det_rows) == 0:
             # No detection found, return original coordinates
