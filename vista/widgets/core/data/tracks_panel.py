@@ -1467,6 +1467,11 @@ class TracksPanel(QWidget):
 
         # Refresh table
         self.refresh_tracks_table()
+
+        # Clear selection in both table and viewer to prevent stale indices from being highlighted
+        self.tracks_table.clearSelection()
+        self.viewer.set_selected_tracks(set())
+
         self.data_changed.emit()
 
     def on_track_selection_changed(self):
