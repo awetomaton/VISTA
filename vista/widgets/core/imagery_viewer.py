@@ -4,7 +4,7 @@ import os
 import pyqtgraph as pg
 import time
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
@@ -12,6 +12,7 @@ from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
 from vista.utils.point_refinement import refine_point
+from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
 
 # Performance monitoring (enabled via environment variable)
@@ -733,7 +734,6 @@ class ImageryViewer(QWidget):
 
         # Handle drag painting during extraction editing
         if self.extraction_editing_mode and self.pan_zoom_locked:
-            from PyQt6.QtWidgets import QApplication
             # Check if left mouse button is pressed
             if QApplication.mouseButtons() & Qt.MouseButton.LeftButton:
                 # Paint pixel at current position
@@ -1263,7 +1263,6 @@ class ImageryViewer(QWidget):
 
         # Create extraction editor widget if it doesn't exist
         if self.extraction_editor is None:
-            from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
             self.extraction_editor = ExtractionEditorWidget(self)
             self.extraction_editor.frame_changed.connect(self.on_extraction_editor_frame_changed)
             self.extraction_editor.signal_mask_updated.connect(self._update_extraction_overlay_from_editor)
