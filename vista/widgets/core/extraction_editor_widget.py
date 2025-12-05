@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 )
 from skimage.measure import label, regionprops
 from vista.algorithms.detectors.cfar import CFAR
-from vista.widgets.common.cfar_config_widget import CFARConfigWidget
+from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 
 
 class ExtractionEditorWidget(QDialog):
@@ -54,6 +54,9 @@ class ExtractionEditorWidget(QDialog):
         # CFAR parameters widget
         self.cfar_widget = CFARConfigWidget(
             parent=self,
+            show_visualization=False,
+            show_area_filters=False,
+            show_detection_mode=False,
             settings_prefix="ExtractionEditor/CFAR",
             show_group_box=True
         )

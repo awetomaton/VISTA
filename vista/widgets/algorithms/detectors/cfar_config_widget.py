@@ -5,10 +5,10 @@ This module provides a reusable Qt widget for configuring CFAR (Constant False A
 detection parameters. The widget can be used in multiple contexts including full-frame
 detection and point refinement during track/detection creation.
 """
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
-    QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
+    QComboBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
 )
 
 
@@ -178,6 +178,11 @@ class CFARConfigWidget(QWidget):
         Whether to show min/max area filters, by default True
     show_detection_mode : bool, optional
         Whether to show detection mode selector, by default True
+    settings_prefix : str, optional
+        Prefix for QSettings keys to persist widget state. If None, settings are not persisted.
+        By default None
+    show_group_box : bool, optional
+        If True, wrap controls in a QGroupBox titled "CFAR Parameters". By default False
 
     Attributes
     ----------
@@ -187,6 +192,10 @@ class CFARConfigWidget(QWidget):
         Whether area filters are shown
     show_detection_mode : bool
         Whether detection mode selector is shown
+    settings_prefix : str or None
+        Prefix for QSettings keys
+    settings : QSettings or None
+        QSettings instance for persistence
     shape_combo : QComboBox
         Combo box for annulus shape selection
     mode_combo : QComboBox
@@ -206,12 +215,19 @@ class CFARConfigWidget(QWidget):
     """
 
     def __init__(self, parent=None, show_visualization=True, show_area_filters=True,
-                 show_detection_mode=True):
+                 show_detection_mode=True, settings_prefix=None, show_group_box=False):
         super().__init__(parent)
         self.show_visualization = show_visualization
         self.show_area_filters = show_area_filters
         self.show_detection_mode = show_detection_mode
+        self.settings_prefix = settings_prefix
+        self.settings = QSettings("VISTA", "CFARConfig") if settings_prefix else None
+        self.show_group_box = show_group_box
         self.init_ui()
+
+        # Load saved settings if available
+        if self.settings and self.settings_prefix:
+            self.load_settings()
 
     def init_ui(self):
         """
@@ -221,7 +237,7 @@ class CFARConfigWidget(QWidget):
         background/ignore radius spinboxes, threshold deviation spinbox, optional
         area filters, and optional neighborhood visualization.
         """
-        layout = QHBoxLayout()
+        main_layout = QHBoxLayout()
 
         # Left side: parameters
         params_layout = QVBoxLayout()
@@ -360,7 +376,14 @@ class CFARConfigWidget(QWidget):
             params_layout.addLayout(max_area_layout)
 
         params_layout.addStretch()
-        layout.addLayout(params_layout)
+
+        # Wrap parameters in group box if requested
+        if self.show_group_box:
+            group_box = QGroupBox("CFAR Parameters")
+            group_box.setLayout(params_layout)
+            main_layout.addWidget(group_box)
+        else:
+            main_layout.addLayout(params_layout)
 
         # Right side: neighborhood visualization (optional)
         if self.show_visualization:
@@ -377,9 +400,9 @@ class CFARConfigWidget(QWidget):
             viz_layout.addWidget(self.neighborhood_viz)
             viz_layout.addStretch()
 
-            layout.addLayout(viz_layout)
+            main_layout.addLayout(viz_layout)
 
-        self.setLayout(layout)
+        self.setLayout(main_layout)
 
     def update_visualization(self):
         """
@@ -469,3 +492,114 @@ class CFARConfigWidget(QWidget):
                 self.min_area_spinbox.setValue(params['min_area'])
             if 'max_area' in params:
                 self.max_area_spinbox.setValue(params['max_area'])
+
+    def get_config(self):
+        """
+        Get current CFAR configuration as a dictionary (alias for get_parameters).
+
+        This method provides API compatibility with the simpler CFARConfigWidget interface.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys:
+            - 'background_radius': int
+            - 'ignore_radius': int
+            - 'threshold_deviation': float
+            - 'annulus_shape': str
+            - 'detection_mode': str (if show_detection_mode is True)
+            - 'min_area': int (if show_area_filters is True)
+            - 'max_area': int (if show_area_filters is True)
+        """
+        return self.get_parameters()
+
+    def set_config(self, config_dict):
+        """
+        Set widget values from configuration dictionary (alias for set_parameters).
+
+        This method provides API compatibility with the simpler CFARConfigWidget interface.
+
+        Parameters
+        ----------
+        config_dict : dict
+            Dictionary with optional keys:
+            - 'background_radius': int
+            - 'ignore_radius': int
+            - 'threshold_deviation': float
+            - 'annulus_shape': str
+            - 'detection_mode': str (if show_detection_mode is True)
+            - 'min_area': int (if show_area_filters is True)
+            - 'max_area': int (if show_area_filters is True)
+        """
+        self.set_parameters(config_dict)
+
+    def load_settings(self):
+        """
+        Load previously saved settings from QSettings.
+
+        Only loads settings if settings_prefix was provided during initialization.
+        Loads background_radius, ignore_radius, threshold_deviation, and annulus_shape.
+        """
+        if not self.settings or not self.settings_prefix:
+            return
+
+        prefix = self.settings_prefix
+
+        self.background_spinbox.setValue(
+            self.settings.value(f"{prefix}/background_radius", 10, type=int)
+        )
+        self.ignore_spinbox.setValue(
+            self.settings.value(f"{prefix}/ignore_radius", 3, type=int)
+        )
+        self.threshold_spinbox.setValue(
+            self.settings.value(f"{prefix}/threshold_deviation", 3.0, type=float)
+        )
+
+        annulus_shape = self.settings.value(f"{prefix}/annulus_shape", "circular")
+        for i in range(self.shape_combo.count()):
+            if self.shape_combo.itemData(i) == annulus_shape:
+                self.shape_combo.setCurrentIndex(i)
+                break
+
+        # Load detection mode if applicable
+        if self.show_detection_mode:
+            detection_mode = self.settings.value(f"{prefix}/detection_mode", "above")
+            for i in range(self.mode_combo.count()):
+                if self.mode_combo.itemData(i) == detection_mode:
+                    self.mode_combo.setCurrentIndex(i)
+                    break
+
+        # Load area filters if applicable
+        if self.show_area_filters:
+            self.min_area_spinbox.setValue(
+                self.settings.value(f"{prefix}/min_area", 1, type=int)
+            )
+            self.max_area_spinbox.setValue(
+                self.settings.value(f"{prefix}/max_area", 1000, type=int)
+            )
+
+    def save_settings(self):
+        """
+        Save current settings to QSettings.
+
+        Only saves settings if settings_prefix was provided during initialization.
+        Saves background_radius, ignore_radius, threshold_deviation, and annulus_shape.
+        """
+        if not self.settings or not self.settings_prefix:
+            return
+
+        prefix = self.settings_prefix
+
+        self.settings.setValue(f"{prefix}/background_radius", self.background_spinbox.value())
+        self.settings.setValue(f"{prefix}/ignore_radius", self.ignore_spinbox.value())
+        self.settings.setValue(f"{prefix}/threshold_deviation", self.threshold_spinbox.value())
+        self.settings.setValue(f"{prefix}/annulus_shape", self.shape_combo.currentData())
+
+        # Save detection mode if applicable
+        if self.show_detection_mode:
+            self.settings.setValue(f"{prefix}/detection_mode", self.mode_combo.currentData())
+
+        # Save area filters if applicable
+        if self.show_area_filters:
+            self.settings.setValue(f"{prefix}/min_area", self.min_area_spinbox.value())
+            self.settings.setValue(f"{prefix}/max_area", self.max_area_spinbox.value())

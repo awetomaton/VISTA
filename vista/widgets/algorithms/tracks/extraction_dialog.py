@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout
 )
 from vista.algorithms.tracks.extraction import TrackExtraction
-from vista.widgets.common.cfar_config_widget import CFARConfigWidget
+from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 
 
 class TrackExtractionThread(QThread):
@@ -157,6 +157,9 @@ class TrackExtractionDialog(QDialog):
         # CFAR parameters widget
         self.cfar_widget = CFARConfigWidget(
             parent=self,
+            show_visualization=False,
+            show_area_filters=False,
+            show_detection_mode=False,
             settings_prefix="TrackExtraction/CFAR",
             show_group_box=True
         )
