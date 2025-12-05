@@ -1481,21 +1481,49 @@ class TracksPanel(QWidget):
 
         # Enable View Extraction and Edit Extraction buttons only if exactly one track with extraction is selected
         has_extraction = False
+        selected_track = None
         if len(selected_rows) == 1:
             row = list(selected_rows)[0]
             # Check if extracted checkbox is checked
             extracted_item = self.tracks_table.item(row, 13)  # Extracted column
             if extracted_item and extracted_item.checkState() == Qt.CheckState.Checked:
                 has_extraction = True
+
+                # Get the selected track object
+                tracker_item = self.tracks_table.item(row, 1)
+                track_name_item = self.tracks_table.item(row, 2)
+                if tracker_item and track_name_item:
+                    tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+                    track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+                    # Find the actual track object
+                    for tracker in self.viewer.trackers:
+                        if id(tracker) == tracker_id:
+                            for t in tracker.tracks:
+                                if id(t) == track_id:
+                                    selected_track = t
+                                    break
+                            break
+
         self.view_extraction_btn.setEnabled(has_extraction)
         self.edit_extraction_btn.setEnabled(has_extraction)
-        # If buttons are checked but selection changed, uncheck them and clean up viewer modes
-        if self.view_extraction_btn.isChecked() and not has_extraction:
-            self.viewer.finish_extraction_viewing()
-            self.view_extraction_btn.setChecked(False)
-        if self.edit_extraction_btn.isChecked() and not has_extraction:
-            self.viewer.finish_extraction_editing()
-            self.edit_extraction_btn.setChecked(False)
+
+        # If buttons are checked but selection changed, update or uncheck them
+        if self.view_extraction_btn.isChecked():
+            if has_extraction and selected_track:
+                # Update to view the new track's extraction
+                if self.viewer.viewing_extraction_track != selected_track:
+                    self.viewer.finish_extraction_viewing()
+                    self.viewer.start_extraction_viewing(selected_track)
+            else:
+                # No extraction, turn off view mode
+                self.viewer.finish_extraction_viewing()
+                self.view_extraction_btn.setChecked(False)
+
+        if self.edit_extraction_btn.isChecked():
+            if not has_extraction:
+                self.viewer.finish_extraction_editing()
+                self.edit_extraction_btn.setChecked(False)
 
         # Collect selected track IDs for highlighting in the viewer
         selected_track_ids = set()
