@@ -329,11 +329,12 @@ class ImageryViewer(QWidget):
         self.update_overlays()
 
         # Update extraction overlay if in extraction view or edit mode
-        if self.extraction_view_mode:
-            self._update_extraction_overlay()
-        elif self.extraction_editing_mode:
+        # Prioritize editing mode over viewing mode (editing shows working copy)
+        if self.extraction_editing_mode:
             # Update overlay (will automatically sync track index to current frame)
             self._update_extraction_overlay_from_editor()
+        elif self.extraction_view_mode:
+            self._update_extraction_overlay()
 
         # Update tooltips if mouse was previously hovering and tooltips are enabled
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
