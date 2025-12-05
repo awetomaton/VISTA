@@ -3,11 +3,12 @@ import traceback
 import numpy as np
 from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox,
+    QCheckBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox,
     QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QSpinBox,
     QVBoxLayout
 )
 from vista.algorithms.tracks.extraction import TrackExtraction
+from vista.widgets.common.cfar_config_widget import CFARConfigWidget
 
 
 class TrackExtractionThread(QThread):
@@ -130,56 +131,36 @@ class TrackExtractionDialog(QDialog):
         params_group = QGroupBox("Extraction Parameters")
         params_layout = QFormLayout()
 
-        # Chip diameter
-        self.chip_diameter_spin = QSpinBox()
-        self.chip_diameter_spin.setRange(5, 201)
-        self.chip_diameter_spin.setSingleStep(2)
-        self.chip_diameter_spin.setValue(31)
-        self.chip_diameter_spin.setToolTip(
-            "Diameter of square image chips to extract around each track point (pixels).\n"
-            "Should be odd number for symmetric chips."
+        # Chip radius
+        self.chip_radius_spin = QSpinBox()
+        self.chip_radius_spin.setRange(2, 100)
+        self.chip_radius_spin.setValue(15)
+        self.chip_radius_spin.setToolTip(
+            "Radius of square image chips to extract around each track point (pixels).\n"
+            "Total chip diameter will be 2*radius + 1."
         )
-        params_layout.addRow("Chip Diameter:", self.chip_diameter_spin)
+        params_layout.addRow("Chip Radius:", self.chip_radius_spin)
 
-        # Background radius
-        self.background_radius_spin = QSpinBox()
-        self.background_radius_spin.setRange(1, 100)
-        self.background_radius_spin.setValue(10)
-        self.background_radius_spin.setToolTip(
-            "Outer radius of annular region for background noise calculation (pixels)."
+        # Search radius
+        self.search_radius_spin = QSpinBox()
+        self.search_radius_spin.setRange(0, 100)
+        self.search_radius_spin.setValue(3)
+        self.search_radius_spin.setToolTip(
+            "Only keep signal blobs that have at least one pixel within this radius\n"
+            "of the chip center. Set to 0 to disable (keep all blobs)."
         )
-        params_layout.addRow("Background Radius:", self.background_radius_spin)
-
-        # Ignore radius (guard region)
-        self.ignore_radius_spin = QSpinBox()
-        self.ignore_radius_spin.setRange(0, 100)
-        self.ignore_radius_spin.setValue(3)
-        self.ignore_radius_spin.setToolTip(
-            "Inner radius to exclude from background calculation (guard region, pixels)."
-        )
-        params_layout.addRow("Ignore Radius:", self.ignore_radius_spin)
-
-        # Threshold deviation
-        self.threshold_deviation_spin = QDoubleSpinBox()
-        self.threshold_deviation_spin.setRange(0.1, 20.0)
-        self.threshold_deviation_spin.setSingleStep(0.5)
-        self.threshold_deviation_spin.setDecimals(1)
-        self.threshold_deviation_spin.setValue(3.0)
-        self.threshold_deviation_spin.setToolTip(
-            "Number of standard deviations above local mean for signal detection threshold."
-        )
-        params_layout.addRow("Threshold (σ):", self.threshold_deviation_spin)
-
-        # Annulus shape
-        self.annulus_shape_combo = QComboBox()
-        self.annulus_shape_combo.addItems(["circular", "square"])
-        self.annulus_shape_combo.setToolTip(
-            "Shape of the background annular region: circular or square."
-        )
-        params_layout.addRow("Annulus Shape:", self.annulus_shape_combo)
+        params_layout.addRow("Search Radius:", self.search_radius_spin)
 
         params_group.setLayout(params_layout)
         layout.addWidget(params_group)
+
+        # CFAR parameters widget
+        self.cfar_widget = CFARConfigWidget(
+            parent=self,
+            settings_prefix="TrackExtraction/CFAR",
+            show_group_box=True
+        )
+        layout.addWidget(self.cfar_widget)
 
         # Centroid update group
         centroid_group = QGroupBox("Centroid Refinement")
@@ -242,26 +223,20 @@ class TrackExtractionDialog(QDialog):
 
     def load_settings(self):
         """Load previously saved settings"""
-        self.chip_diameter_spin.setValue(self.settings.value("chip_diameter", 31, type=int))
-        self.background_radius_spin.setValue(self.settings.value("background_radius", 10, type=int))
-        self.ignore_radius_spin.setValue(self.settings.value("ignore_radius", 3, type=int))
-        self.threshold_deviation_spin.setValue(self.settings.value("threshold_deviation", 3.0, type=float))
-        annulus_shape = self.settings.value("annulus_shape", "circular")
-        idx = self.annulus_shape_combo.findText(annulus_shape)
-        if idx >= 0:
-            self.annulus_shape_combo.setCurrentIndex(idx)
+        self.chip_radius_spin.setValue(self.settings.value("chip_radius", 15, type=int))
+        self.search_radius_spin.setValue(self.settings.value("search_radius", 3, type=int))
         self.update_centroids_check.setChecked(self.settings.value("update_centroids", False, type=bool))
         self.max_centroid_shift_spin.setValue(self.settings.value("max_centroid_shift", 5.0, type=float))
+        # CFAR widget loads its own settings
 
     def save_settings(self):
         """Save current settings for next time"""
-        self.settings.setValue("chip_diameter", self.chip_diameter_spin.value())
-        self.settings.setValue("background_radius", self.background_radius_spin.value())
-        self.settings.setValue("ignore_radius", self.ignore_radius_spin.value())
-        self.settings.setValue("threshold_deviation", self.threshold_deviation_spin.value())
-        self.settings.setValue("annulus_shape", self.annulus_shape_combo.currentText())
+        self.settings.setValue("chip_radius", self.chip_radius_spin.value())
+        self.settings.setValue("search_radius", self.search_radius_spin.value())
         self.settings.setValue("update_centroids", self.update_centroids_check.isChecked())
         self.settings.setValue("max_centroid_shift", self.max_centroid_shift_spin.value())
+        # CFAR widget saves its own settings
+        self.cfar_widget.save_settings()
 
     def get_extraction_params(self):
         """
@@ -272,12 +247,22 @@ class TrackExtractionDialog(QDialog):
         dict
             Extraction parameters
         """
+        # Get CFAR parameters
+        cfar_params = self.cfar_widget.get_config()
+
+        # Get search radius (0 means None)
+        search_radius = self.search_radius_spin.value()
+        if search_radius == 0:
+            search_radius = None
+
+        # Combine all parameters
         return {
-            'chip_diameter': self.chip_diameter_spin.value(),
-            'background_radius': self.background_radius_spin.value(),
-            'ignore_radius': self.ignore_radius_spin.value(),
-            'threshold_deviation': self.threshold_deviation_spin.value(),
-            'annulus_shape': self.annulus_shape_combo.currentText(),
+            'chip_radius': self.chip_radius_spin.value(),
+            'search_radius': search_radius,
+            'background_radius': cfar_params['background_radius'],
+            'ignore_radius': cfar_params['ignore_radius'],
+            'threshold_deviation': cfar_params['threshold_deviation'],
+            'annulus_shape': cfar_params['annulus_shape'],
             'update_centroids': self.update_centroids_check.isChecked(),
             'max_centroid_shift': self.max_centroid_shift_spin.value()
         }
@@ -291,15 +276,20 @@ class TrackExtractionDialog(QDialog):
         tuple
             (is_valid, error_message)
         """
-        background_radius = self.background_radius_spin.value()
-        ignore_radius = self.ignore_radius_spin.value()
+        cfar_params = self.cfar_widget.get_config()
+        background_radius = cfar_params['background_radius']
+        ignore_radius = cfar_params['ignore_radius']
 
         if ignore_radius >= background_radius:
             return False, "Ignore radius must be less than background radius."
 
-        chip_diameter = self.chip_diameter_spin.value()
-        if chip_diameter % 2 == 0:
-            return False, "Chip diameter should be an odd number for symmetric chips."
+        chip_radius = self.chip_radius_spin.value()
+        if chip_radius <= 0:
+            return False, "Chip radius must be a positive integer."
+
+        search_radius = self.search_radius_spin.value()
+        if search_radius > chip_radius:
+            return False, "Search radius cannot be greater than chip radius."
 
         return True, ""
 
@@ -416,11 +406,9 @@ class TrackExtractionDialog(QDialog):
 
     def set_controls_enabled(self, enabled):
         """Enable or disable parameter controls"""
-        self.chip_diameter_spin.setEnabled(enabled)
-        self.background_radius_spin.setEnabled(enabled)
-        self.ignore_radius_spin.setEnabled(enabled)
-        self.threshold_deviation_spin.setEnabled(enabled)
-        self.annulus_shape_combo.setEnabled(enabled)
+        self.chip_radius_spin.setEnabled(enabled)
+        self.search_radius_spin.setEnabled(enabled)
+        self.cfar_widget.setEnabled(enabled)
         self.update_centroids_check.setEnabled(enabled)
         if enabled:
             self.max_centroid_shift_spin.setEnabled(

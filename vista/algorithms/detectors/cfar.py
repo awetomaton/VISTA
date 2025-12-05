@@ -12,7 +12,6 @@ statistics across large images.
 import numpy as np
 from scipy import fft
 from skimage.measure import label, regionprops
-from vista.imagery.imagery import Imagery
 
 
 class CFAR:
@@ -28,8 +27,6 @@ class CFAR:
 
     Parameters
     ----------
-    imagery : Imagery
-        Imagery object to process
     background_radius : int
         Outer radius for neighborhood statistics calculation (pixels)
     ignore_radius : int
@@ -47,6 +44,11 @@ class CFAR:
         - 'above': Detect pixels brighter than threshold (mean + threshold*std)
         - 'below': Detect pixels darker than threshold (mean - threshold*std)
         - 'both': Detect pixels deviating from mean in either direction
+    search_radius : int, optional
+        When specified, only keep the blob whose weighted centroid is closest to
+        the search_center (or image center) and within this radius. Used for
+        chip-based detection where only blobs near the center are of interest.
+        By default None (keep all blobs)
 
     Attributes
     ----------
@@ -56,13 +58,13 @@ class CFAR:
         Pre-computed annular kernel for convolution
     n_pixels : int
         Number of pixels in the annular neighborhood
-    current_frame_idx : int
-        Index of frame currently being processed
 
     Methods
     -------
-    __call__()
-        Process all frames and return detections as (frame_numbers, rows, columns)
+    __call__(image, search_center=None)
+        Process single image and return detections as (rows, columns)
+    process_chip(chip, search_center=None)
+        Process chip and return (signal_mask, noise_std) for track extraction
 
     Notes
     -----
@@ -72,21 +74,25 @@ class CFAR:
     - Detected pixels are grouped into connected blobs using 8-connectivity
     - Blobs are filtered by area (min_area <= area <= max_area)
     - Blob centroids are returned as sub-pixel coordinates
+    - Kernel FFT is cached by image shape for efficiency
 
     Examples
     --------
     >>> from vista.algorithms.detectors.cfar import CFAR
-    >>> cfar = CFAR(imagery, background_radius=10, ignore_radius=3,
+    >>> cfar = CFAR(background_radius=10, ignore_radius=3,
     ...             threshold_deviation=3.0, min_area=1, max_area=100)
-    >>> frame_numbers, rows, columns = cfar()
+    >>> # Process single frame
+    >>> rows, columns = cfar(image)
+    >>> # Process chip with search radius
+    >>> signal_mask, noise_std = cfar.process_chip(chip, search_center=(chip_size//2, chip_size//2))
     """
 
     name = "Constant False Alarm Rate"
 
-    def __init__(self, imagery: Imagery, background_radius: int, ignore_radius: int,
+    def __init__(self, background_radius: int, ignore_radius: int,
                  threshold_deviation: float, min_area: int = 1, max_area: int = 1000,
-                 annulus_shape: str = 'circular', detection_mode: str = 'above'):
-        self.imagery = imagery
+                 annulus_shape: str = 'circular', detection_mode: str = 'above',
+                 search_radius: int = None):
         self.background_radius = background_radius
         self.ignore_radius = ignore_radius
         self.threshold_deviation = threshold_deviation
@@ -94,7 +100,7 @@ class CFAR:
         self.max_area = max_area
         self.annulus_shape = annulus_shape
         self.detection_mode = detection_mode
-        self.current_frame_idx = 0
+        self.search_radius = search_radius
 
         # Pre-compute kernel for efficiency
         self.kernel = self._create_annular_kernel()
@@ -177,15 +183,16 @@ class CFAR:
     def _get_kernel_fft(self, image_shape):
         """Get or compute kernel FFT for given image shape"""
         if image_shape not in self._kernel_fft_cache:
-            # Pad kernel to match image shape
+            # Shift kernel so its center is at position (0, 0) for correct FFT convolution
+            kernel_shifted = fft.ifftshift(self.kernel)
+
+            # Pad shifted kernel to match image shape
             padded_kernel = np.zeros(image_shape, dtype=np.float32)
+            k_rows, k_cols = kernel_shifted.shape
+            padded_kernel[:k_rows, :k_cols] = kernel_shifted
 
-            # Place kernel in top-left corner (will be shifted by ifftshift)
-            k_rows, k_cols = self.kernel.shape
-            padded_kernel[:k_rows, :k_cols] = self.kernel
-
-            # Compute FFT with proper shifting
-            self._kernel_fft_cache[image_shape] = fft.fft2(fft.ifftshift(padded_kernel))
+            # Compute and cache FFT
+            self._kernel_fft_cache[image_shape] = fft.fft2(padded_kernel)
 
         return self._kernel_fft_cache[image_shape]
 
@@ -205,21 +212,25 @@ class CFAR:
 
         return result
 
-    def __call__(self):
+    def __call__(self, image, search_center=None):
         """
-        Process the next frame and return detections.
+        Process a single image and return detection centroids.
 
-        Returns:
-            Tuple of (frame_number, rows, columns) where rows and columns are arrays
-            of detection centroids for the current frame.
+        Parameters
+        ----------
+        image : ndarray
+            2D image array to process
+        search_center : tuple, optional
+            (row, col) for search_radius filtering. If None and search_radius is set,
+            uses image center. If search_radius is None, this parameter is ignored.
+
+        Returns
+        -------
+        rows : ndarray
+            Array of detection centroid row coordinates
+        columns : ndarray
+            Array of detection centroid column coordinates
         """
-        if self.current_frame_idx >= len(self.imagery):
-            raise StopIteration("No more frames to process")
-
-        # Get current frame
-        image = self.imagery.images[self.current_frame_idx]
-        frame_number = self.imagery.frames[self.current_frame_idx]
-
         # Pad image for convolution
         padded_image = self._pad_image(image)
 
@@ -266,26 +277,163 @@ class CFAR:
         # Get region properties
         regions = regionprops(labeled, intensity_image=image)
 
-        # Filter by area and extract weighted centroids
+        # Filter by area
+        valid_regions = [r for r in regions if self.min_area <= r.area <= self.max_area]
+
+        # Apply search_radius filtering if specified
+        if self.search_radius is not None and len(valid_regions) > 0:
+            # Determine search center
+            if search_center is None:
+                center_row = image.shape[0] / 2
+                center_col = image.shape[1] / 2
+            else:
+                center_row, center_col = search_center
+
+            # Find blobs whose weighted centroid is within search_radius
+            candidates = []
+            for region in valid_regions:
+                centroid = region.weighted_centroid
+
+                if self.annulus_shape == 'circular':
+                    dist = np.sqrt((centroid[0] - center_row)**2 + (centroid[1] - center_col)**2)
+                else:  # square
+                    dist = max(abs(centroid[0] - center_row), abs(centroid[1] - center_col))
+
+                if dist <= self.search_radius:
+                    candidates.append((region, dist))
+
+            # Keep only the closest blob
+            if len(candidates) > 0:
+                closest_region = min(candidates, key=lambda x: x[1])[0]
+                valid_regions = [closest_region]
+            else:
+                valid_regions = []
+
+        # Extract weighted centroids (with 0.5 offset for pixel center)
         rows = []
         columns = []
-
-        for region in regions:
-            if self.min_area <= region.area <= self.max_area:
-                # Use weighted centroid (intensity-weighted) and account for center of pixel being at 0.5, 0.5
-                centroid = region.weighted_centroid
-                rows.append(centroid[0] + 0.5)
-                columns.append(centroid[1] + 0.5)
+        for region in valid_regions:
+            centroid = region.weighted_centroid
+            rows.append(centroid[0] + 0.5)
+            columns.append(centroid[1] + 0.5)
 
         # Convert to numpy arrays
         rows = np.array(rows)
         columns = np.array(columns)
 
-        # Move to next frame
-        self.current_frame_idx += 1
+        return rows, columns
 
-        return frame_number, rows, columns
+    def process_chip(self, chip, search_center=None):
+        """
+        Process a chip and return detailed signal information.
 
-    def __len__(self):
-        """Return the number of frames to process"""
-        return len(self.imagery)
+        This method is designed for track extraction, where both the signal mask
+        and noise statistics are needed.
+
+        Parameters
+        ----------
+        chip : ndarray
+            2D image chip (may contain NaN values at edges)
+        search_center : tuple, optional
+            (row, col) for search_radius filtering. If None and search_radius is set,
+            uses chip center. If search_radius is None, this parameter is ignored.
+
+        Returns
+        -------
+        signal_mask : ndarray
+            Boolean mask of signal pixels (same shape as chip)
+        noise_std : float
+            Noise standard deviation at chip center
+
+        Notes
+        -----
+        - NaN values in the chip are replaced with 0 for processing and masked out
+        - Uses search_radius to filter blobs (keeps closest by weighted centroid)
+        - Returns full signal mask (all pixels in the blob), not just centroids
+        """
+        # Replace NaN with 0 for convolution
+        chip_clean = np.nan_to_num(chip, nan=0.0)
+
+        # Pad chip to accommodate kernel
+        pad_size = self.background_radius
+        padded_chip = np.pad(chip_clean, pad_size, mode='edge')
+
+        # Prepare kernel FFT for padded chip shape
+        kernel_shifted = fft.ifftshift(self.kernel)
+        padded_kernel = np.zeros(padded_chip.shape, dtype=np.float32)
+        k_rows, k_cols = kernel_shifted.shape
+        padded_kernel[:k_rows, :k_cols] = kernel_shifted
+        kernel_fft = fft.fft2(padded_kernel)
+
+        # Calculate local mean using convolution
+        image_fft = fft.fft2(padded_chip)
+        local_sum = fft.ifft2(image_fft * kernel_fft).real
+        local_mean = local_sum / self.n_pixels
+
+        # Calculate local std
+        padded_chip_sq = padded_chip ** 2
+        image_sq_fft = fft.fft2(padded_chip_sq)
+        local_sum_sq = fft.ifft2(image_sq_fft * kernel_fft).real
+        local_mean_sq = local_sum_sq / self.n_pixels
+        local_variance = np.maximum(local_mean_sq - local_mean ** 2, 0)
+        local_std = np.sqrt(local_variance)
+
+        # Get center noise std
+        center_idx = padded_chip.shape[0] // 2
+        noise_std = local_std[center_idx, center_idx]
+
+        # Remove padding
+        local_mean = local_mean[pad_size:-pad_size, pad_size:-pad_size]
+
+        # Apply threshold
+        threshold = local_mean + self.threshold_deviation * noise_std
+        signal_mask = chip_clean > threshold
+
+        # Mask out NaN regions
+        signal_mask[np.isnan(chip)] = False
+
+        # Apply search_radius filtering if specified
+        if self.search_radius is not None and np.any(signal_mask):
+            # Determine search center
+            if search_center is None:
+                center_row = chip.shape[0] // 2
+                center_col = chip.shape[1] // 2
+            else:
+                center_row, center_col = search_center
+
+            # Label connected components
+            labeled = label(signal_mask)
+            if labeled.max() > 0:
+                # Check if center pixel is in a labeled region
+                center_label = labeled[center_row, center_col]
+
+                if center_label > 0:
+                    # Keep only the region containing the center
+                    signal_mask = labeled == center_label
+                else:
+                    # Find closest region to center (within search_radius)
+                    regions = regionprops(labeled, intensity_image=chip_clean)
+                    candidates = []
+
+                    for region in regions:
+                        centroid = region.weighted_centroid
+
+                        if self.annulus_shape == 'circular':
+                            dist = np.sqrt((centroid[0] - center_row)**2 + (centroid[1] - center_col)**2)
+                        else:  # square
+                            dist = max(abs(centroid[0] - center_row), abs(centroid[1] - center_col))
+
+                        if dist <= self.search_radius:
+                            candidates.append((region.label, dist))
+
+                    # Keep only the closest region
+                    if len(candidates) > 0:
+                        closest_label = min(candidates, key=lambda x: x[1])[0]
+                        signal_mask = labeled == closest_label
+                    else:
+                        signal_mask = np.zeros_like(chip, dtype=bool)
+        elif not np.any(signal_mask):
+            # No signal detected
+            signal_mask = np.zeros_like(chip, dtype=bool)
+
+        return signal_mask, float(noise_std)

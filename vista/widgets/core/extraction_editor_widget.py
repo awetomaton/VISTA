@@ -2,11 +2,12 @@
 import numpy as np
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QButtonGroup, QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QHBoxLayout, QLabel, QPushButton, QRadioButton, QSpinBox, QVBoxLayout, QWidget
+    QButtonGroup, QCheckBox, QDialog, QFormLayout,
+    QGroupBox, QHBoxLayout, QLabel, QPushButton, QRadioButton, QSpinBox, QVBoxLayout
 )
-from scipy import fft
 from skimage.measure import label, regionprops
+from vista.algorithms.detectors.cfar import CFAR
+from vista.widgets.common.cfar_config_widget import CFARConfigWidget
 
 
 class ExtractionEditorWidget(QDialog):
@@ -34,10 +35,6 @@ class ExtractionEditorWidget(QDialog):
         self.brush_size = 1
         self.paint_mode = True  # True = paint (add), False = clear (remove)
 
-        # CFAR kernel cache
-        self._kernel = None
-        self._kernel_fft_cache = {}
-
         self.init_ui()
 
     def init_ui(self):
@@ -54,37 +51,18 @@ class ExtractionEditorWidget(QDialog):
         info_group.setLayout(info_layout)
         layout.addWidget(info_group)
 
-        # CFAR parameters
-        cfar_group = QGroupBox("CFAR Parameters")
-        cfar_layout = QFormLayout()
+        # CFAR parameters widget
+        self.cfar_widget = CFARConfigWidget(
+            parent=self,
+            settings_prefix="ExtractionEditor/CFAR",
+            show_group_box=True
+        )
+        layout.addWidget(self.cfar_widget)
 
-        self.background_radius_spin = QSpinBox()
-        self.background_radius_spin.setRange(1, 100)
-        self.background_radius_spin.setValue(10)
-        cfar_layout.addRow("Background Radius:", self.background_radius_spin)
-
-        self.ignore_radius_spin = QSpinBox()
-        self.ignore_radius_spin.setRange(0, 100)
-        self.ignore_radius_spin.setValue(3)
-        cfar_layout.addRow("Ignore Radius:", self.ignore_radius_spin)
-
-        self.threshold_spin = QDoubleSpinBox()
-        self.threshold_spin.setRange(0.1, 20.0)
-        self.threshold_spin.setSingleStep(0.5)
-        self.threshold_spin.setDecimals(1)
-        self.threshold_spin.setValue(3.0)
-        cfar_layout.addRow("Threshold (σ):", self.threshold_spin)
-
-        self.annulus_shape_combo = QComboBox()
-        self.annulus_shape_combo.addItems(["circular", "square"])
-        cfar_layout.addRow("Annulus Shape:", self.annulus_shape_combo)
-
+        # Auto-detect button
         self.auto_detect_button = QPushButton("Auto-Detect Current Frame")
         self.auto_detect_button.clicked.connect(self.on_auto_detect)
-        cfar_layout.addRow(self.auto_detect_button)
-
-        cfar_group.setLayout(cfar_layout)
-        layout.addWidget(cfar_group)
+        layout.addWidget(self.auto_detect_button)
 
         # Paint mode
         paint_group = QGroupBox("Paint Mode")
@@ -227,23 +205,25 @@ class ExtractionEditorWidget(QDialog):
         if self.track is None or self.working_extraction is None:
             return
 
-        # Get current chip and parameters
+        # Get current chip and CFAR parameters
         chip = self.working_extraction['chips'][self.current_track_idx]
-        background_radius = self.background_radius_spin.value()
-        ignore_radius = self.ignore_radius_spin.value()
-        threshold_deviation = self.threshold_spin.value()
-        annulus_shape = self.annulus_shape_combo.currentText()
+        cfar_params = self.cfar_widget.get_config()
 
-        # Create kernel if parameters changed
-        self._update_kernel(background_radius, ignore_radius, annulus_shape)
+        # Create CFAR detector instance
+        cfar = CFAR(
+            background_radius=cfar_params['background_radius'],
+            ignore_radius=cfar_params['ignore_radius'],
+            threshold_deviation=cfar_params['threshold_deviation'],
+            annulus_shape=cfar_params['annulus_shape'],
+            search_radius=None  # No search radius filtering in editor
+        )
 
-        # Compute noise std
-        noise_std = self._compute_noise_std(chip)
-        self.working_extraction['noise_stds'][self.current_track_idx] = noise_std
+        # Use CFAR to detect signal pixels
+        signal_mask, noise_std = cfar.process_chip(chip)
 
-        # Detect signal pixels
-        signal_mask = self._detect_signal_pixels(chip, noise_std, threshold_deviation)
+        # Update working extraction
         self.working_extraction['signal_masks'][self.current_track_idx] = signal_mask
+        self.working_extraction['noise_stds'][self.current_track_idx] = noise_std
 
         # Emit signal to update viewer
         self.signal_mask_updated.emit()
@@ -251,124 +231,6 @@ class ExtractionEditorWidget(QDialog):
         # Update centroid preview if enabled
         if self.show_centroid_check.isChecked():
             self.update_centroid_preview()
-
-    def _update_kernel(self, background_radius, ignore_radius, annulus_shape):
-        """Create or update CFAR kernel"""
-        if annulus_shape == 'circular':
-            size = 2 * background_radius + 1
-            kernel = np.zeros((size, size), dtype=np.float32)
-            center = background_radius
-            y, x = np.ogrid[:size, :size]
-            distances = np.sqrt((x - center)**2 + (y - center)**2)
-            kernel[(distances <= background_radius) & (distances > ignore_radius)] = 1
-        else:  # square
-            size = 2 * background_radius + 1
-            kernel = np.zeros((size, size), dtype=np.float32)
-            center = background_radius
-            y, x = np.ogrid[:size, :size]
-            distances = np.maximum(np.abs(x - center), np.abs(y - center))
-            kernel[(distances <= background_radius) & (distances > ignore_radius)] = 1
-
-        self._kernel = kernel
-        self._kernel_fft_cache = {}  # Clear cache when kernel changes
-
-    def _compute_noise_std(self, chip):
-        """Compute noise standard deviation for chip"""
-        if self._kernel is None:
-            return np.nan
-
-        chip_clean = np.nan_to_num(chip, nan=0.0)
-        pad_size = self._kernel.shape[0] // 2
-        padded_chip = np.pad(chip_clean, pad_size, mode='edge')
-
-        # Convolve to get local stats
-        kernel_fft = self._get_kernel_fft(padded_chip.shape)
-        image_fft = fft.fft2(padded_chip)
-        local_sum = fft.ifft2(image_fft * kernel_fft).real
-
-        padded_chip_sq = padded_chip ** 2
-        image_sq_fft = fft.fft2(padded_chip_sq)
-        local_sum_sq = fft.ifft2(image_sq_fft * kernel_fft).real
-
-        n_pixels = np.sum(self._kernel)
-        local_mean = local_sum / n_pixels
-        local_mean_sq = local_sum_sq / n_pixels
-        local_variance = np.maximum(local_mean_sq - local_mean ** 2, 0)
-        local_std = np.sqrt(local_variance)
-
-        # Get center value
-        center_idx = padded_chip.shape[0] // 2
-        return local_std[center_idx, center_idx]
-
-    def _get_kernel_fft(self, image_shape):
-        """Get or compute kernel FFT for given image shape"""
-        if image_shape not in self._kernel_fft_cache:
-            # Shift kernel so its center is at position (0, 0) for correct FFT convolution
-            kernel_shifted = fft.ifftshift(self._kernel)
-
-            # Pad shifted kernel to match image shape
-            padded_kernel = np.zeros(image_shape, dtype=np.float32)
-            k_rows, k_cols = kernel_shifted.shape
-            padded_kernel[:k_rows, :k_cols] = kernel_shifted
-
-            # Compute and cache FFT
-            self._kernel_fft_cache[image_shape] = fft.fft2(padded_kernel)
-        return self._kernel_fft_cache[image_shape]
-
-    def _detect_signal_pixels(self, chip, noise_std, threshold_deviation):
-        """Detect signal pixels using CFAR"""
-        if self._kernel is None:
-            return np.zeros_like(chip, dtype=bool)
-
-        chip_clean = np.nan_to_num(chip, nan=0.0)
-        pad_size = self._kernel.shape[0] // 2
-        padded_chip = np.pad(chip_clean, pad_size, mode='edge')
-
-        # Calculate local mean
-        kernel_fft = self._get_kernel_fft(padded_chip.shape)
-        image_fft = fft.fft2(padded_chip)
-        local_sum = fft.ifft2(image_fft * kernel_fft).real
-        n_pixels = np.sum(self._kernel)
-        local_mean = local_sum / n_pixels
-        local_mean = local_mean[pad_size:-pad_size, pad_size:-pad_size]
-
-        # Apply threshold
-        threshold = local_mean + threshold_deviation * noise_std
-        signal_mask = chip_clean > threshold
-        signal_mask[np.isnan(chip)] = False
-
-        # Keep only the connected region closest to chip center
-        if np.any(signal_mask):
-            labeled = label(signal_mask)
-            if labeled.max() > 0:
-                # Find center of chip
-                chip_center_row = chip.shape[0] // 2
-                chip_center_col = chip.shape[1] // 2
-
-                # Check if center pixel is in a labeled region
-                center_label = labeled[chip_center_row, chip_center_col]
-
-                if center_label > 0:
-                    # Keep only the region containing the center
-                    signal_mask = labeled == center_label
-                else:
-                    # Find closest region to center
-                    regions = regionprops(labeled)
-                    min_distance = float('inf')
-                    closest_label = 0
-
-                    for region in regions:
-                        centroid = region.centroid
-                        distance = np.sqrt((centroid[0] - chip_center_row)**2 +
-                                         (centroid[1] - chip_center_col)**2)
-                        if distance < min_distance:
-                            min_distance = distance
-                            closest_label = region.label
-
-                    # Keep only the closest region
-                    signal_mask = labeled == closest_label
-
-        return signal_mask
 
     def paint_pixel(self, row, col, is_drag=False):
         """

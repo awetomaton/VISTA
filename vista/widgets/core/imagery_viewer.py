@@ -1307,10 +1307,16 @@ class ImageryViewer(QWidget):
         if self.extraction_editor is not None:
             self.extraction_editor.hide()
 
-        # Remove overlay
-        if self.extraction_overlay is not None:
-            self.plot_item.removeItem(self.extraction_overlay)
-            self.extraction_overlay = None
+        # Only remove overlay if not in view extraction mode
+        # If view mode is active, keep the overlay and update it
+        if self.extraction_view_mode:
+            # Update the overlay to show the view mode track's extraction
+            self._update_extraction_overlay()
+        else:
+            # Remove overlay completely
+            if self.extraction_overlay is not None:
+                self.plot_item.removeItem(self.extraction_overlay)
+                self.extraction_overlay = None
 
         # Update cursor
         self.update_cursor()
@@ -1357,6 +1363,9 @@ class ImageryViewer(QWidget):
                 correct_idx = int(np.where(frame_mask)[0][0])
                 if self.extraction_editor.current_track_idx != correct_idx:
                     self.extraction_editor.current_track_idx = correct_idx
+                    # Update UI elements (like centroid preview) for the new frame
+                    if self.extraction_editor.show_centroid_check.isChecked():
+                        self.extraction_editor.update_centroid_preview()
 
         signal_mask = self.extraction_editor.get_current_signal_mask()
         chip_position = self.extraction_editor.get_current_chip_position()

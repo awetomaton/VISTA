@@ -7,8 +7,8 @@ and optionally refines track coordinates using weighted centroids.
 """
 import numpy as np
 from numpy.typing import NDArray
-from scipy import fft
 from skimage.measure import label, regionprops
+from vista.algorithms.detectors.cfar import CFAR
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 
@@ -29,8 +29,8 @@ class TrackExtraction:
         Track object containing trajectory points
     imagery : Imagery
         Imagery object to extract chips from
-    chip_diameter : int
-        Diameter of square chips to extract (in pixels)
+    chip_radius : int
+        Radius of square chips to extract (in pixels). Total chip diameter will be 2*radius + 1
     background_radius : int
         Outer radius for background noise calculation (pixels)
     ignore_radius : int
@@ -39,6 +39,9 @@ class TrackExtraction:
         Number of standard deviations above mean for signal detection
     annulus_shape : str, optional
         Shape of the annulus ('circular' or 'square'), by default 'circular'
+    search_radius : int, optional
+        When specified, only keep signal blobs that have at least one pixel within the
+        central search region of this radius. By default None (keep all blobs)
     update_centroids : bool, optional
         If True, update track coordinates to signal blob centroids, by default False
     max_centroid_shift : float, optional
@@ -49,10 +52,8 @@ class TrackExtraction:
     ----------
     name : str
         Algorithm name ("Track Extraction")
-    kernel : ndarray
-        Pre-computed annular kernel for noise calculation
-    n_pixels : int
-        Number of pixels in the background annular region
+    chip_diameter : int
+        Computed chip diameter (2 * chip_radius + 1)
 
     Methods
     -------
@@ -79,80 +80,34 @@ class TrackExtraction:
 
     name = "Track Extraction"
 
-    def __init__(self, track: Track, imagery: Imagery, chip_diameter: int,
+    def __init__(self, track: Track, imagery: Imagery, chip_radius: int,
                  background_radius: int, ignore_radius: int, threshold_deviation: float,
-                 annulus_shape: str = 'circular', update_centroids: bool = False,
-                 max_centroid_shift: float = np.inf):
+                 annulus_shape: str = 'circular', search_radius: int = None,
+                 update_centroids: bool = False, max_centroid_shift: float = np.inf):
+        # Validate chip_radius
+        if not isinstance(chip_radius, int) or chip_radius <= 0:
+            raise ValueError(f"chip_radius must be a positive integer, got {chip_radius}")
+
         self.track = track
         self.imagery = imagery
-        self.chip_diameter = chip_diameter
+        self.chip_radius = chip_radius
+        self.chip_diameter = 2 * chip_radius + 1
         self.background_radius = background_radius
         self.ignore_radius = ignore_radius
         self.threshold_deviation = threshold_deviation
         self.annulus_shape = annulus_shape
+        self.search_radius = search_radius
         self.update_centroids = update_centroids
         self.max_centroid_shift = max_centroid_shift
 
-        # Pre-compute kernel for noise calculation
-        self.kernel = self._create_annular_kernel()
-        self.n_pixels = np.sum(self.kernel)
-
-        # Cache for kernel FFT at different image sizes
-        self._kernel_fft_cache = {}
-
-    def _create_annular_kernel(self):
-        """
-        Create an annular kernel (ring) for background noise calculation.
-
-        Returns
-        -------
-        ndarray
-            2D array with 1s in the annular region, 0s elsewhere
-        """
-        if self.annulus_shape == 'square':
-            return self._create_square_annular_kernel()
-        else:  # circular
-            return self._create_circular_annular_kernel()
-
-    def _create_circular_annular_kernel(self):
-        """
-        Create a circular annular kernel (ring) for background calculation.
-
-        Returns
-        -------
-        ndarray
-            2D array with 1s in the annular region, 0s elsewhere
-        """
-        size = 2 * self.background_radius + 1
-        kernel = np.zeros((size, size), dtype=np.float32)
-
-        center = self.background_radius
-        y, x = np.ogrid[:size, :size]
-        distances = np.sqrt((x - center)**2 + (y - center)**2)
-
-        kernel[(distances <= self.background_radius) & (distances > self.ignore_radius)] = 1
-
-        return kernel
-
-    def _create_square_annular_kernel(self):
-        """
-        Create a square annular kernel for background calculation.
-
-        Returns
-        -------
-        ndarray
-            2D array with 1s in the square annular region, 0s elsewhere
-        """
-        size = 2 * self.background_radius + 1
-        kernel = np.zeros((size, size), dtype=np.float32)
-
-        center = self.background_radius
-        y, x = np.ogrid[:size, :size]
-        distances = np.maximum(np.abs(x - center), np.abs(y - center))
-
-        kernel[(distances <= self.background_radius) & (distances > self.ignore_radius)] = 1
-
-        return kernel
+        # Create CFAR detector instance for chip processing
+        self.cfar_detector = CFAR(
+            background_radius=background_radius,
+            ignore_radius=ignore_radius,
+            threshold_deviation=threshold_deviation,
+            annulus_shape=annulus_shape,
+            search_radius=search_radius
+        )
 
     def _extract_chip(self, image: NDArray, row: float, col: float) -> NDArray:
         """
@@ -206,138 +161,6 @@ class TrackExtraction:
                 image[valid_row_start:valid_row_end, valid_col_start:valid_col_end]
 
         return chip
-
-    def _get_kernel_fft(self, image_shape):
-        """Get or compute kernel FFT for given image shape"""
-        if image_shape not in self._kernel_fft_cache:
-            # Shift kernel so its center is at position (0, 0) for correct FFT convolution
-            kernel_shifted = fft.ifftshift(self.kernel)
-
-            # Pad shifted kernel to match image shape
-            padded_kernel = np.zeros(image_shape, dtype=np.float32)
-            k_rows, k_cols = kernel_shifted.shape
-            padded_kernel[:k_rows, :k_cols] = kernel_shifted
-
-            # Compute and cache FFT
-            self._kernel_fft_cache[image_shape] = fft.fft2(padded_kernel)
-        return self._kernel_fft_cache[image_shape]
-
-    def _convolve_fft(self, image):
-        """Perform FFT-based convolution for noise calculation"""
-        kernel_fft = self._get_kernel_fft(image.shape)
-        image_fft = fft.fft2(image)
-        result_fft = image_fft * kernel_fft
-        result = fft.ifft2(result_fft).real
-        return result
-
-    def _compute_noise_std(self, chip: NDArray) -> float:
-        """
-        Compute noise standard deviation from background annulus.
-
-        Parameters
-        ----------
-        chip : NDArray
-            Image chip (may contain NaN values at edges)
-
-        Returns
-        -------
-        float
-            Noise standard deviation, or np.nan if cannot be computed
-        """
-        # Replace NaN with 0 for convolution (they won't contribute to statistics)
-        chip_clean = np.nan_to_num(chip, nan=0.0)
-
-        # Pad chip to accommodate kernel
-        pad_size = self.background_radius
-        padded_chip = np.pad(chip_clean, pad_size, mode='edge')
-
-        # Calculate local mean using convolution
-        local_sum = self._convolve_fft(padded_chip)
-        local_mean = local_sum / self.n_pixels
-
-        # Calculate local std
-        padded_chip_sq = padded_chip ** 2
-        local_sum_sq = self._convolve_fft(padded_chip_sq)
-        local_mean_sq = local_sum_sq / self.n_pixels
-        local_variance = local_mean_sq - local_mean ** 2
-        local_variance = np.maximum(local_variance, 0)
-        local_std = np.sqrt(local_variance)
-
-        # Get center value (noise std at chip center)
-        center_idx = padded_chip.shape[0] // 2
-        noise_std = local_std[center_idx, center_idx]
-
-        return noise_std
-
-    def _detect_signal_pixels(self, chip: NDArray, noise_std: float) -> NDArray:
-        """
-        Detect signal pixels in chip using CFAR-like thresholding.
-
-        Parameters
-        ----------
-        chip : NDArray
-            Image chip
-        noise_std : float
-            Noise standard deviation
-
-        Returns
-        -------
-        NDArray
-            Boolean mask of signal pixels
-        """
-        # Replace NaN with 0 for threshold comparison
-        chip_clean = np.nan_to_num(chip, nan=0.0)
-
-        # Compute local statistics for thresholding
-        pad_size = self.background_radius
-        padded_chip = np.pad(chip_clean, pad_size, mode='edge')
-
-        # Calculate local mean
-        local_sum = self._convolve_fft(padded_chip)
-        local_mean = local_sum / self.n_pixels
-
-        # Remove padding
-        local_mean = local_mean[pad_size:-pad_size, pad_size:-pad_size]
-
-        # Apply threshold
-        threshold = local_mean + self.threshold_deviation * noise_std
-        signal_mask = chip_clean > threshold
-
-        # Mask out NaN regions
-        signal_mask[np.isnan(chip)] = False
-
-        # Keep only the connected region closest to chip center
-        if np.any(signal_mask):
-            labeled = label(signal_mask)
-            if labeled.max() > 0:
-                # Find center of chip
-                chip_center_row = chip.shape[0] // 2
-                chip_center_col = chip.shape[1] // 2
-
-                # Check if center pixel is in a labeled region
-                center_label = labeled[chip_center_row, chip_center_col]
-
-                if center_label > 0:
-                    # Keep only the region containing the center
-                    signal_mask = labeled == center_label
-                else:
-                    # Find closest region to center
-                    regions = regionprops(labeled)
-                    min_distance = float('inf')
-                    closest_label = 0
-
-                    for region in regions:
-                        centroid = region.centroid
-                        distance = np.sqrt((centroid[0] - chip_center_row)**2 +
-                                         (centroid[1] - chip_center_col)**2)
-                        if distance < min_distance:
-                            min_distance = distance
-                            closest_label = region.label
-
-                    # Keep only the closest region
-                    signal_mask = labeled == closest_label
-
-        return signal_mask
 
     def _compute_weighted_centroid(self, chip: NDArray, signal_mask: NDArray) -> tuple:
         """
@@ -425,13 +248,14 @@ class TrackExtraction:
             chip = self._extract_chip(image, row, col)
             chips[i, :, :] = chip
 
-            # Compute noise std
-            noise_std = self._compute_noise_std(chip)
-            noise_stds[i] = noise_std
-
-            # Detect signal pixels
-            signal_mask = self._detect_signal_pixels(chip, noise_std)
+            # Use CFAR to detect signal pixels and compute noise std
+            chip_center = self.chip_diameter // 2
+            signal_mask, noise_std = self.cfar_detector.process_chip(
+                chip,
+                search_center=(chip_center, chip_center)
+            )
             signal_masks[i, :, :] = signal_mask
+            noise_stds[i] = noise_std
 
             # Update centroid if requested
             if self.update_centroids:

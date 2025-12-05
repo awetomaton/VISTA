@@ -1696,6 +1696,15 @@ class TracksPanel(QWidget):
 
     def on_extraction_complete(self, tracks, results_list):
         """Handle completion of track extraction"""
+        # Save currently selected track IDs before refreshing table
+        selected_track_ids = set()
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                selected_track_ids.add(track_id)
+
         # Update each track with extraction results
         for track, results in zip(tracks, results_list):
             # Store extraction metadata in track
@@ -1716,6 +1725,28 @@ class TracksPanel(QWidget):
         # Refresh the table and emit data changed signal
         self.refresh_tracks_table()
         self.data_changed.emit()
+
+        # Restore track selection after refresh
+        if selected_track_ids:
+            self.tracks_table.blockSignals(True)
+            for row in range(self.tracks_table.rowCount()):
+                track_name_item = self.tracks_table.item(row, 2)
+                if track_name_item:
+                    track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                    if track_id in selected_track_ids:
+                        # Select all columns in this row
+                        for col in range(self.tracks_table.columnCount()):
+                            item = self.tracks_table.item(row, col)
+                            if item:
+                                item.setSelected(True)
+            self.tracks_table.blockSignals(False)
+            # Manually trigger selection changed to update button states
+            self.on_track_selection_changed()
+
+        # Auto-enable "View Extraction" if exactly one track was extracted
+        if len(tracks) == 1 and not self.view_extraction_btn.isChecked():
+            self.view_extraction_btn.setChecked(True)
+            self.on_view_extraction_clicked(True)
 
         # Show status message
         main_window = self.window()
