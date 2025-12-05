@@ -29,6 +29,8 @@ from vista.widgets.algorithms.trackers.kalman_tracking_dialog import KalmanTrack
 from vista.widgets.algorithms.trackers.network_flow_tracking_dialog import NetworkFlowTrackingDialog
 from vista.widgets.algorithms.trackers.simple_tracking_dialog import SimpleTrackingDialog
 from vista.widgets.algorithms.trackers.tracklet_tracking_dialog import TrackletTrackingDialog
+from vista.widgets.algorithms.tracks.interpolation_dialog import TrackInterpolationDialog
+from vista.widgets.algorithms.tracks.savitzky_golay_dialog import SavitzkyGolayDialog
 from vista.widgets.algorithms.treatments import BiasRemovalWidget, NonUniformityCorrectionWidget
 from .data.data_loader import DataLoaderThread
 from .data.data_manager import DataManagerPanel
@@ -281,6 +283,20 @@ class VistaMainWindow(QMainWindow):
         non_uniformity_correction_action = QAction("Non-Uniformity Correction", self)
         non_uniformity_correction_action.triggered.connect(self.open_non_uniformity_correction_widget)
         treatment_menu.addAction(non_uniformity_correction_action)
+
+        # Filters menu
+        filters_menu = menubar.addMenu("Filters")
+
+        # Track Filters submenu
+        track_filters_menu = filters_menu.addMenu("Track Filters")
+
+        track_interpolator_action = QAction("Track Interpolator", self)
+        track_interpolator_action.triggered.connect(self.open_track_interpolation_dialog)
+        track_filters_menu.addAction(track_interpolator_action)
+
+        savitzky_golay_action = QAction("Savitzky-Golay Filter", self)
+        savitzky_golay_action.triggered.connect(self.open_savitzky_golay_dialog)
+        track_filters_menu.addAction(savitzky_golay_action)
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -1642,6 +1658,191 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
+
+    def open_track_interpolation_dialog(self):
+        """Open the Track Interpolation dialog for selected tracks"""
+        # Get selected tracks from tracks panel
+        selected_rows = list(set(index.row() for index in self.data_manager.tracks_panel.tracks_table.selectedIndexes()))
+
+        if not selected_rows:
+            QMessageBox.warning(
+                self,
+                "No Tracks Selected",
+                "Please select one or more tracks in the Tracks tab to interpolate.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Find the selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            tracker_item = self.data_manager.tracks_panel.tracks_table.item(row, 1)  # Tracker column
+            track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)  # Track name column
+
+            if not tracker_item or not track_name_item:
+                continue
+
+            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+            # Find the track
+            for tracker in self.viewer.trackers:
+                if id(tracker) == tracker_id:
+                    for t in tracker.tracks:
+                        if id(t) == track_id:
+                            selected_tracks.append(t)
+                            break
+                    break
+
+        if not selected_tracks:
+            QMessageBox.warning(
+                self,
+                "No Tracks Found",
+                "Could not find the selected tracks.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Open interpolation dialog
+        dialog = TrackInterpolationDialog(
+            parent=self,
+            tracks=selected_tracks
+        )
+        dialog.interpolation_complete.connect(self.on_track_interpolation_complete)
+        dialog.exec()
+
+    def on_track_interpolation_complete(self, original_tracks, results_list):
+        """Handle completion of track interpolation"""
+        # Save currently selected track IDs before refreshing table
+        selected_track_ids = set()
+        selected_rows = set(index.row() for index in self.data_manager.tracks_panel.tracks_table.selectedIndexes())
+        for row in selected_rows:
+            track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                selected_track_ids.add(track_id)
+
+        # Update each track with interpolated data
+        for original_track, results in zip(original_tracks, results_list):
+            interpolated_track = results['interpolated_track']
+
+            # Update the original track with interpolated data
+            original_track.frames = interpolated_track.frames
+            original_track.rows = interpolated_track.rows
+            original_track.columns = interpolated_track.columns
+            original_track.invalidate_caches()
+
+        # Refresh the table and update overlays
+        self.data_manager.tracks_panel.refresh_tracks_table()
+        self.data_manager.tracks_panel.data_changed.emit()
+        self.viewer.update_overlays()
+
+        # Restore track selection after refresh
+        if selected_track_ids:
+            self.data_manager.tracks_panel.tracks_table.blockSignals(True)
+            for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
+                track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
+                if track_name_item:
+                    track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                    if track_id in selected_track_ids:
+                        # Select all columns in this row
+                        for col in range(self.data_manager.tracks_panel.tracks_table.columnCount()):
+                            item = self.data_manager.tracks_panel.tracks_table.item(row, col)
+                            if item:
+                                item.setSelected(True)
+            self.data_manager.tracks_panel.tracks_table.blockSignals(False)
+
+    def open_savitzky_golay_dialog(self):
+        """Open the Savitzky-Golay Filter dialog for selected tracks"""
+        # Get selected tracks from tracks panel
+        selected_rows = list(set(index.row() for index in self.data_manager.tracks_panel.tracks_table.selectedIndexes()))
+
+        if not selected_rows:
+            QMessageBox.warning(
+                self,
+                "No Tracks Selected",
+                "Please select one or more tracks in the Tracks tab to filter.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Find the selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            tracker_item = self.data_manager.tracks_panel.tracks_table.item(row, 1)  # Tracker column
+            track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)  # Track name column
+
+            if not tracker_item or not track_name_item:
+                continue
+
+            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+
+            # Find the track
+            for tracker in self.viewer.trackers:
+                if id(tracker) == tracker_id:
+                    for t in tracker.tracks:
+                        if id(t) == track_id:
+                            selected_tracks.append(t)
+                            break
+                    break
+
+        if not selected_tracks:
+            QMessageBox.warning(
+                self,
+                "No Tracks Found",
+                "Could not find the selected tracks.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Open Savitzky-Golay filter dialog
+        dialog = SavitzkyGolayDialog(
+            parent=self,
+            tracks=selected_tracks
+        )
+        dialog.filtering_complete.connect(self.on_savitzky_golay_complete)
+        dialog.exec()
+
+    def on_savitzky_golay_complete(self, original_tracks, results_list):
+        """Handle completion of Savitzky-Golay filtering"""
+        # Save currently selected track IDs before refreshing table
+        selected_track_ids = set()
+        selected_rows = set(index.row() for index in self.data_manager.tracks_panel.tracks_table.selectedIndexes())
+        for row in selected_rows:
+            track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                selected_track_ids.add(track_id)
+
+        # Update each track with smoothed data
+        for original_track, results in zip(original_tracks, results_list):
+            smoothed_track = results['smoothed_track']
+
+            # Update the original track with smoothed data
+            original_track.rows = smoothed_track.rows
+            original_track.columns = smoothed_track.columns
+            original_track.invalidate_caches()
+
+        # Refresh the table and update overlays
+        self.data_manager.tracks_panel.refresh_tracks_table()
+        self.data_manager.tracks_panel.data_changed.emit()
+        self.viewer.update_overlays()
+
+        # Restore track selection after refresh
+        if selected_track_ids:
+            self.data_manager.tracks_panel.tracks_table.blockSignals(True)
+            for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
+                track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
+                if track_name_item:
+                    track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                    if track_id in selected_track_ids:
+                        # Select all columns in this row
+                        for col in range(self.data_manager.tracks_panel.tracks_table.columnCount()):
+                            item = self.data_manager.tracks_panel.tracks_table.item(row, col)
+                            if item:
+                                item.setSelected(True)
+            self.data_manager.tracks_panel.tracks_table.blockSignals(False)
 
     def load_data_programmatically(self, imagery=None, tracks=None, detections=None, sensors=None):
         """
