@@ -10,6 +10,7 @@ from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
+import uuid
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
 from vista.sensors.sensor import Sensor
@@ -119,6 +120,10 @@ class Track:
     _cached_brush: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph brush
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
     _brush_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached brush
+    uuid: str = field(init=None, default=None)
+    
+    def __post_init__(self):
+        self.uuid = uuid.uuid4()
     
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
