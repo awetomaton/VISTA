@@ -1,6 +1,8 @@
 """AOI (Area of Interest) / ROI (Region of Interest) data model"""
 from dataclasses import dataclass, field
 from typing import Optional
+
+import pandas as pd
 import pyqtgraph as pg
 
 
@@ -91,3 +93,67 @@ class AOI:
             visible=data.get('visible', True),
             color=data.get('color', 'y')
         )
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """
+        Convert AOI to DataFrame for CSV export
+
+        Returns
+        -------
+        pd.DataFrame
+            Single-row DataFrame containing AOI attributes
+        """
+        data = {
+            "Name": [self.name],
+            "X": [self.x],
+            "Y": [self.y],
+            "Width": [self.width],
+            "Height": [self.height],
+            "Visible": [self.visible],
+            "Color": [self.color]
+        }
+        return pd.DataFrame(data)
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, name: str = None):
+        """
+        Create AOI from DataFrame row
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame containing AOI data with required columns:
+            Name, X, Y, Width, Height, and optional Visible, Color
+        name : str, optional
+            Override name from DataFrame
+
+        Returns
+        -------
+        AOI
+            New AOI object
+
+        Raises
+        ------
+        ValueError
+            If required columns are missing
+        """
+        required_cols = ["Name", "X", "Y", "Width", "Height"]
+        missing = [col for col in required_cols if col not in df.columns]
+        if missing:
+            raise ValueError(f"DataFrame missing required columns: {missing}")
+
+        aoi_name = name if name is not None else df["Name"].iloc[0]
+        kwargs = {
+            "name": aoi_name,
+            "x": float(df["X"].iloc[0]),
+            "y": float(df["Y"].iloc[0]),
+            "width": float(df["Width"].iloc[0]),
+            "height": float(df["Height"].iloc[0])
+        }
+
+        if "Visible" in df.columns:
+            kwargs["visible"] = bool(df["Visible"].iloc[0])
+        if "Color" in df.columns:
+            kwargs["color"] = str(df["Color"].iloc[0])
+
+        return cls(**kwargs)

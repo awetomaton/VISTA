@@ -159,6 +159,10 @@ class VistaMainWindow(QMainWindow):
         load_tracks_action.triggered.connect(self.load_tracks_file)
         file_menu.addAction(load_tracks_action)
 
+        load_aois_action = QAction("Load AOIs (CSV)", self)
+        load_aois_action.triggered.connect(self.load_aois_file)
+        file_menu.addAction(load_aois_action)
+
         file_menu.addSeparator()
 
         simulate_action = QAction("Simulate", self)
@@ -1036,6 +1040,90 @@ class VistaMainWindow(QMainWindow):
 
         total_tracks = sum(len(tracker.tracks) for tracker in trackers)
         self.statusBar().showMessage(f"Loaded {len(trackers)} tracker(s) with {total_tracks} track(s)", 3000)
+
+    def load_aois_file(self):
+        """Load AOIs from CSV file(s) using background thread"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_aois_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Load AOIs", last_dir, "CSV Files (*.csv)"
+        )
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_aois_dir", str(Path(file_paths[0]).parent))
+
+            # Store file paths queue for sequential loading
+            self.aois_file_queue = list(file_paths)
+            self.aois_loaded_count = 0
+            self.aois_total_count = len(file_paths)
+
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading AOIs...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
+
+            # Start loading the first file
+            self._load_next_aois_file()
+
+    def _load_next_aois_file(self):
+        """Load the next AOI file from the queue"""
+        if not self.aois_file_queue:
+            # All files loaded
+            return
+
+        file_path = self.aois_file_queue.pop(0)
+
+        # Create and start loader thread
+        self.loader_thread = DataLoaderThread(file_path, 'aois', 'csv')
+        self.loader_thread.aois_loaded.connect(self.on_aois_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_aois_file_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except:
+                pass
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_aois_file_loaded(self):
+        """Handle completion of a single AOI file load"""
+        self.aois_loaded_count += 1
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # Check if there are more files to load
+        if self.aois_file_queue:
+            # Load next file
+            self._load_next_aois_file()
+        else:
+            # All files loaded, close progress dialog
+            self.on_loading_finished()
+
+            # Update status with total count
+            self.statusBar().showMessage(f"Loaded {self.aois_loaded_count} AOI file(s)", 3000)
+
+    def on_aois_loaded(self, aois):
+        """Handle AOIs loaded in background thread"""
+        # Add each AOI to the viewer
+        for aoi in aois:
+            self.viewer.add_aoi(aoi)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Loaded {len(aois)} AOI(s)", 3000)
 
     def on_loading_progress(self, message, current, total):
         """Handle progress updates from background loading thread"""

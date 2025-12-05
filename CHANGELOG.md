@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 - Added the ability to identify signal pixels for extracting track energy.
+- Added the ability to load AOIs and export selected AOIs.
 
 ## [1.6.4] - 2025-12-1
 
