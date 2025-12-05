@@ -80,8 +80,8 @@ class ImageryViewer(QWidget):
         # Persistent plot items (created once, reused for efficiency)
         # Use id(object) as key since dataclass objects are not hashable
         self.detector_plot_items = {}  # id(detector) -> ScatterPlotItem
-        self.track_path_items = {}  # id(track) -> PlotCurveItem (for track path)
-        self.track_marker_items = {}  # id(track) -> ScatterPlotItem (for current position)
+        self.track_path_items = {}  # track.uuid -> PlotCurveItem (for track path)
+        self.track_marker_items = {}  # track.uuid -> ScatterPlotItem (for current position)
 
         # Set of selected track IDs for highlighting
         self.selected_track_ids = set()
@@ -505,7 +505,7 @@ class ImageryViewer(QWidget):
         for tracker in self.trackers:
             for track in tracker.tracks:
                 # Get or create plot items for this track
-                track_id = id(track)
+                track_id = track.uuid
                 if track_id not in self.track_path_items:
                     path = pg.PlotCurveItem()
                     marker = pg.ScatterPlotItem()
@@ -623,7 +623,7 @@ class ImageryViewer(QWidget):
         Set which tracks are selected for highlighting.
 
         Args:
-            track_ids: Set of track IDs (id(track)) to highlight
+            track_ids: Set of track UUIDs (track.uuid) to highlight
         """
         self.selected_track_ids = track_ids
         self.update_overlays()

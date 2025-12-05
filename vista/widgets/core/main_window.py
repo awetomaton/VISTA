@@ -1683,13 +1683,13 @@ class VistaMainWindow(QMainWindow):
                 continue
 
             tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
             for tracker in self.viewer.trackers:
                 if id(tracker) == tracker_id:
                     for t in tracker.tracks:
-                        if id(t) == track_id:
+                        if t.uuid == track_uuid:
                             selected_tracks.append(t)
                             break
                     break
@@ -1776,13 +1776,13 @@ class VistaMainWindow(QMainWindow):
                 continue
 
             tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
             for tracker in self.viewer.trackers:
                 if id(tracker) == tracker_id:
                     for t in tracker.tracks:
-                        if id(t) == track_id:
+                        if t.uuid == track_uuid:
                             selected_tracks.append(t)
                             break
                     break
