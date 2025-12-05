@@ -148,7 +148,7 @@ class SensorsPanel(QWidget):
             for tracker in self.viewer.trackers:
                 tracks_to_delete = [track for track in tracker.tracks if track.sensor == sensor]
                 for track in tracks_to_delete:
-                    track_id = id(track)
+                    track_id = track.uuid
                     if track_id in self.viewer.track_path_items:
                         self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
                         del self.viewer.track_path_items[track_id]

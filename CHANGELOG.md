@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 - Added the ability to identify signal pixels for extracting track energy.
+- Added the ability to load AOIs and export selected AOIs.
+- Added Track Interpolator algorithm (Filters > Track Filters > Track Interpolator) to fill missing frames in track trajectories.
+- Added Savitzky-Golay Filter algorithm (Filters > Track Filters > Savitzky-Golay Filter) to smooth track trajectories.
+
+### Bug Fixes
+- Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
+  or creating new tracks, the new track would show as highlighted even though they were not yet selected.
 
 ## [1.6.4] - 2025-12-1
 

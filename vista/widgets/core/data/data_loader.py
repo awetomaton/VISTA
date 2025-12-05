@@ -7,6 +7,7 @@ import pandas as pd
 from PyQt6.QtCore import QThread, pyqtSignal
 import time
 
+from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
@@ -24,6 +25,7 @@ class DataLoaderThread(QThread):
     detectors_loaded = pyqtSignal(list)  # Emits list of Detector objects
     tracker_loaded = pyqtSignal(object)  # Emits Tracker object
     trackers_loaded = pyqtSignal(list)  # Emits list of Tracker objects
+    aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total)
@@ -34,7 +36,7 @@ class DataLoaderThread(QThread):
 
         Args:
             file_path: Path to the file to load
-            data_type: Type of data to load ('imagery', 'detections', 'tracks')
+            data_type: Type of data to load ('imagery', 'detections', 'tracks', 'aois')
             file_format: Format of the file ('hdf5' or 'csv')
             sensor: Optional Sensor object for track/detection association and geodetic mapping
             imagery: Optional Imagery object for time-to-frame mapping (for tracks with times)
@@ -60,6 +62,8 @@ class DataLoaderThread(QThread):
                 self._load_detections_csv()
             elif self.data_type == 'tracks':
                 self._load_tracks_csv()
+            elif self.data_type == 'aois':
+                self._load_aois_csv()
             else:
                 self.error_occurred.emit(f"Unknown data type: {self.data_type}")
         except Exception as e:
@@ -495,3 +499,34 @@ class DataLoaderThread(QThread):
 
         # Emit the loaded trackers
         self.trackers_loaded.emit(trackers)
+
+    def _load_aois_csv(self):
+        """Load AOIs from CSV file"""
+        df = pd.read_csv(self.file_path)
+
+        if self._cancelled:
+            return  # Exit early if cancelled
+
+        aois = []
+
+        # Get total number of AOIs for progress
+        num_aois = len(df)
+        self.progress_updated.emit("Loading AOIs...", 0, num_aois)
+
+        # Each row is an AOI
+        for idx in range(num_aois):
+            if self._cancelled:
+                return  # Exit early if cancelled
+
+            # Get single row as DataFrame
+            row_df = df.iloc[idx:idx+1]
+            aoi = AOI.from_dataframe(row_df)
+            aois.append(aoi)
+
+            self.progress_updated.emit("Loading AOIs...", idx + 1, num_aois)
+
+        if self._cancelled:
+            return  # Exit early if cancelled
+
+        # Emit the loaded AOIs
+        self.aois_loaded.emit(aois)

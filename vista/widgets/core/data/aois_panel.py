@@ -1,9 +1,12 @@
 """AOIs panel for data manager"""
+import pathlib
+
+import pandas as pd
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView
+    QFileDialog, QHeaderView, QHBoxLayout, QMessageBox,
+    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
-from PyQt6.QtCore import Qt, pyqtSignal
 
 
 class AOIsPanel(QWidget):
@@ -14,6 +17,7 @@ class AOIsPanel(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
+        self.settings = QSettings('VISTA', 'VISTA')
         self.init_ui()
 
     def init_ui(self):
@@ -27,6 +31,11 @@ class AOIsPanel(QWidget):
         self.delete_aoi_btn = QPushButton("Delete Selected")
         self.delete_aoi_btn.clicked.connect(self.delete_selected_aois)
         button_layout.addWidget(self.delete_aoi_btn)
+
+        # Export button
+        self.export_aoi_btn = QPushButton("Export Selection")
+        self.export_aoi_btn.clicked.connect(self.export_aois)
+        button_layout.addWidget(self.export_aoi_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -128,3 +137,72 @@ class AOIsPanel(QWidget):
 
         # Refresh table
         self.refresh_aois_table()
+
+    def export_aois(self):
+        """Export selected AOIs to CSV file"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.aois_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select AOI(s) to export.")
+            return
+
+        # Collect selected AOIs
+        aois_to_export = []
+        for row in selected_rows:
+            name_item = self.aois_table.item(row, 0)  # Name column
+            if name_item:
+                aoi_id = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the AOI by ID
+                for aoi in self.viewer.aois:
+                    if id(aoi) == aoi_id:
+                        aois_to_export.append(aoi)
+                        break
+
+        if not aois_to_export:
+            QMessageBox.warning(self, "No AOIs", "No AOIs found to export.")
+            return
+
+        # Get last used save file from settings
+        last_save_file = self.settings.value("last_aois_export_dir", "")
+        if last_save_file:
+            last_save_file = str(pathlib.Path(last_save_file) / "aois.csv")
+        else:
+            last_save_file = "aois.csv"
+
+        # Open file dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export AOIs",
+            last_save_file,
+            "CSV Files (*.csv);;All Files (*)",
+        )
+
+        if file_path:
+            self.settings.setValue("last_aois_export_dir", str(pathlib.Path(file_path).parent))
+            try:
+                # Combine selected AOI data
+                all_aois_df = pd.DataFrame()
+
+                for aoi in aois_to_export:
+                    aoi_df = aoi.to_dataframe()
+                    all_aois_df = pd.concat([all_aois_df, aoi_df], ignore_index=True)
+
+                # Save to CSV
+                all_aois_df.to_csv(file_path, index=False)
+
+                num_aois = len(aois_to_export)
+
+                # Build success message
+                message = f"Exported {num_aois} AOI(s) to:\n{file_path}"
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    message
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Export Error",
+                    f"Failed to export AOIs:\n{str(e)}"
+                )

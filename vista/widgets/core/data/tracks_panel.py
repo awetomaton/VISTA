@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import pathlib
+import uuid
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -320,7 +321,7 @@ class TracksPanel(QWidget):
 
             # Track name
             track_name_item = QTableWidgetItem(track.name)
-            track_name_item.setData(Qt.ItemDataRole.UserRole, id(track))
+            track_name_item.setData(Qt.ItemDataRole.UserRole, track.uuid)
             self.tracks_table.setItem(row, 2, track_name_item)
 
             # Labels
@@ -945,20 +946,20 @@ class TracksPanel(QWidget):
 
     def on_track_cell_changed(self, row, column):
         """Handle track cell changes"""
-        # Get the track ID from the name item
+        # Get the track UUID from the name item
         track_name_item = self.tracks_table.item(row, 2)  # Track name
         if not track_name_item:
             return
 
-        track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
-        if not track_id:
+        track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+        if not track_uuid:
             return
 
-        # Find the track by ID
+        # Find the track by UUID
         track = None
         for tracker in self.viewer.trackers:
             for t in tracker.tracks:
-                if id(t) == track_id:
+                if t.uuid == track_uuid:
                     track = t
                     break
             if track:
@@ -1206,7 +1207,7 @@ class TracksPanel(QWidget):
             # Get the track from this row
             name_item = self.tracks_table.item(row, 2)  # Track name column
             if name_item:
-                track_name = name_item.text()
+                track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
                 tracker_item = self.tracks_table.item(row, 1)  # Tracker column
                 tracker_name = tracker_item.text() if tracker_item else None
 
@@ -1214,9 +1215,9 @@ class TracksPanel(QWidget):
                 for tracker in self.viewer.trackers:
                     if tracker_name is None or tracker.name == tracker_name:
                         for track in tracker.tracks:
-                            if track.name == track_name:
+                            if track.uuid == track_uuid:
                                 tracks_to_merge.append(track)
-                                tracker_map[id(track)] = tracker
+                                tracker_map[track.uuid] = tracker
                                 break
 
         if len(tracks_to_merge) < 2:
@@ -1281,11 +1282,11 @@ class TracksPanel(QWidget):
 
         # Delete the original tracks
         for track in tracks_to_merge:
-            tracker = tracker_map[id(track)]
+            tracker = tracker_map[track.uuid]
             tracker.tracks.remove(track)
 
             # Remove plot items from viewer
-            track_id = id(track)
+            track_id = track.uuid
             if track_id in self.viewer.track_path_items:
                 self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
                 del self.viewer.track_path_items[track_id]
@@ -1329,7 +1330,7 @@ class TracksPanel(QWidget):
         if not name_item:
             return
 
-        track_name = name_item.text()
+        track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
         tracker_item = self.tracks_table.item(row, 1)  # Tracker column
         tracker_name = tracker_item.text() if tracker_item else None
 
@@ -1340,7 +1341,7 @@ class TracksPanel(QWidget):
         for tracker in self.viewer.trackers:
             if tracker_name is None or tracker.name == tracker_name:
                 for track in tracker.tracks:
-                    if track.name == track_name:
+                    if track.uuid == track_uuid:
                         track_to_split = track
                         parent_tracker = tracker
                         break
@@ -1437,7 +1438,7 @@ class TracksPanel(QWidget):
             # Get the track from this row
             name_item = self.tracks_table.item(row, 2)  # Track name column
             if name_item:
-                track_name = name_item.text()
+                track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
                 tracker_item = self.tracks_table.item(row, 1)  # Tracker column
                 tracker_name = tracker_item.text() if tracker_item else None
 
@@ -1445,7 +1446,7 @@ class TracksPanel(QWidget):
                 for tracker in self.viewer.trackers:
                     if tracker_name is None or tracker.name == tracker_name:
                         for track in tracker.tracks:
-                            if track.name == track_name:
+                            if track.uuid == track_uuid:
                                 tracks_to_delete.append((tracker, track))
                                 break
 
@@ -1454,7 +1455,7 @@ class TracksPanel(QWidget):
             tracker.tracks.remove(track)
 
             # Remove plot items from viewer
-            track_id = id(track)
+            track_id = track.uuid
             if track_id in self.viewer.track_path_items:
                 self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
                 del self.viewer.track_path_items[track_id]
@@ -1467,6 +1468,11 @@ class TracksPanel(QWidget):
 
         # Refresh table
         self.refresh_tracks_table()
+
+        # Clear selection in both table and viewer to prevent stale indices from being highlighted
+        self.tracks_table.clearSelection()
+        self.viewer.set_selected_tracks(set())
+
         self.data_changed.emit()
 
     def on_track_selection_changed(self):
@@ -1494,13 +1500,13 @@ class TracksPanel(QWidget):
                 track_name_item = self.tracks_table.item(row, 2)
                 if tracker_item and track_name_item:
                     tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-                    track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+                    track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
                     # Find the actual track object
                     for tracker in self.viewer.trackers:
                         if id(tracker) == tracker_id:
                             for t in tracker.tracks:
-                                if id(t) == track_id:
+                                if t.uuid == track_uuid:
                                     selected_track = t
                                     break
                             break
@@ -1531,7 +1537,7 @@ class TracksPanel(QWidget):
             # Get the track from this row
             name_item = self.tracks_table.item(row, 2)  # Track name column
             if name_item:
-                track_name = name_item.text()
+                track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
                 tracker_item = self.tracks_table.item(row, 1)  # Tracker column
                 tracker_name = tracker_item.text() if tracker_item else None
 
@@ -1539,8 +1545,8 @@ class TracksPanel(QWidget):
                 for tracker in self.viewer.trackers:
                     if tracker_name is None or tracker.name == tracker_name:
                         for track in tracker.tracks:
-                            if track.name == track_name:
-                                selected_track_ids.add(id(track))
+                            if track.uuid == track_uuid:
+                                selected_track_ids.add(track.uuid)
                                 break
 
         # Update viewer with selected tracks
@@ -1555,7 +1561,7 @@ class TracksPanel(QWidget):
         # Find the row in the tracks table that matches this track
         for row in range(self.tracks_table.rowCount()):
             track_name_item = self.tracks_table.item(row, 2)
-            if track_name_item and track_name_item.text() == track.name:
+            if track_name_item and track_name_item.data(Qt.ItemDataRole.UserRole) == track.uuid:
                 if ctrl_or_cmd_held:
                     # Add to selection (toggle if already selected)
                     if self.tracks_table.item(row, 0).isSelected():
@@ -1599,13 +1605,13 @@ class TracksPanel(QWidget):
 
             # Find the track
             tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             track = None
             for tracker in self.viewer.trackers:
                 if id(tracker) == tracker_id:
                     for t in tracker.tracks:
-                        if id(t) == track_id:
+                        if t.uuid == track_uuid:
                             track = t
                             break
                     break
@@ -1678,13 +1684,13 @@ class TracksPanel(QWidget):
                 continue
 
             tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
             for tracker in self.viewer.trackers:
                 if id(tracker) == tracker_id:
                     for t in tracker.tracks:
-                        if id(t) == track_id:
+                        if t.uuid == track_uuid:
                             selected_tracks.append(t)
                             break
                     break
@@ -1808,13 +1814,13 @@ class TracksPanel(QWidget):
 
             # Find the track
             tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             track = None
             for tracker in self.viewer.trackers:
                 if id(tracker) == tracker_id:
                     for t in tracker.tracks:
-                        if id(t) == track_id:
+                        if t.uuid == track_uuid:
                             track = t
                             break
                     break
@@ -1868,13 +1874,13 @@ class TracksPanel(QWidget):
 
             # Find the track
             tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
-            track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             track = None
             for tracker in self.viewer.trackers:
                 if id(tracker) == tracker_id:
                     for t in tracker.tracks:
-                        if id(t) == track_id:
+                        if t.uuid == track_uuid:
                             track = t
                             break
                     break
@@ -2036,7 +2042,7 @@ class TracksPanel(QWidget):
             for row in selected_rows:
                 track_name_item = self.tracks_table.item(row, 2)
                 if track_name_item:
-                    track_name = track_name_item.text()
+                    track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
                     tracker_item = self.tracks_table.item(row, 1)
                     tracker_name = tracker_item.text() if tracker_item else None
 
@@ -2044,7 +2050,7 @@ class TracksPanel(QWidget):
                     for tracker in self.viewer.trackers:
                         if tracker_name is None or tracker.name == tracker_name:
                             for track in tracker.tracks:
-                                if track.name == track_name:
+                                if track.uuid == track_uuid:
                                     tracks_to_copy.append((tracker, track))
                                     break
 
