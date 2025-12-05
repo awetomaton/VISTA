@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
   or creating new tracks, the new track would show as highlighted even though they were not yet selected.
+- Fixed bug where editing track names didn't actually update the underlying track object name
 
 ## [1.6.4] - 2025-12-1
 
