@@ -59,14 +59,14 @@ Issues = "https://github.com/hartzell-stephen-me/vista/issues"
 [project.gui-scripts]
 vista = "vista.__main__:main"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 exclude = ["scripts*", "notebooks*", "docs*", "data*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "vista.__version__"}
-
-[tool.setuptools.package-data]
-vista = ["icons/*.png", "icons/*.jpg"]
 
 [tool.black]
 line-length = 88
