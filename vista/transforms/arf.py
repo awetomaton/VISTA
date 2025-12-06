@@ -35,10 +35,10 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
     northish = north_pole - sensor_pos
     northish = northish / np.linalg.norm(northish)
 
-    # The projection of our northish vector onto the ARF X-axis (the global Z-axis)
+    # The projection of our northish vector onto the ARF X-axis
     proj_north_arfx = np.dot(arf_x, northish) * arf_x
 
-    # Remove the projection of the ARF X-axis from the global Z-axis to leave a vector pointing as north as it can while
+    # Remove the projection of the ARF X-axis on the northish vector to leave a vector pointing as north as it can while
     # still being orthogonal to the ARF X-axis
     arf_z = northish - proj_north_arfx
 
@@ -50,7 +50,7 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
     # Cross products can result in a non-normalized vector even with unit vector inputs, so we normalize this vector
     arf_y = arf_y / np.linalg.norm(arf_y)
     
-    # Let's convert our pointing vectors from the original example into ARF!
+    # Get the transformation matrix to convert from the global reference frame to the ARF reference frame
     global_to_arf_transformation_matrix = np.empty((3, 3))
     global_to_arf_transformation_matrix[0] = arf_x
     global_to_arf_transformation_matrix[1] = arf_y
