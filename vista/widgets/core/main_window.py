@@ -165,6 +165,10 @@ class VistaMainWindow(QMainWindow):
         load_aois_action.triggered.connect(self.load_aois_file)
         file_menu.addAction(load_aois_action)
 
+        load_shapefile_action = QAction("Load Shapefile", self)
+        load_shapefile_action.triggered.connect(self.load_shapefile)
+        file_menu.addAction(load_shapefile_action)
+
         file_menu.addSeparator()
 
         simulate_action = QAction("Simulate", self)
@@ -1140,6 +1144,68 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Loaded {len(aois)} AOI(s)", 3000)
+
+    def load_shapefile(self):
+        """Load shapefile(s) and add as features"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_shapefile_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Load Shapefile", last_dir, "Shapefiles (*.shp);;All Files (*)"
+        )
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_shapefile_dir", str(Path(file_paths[0]).parent))
+
+            try:
+                import shapefile
+            except ImportError:
+                QMessageBox.critical(
+                    self,
+                    "Import Error",
+                    "The 'pyshp' library is required to load shapefiles.\n\n"
+                    "Please install it using:\n"
+                    "pip install pyshp"
+                )
+                return
+
+            # Load each shapefile
+            for file_path in file_paths:
+                try:
+                    # Read the shapefile
+                    sf = shapefile.Reader(file_path)
+
+                    # Get the shapefile name from the file
+                    shapefile_name = Path(file_path).stem
+
+                    # Create a ShapefileFeature
+                    from vista.features import ShapefileFeature
+
+                    feature = ShapefileFeature(
+                        name=shapefile_name,
+                        feature_type="shapefile",
+                        geometry={
+                            'shapes': sf.shapes(),
+                            'records': sf.records(),
+                            'fields': sf.fields
+                        },
+                        properties={'file_path': str(file_path)}
+                    )
+
+                    # Add to viewer
+                    self.viewer.add_feature(feature)
+
+                except Exception as e:
+                    QMessageBox.critical(
+                        self,
+                        "Shapefile Load Error",
+                        f"Failed to load shapefile:\n{file_path}\n\nError: {str(e)}"
+                    )
+
+            # Refresh data manager
+            self.data_manager.refresh()
+            self.statusBar().showMessage(f"Loaded {len(file_paths)} shapefile(s)", 3000)
 
     def on_loading_progress(self, message, current, total):
         """Handle progress updates from background loading thread"""

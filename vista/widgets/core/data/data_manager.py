@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from .aois_panel import AOIsPanel
 from .detections_panel import DetectionsPanel
+from .features_panel import FeaturesPanel
 from .imagery_panel import ImageryPanel
 from .sensors_panel import SensorsPanel
 from .tracks_panel import TracksPanel
@@ -40,6 +41,7 @@ class DataManagerPanel(QWidget):
         self.tracks_panel = TracksPanel(self.viewer)
         self.detections_panel = DetectionsPanel(self.viewer)
         self.aois_panel = AOIsPanel(self.viewer)
+        self.features_panel = FeaturesPanel(self.viewer)
 
         # Connect panel signals
         self.sensors_panel.data_changed.connect(self.on_sensor_data_changed)
@@ -48,6 +50,7 @@ class DataManagerPanel(QWidget):
         self.tracks_panel.data_changed.connect(self.data_changed.emit)
         self.detections_panel.data_changed.connect(self.data_changed.emit)
         self.aois_panel.data_changed.connect(self.data_changed.emit)
+        self.features_panel.data_changed.connect(self.data_changed.emit)
 
         # Add panels as tabs
         self.tabs.addTab(self.sensors_panel, "Sensors")
@@ -55,6 +58,7 @@ class DataManagerPanel(QWidget):
         self.tabs.addTab(self.tracks_panel, "Tracks")
         self.tabs.addTab(self.detections_panel, "Detections")
         self.tabs.addTab(self.aois_panel, "AOIs")
+        self.tabs.addTab(self.features_panel, "Features")
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
@@ -83,6 +87,7 @@ class DataManagerPanel(QWidget):
         self.tracks_panel.refresh_tracks_table()
         self.detections_panel.refresh_detections_table()
         self.aois_panel.refresh_aois_table()
+        self.features_panel.refresh_features_table()
 
     def on_track_selected_in_viewer(self, track):
         """

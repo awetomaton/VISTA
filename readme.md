@@ -124,12 +124,19 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 - Actual FPS tracking display
 
 ### Data Manager Panel
-- Tabbed interface for managing Imagery, Tracks, and Detections
+- Tabbed interface for managing Imagery, Tracks, Detections, AOIs, and Features
 - Bulk property editing (visibility, colors, markers, sizes, line thickness)
 - **Label assignment and filtering**: Apply labels to tracks/detections and filter by label
 - Column filtering and sorting for tracks and detections
 - Real-time updates synchronized with visualization
 - Track editing with complete track toggle
+
+### Feature Support (Shapefiles and Placemarks)
+- **Shapefile Import**: Load ESRI shapefiles with polygons, polylines, points, and multipoints
+- **Placemark Creation**: Create point markers using pixel or geodetic coordinates
+- **Dual Coordinate Systems**: Automatic conversion between pixel and geodetic coordinates when geolocation is available
+- **Feature Management**: Toggle visibility, rename, and delete features
+- **Persistent Overlays**: Features don't change with time and display across all frames
 
 ### Geolocation Support
 - 4th-order polynomial geodetic coordinate conversion (Lat/Lon/Alt ↔ Row/Column)
@@ -768,6 +775,89 @@ AOIs allow you to define rectangular regions for focused algorithm processing (b
 - AOIs appear in the Data Manager
 - Toggle visibility to show/hide AOI rectangles on the display
 - Delete unwanted AOIs from the Data Manager
+
+### Working with Features (Shapefiles and Placemarks)
+
+VISTA supports persistent feature overlays that don't change with time, including shapefiles and placemarks.
+
+#### Loading Shapefiles
+
+**Menu Path:** `File → Load Shapefile`
+
+**Supported Geometry Types:**
+- Polygons (including multi-part polygons with holes)
+- Polylines (including multi-part polylines)
+- Points and MultiPoints
+- All Z and M variants (PolygonZ, PolyLineZ, etc.)
+
+**Workflow:**
+1. Select one or more `.shp` files from the file dialog
+2. Shapefiles appear in the **Features** tab of the Data Manager
+3. Each shapefile is displayed as a separate feature with all its geometries
+
+**Requirements:**
+- The `pyshp` library is required: `pip install pyshp`
+- Shapefile coordinates should be in pixel space (row/column) to match imagery
+
+#### Creating Placemarks
+
+Placemarks are point features that mark specific locations in your imagery using either pixel or geodetic coordinates.
+
+**Menu Path:** Features tab → **"Create Placemark"** button
+
+**Creating a Placemark:**
+
+1. **Load Imagery First**: Placemarks require loaded imagery
+2. **Open Create Placemark Dialog**:
+   - Go to the **Features** tab in the Data Manager
+   - Click the **"Create Placemark"** button
+
+3. **Enter Placemark Details**:
+   - **Name**: Descriptive name for the placemark (e.g., "Building A", "GCP-1")
+   - **Coordinate System**: Choose between two options
+
+4. **Option A: Using Pixel Coordinates (Row/Column)**
+   - Select "Pixel (Row/Column)" radio button
+   - Enter row and column coordinates
+   - If geolocation is available, geodetic coordinates are automatically calculated
+
+5. **Option B: Using Geodetic Coordinates (Lat/Lon/Alt)**
+   - **Note:** Only available if imagery has geolocation capability (`can_geolocate`)
+   - Select "Geodetic (Lat/Lon/Alt)" radio button
+   - Enter latitude (degrees), longitude (degrees), and altitude (km)
+   - Coordinates are automatically converted to pixel coordinates for display
+   - If location is outside the sensor's field of view, a warning is displayed
+
+6. **Save**: Click OK to create the placemark
+
+**Placemark Display:**
+- Circular marker (size 12) at the specified location
+- Text label showing the placemark name above the marker
+- Default color: yellow (customizable via feature.color)
+
+**Stored Data:**
+Each placemark stores both coordinate systems (when available):
+- **row/col**: Pixel coordinates (always stored)
+- **lat/lon/alt**: Geodetic coordinates (stored when geolocation is available)
+
+**Use Cases:**
+- **Marking Points of Interest**: Identify specific features in imagery
+- **Ground Control Points**: Mark known geodetic locations for calibration
+- **Target Locations**: Mark locations for analysis or tracking
+- **Reference Points**: Create landmarks for navigation in the imagery
+
+#### Managing Features
+
+**In the Features Tab:**
+- **Toggle Visibility**: Use checkboxes to show/hide individual features
+- **Rename Features**: Click on feature names to edit them
+- **Delete Features**: Select features and click "Delete Selected"
+- **View Feature Type**: See whether each feature is a shapefile or placemark
+
+**Feature Persistence:**
+- Features remain in the Data Manager until deleted
+- Feature visibility state is maintained independently
+- Multiple features can be loaded and managed simultaneously
 
 ### Detection Algorithms
 

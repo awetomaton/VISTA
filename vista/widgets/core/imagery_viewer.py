@@ -76,6 +76,7 @@ class ImageryViewer(QWidget):
         self.trackers = []  # List of Tracker objects
         self.tracks = []  # List of Track objects (for compatibility with sensor deletion)
         self.aois = []  # List of AOI objects
+        self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
         # Use id(object) as key since dataclass objects are not hashable
@@ -1078,6 +1079,194 @@ class ImageryViewer(QWidget):
 
         if aoi._text_item:
             aoi._text_item.setVisible(aoi.visible)
+
+    def add_feature(self, feature):
+        """Add a feature (shapefile, placemark, etc.) to the viewer"""
+        if feature not in self.features:
+            self.features.append(feature)
+            # Render the feature
+            self._render_feature(feature)
+
+    def remove_feature(self, feature):
+        """Remove a feature from the viewer"""
+        if feature in self.features:
+            # Remove all plot items associated with this feature
+            if feature._plot_items:
+                for item in feature._plot_items:
+                    self.plot_item.removeItem(item)
+                feature._plot_items = []
+
+            # Remove from list
+            self.features.remove(feature)
+
+    def update_feature_display(self, feature):
+        """Update feature display (name, visibility, color)"""
+        # Remove existing plot items
+        if feature._plot_items:
+            for item in feature._plot_items:
+                self.plot_item.removeItem(item)
+            feature._plot_items = []
+
+        # Re-render if visible
+        if feature.visible:
+            self._render_feature(feature)
+
+    def _render_feature(self, feature):
+        """Render a feature on the plot"""
+        if not feature.visible:
+            return
+
+        # Handle different feature types
+        if feature.feature_type == "shapefile":
+            self._render_shapefile(feature)
+        elif feature.feature_type == "placemark":
+            self._render_placemark(feature)
+
+    def _render_placemark(self, feature):
+        """Render a placemark feature"""
+        from vista.features import PlacemarkFeature
+
+        if not isinstance(feature, PlacemarkFeature):
+            return
+
+        geometry = feature.geometry
+        if not geometry or 'row' not in geometry or 'col' not in geometry:
+            return
+
+        row = geometry['row']
+        col = geometry['col']
+        color = pg.mkColor(feature.color)
+
+        # Create a larger marker for the placemark
+        scatter_item = pg.ScatterPlotItem(
+            x=[col], y=[row],
+            size=12,
+            pen=pg.mkPen(color, width=2),
+            brush=pg.mkBrush(color),
+            symbol='o'
+        )
+        self.plot_item.addItem(scatter_item)
+        feature._plot_items.append(scatter_item)
+
+        # Add text label for the placemark
+        text_item = pg.TextItem(feature.name, color=color, anchor=(0, 1))
+        text_item.setPos(col, row)
+        self.plot_item.addItem(text_item)
+        feature._plot_items.append(text_item)
+
+    def _render_shapefile(self, feature):
+        """Render a shapefile feature"""
+        from vista.features import ShapefileFeature
+
+        if not isinstance(feature, ShapefileFeature):
+            return
+
+        geometry = feature.geometry
+        if not geometry or 'shapes' not in geometry:
+            return
+
+        shapes = geometry['shapes']
+        color = pg.mkColor(feature.color)
+
+        # Render each shape in the shapefile
+        for shape in shapes:
+            shape_type = shape.shapeType
+
+            # Handle polygon shapes (5 = Polygon, 15 = PolygonZ, 25 = PolygonM)
+            if shape_type in [5, 15, 25]:
+                # Get all parts of the polygon
+                points = shape.points
+                parts = shape.parts if hasattr(shape, 'parts') else [0]
+
+                # Add ending index
+                parts = list(parts) + [len(points)]
+
+                # Draw each part (outer ring and holes)
+                for i in range(len(parts) - 1):
+                    start_idx = parts[i]
+                    end_idx = parts[i + 1]
+                    part_points = points[start_idx:end_idx]
+
+                    if len(part_points) > 0:
+                        # Convert to numpy array and separate x, y
+                        import numpy as np
+                        coords = np.array(part_points)
+                        x = coords[:, 0]
+                        y = coords[:, 1]
+
+                        # Close the polygon if not already closed
+                        if not (x[0] == x[-1] and y[0] == y[-1]):
+                            x = np.append(x, x[0])
+                            y = np.append(y, y[0])
+
+                        # Create plot item for this polygon part
+                        plot_item = pg.PlotCurveItem(x, y, pen=pg.mkPen(color, width=2))
+                        self.plot_item.addItem(plot_item)
+                        feature._plot_items.append(plot_item)
+
+            # Handle polyline shapes (3 = PolyLine, 13 = PolyLineZ, 23 = PolyLineM)
+            elif shape_type in [3, 13, 23]:
+                points = shape.points
+                parts = shape.parts if hasattr(shape, 'parts') else [0]
+
+                # Add ending index
+                parts = list(parts) + [len(points)]
+
+                # Draw each part
+                for i in range(len(parts) - 1):
+                    start_idx = parts[i]
+                    end_idx = parts[i + 1]
+                    part_points = points[start_idx:end_idx]
+
+                    if len(part_points) > 0:
+                        # Convert to numpy array and separate x, y
+                        import numpy as np
+                        coords = np.array(part_points)
+                        x = coords[:, 0]
+                        y = coords[:, 1]
+
+                        # Create plot item for this polyline part
+                        plot_item = pg.PlotCurveItem(x, y, pen=pg.mkPen(color, width=2))
+                        self.plot_item.addItem(plot_item)
+                        feature._plot_items.append(plot_item)
+
+            # Handle point shapes (1 = Point, 11 = PointZ, 21 = PointM)
+            elif shape_type in [1, 11, 21]:
+                points = shape.points
+                if len(points) > 0:
+                    import numpy as np
+                    coords = np.array(points)
+                    x = coords[:, 0]
+                    y = coords[:, 1]
+
+                    # Create scatter plot for points
+                    scatter_item = pg.ScatterPlotItem(
+                        x=x, y=y,
+                        size=8,
+                        pen=pg.mkPen(color, width=2),
+                        brush=pg.mkBrush(color)
+                    )
+                    self.plot_item.addItem(scatter_item)
+                    feature._plot_items.append(scatter_item)
+
+            # Handle multipoint shapes (8 = MultiPoint, 18 = MultiPointZ, 28 = MultiPointM)
+            elif shape_type in [8, 18, 28]:
+                points = shape.points
+                if len(points) > 0:
+                    import numpy as np
+                    coords = np.array(points)
+                    x = coords[:, 0]
+                    y = coords[:, 1]
+
+                    # Create scatter plot for points
+                    scatter_item = pg.ScatterPlotItem(
+                        x=x, y=y,
+                        size=8,
+                        pen=pg.mkPen(color, width=2),
+                        brush=pg.mkBrush(color)
+                    )
+                    self.plot_item.addItem(scatter_item)
+                    feature._plot_items.append(scatter_item)
 
     def start_track_creation(self):
         """Start track creation mode"""
