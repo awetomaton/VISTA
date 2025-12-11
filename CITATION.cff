@@ -12,8 +12,8 @@ authors:
     family-names: Hartzell
     email: shartzell@awetomaton.com
 identifiers:
-repository-code: 'https://github.com/awetomaton/vista'
-url: 'https://github.com/awetomaton/vista'
+repository-code: 'https://github.com/awetomaton/VISTA'
+url: 'https://github.com/awetomaton/VISTA'
 abstract: >-
   VISTA is a PyQt6-based desktop application for viewing, analyzing, and 
   managing multi-frame imagery datasets along with associated detection 

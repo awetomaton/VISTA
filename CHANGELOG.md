@@ -161,14 +161,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
-[1.7.0]: https://github.com/awetomaton/vista/releases/tag/1.7.0
-[1.6.4]: https://github.com/awetomaton/vista/releases/tag/1.6.4
-[1.6.3]: https://github.com/awetomaton/vista/releases/tag/1.6.3
-[1.6.2]: https://github.com/awetomaton/vista/releases/tag/1.6.2
-[1.6.1]: https://github.com/awetomaton/vista/releases/tag/1.6.1
-[1.6.0]: https://github.com/awetomaton/vista/releases/tag/1.6.0
-[1.5.0]: https://github.com/awetomaton/vista/releases/tag/1.5.0
-[1.4.0]: https://github.com/awetomaton/vista/releases/tag/1.4.0
-[1.3.0]: https://github.com/awetomaton/vista/releases/tag/1.3.0
-[1.2.0]: https://github.com/awetomaton/vista/releases/tag/1.2.0
-[1.1.0]: https://github.com/awetomaton/vista/releases/tag/1.1.0
+[1.6.4]: https://github.com/awetomaton/VISTA/releases/tag/1.6.4
+[1.6.3]: https://github.com/awetomaton/VISTA/releases/tag/1.6.3
+[1.6.2]: https://github.com/awetomaton/VISTA/releases/tag/1.6.2
+[1.6.1]: https://github.com/awetomaton/VISTA/releases/tag/1.6.1
+[1.6.0]: https://github.com/awetomaton/VISTA/releases/tag/1.6.0
+[1.5.0]: https://github.com/awetomaton/VISTA/releases/tag/1.5.0
+[1.4.0]: https://github.com/awetomaton/VISTA/releases/tag/1.4.0
+[1.3.0]: https://github.com/awetomaton/VISTA/releases/tag/1.3.0
+[1.2.0]: https://github.com/awetomaton/VISTA/releases/tag/1.2.0
+[1.1.0]: https://github.com/awetomaton/VISTA/releases/tag/1.1.0

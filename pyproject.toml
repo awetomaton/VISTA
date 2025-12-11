@@ -52,9 +52,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/awetomaton/vista"
-Repository = "https://github.com/awetomaton/vista"
-Issues = "https://github.com/awetomaton/vista/issues"
+Homepage = "https://github.com/awetomaton/VISTA"
+Repository = "https://github.com/awetomaton/VISTA"
+Issues = "https://github.com/awetomaton/VISTA/issues"
 
 [project.gui-scripts]
 vista = "vista.__main__:main"

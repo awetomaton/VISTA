@@ -1,4 +1,5 @@
 # VISTA - Visual Imagery Software Tool for Analysis
+## Now an open-source MIT-licensed Awetomaton project for the GEOINT community
 
 ![Logo](/vista/icons/logo-small.jpg)
 
@@ -181,7 +182,7 @@ app.exec()
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/awetomaton/vista.git
+git clone https://github.com/awetomaton/VISTA.git
 cd vista
 ```
 
