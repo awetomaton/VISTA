@@ -7,7 +7,7 @@ multi-frame imagery datasets along with associated detection and track overlays.
 
 __version__ = "1.6.4"
 __author__ = "Stephen Hartzell"
-__email__ = "hartzell.stephen@gmail.com"
+__email__ = "shartzell@awetomaton.com"
 
 # Expose version at package level
 __all__ = ["__version__", "__author__", "__email__"]
