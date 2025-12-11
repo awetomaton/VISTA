@@ -164,9 +164,10 @@ class PlacemarkDialog(QDialog):
                         np.array([row]),
                         np.array([col])
                     )
-                    lat = location.lat.deg[0]
-                    lon = location.lon.deg[0]
-                    alt = location.height.to(units.km).value[0]
+                    # Handle both scalar and array returns
+                    lat = np.atleast_1d(location.lat.deg)[0]
+                    lon = np.atleast_1d(location.lon.deg)[0]
+                    alt = np.atleast_1d(location.height.to(units.km).value)[0]
                 except Exception as e:
                     print(f"Warning: Could not convert pixel to geodetic: {e}")
 
@@ -193,8 +194,9 @@ class PlacemarkDialog(QDialog):
                     height=alt * units.km
                 )
                 rows, cols = self.viewer.imagery.sensor.geodetic_to_pixel(frame, location)
-                row = rows[0]
-                col = cols[0]
+                # Handle both scalar and array returns
+                row = np.atleast_1d(rows)[0]
+                col = np.atleast_1d(cols)[0]
 
                 if np.isnan(row) or np.isnan(col):
                     QMessageBox.warning(

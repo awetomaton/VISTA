@@ -846,6 +846,56 @@ Each placemark stores both coordinate systems (when available):
 - **Target Locations**: Mark locations for analysis or tracking
 - **Reference Points**: Create landmarks for navigation in the imagery
 
+#### Loading Placemarks from CSV
+
+**Menu Path:** `File → Load Placemarks (CSV)`
+
+You can bulk-load placemarks from CSV files in two coordinate formats:
+
+**Option 1: Pixel Coordinates**
+```csv
+Name,Row,Column
+Target Alpha,100.5,200.3
+Target Bravo,150.0,250.0
+Reference Point 1,200.5,300.8
+```
+
+**Required Columns:**
+- `Name` - Placemark name
+- `Row` - Pixel row coordinate
+- `Column` - Pixel column coordinate
+
+**Option 2: Geodetic Coordinates**
+```csv
+Name,Latitude,Longitude,Altitude
+GCP-1,40.0128,-105.0156,1.5
+GCP-2,40.0135,-105.0165,1.5
+Site A,40.0142,-105.0174,1.6
+```
+
+**Required Columns:**
+- `Name` - Placemark name
+- `Latitude` - Latitude in degrees
+- `Longitude` - Longitude in degrees
+
+**Optional Columns:**
+- `Altitude` - Altitude in km (defaults to 0.0)
+
+**Requirements for Geodetic Coordinates:**
+- Imagery must be loaded with geolocation capability
+- Locations outside the sensor's field of view are skipped with warnings
+
+**Workflow:**
+1. Prepare CSV file(s) with placemarks
+2. Load imagery (required for geodetic coordinates)
+3. Select **File → Load Placemarks (CSV)**
+4. Choose one or more CSV files
+5. Review any warnings about failed conversions
+6. Placemarks appear in the **Features** tab
+
+**Example Files:**
+See `data/placemarks/` directory for example CSV files and detailed documentation.
+
 #### Managing Features
 
 **In the Features Tab:**
