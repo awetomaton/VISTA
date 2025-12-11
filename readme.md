@@ -1,5 +1,5 @@
 # VISTA - Visual Imagery Software Tool for Analysis
-## Now an Open-Source MIT-Licensed Awetomaton Project for the GEOINT community
+## Now an open-source MIT-licensed Awetomaton project for the GEOINT community
 
 ![Logo](/vista/icons/logo-small.jpg)
 
