@@ -181,7 +181,7 @@ app.exec()
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/hartzell-stephen-me/vista.git
+git clone https://github.com/awetomaton/vista.git
 cd vista
 ```
 
