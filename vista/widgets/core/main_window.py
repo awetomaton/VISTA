@@ -209,7 +209,7 @@ class VistaMainWindow(QMainWindow):
         # Labels action
         manage_labels_action = QAction("Labels", self)
         manage_labels_action.triggered.connect(self.manage_labels)
-        menubar.addAction(manage_labels_action)
+        view_menu.addAction(manage_labels_action)
 
         # Image Processing menu
         image_processing_menu = menubar.addMenu("Image Processing")
