@@ -165,6 +165,14 @@ class VistaMainWindow(QMainWindow):
         load_aois_action.triggered.connect(self.load_aois_file)
         file_menu.addAction(load_aois_action)
 
+        load_shapefile_action = QAction("Load Shapefile", self)
+        load_shapefile_action.triggered.connect(self.load_shapefile)
+        file_menu.addAction(load_shapefile_action)
+
+        load_placemarks_action = QAction("Load Placemarks (CSV)", self)
+        load_placemarks_action.triggered.connect(self.load_placemarks_file)
+        file_menu.addAction(load_placemarks_action)
+
         file_menu.addSeparator()
 
         simulate_action = QAction("Simulate", self)
@@ -215,7 +223,7 @@ class VistaMainWindow(QMainWindow):
         # Labels action
         manage_labels_action = QAction("Labels", self)
         manage_labels_action.triggered.connect(self.manage_labels)
-        menubar.addAction(manage_labels_action)
+        view_menu.addAction(manage_labels_action)
 
         # Image Processing menu
         image_processing_menu = menubar.addMenu("Image Processing")
@@ -1140,6 +1148,214 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Loaded {len(aois)} AOI(s)", 3000)
+
+    def load_shapefile(self):
+        """Load shapefile(s) and add as features"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_shapefile_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Load Shapefile", last_dir, "Shapefiles (*.shp);;All Files (*)"
+        )
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_shapefile_dir", str(Path(file_paths[0]).parent))
+
+            try:
+                import shapefile
+            except ImportError:
+                QMessageBox.critical(
+                    self,
+                    "Import Error",
+                    "The 'pyshp' library is required to load shapefiles.\n\n"
+                    "Please install it using:\n"
+                    "pip install pyshp"
+                )
+                return
+
+            # Load each shapefile
+            for file_path in file_paths:
+                try:
+                    # Read the shapefile
+                    sf = shapefile.Reader(file_path)
+
+                    # Get the shapefile name from the file
+                    shapefile_name = Path(file_path).stem
+
+                    # Create a ShapefileFeature
+                    from vista.features import ShapefileFeature
+
+                    feature = ShapefileFeature(
+                        name=shapefile_name,
+                        feature_type="shapefile",
+                        geometry={
+                            'shapes': sf.shapes(),
+                            'records': sf.records(),
+                            'fields': sf.fields
+                        },
+                        properties={'file_path': str(file_path)}
+                    )
+
+                    # Add to viewer
+                    self.viewer.add_feature(feature)
+
+                except Exception as e:
+                    QMessageBox.critical(
+                        self,
+                        "Shapefile Load Error",
+                        f"Failed to load shapefile:\n{file_path}\n\nError: {str(e)}"
+                    )
+
+            # Refresh data manager
+            self.data_manager.refresh()
+            self.statusBar().showMessage(f"Loaded {len(file_paths)} shapefile(s)", 3000)
+
+    def load_placemarks_file(self):
+        """Load placemarks from CSV file(s)"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_placemarks_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Load Placemarks", last_dir, "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_placemarks_dir", str(Path(file_paths[0]).parent))
+
+            from vista.features import PlacemarkFeature
+            import numpy as np
+            from astropy.coordinates import EarthLocation
+            from astropy import units
+
+            total_loaded = 0
+            errors = []
+
+            # Load each CSV file
+            for file_path in file_paths:
+                try:
+                    # Read CSV file
+                    df = pd.read_csv(file_path)
+
+                    # Check required columns
+                    if 'Name' not in df.columns:
+                        errors.append(f"{Path(file_path).name}: Missing 'Name' column")
+                        continue
+
+                    # Determine coordinate system
+                    has_pixel = 'Row' in df.columns and 'Column' in df.columns
+                    has_geodetic = 'Latitude' in df.columns and 'Longitude' in df.columns
+
+                    if not has_pixel and not has_geodetic:
+                        errors.append(
+                            f"{Path(file_path).name}: Must have either (Row, Column) or (Latitude, Longitude) columns"
+                        )
+                        continue
+
+                    # Check if we need imagery for conversion
+                    if has_geodetic and not has_pixel:
+                        if not self.viewer.imagery:
+                            errors.append(
+                                f"{Path(file_path).name}: Geodetic coordinates require loaded imagery"
+                            )
+                            continue
+                        if not hasattr(self.viewer.imagery, 'sensor') or not self.viewer.imagery.sensor:
+                            errors.append(
+                                f"{Path(file_path).name}: Imagery has no sensor for coordinate conversion"
+                            )
+                            continue
+                        if not self.viewer.imagery.sensor.can_geolocate():
+                            errors.append(
+                                f"{Path(file_path).name}: Imagery sensor cannot perform geolocation"
+                            )
+                            continue
+
+                    # Process each placemark
+                    for idx, row_data in df.iterrows():
+                        try:
+                            name = str(row_data['Name'])
+
+                            if has_pixel:
+                                # Use pixel coordinates
+                                row = float(row_data['Row'])
+                                col = float(row_data['Column'])
+
+                                # Try to convert to geodetic if possible
+                                lat, lon, alt = None, None, None
+                                if self.viewer.imagery and hasattr(self.viewer.imagery, 'sensor'):
+                                    if self.viewer.imagery.sensor and self.viewer.imagery.sensor.can_geolocate():
+                                        try:
+                                            frame = self.viewer.current_frame_number
+                                            location = self.viewer.imagery.sensor.pixel_to_geodetic(
+                                                frame,
+                                                np.array([row]),
+                                                np.array([col])
+                                            )
+                                            lat = np.atleast_1d(location.lat.deg)[0]
+                                            lon = np.atleast_1d(location.lon.deg)[0]
+                                            alt = np.atleast_1d(location.height.to(units.km).value)[0]
+                                        except Exception:
+                                            pass  # Geodetic conversion optional
+
+                            else:
+                                # Use geodetic coordinates and convert to pixel
+                                lat = float(row_data['Latitude'])
+                                lon = float(row_data['Longitude'])
+                                alt = float(row_data.get('Altitude', 0.0))
+
+                                frame = self.viewer.current_frame_number
+                                location = EarthLocation(
+                                    lat=lat * units.deg,
+                                    lon=lon * units.deg,
+                                    height=alt * units.km
+                                )
+                                rows, cols = self.viewer.imagery.sensor.geodetic_to_pixel(frame, location)
+                                row = np.atleast_1d(rows)[0]
+                                col = np.atleast_1d(cols)[0]
+
+                                if np.isnan(row) or np.isnan(col):
+                                    errors.append(
+                                        f"{Path(file_path).name} row {idx}: Location outside sensor field of view"
+                                    )
+                                    continue
+
+                            # Create placemark feature
+                            feature = PlacemarkFeature(
+                                name=name,
+                                feature_type="placemark",
+                                geometry={
+                                    'row': row,
+                                    'col': col,
+                                    'lat': lat,
+                                    'lon': lon,
+                                    'alt': alt
+                                }
+                            )
+
+                            # Add to viewer
+                            self.viewer.add_feature(feature)
+                            total_loaded += 1
+
+                        except Exception as e:
+                            errors.append(f"{Path(file_path).name} row {idx}: {str(e)}")
+
+                except Exception as e:
+                    errors.append(f"{Path(file_path).name}: {str(e)}")
+
+            # Refresh data manager
+            self.data_manager.refresh()
+
+            # Show results
+            if total_loaded > 0:
+                self.statusBar().showMessage(f"Loaded {total_loaded} placemark(s)", 3000)
+
+            if errors:
+                error_msg = f"Loaded {total_loaded} placemark(s) with {len(errors)} error(s):\n\n"
+                error_msg += "\n".join(errors[:10])  # Show first 10 errors
+                if len(errors) > 10:
+                    error_msg += f"\n... and {len(errors) - 10} more errors"
+                QMessageBox.warning(self, "Placemark Loading Warnings", error_msg)
 
     def on_loading_progress(self, message, current, total):
         """Handle progress updates from background loading thread"""

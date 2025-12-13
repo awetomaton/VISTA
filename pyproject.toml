@@ -9,10 +9,10 @@ description = "A PyQt6-based desktop application for viewing, analyzing, and man
 readme = "readme.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Stephen Hartzell", email = "hartzell.stephen@gmail.com"}
+    {name = "Stephen Hartzell", email = "shartzell@awetomaton.com"}
 ]
 maintainers = [
-    {name = "Stephen Hartzell", email = "hartzell.stephen@gmail.com"}
+    {name = "Stephen Hartzell", email = "shartzell@awetomaton.com"}
 ]
 keywords = ["VISTA", "tracking", "detection", "imagery", "PyQt6", "scientific", "analysis"]
 classifiers = [
@@ -52,9 +52,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hartzell-stephen-me/vista"
-Repository = "https://github.com/hartzell-stephen-me/vista"
-Issues = "https://github.com/hartzell-stephen-me/vista/issues"
+Homepage = "https://github.com/awetomaton/VISTA"
+Repository = "https://github.com/awetomaton/VISTA"
+Issues = "https://github.com/awetomaton/VISTA/issues"
 
 [project.gui-scripts]
 vista = "vista.__main__:main"

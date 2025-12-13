@@ -3,6 +3,8 @@ from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,  QVBoxLayout)
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
+from vista.utils.labels_fixture import load_labels_from_fixture
+
 
 class LabelsManagerDialog(QDialog):
     """Dialog for managing track labels"""
@@ -68,10 +70,23 @@ class LabelsManagerDialog(QDialog):
         self.resize(400, 400)
 
     def load_labels(self):
-        """Load labels from settings"""
+        """Load labels from settings and VISTA_LABELS fixture"""
         labels = self.settings.value("labels", [])
         if labels is None:
             labels = []
+
+        # Merge with fixture labels from VISTA_LABELS environment variable
+        fixture_labels = load_labels_from_fixture()
+        if fixture_labels:
+            # Use a set to avoid duplicates (case-insensitive comparison)
+            existing_lower = {label.lower() for label in labels}
+            for fixture_label in fixture_labels:
+                if fixture_label.lower() not in existing_lower:
+                    labels.append(fixture_label)
+                    existing_lower.add(fixture_label.lower())
+            # Save the merged labels back to settings
+            self.settings.setValue("labels", labels)
+
         self.labels_list.clear()
         for label in sorted(labels):
             self.labels_list.addItem(label)
@@ -150,9 +165,19 @@ class LabelsManagerDialog(QDialog):
 
     @staticmethod
     def get_available_labels():
-        """Get list of all available labels from settings"""
+        """Get list of all available labels from settings and VISTA_LABELS fixture"""
         settings = QSettings("VISTA", "TrackLabels")
         labels = settings.value("labels", [])
         if labels is None:
             labels = []
+
+        # Merge with fixture labels from VISTA_LABELS environment variable
+        fixture_labels = load_labels_from_fixture()
+        if fixture_labels:
+            existing_lower = {label.lower() for label in labels}
+            for fixture_label in fixture_labels:
+                if fixture_label.lower() not in existing_lower:
+                    labels.append(fixture_label)
+                    existing_lower.add(fixture_label.lower())
+
         return sorted(labels)

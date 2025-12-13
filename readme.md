@@ -1,10 +1,15 @@
 # VISTA - Visual Imagery Software Tool for Analysis
+## Now an open-source MIT-licensed Awetomaton project for the GEOINT community
 
 ![Logo](/vista/icons/logo-small.jpg)
 
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
+<<<<<<< HEAD
 ![Version](https://img.shields.io/badge/version-1.7.0-blue)
+=======
+![Version](https://img.shields.io/badge/version-1.6.5-blue)
+>>>>>>> main
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
@@ -124,12 +129,19 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 - Actual FPS tracking display
 
 ### Data Manager Panel
-- Tabbed interface for managing Imagery, Tracks, and Detections
+- Tabbed interface for managing Imagery, Tracks, Detections, AOIs, and Features
 - Bulk property editing (visibility, colors, markers, sizes, line thickness)
 - **Label assignment and filtering**: Apply labels to tracks/detections and filter by label
 - Column filtering and sorting for tracks and detections
 - Real-time updates synchronized with visualization
 - Track editing with complete track toggle
+
+### Feature Support (Shapefiles and Placemarks)
+- **Shapefile Import**: Load ESRI shapefiles with polygons, polylines, points, and multipoints
+- **Placemark Creation**: Create point markers using pixel or geodetic coordinates
+- **Dual Coordinate Systems**: Automatic conversion between pixel and geodetic coordinates when geolocation is available
+- **Feature Management**: Toggle visibility, rename, and delete features
+- **Persistent Overlays**: Features don't change with time and display across all frames
 
 ### Geolocation Support
 - 4th-order polynomial geodetic coordinate conversion (Lat/Lon/Alt ↔ Row/Column)
@@ -174,7 +186,7 @@ app.exec()
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/hartzell-stephen-me/vista.git
+git clone https://github.com/awetomaton/VISTA.git
 cd vista
 ```
 
@@ -725,6 +737,58 @@ The Labels Manager provides centralized control over all labels in your project:
 - When loading CSV files with a "Label" column, labels are automatically imported
 - Labels persist across VISTA sessions
 
+#### Pre-configured Labels via Environment Variable
+
+The `VISTA_LABELS` environment variable allows you to pre-configure labels that will be automatically loaded when VISTA starts. This is useful for:
+- Establishing consistent labeling schemes across teams
+- Setting up standardized classification workflows
+- Automating label setup in scripts or CI/CD pipelines
+
+**Supported Formats:**
+
+1. **CSV File Path**: Point to a CSV file containing labels
+   ```bash
+   export VISTA_LABELS="/path/to/labels.csv"
+   ```
+
+   CSV format with header:
+   ```csv
+   label
+   Aircraft
+   Satellite
+   Bird
+   Debris
+   ```
+
+   Or simple format (one label per line):
+   ```csv
+   Aircraft
+   Satellite
+   Bird
+   Debris
+   ```
+
+2. **JSON File Path**: Point to a JSON file containing an array of labels
+   ```bash
+   export VISTA_LABELS="/path/to/labels.json"
+   ```
+
+   JSON format:
+   ```json
+   ["Aircraft", "Satellite", "Bird", "Debris"]
+   ```
+
+3. **Comma-Separated Values**: Specify labels directly in the environment variable
+   ```bash
+   export VISTA_LABELS="Aircraft,Satellite,Bird,Debris"
+   ```
+
+**Behavior:**
+- Fixture labels are merged with any existing labels in VISTA's settings
+- Duplicate labels are ignored (case-insensitive comparison)
+- Once merged, labels are persisted to settings and remain available even if the environment variable is removed
+- Labels can still be managed (added/deleted) through the Labels Manager UI
+
 #### Common Labeling Workflows
 
 **Ground Truth Annotation:**
@@ -768,6 +832,139 @@ AOIs allow you to define rectangular regions for focused algorithm processing (b
 - AOIs appear in the Data Manager
 - Toggle visibility to show/hide AOI rectangles on the display
 - Delete unwanted AOIs from the Data Manager
+
+### Working with Features (Shapefiles and Placemarks)
+
+VISTA supports persistent feature overlays that don't change with time, including shapefiles and placemarks.
+
+#### Loading Shapefiles
+
+**Menu Path:** `File → Load Shapefile`
+
+**Supported Geometry Types:**
+- Polygons (including multi-part polygons with holes)
+- Polylines (including multi-part polylines)
+- Points and MultiPoints
+- All Z and M variants (PolygonZ, PolyLineZ, etc.)
+
+**Workflow:**
+1. Select one or more `.shp` files from the file dialog
+2. Shapefiles appear in the **Features** tab of the Data Manager
+3. Each shapefile is displayed as a separate feature with all its geometries
+
+**Requirements:**
+- The `pyshp` library is required: `pip install pyshp`
+- Shapefile coordinates should be in pixel space (row/column) to match imagery
+
+#### Creating Placemarks
+
+Placemarks are point features that mark specific locations in your imagery using either pixel or geodetic coordinates.
+
+**Menu Path:** Features tab → **"Create Placemark"** button
+
+**Creating a Placemark:**
+
+1. **Load Imagery First**: Placemarks require loaded imagery
+2. **Open Create Placemark Dialog**:
+   - Go to the **Features** tab in the Data Manager
+   - Click the **"Create Placemark"** button
+
+3. **Enter Placemark Details**:
+   - **Name**: Descriptive name for the placemark (e.g., "Building A", "GCP-1")
+   - **Coordinate System**: Choose between two options
+
+4. **Option A: Using Pixel Coordinates (Row/Column)**
+   - Select "Pixel (Row/Column)" radio button
+   - Enter row and column coordinates
+   - If geolocation is available, geodetic coordinates are automatically calculated
+
+5. **Option B: Using Geodetic Coordinates (Lat/Lon/Alt)**
+   - **Note:** Only available if imagery has geolocation capability (`can_geolocate`)
+   - Select "Geodetic (Lat/Lon/Alt)" radio button
+   - Enter latitude (degrees), longitude (degrees), and altitude (km)
+   - Coordinates are automatically converted to pixel coordinates for display
+   - If location is outside the sensor's field of view, a warning is displayed
+
+6. **Save**: Click OK to create the placemark
+
+**Placemark Display:**
+- Circular marker (size 12) at the specified location
+- Text label showing the placemark name above the marker
+- Default color: yellow (customizable via feature.color)
+
+**Stored Data:**
+Each placemark stores both coordinate systems (when available):
+- **row/col**: Pixel coordinates (always stored)
+- **lat/lon/alt**: Geodetic coordinates (stored when geolocation is available)
+
+**Use Cases:**
+- **Marking Points of Interest**: Identify specific features in imagery
+- **Ground Control Points**: Mark known geodetic locations for calibration
+- **Target Locations**: Mark locations for analysis or tracking
+- **Reference Points**: Create landmarks for navigation in the imagery
+
+#### Loading Placemarks from CSV
+
+**Menu Path:** `File → Load Placemarks (CSV)`
+
+You can bulk-load placemarks from CSV files in two coordinate formats:
+
+**Option 1: Pixel Coordinates**
+```csv
+Name,Row,Column
+Target Alpha,100.5,200.3
+Target Bravo,150.0,250.0
+Reference Point 1,200.5,300.8
+```
+
+**Required Columns:**
+- `Name` - Placemark name
+- `Row` - Pixel row coordinate
+- `Column` - Pixel column coordinate
+
+**Option 2: Geodetic Coordinates**
+```csv
+Name,Latitude,Longitude,Altitude
+GCP-1,40.0128,-105.0156,1.5
+GCP-2,40.0135,-105.0165,1.5
+Site A,40.0142,-105.0174,1.6
+```
+
+**Required Columns:**
+- `Name` - Placemark name
+- `Latitude` - Latitude in degrees
+- `Longitude` - Longitude in degrees
+
+**Optional Columns:**
+- `Altitude` - Altitude in km (defaults to 0.0)
+
+**Requirements for Geodetic Coordinates:**
+- Imagery must be loaded with geolocation capability
+- Locations outside the sensor's field of view are skipped with warnings
+
+**Workflow:**
+1. Prepare CSV file(s) with placemarks
+2. Load imagery (required for geodetic coordinates)
+3. Select **File → Load Placemarks (CSV)**
+4. Choose one or more CSV files
+5. Review any warnings about failed conversions
+6. Placemarks appear in the **Features** tab
+
+**Example Files:**
+See `data/placemarks/` directory for example CSV files and detailed documentation.
+
+#### Managing Features
+
+**In the Features Tab:**
+- **Toggle Visibility**: Use checkboxes to show/hide individual features
+- **Rename Features**: Click on feature names to edit them
+- **Delete Features**: Select features and click "Delete Selected"
+- **View Feature Type**: See whether each feature is a shapefile or placemark
+
+**Feature Persistence:**
+- Features remain in the Data Manager until deleted
+- Feature visibility state is maintained independently
+- Multiple features can be loaded and managed simultaneously
 
 ### Detection Algorithms
 
