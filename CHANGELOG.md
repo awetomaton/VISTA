@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - 2025-12-13
+
+### New Features
+- Added `VISTA_LABELS` environment variable to pre-configure labels from CSV files, JSON files, or comma-separated values
+
+### Improvements
+- Moved label management into view menu due to issues with actions on primary app menu on iOS
+
 ## [1.6.4] - 2025-12-1
 
 ### Improvements
@@ -148,6 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[1.6.5]: https://github.com/awetomaton/VISTA/releases/tag/1.6.5
 [1.6.4]: https://github.com/awetomaton/VISTA/releases/tag/1.6.4
 [1.6.3]: https://github.com/awetomaton/VISTA/releases/tag/1.6.3
 [1.6.2]: https://github.com/awetomaton/VISTA/releases/tag/1.6.2

@@ -5,7 +5,7 @@
 
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
-![Version](https://img.shields.io/badge/version-1.6.4-blue)
+![Version](https://img.shields.io/badge/version-1.6.5-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
@@ -725,6 +725,58 @@ The Labels Manager provides centralized control over all labels in your project:
 - When exporting tracks/detections to CSV, labels are included in the "Label" column
 - When loading CSV files with a "Label" column, labels are automatically imported
 - Labels persist across VISTA sessions
+
+#### Pre-configured Labels via Environment Variable
+
+The `VISTA_LABELS` environment variable allows you to pre-configure labels that will be automatically loaded when VISTA starts. This is useful for:
+- Establishing consistent labeling schemes across teams
+- Setting up standardized classification workflows
+- Automating label setup in scripts or CI/CD pipelines
+
+**Supported Formats:**
+
+1. **CSV File Path**: Point to a CSV file containing labels
+   ```bash
+   export VISTA_LABELS="/path/to/labels.csv"
+   ```
+
+   CSV format with header:
+   ```csv
+   label
+   Aircraft
+   Satellite
+   Bird
+   Debris
+   ```
+
+   Or simple format (one label per line):
+   ```csv
+   Aircraft
+   Satellite
+   Bird
+   Debris
+   ```
+
+2. **JSON File Path**: Point to a JSON file containing an array of labels
+   ```bash
+   export VISTA_LABELS="/path/to/labels.json"
+   ```
+
+   JSON format:
+   ```json
+   ["Aircraft", "Satellite", "Bird", "Debris"]
+   ```
+
+3. **Comma-Separated Values**: Specify labels directly in the environment variable
+   ```bash
+   export VISTA_LABELS="Aircraft,Satellite,Bird,Debris"
+   ```
+
+**Behavior:**
+- Fixture labels are merged with any existing labels in VISTA's settings
+- Duplicate labels are ignored (case-insensitive comparison)
+- Once merged, labels are persisted to settings and remain available even if the environment variable is removed
+- Labels can still be managed (added/deleted) through the Labels Manager UI
 
 #### Common Labeling Workflows
 
