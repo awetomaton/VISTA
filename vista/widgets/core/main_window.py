@@ -108,6 +108,7 @@ class VistaMainWindow(QMainWindow):
         # Connect viewer signals to data manager
         self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
+        self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
 
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
@@ -395,6 +396,18 @@ class VistaMainWindow(QMainWindow):
         self.interactive_mode_group.addAction(self.select_detections_action)
         toolbar.addAction(self.select_detections_action)
 
+        # Lasso Select action
+        if darkdetect.isDark():
+            self.lasso_select_action = QAction(self.icons.lasso_select_light, "Lasso Select", self)
+        else:
+            self.lasso_select_action = QAction(self.icons.lasso_select_dark, "Lasso Select", self)
+        self.lasso_select_action.setCheckable(True)
+        self.lasso_select_action.setChecked(False)
+        self.lasso_select_action.setToolTip("Draw a lasso to select tracks, detections, and features wholly contained within.")
+        self.lasso_select_action.toggled.connect(self.on_lasso_select_toggled)
+        self.interactive_mode_group.addAction(self.lasso_select_action)
+        toolbar.addAction(self.lasso_select_action)
+
     def create_interactive_mode_action_group(self):
         """
         Create action group for mutually exclusive interactive modes.
@@ -431,6 +444,8 @@ class VistaMainWindow(QMainWindow):
                 elif action == self.select_detections_action:
                     self.viewer.set_detection_selection_mode(False)
                     self.data_manager.detections_panel.clear_detection_selection()
+                elif action == self.lasso_select_action:
+                    self.viewer.set_lasso_selection_mode(False)
 
                 # Now uncheck the action without triggering signals
                 action.blockSignals(True)
@@ -587,6 +602,57 @@ class VistaMainWindow(QMainWindow):
             # Clear selected detections in panel
             self.data_manager.detections_panel.clear_detection_selection()
             self.statusBar().showMessage("Detection selection mode disabled", 3000)
+
+    def on_lasso_select_toggled(self, checked):
+        """Handle Lasso Select toggle"""
+        if checked:
+            # Deactivate all other interactive modes
+            self.deactivate_all_interactive_modes(except_action=self.lasso_select_action)
+
+            # Check if imagery is loaded
+            if self.viewer.imagery is None:
+                QMessageBox.warning(
+                    self,
+                    "No Imagery",
+                    "Please load imagery before using lasso selection.",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.lasso_select_action.setChecked(False)
+                return
+
+            # Enable lasso selection mode in viewer
+            self.viewer.set_lasso_selection_mode(True)
+            self.statusBar().showMessage(
+                "Lasso selection mode: Click and drag to draw a selection area. Click again to complete.", 0
+            )
+        else:
+            # Disable lasso selection mode
+            self.viewer.set_lasso_selection_mode(False)
+            self.statusBar().showMessage("Lasso selection mode disabled", 3000)
+
+    def on_lasso_selection_completed(self, selected_items):
+        """Handle lasso selection completion"""
+        # Update track table selection
+        if selected_items['tracks']:
+            self.data_manager.tabs.setCurrentIndex(2)  # Switch to tracks tab
+            track_uuids = {track.uuid for track in selected_items['tracks']}
+            self.data_manager.tracks_panel.select_tracks_by_uuid(track_uuids)
+
+        # Update detection selection in panel
+        if selected_items['detections']:
+            self.data_manager.detections_panel.on_detections_selected_in_viewer(selected_items['detections'])
+
+        # Update feature selection in panel
+        if selected_items['features']:
+            self.data_manager.features_panel.select_features(selected_items['features'])
+
+        # Show status message
+        self.statusBar().showMessage(
+            f"Selected: {len(selected_items['tracks'])} track(s), "
+            f"{len(selected_items['detections'])} detection(s), "
+            f"{len(selected_items['aois'])} AOI(s), "
+            f"{len(selected_items['features'])} feature(s)", 5000
+        )
 
     def on_aoi_updated(self):
         """Handle AOI updates from viewer"""

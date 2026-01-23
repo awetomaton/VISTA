@@ -67,6 +67,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when extraction editing mode ends
     extraction_editing_ended = pyqtSignal()
 
+    # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
+    lasso_selection_completed = pyqtSignal(dict)
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -135,6 +138,12 @@ class ImageryViewer(QWidget):
         self.editing_extraction_imagery = None  # Imagery for extraction editing
         self.extraction_painting = False  # True when mouse is held down for drag painting
         self.pan_zoom_locked = False  # True when pan/zoom is disabled for painting
+
+        # Lasso selection mode
+        self.lasso_selection_mode = False
+        self.lasso_points = []  # List of (x, y) tuples forming the lasso polygon
+        self.lasso_drawing = False  # True when actively drawing
+        self.lasso_plot_item = None  # PlotCurveItem for visual feedback during drawing
 
         # Histogram bounds persistence (session only)
         self.user_histogram_bounds = {}  # (min, max) tuple by imagery UUID
@@ -702,7 +711,7 @@ class ImageryViewer(QWidget):
             self.track_creation_mode or self.track_editing_mode or
             self.detection_creation_mode or self.detection_editing_mode or
             self.track_selection_mode or self.detection_selection_mode or
-            self.extraction_editing_mode):
+            self.extraction_editing_mode or self.lasso_selection_mode):
             self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
         else:
             self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
@@ -729,6 +738,165 @@ class ImageryViewer(QWidget):
             self.pixel_value_text.setText("")
         # Update cursor based on both tooltip states
         self.update_cursor()
+
+    def set_lasso_selection_mode(self, enabled):
+        """
+        Enable or disable lasso selection mode.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether lasso selection mode is enabled
+        """
+        self.lasso_selection_mode = enabled
+        if not enabled:
+            # Clear any in-progress lasso
+            self._clear_lasso()
+        self.update_cursor()
+
+    def _update_lasso_display(self):
+        """Update the visual display of the lasso during drawing"""
+        if self.lasso_plot_item is not None and len(self.lasso_points) > 0:
+            # Close the polygon for display
+            points = list(self.lasso_points) + [self.lasso_points[0]]
+            x = [p[0] for p in points]
+            y = [p[1] for p in points]
+            self.lasso_plot_item.setData(x=x, y=y)
+
+    def _clear_lasso(self):
+        """Clear the lasso selection visual and data"""
+        self.lasso_points = []
+        self.lasso_drawing = False
+        if self.lasso_plot_item is not None:
+            self.plot_item.removeItem(self.lasso_plot_item)
+            self.lasso_plot_item = None
+
+    def _complete_lasso_selection(self):
+        """Complete the lasso selection and find contained items"""
+        from shapely.geometry import Point, Polygon
+
+        # Create shapely Polygon from lasso points
+        if len(self.lasso_points) < 3:
+            self._clear_lasso()
+            return
+
+        lasso_polygon = Polygon(self.lasso_points)
+
+        # Find contained items
+        selected_items = {
+            'tracks': [],
+            'detections': [],
+            'aois': [],
+            'features': []
+        }
+
+        # Check tracks (wholly contained = ALL visible points inside)
+        for tracker in self.trackers:
+            for track in tracker.tracks:
+                if not track.visible:
+                    continue
+                if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                    continue
+
+                # Get visible indices for current frame
+                visible_indices = track.get_visible_indices(self.current_frame_number)
+                if visible_indices is None or len(visible_indices) == 0:
+                    continue
+
+                # Check if ALL visible points are contained
+                visible_rows = track.rows[visible_indices]
+                visible_cols = track.columns[visible_indices]
+
+                all_contained = True
+                for col, row in zip(visible_cols, visible_rows):
+                    if not lasso_polygon.contains(Point(col, row)):
+                        all_contained = False
+                        break
+
+                if all_contained:
+                    selected_items['tracks'].append(track)
+
+        # Check detections at current frame (each detection checked individually)
+        for detector in self.detectors:
+            if not detector.visible:
+                continue
+            if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
+                continue
+
+            rows, cols = detector.get_detections_at_frame(self.current_frame_number)
+            if len(rows) == 0:
+                continue
+
+            # Get indices for detections at current frame
+            frame_mask = detector.frames == self.current_frame_number
+            indices = np.where(frame_mask)[0]
+
+            for i, (row, col) in enumerate(zip(rows, cols)):
+                if lasso_polygon.contains(Point(col, row)):
+                    # Store as (detector, frame, original_index)
+                    selected_items['detections'].append((detector, self.current_frame_number, int(indices[i])))
+
+        # Check AOIs (wholly contained = ALL 4 corners inside)
+        for aoi in self.aois:
+            if not aoi.visible:
+                continue
+
+            # Get all 4 corners
+            corners = [
+                (aoi.x, aoi.y),
+                (aoi.x + aoi.width, aoi.y),
+                (aoi.x + aoi.width, aoi.y + aoi.height),
+                (aoi.x, aoi.y + aoi.height)
+            ]
+
+            all_contained = all(lasso_polygon.contains(Point(corner)) for corner in corners)
+            if all_contained:
+                selected_items['aois'].append(aoi)
+
+        # Check features (placemarks and shapefiles)
+        for feature in self.features:
+            if not feature.visible:
+                continue
+
+            if isinstance(feature, PlacemarkFeature):
+                # Single point - just check if inside
+                row = feature.geometry.get('row')
+                col = feature.geometry.get('col')
+                if row is not None and col is not None:
+                    if lasso_polygon.contains(Point(col, row)):
+                        selected_items['features'].append(feature)
+
+            elif isinstance(feature, ShapefileFeature):
+                # Check all vertices of all shapes
+                shapes = feature.geometry.get('shapes', [])
+                all_contained = True
+                has_points = False
+
+                for shape in shapes:
+                    for point in shape.points:
+                        has_points = True
+                        if not lasso_polygon.contains(Point(point[0], point[1])):
+                            all_contained = False
+                            break
+                    if not all_contained:
+                        break
+
+                if has_points and all_contained:
+                    selected_items['features'].append(feature)
+
+        # Clear lasso visual
+        self._clear_lasso()
+
+        # Emit signal with selected items
+        self.lasso_selection_completed.emit(selected_items)
+
+        # Also update track selection in viewer
+        track_ids = {track.uuid for track in selected_items['tracks']}
+        self.set_selected_tracks(track_ids)
+
+        # Update detection selection
+        self.selected_detections = selected_items['detections']
+        self._update_selected_detections_display()
 
     def on_mouse_moved(self, pos):
         """Handle mouse movement over the image"""
@@ -762,6 +930,13 @@ class ImageryViewer(QWidget):
                             if 0 <= chip_row < chip_size and 0 <= chip_col < chip_size:
                                 # Paint pixel (drag mode)
                                 self.extraction_editor.paint_pixel(chip_row, chip_col, is_drag=True)
+
+        # Handle lasso drawing
+        if self.lasso_selection_mode and self.lasso_drawing:
+            if self.plot_item.sceneBoundingRect().contains(pos):
+                mouse_point = self.plot_item.vb.mapSceneToView(pos)
+                self.lasso_points.append((mouse_point.x(), mouse_point.y()))
+                self._update_lasso_display()
 
         # Update tooltips for the current position
         self._update_tooltips_at_position(pos)
@@ -1769,6 +1944,29 @@ class ImageryViewer(QWidget):
 
     def on_mouse_clicked(self, event):
         """Handle mouse click events for track/detection creation/editing/selection"""
+        # Handle lasso selection mode
+        if self.lasso_selection_mode:
+            pos = event.scenePos()
+            if self.plot_item.sceneBoundingRect().contains(pos):
+                mouse_point = self.plot_item.vb.mapSceneToView(pos)
+
+                if event.button() == Qt.MouseButton.LeftButton:
+                    if not self.lasso_drawing:
+                        # Start lasso drawing
+                        self.lasso_points = [(mouse_point.x(), mouse_point.y())]
+                        self.lasso_drawing = True
+                        # Create visual feedback item
+                        if self.lasso_plot_item is None:
+                            self.lasso_plot_item = pg.PlotCurveItem(
+                                pen=pg.mkPen('y', width=2, style=Qt.PenStyle.DashLine)
+                            )
+                            self.plot_item.addItem(self.lasso_plot_item)
+                    else:
+                        # Already drawing - complete the lasso selection on second left click
+                        self._complete_lasso_selection()
+                    return
+            return
+
         # Only handle left clicks in creation/editing/selection mode
         if not (self.track_creation_mode or self.track_editing_mode or
                 self.detection_creation_mode or self.detection_editing_mode or

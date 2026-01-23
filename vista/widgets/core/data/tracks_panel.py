@@ -1551,6 +1551,28 @@ class TracksPanel(QWidget):
         # Update viewer with selected tracks
         self.viewer.set_selected_tracks(selected_track_ids)
 
+    def select_tracks_by_uuid(self, track_uuids):
+        """
+        Select tracks in the table by their UUIDs.
+
+        Parameters
+        ----------
+        track_uuids : set
+            Set of track UUIDs to select
+        """
+        self.tracks_table.blockSignals(True)
+        self.tracks_table.clearSelection()
+
+        for row in range(self.tracks_table.rowCount()):
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                if track_uuid in track_uuids:
+                    self.tracks_table.selectRow(row)
+
+        self.tracks_table.blockSignals(False)
+        self.on_track_selection_changed()  # Trigger selection changed handler
+
     def on_track_selected_in_viewer(self, track):
         """Handle track selection from viewer click"""
         # Check if Ctrl (Windows/Linux) or Cmd (Mac) is held down

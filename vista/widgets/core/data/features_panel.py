@@ -141,6 +141,28 @@ class FeaturesPanel(QWidget):
         # Refresh table
         self.refresh_features_table()
 
+    def select_features(self, features):
+        """
+        Select features in the table.
+
+        Parameters
+        ----------
+        features : list
+            List of Feature objects to select
+        """
+        feature_uuids = {feature.uuid for feature in features}
+        self.features_table.blockSignals(True)
+        self.features_table.clearSelection()
+
+        for row in range(self.features_table.rowCount()):
+            name_item = self.features_table.item(row, 1)  # Name column
+            if name_item:
+                uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if uuid in feature_uuids:
+                    self.features_table.selectRow(row)
+
+        self.features_table.blockSignals(False)
+
     def create_placemark(self):
         """Open dialog to create a new placemark"""
 
