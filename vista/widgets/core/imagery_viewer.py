@@ -8,6 +8,8 @@ from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
+from vista.features import PlacemarkFeature
+from vista.features import ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
@@ -1124,7 +1126,6 @@ class ImageryViewer(QWidget):
 
     def _render_placemark(self, feature):
         """Render a placemark feature"""
-        from vista.features import PlacemarkFeature
 
         if not isinstance(feature, PlacemarkFeature):
             return
@@ -1156,7 +1157,6 @@ class ImageryViewer(QWidget):
 
     def _render_shapefile(self, feature):
         """Render a shapefile feature"""
-        from vista.features import ShapefileFeature
 
         if not isinstance(feature, ShapefileFeature):
             return
@@ -1189,7 +1189,6 @@ class ImageryViewer(QWidget):
 
                     if len(part_points) > 0:
                         # Convert to numpy array and separate x, y
-                        import numpy as np
                         coords = np.array(part_points)
                         x = coords[:, 0]
                         y = coords[:, 1]
@@ -1220,7 +1219,6 @@ class ImageryViewer(QWidget):
 
                     if len(part_points) > 0:
                         # Convert to numpy array and separate x, y
-                        import numpy as np
                         coords = np.array(part_points)
                         x = coords[:, 0]
                         y = coords[:, 1]
@@ -1234,7 +1232,6 @@ class ImageryViewer(QWidget):
             elif shape_type in [1, 11, 21]:
                 points = shape.points
                 if len(points) > 0:
-                    import numpy as np
                     coords = np.array(points)
                     x = coords[:, 0]
                     y = coords[:, 1]
@@ -1253,7 +1250,6 @@ class ImageryViewer(QWidget):
             elif shape_type in [8, 18, 28]:
                 points = shape.points
                 if len(points) > 0:
-                    import numpy as np
                     coords = np.array(points)
                     x = coords[:, 0]
                     y = coords[:, 1]

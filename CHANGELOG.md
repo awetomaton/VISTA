@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.7.0] - TBD
 
 ### Improvements
+- Modified VISTA `SampledSensor` objects to define pointing in an Attitude Reference Frame (ARF) to enable off and on Earth ray projection
 - Added the ability to identify signal pixels for extracting track energy.
 - Added the ability to load AOIs and export selected AOIs.
 - Added Track Interpolator algorithm (Filters > Track Filters > Track Interpolator) to fill missing frames in track trajectories.

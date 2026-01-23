@@ -33,17 +33,17 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 - Interactive image histogram with dynamic range adjustment
 - Frame-by-frame navigation with keyboard shortcuts
 - **Interactive AOI (Area of Interest) Drawing**: Right-click context menu to draw rectangular regions for focused processing
-- **Geolocation tooltip**: Display latitude/longitude coordinates when hovering over imagery (requires geodetic polynomials)
+- **Geolocation tooltip**: Display latitude/longitude coordinates when hovering over imagery (requires geolocation data)
 - **Pixel value tooltip**: Display pixel intensity values when hovering over imagery
 
 ### Advanced Track Support
 - **Multiple coordinate systems**:
   - Pixel coordinates (Row/Column)
-  - Geodetic coordinates (Latitude/Longitude/Altitude) with automatic conversion. Note that at this time this software assumes the altitude is always zero (tracks are already projected to ground)
+  - Geodetic coordinates (Latitude/Longitude/Altitude) with automatic conversion including altitude support
   - Time-based or frame-based indexing
 - **Automatic coordinate conversion**:
   - Times → Frames using imagery timestamps
-  - Geodetic coordinates (Lat/Lon/Alt) → Pixel coordinates using 4th-order polynomials
+  - Geodetic coordinates (Lat/Lon/Alt) → Pixel coordinates using ray casting
 - **Priority system**: Row/Column takes precedence over geodetic; Frames takes precedence over times
 - **Manual track creation and editing**:
   - Click-to-create tracks with automatic frame tracking
@@ -140,7 +140,9 @@ VISTA assumes that all loaded imagery datasets for a given sensor are temporally
 - **Persistent Overlays**: Features don't change with time and display across all frames
 
 ### Geolocation Support
-- 4th-order polynomial geodetic coordinate conversion (Lat/Lon/Alt ↔ Row/Column)
+- **Attitude Reference Frame (ARF) based geolocation** for robust pixel↔geodetic coordinate conversion
+- Supports targets at altitude (not just ground-projected tracks)
+- Gracefully handles off-Earth pixels (returns NaN for sky/space pixels)
 - Optional geodetic coordinate tooltip display
 - Automatic coordinate system detection in track files
 - Imagery selection dialog for tracks requiring conversion
@@ -243,13 +245,23 @@ VISTA uses HDF5 files to store image sequences with optional time and geodetic m
 - **`unix_time`**: 1D array of `int64` (seconds since Unix epoch)
 - **`unix_fine_time`**: 1D array of `int64` (nanosecond offset for high-precision timing)
 
-**Geodetic Conversion Polynomials (4th-order, 15 coefficients each):**
-- **`poly_row_col_to_lat`**: Shape `(N_frames, 15)` - Convert pixel col/row to latitude
-- **`poly_row_col_to_lon`**: Shape `(N_frames, 15)` - Convert pixel col/row to longitude
-- **`poly_lat_lon_to_row`**: Shape `(N_frames, 15)` - Convert lon/lat to pixel row
-- **`poly_lat_lon_to_col`**: Shape `(N_frames, 15)` - Convert lon/lat to pixel column
+**ARF-Based Geolocation Data (Attitude Reference Frame):**
 
-Polynomial format: `f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 + c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 + c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4`
+The geolocation system uses an Attitude Reference Frame (ARF) to convert between pixel coordinates and geodetic coordinates via intermediate angular coordinates (azimuth/elevation). This approach supports off-Earth pixels and targets at altitude.
+
+- **`pointing`**: Shape `(3, N_frames)` - Sensor pointing vector in ECEF coordinates (unit vector per frame)
+- **`poly_pixel_to_arf_azimuth`**: Shape `(N_coefficients,)` - Convert pixel row/col to ARF azimuth angle (radians)
+- **`poly_pixel_to_arf_elevation`**: Shape `(N_coefficients,)` - Convert pixel row/col to ARF elevation angle (radians)
+- **`poly_arf_to_row`**: Shape `(N_coefficients,)` - Convert ARF azimuth/elevation to pixel row
+- **`poly_arf_to_col`**: Shape `(N_coefficients,)` - Convert ARF azimuth/elevation to pixel column
+- **`frames`**: Shape `(N_frames,)` - Frame indices for sensor position/pointing data
+
+The polynomials use an arbitrary-order 2D format where the number of coefficients determines the polynomial order. For an order-N polynomial, there are (N+1)(N+2)/2 coefficients arranged as:
+`f(x,y) = c0 + c1*x + c2*y + c3*x² + c4*xy + c5*y² + c6*x³ + ...`
+
+Additionally, the sensor requires position and time information:
+- **`sensor_positions`**: Shape `(3, N_samples)` - Sensor positions in ECEF coordinates (meters)
+- **`sensor_times`**: Shape `(N_samples,)` - Timestamps for sensor positions (microseconds since epoch)
 
 **Sensor Calibration Data:**
 
@@ -281,14 +293,23 @@ imagery.h5
 ├── unix_fine_time (Dataset) [optional]
 │   └── Shape: (100,)
 │   └── dtype: int64
-├── poly_row_col_to_lat (Dataset) [optional]
-│   └── Shape: (100, 15)
-├── poly_row_col_to_lon (Dataset) [optional]
-│   └── Shape: (100, 15)
-├── poly_lat_lon_to_row (Dataset) [optional]
-│   └── Shape: (100, 15)
-├── poly_lat_lon_to_col (Dataset) [optional]
-│   └── Shape: (100, 15)
+├── geolocation/ (Group) [optional]
+│   ├── pointing (Dataset)
+│   │   └── Shape: (3, 100)
+│   ├── poly_pixel_to_arf_azimuth (Dataset)
+│   │   └── Shape: (15,)
+│   ├── poly_pixel_to_arf_elevation (Dataset)
+│   │   └── Shape: (15,)
+│   ├── poly_arf_to_row (Dataset)
+│   │   └── Shape: (15,)
+│   ├── poly_arf_to_col (Dataset)
+│   │   └── Shape: (15,)
+│   ├── frames (Dataset)
+│   │   └── Shape: (100,)
+│   ├── sensor_positions (Dataset)
+│   │   └── Shape: (3, 1)
+│   └── sensor_times (Dataset)
+│       └── Shape: (1,)
 ├── bias_images (Dataset) [optional]
 │   └── Shape: (2, 512, 512)
 ├── bias_image_frames (Dataset) [optional]
@@ -327,29 +348,57 @@ with h5py.File("imagery.h5", "w") as f:
     f.create_dataset("unix_time", data=unix_time)
     f.create_dataset("unix_fine_time", data=np.zeros(n_frames, dtype=np.int64))
 
-    # Optional: Add geodetic conversion polynomials
-    # Example: Simple linear mapping for demonstration
-    poly_row_col_to_lat = np.zeros((n_frames, 15))
-    poly_row_col_to_lat[:, 0] = 40.0  # Base latitude
-    poly_row_col_to_lat[:, 1] = 0.0001  # Row scaling
-    f.create_dataset("poly_row_col_to_lat", data=poly_row_col_to_lat)
-
-    poly_row_col_to_lon = np.zeros((n_frames, 15))
-    poly_row_col_to_lon[:, 0] = -105.0  # Base longitude
-    poly_row_col_to_lon[:, 2] = 0.0001  # Column scaling
-    f.create_dataset("poly_row_col_to_lon", data=poly_row_col_to_lon)
-
-    # Inverse polynomials
-    poly_lat_lon_to_row = np.zeros((n_frames, 15))
-    poly_lat_lon_to_row[:, 0] = -40.0 / 0.0001
-    poly_lat_lon_to_row[:, 1] = 1.0 / 0.0001
-    f.create_dataset("poly_lat_lon_to_row", data=poly_lat_lon_to_row)
-
-    poly_lat_lon_to_col = np.zeros((n_frames, 15))
-    poly_lat_lon_to_col[:, 0] = 105.0 / 0.0001
-    poly_lat_lon_to_col[:, 2] = 1.0 / 0.0001
-    f.create_dataset("poly_lat_lon_to_col", data=poly_lat_lon_to_col)
+    # Optional: Add ARF-based geolocation data
+    # For generating proper geolocation data with realistic sensor models,
+    # use the Simulation class with enable_geodetic=True (see "Generating Test Data")
+    #
+    # Manual creation requires:
+    # - Sensor position(s) in ECEF coordinates
+    # - Sensor pointing vector(s) in ECEF coordinates
+    # - Polynomials mapping pixel↔ARF angles (fitted from sensor geometry)
+    geo_group = f.create_group("geolocation")
+    # ... see Simulation class for complete implementation
 ```
+
+#### Understanding the Attitude Reference Frame (ARF)
+
+VISTA uses an Attitude Reference Frame (ARF) based approach for converting between pixel coordinates and geodetic (latitude/longitude/altitude) coordinates. This approach offers significant advantages over direct polynomial mappings:
+
+**Why ARF?**
+
+Traditional approaches use polynomials to directly map pixel coordinates to latitude/longitude. This has two major limitations:
+1. **Off-Earth pixels**: When part of the image shows sky or space (no Earth intersection), direct polynomials produce invalid results
+2. **Altitude handling**: Direct lat/lon polynomials assume ground-level targets and cannot properly back-project tracks at altitude
+
+**How ARF Works**
+
+The ARF is a local Cartesian coordinate system centered at the sensor where the X-axis points along the sensor's boresight (pointing direction). The conversion process works as follows:
+
+**Pixel → Geodetic (Forward Conversion):**
+1. Convert pixel (row, col) to ARF angles (azimuth, elevation) using polynomials
+2. Convert ARF angles to a unit direction vector in ARF coordinates
+3. Transform the direction vector from ARF to ECEF using the sensor pointing
+4. Ray-cast from sensor position along this direction to find Earth intersection
+5. If the ray misses Earth, return NaN (graceful handling of off-Earth pixels)
+6. Convert ECEF intersection point to geodetic coordinates (lat, lon, alt)
+
+**Geodetic → Pixel (Inverse Conversion):**
+1. Convert geodetic coordinates (lat, lon, alt) to ECEF position
+2. Compute direction vector from sensor position to target
+3. Transform direction vector from ECEF to ARF using sensor pointing
+4. Convert direction vector to ARF angles (azimuth, elevation)
+5. Convert ARF angles to pixel coordinates (row, col) using inverse polynomials
+
+**Key Components:**
+
+- **Sensor Position**: ECEF coordinates (meters) of the sensor at each time/frame
+- **Pointing Vector**: Unit vector in ECEF indicating where the sensor boresight points
+- **ARF Transform**: Built from the pointing vector; transforms between ECEF and ARF coordinates
+- **Polynomials**: Map between pixel coordinates and ARF angles (azimuth, elevation)
+
+**Altitude Support:**
+
+When converting geodetic→pixel, the target's altitude is respected. The system computes where a target at the specified altitude would appear in the image, rather than assuming ground projection.
 
 ### Track Data (CSV Format)
 
@@ -1345,7 +1394,7 @@ Vista/
 
 ### Key Classes
 
-- **`Imagery`**: Image data with optional times and geodetic polynomials
+- **`Imagery`**: Image data with optional times and geolocation data
 - **`Track`**: Single trajectory with automatic coordinate conversion
 - **`Tracker`**: Container for multiple tracks
 - **`Detector`**: Point cloud detection class with styling
@@ -1371,8 +1420,8 @@ Vista/
 - Load imagery before loading time-based tracks
 
 **"No imagery with geodetic conversion capability"**
-- Ensure imagery contains all four polynomial datasets
-- Check that polynomials have correct shape `(N_frames, 15)`
+- Ensure imagery contains a `geolocation` group with ARF data (pointing, polynomials, sensor position)
+- Check that all required datasets are present: `pointing`, `poly_pixel_to_arf_azimuth`, `poly_pixel_to_arf_elevation`, `poly_arf_to_row`, `poly_arf_to_col`
 
 **"Track has times but no frames"**
 - Imagery required for time-to-frame mapping
@@ -1381,9 +1430,10 @@ Vista/
 ### Coordinate Conversion Issues
 
 **Tracks appear in wrong location**
-- Verify polynomial coefficients are correct
-- Check that geodetic coordinates are within imagery coverage area
+- Verify ARF polynomial coefficients are correctly fitted for the sensor geometry
+- Check that geodetic coordinates are within the sensor's field of view
 - Ensure frame synchronization across imagery datasets
+- For off-Earth locations, NaN values are expected and handled gracefully
 
 ### General Issues
 

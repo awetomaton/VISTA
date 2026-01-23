@@ -11,7 +11,6 @@ All refinement functions accept image coordinates and return refined coordinates
 with optional mode-specific parameters.
 """
 import numpy as np
-from scipy import ndimage
 
 from vista.algorithms.detectors.cfar import CFAR
 

@@ -10,6 +10,8 @@ from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
+import pyqtgraph as pg
+from PyQt6.QtCore import Qt
 import uuid
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
@@ -239,8 +241,6 @@ class Track:
         pg.mkPen
             PyQtGraph pen object
         """
-        import pyqtgraph as pg
-        from PyQt6.QtCore import Qt
 
         actual_width = width if width is not None else self.line_width
         actual_style = style if style is not None else self.line_style
@@ -272,7 +272,6 @@ class Track:
         pg.mkBrush
             PyQtGraph brush object
         """
-        import pyqtgraph as pg
 
         params = (self.color,)
 

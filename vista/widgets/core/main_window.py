@@ -1,4 +1,6 @@
 """Main window for the Vista application"""
+from astropy.coordinates import EarthLocation
+from astropy import units
 import darkdetect
 import numpy as np
 import pandas as pd
@@ -12,6 +14,7 @@ from PyQt6.QtWidgets import (
 
 import vista
 from vista.detections.detector import Detector
+from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
@@ -1184,7 +1187,6 @@ class VistaMainWindow(QMainWindow):
                     shapefile_name = Path(file_path).stem
 
                     # Create a ShapefileFeature
-                    from vista.features import ShapefileFeature
 
                     feature = ShapefileFeature(
                         name=shapefile_name,
@@ -1223,11 +1225,6 @@ class VistaMainWindow(QMainWindow):
         if file_paths:
             # Save the directory for next time
             self.settings.setValue("last_placemarks_dir", str(Path(file_paths[0]).parent))
-
-            from vista.features import PlacemarkFeature
-            import numpy as np
-            from astropy.coordinates import EarthLocation
-            from astropy import units
 
             total_loaded = 0
             errors = []

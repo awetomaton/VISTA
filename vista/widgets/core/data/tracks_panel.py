@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 import pathlib
-import uuid
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (

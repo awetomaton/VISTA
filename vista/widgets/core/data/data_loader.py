@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from PyQt6.QtCore import QThread, pyqtSignal
-import time
+import uuid
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
@@ -305,7 +305,6 @@ class DataLoaderThread(QThread):
 
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if sensor_uuid is not None:
-            import uuid
             sensor.uuid = uuid.UUID(sensor_uuid)
 
         return sensor
@@ -344,7 +343,6 @@ class DataLoaderThread(QThread):
 
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if imagery_uuid is not None:
-            import uuid
             imagery.uuid = uuid.UUID(imagery_uuid)
         return imagery
 

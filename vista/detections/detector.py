@@ -4,6 +4,7 @@ import pathlib
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
+import pyqtgraph as pg
 from vista.sensors.sensor import Sensor
 
 
@@ -139,7 +140,6 @@ class Detector:
         pg.mkPen
             PyQtGraph pen object
         """
-        import pyqtgraph as pg
 
         actual_width = width if width is not None else self.line_thickness
         params = (self.color, actual_width)

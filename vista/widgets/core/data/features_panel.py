@@ -1,11 +1,11 @@
 """Features panel for data manager"""
-import pathlib
-
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtWidgets import (
-    QCheckBox, QFileDialog, QHeaderView, QHBoxLayout, QMessageBox,
+    QCheckBox, QHeaderView, QHBoxLayout, QMessageBox,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
+from .placemark_dialog import PlacemarkDialog
+from vista.features import PlacemarkFeature
 
 
 class FeaturesPanel(QWidget):
@@ -143,8 +143,6 @@ class FeaturesPanel(QWidget):
 
     def create_placemark(self):
         """Open dialog to create a new placemark"""
-        from vista.features import PlacemarkFeature
-        from .placemark_dialog import PlacemarkDialog
 
         # Check if we have imagery
         if not self.viewer.imagery:

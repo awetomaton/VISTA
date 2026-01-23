@@ -1,6 +1,7 @@
 """Utility functions for algorithm widgets to reduce code duplication"""
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QMessageBox, QProgressDialog, QSpinBox
+import traceback
 
 
 def show_error_with_traceback(parent, error_message, title="Processing Error"):
@@ -120,6 +121,5 @@ def format_exception_with_traceback(exception, prefix="Error"):
     Returns:
         Formatted error message string with traceback
     """
-    import traceback
     tb_str = traceback.format_exc()
     return f"{prefix}: {str(exception)}\n\nTraceback:\n{tb_str}"
