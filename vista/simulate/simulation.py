@@ -1,16 +1,20 @@
 import numpy as np
 import pandas as pd
 import pathlib
+from astropy.coordinates import EarthLocation
+from astropy import units
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, List
 from PIL import Image
 from scipy.ndimage import shift
+
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery, save_imagery_hdf5
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.simulate.data import EARTH_IMAGE
 from vista.tracks.track import Track
 from vista.tracks.tracker import Tracker
+from vista.transforms import fit_2d_polynomial
 from vista.utils.random_walk import RandomWalk
 
 
@@ -33,14 +37,16 @@ class Simulation:
     track_speed_std: float = 1.0
     track_θ_std: float = 0.1
     track_life_range: Tuple[int, int] = (75, 100)
-    # Time and geodetic simulation parameters
+    # Time and geolocation simulation parameters
     enable_times: bool = False  # If True, generate times for imagery and tracks
     frame_rate: float = 10.0  # Frames per second (for time generation)
     start_time: Optional[np.datetime64] = None  # Start time for imagery (defaults to now)
-    enable_geodetic: bool = False  # If True, generate geodetic conversion polynomials
+    enable_geodetic: bool = False  # If True, generate ARF geolocation polynomials
     center_lat: float = 40.0  # Center latitude for scene (degrees)
     center_lon: float = -105.0  # Center longitude for scene (degrees)
-    pixel_to_deg_scale: float = 0.0001  # Approximate degrees per pixel
+    sensor_altitude_km: float = 500.0  # Sensor altitude in kilometers
+    ifov_rad: float = 0.00005  # Instantaneous field of view in radians per pixel
+    polynomial_order: int = 4  # Order of the polynomial fit for ARF conversion
     # Sensor calibration data simulation parameters
     enable_bias_images: bool = False  # If True, generate bias/dark frames
     num_bias_images: int = 2  # Number of bias images to generate
@@ -77,67 +83,94 @@ class Simulation:
                          for i in range(self.frames)])
         return times
 
-    def _generate_geodetic_polynomials(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _generate_arf_polynomials(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Generate synthetic 4th order polynomial coefficients for geodetic conversions.
+        Generate synthetic ARF polynomial coefficients for geolocation conversions.
 
-        Returns:
-            Tuple of (poly_row_col_to_lat, poly_row_col_to_lon,
-                     poly_lat_lon_to_row, poly_lat_lon_to_col)
-            Each has shape (num_frames, 15) for 4th order 2D polynomials
+        Uses a simple pinhole camera model where ARF angles are approximately linear
+        with pixel offset from image center, plus small higher-order distortion terms.
+
+        Returns
+        -------
+        sensor_positions : np.ndarray
+            Sensor ECEF positions, shape (3, num_frames)
+        pointing : np.ndarray
+            Sensor pointing unit vectors in ECEF, shape (3, num_frames)
+        poly_pixel_to_arf_azimuth : np.ndarray
+            Polynomial coefficients for (col, row) → azimuth, shape (num_frames, num_coeffs)
+        poly_pixel_to_arf_elevation : np.ndarray
+            Polynomial coefficients for (col, row) → elevation, shape (num_frames, num_coeffs)
+        poly_arf_to_row : np.ndarray
+            Polynomial coefficients for (azimuth, elevation) → row, shape (num_frames, num_coeffs)
+        poly_arf_to_col : np.ndarray
+            Polynomial coefficients for (azimuth, elevation) → col, shape (num_frames, num_coeffs)
         """
-        # Generate simple linear + small nonlinear polynomials
-        # For each frame (we'll use same coefficients for all frames for simplicity)
+        # Compute sensor position in ECEF (above center lat/lon at specified altitude)
+        scene_center = EarthLocation.from_geodetic(
+            lon=self.center_lon * units.deg,
+            lat=self.center_lat * units.deg,
+            height=self.sensor_altitude_km * units.km
+        )
+        sensor_pos = np.array([
+            scene_center.geocentric[0].to(units.km).value,
+            scene_center.geocentric[1].to(units.km).value,
+            scene_center.geocentric[2].to(units.km).value
+        ])
 
-        # Calculate approximate lat/lon range covered by image
-        lat_range = self.rows * self.pixel_to_deg_scale
-        lon_range = self.columns * self.pixel_to_deg_scale
+        # Sensor pointing: toward Earth center (nadir pointing)
+        # Pointing vector is from sensor toward Earth center, normalized
+        pointing_vec = -sensor_pos / np.linalg.norm(sensor_pos)
 
-        # Min lat/lon for image corner (row=0, col=0)
-        min_lat = self.center_lat - lat_range / 2
-        min_lon = self.center_lon - lon_range / 2
+        # Create position and pointing arrays for all frames (same for all frames in simulation)
+        sensor_positions = np.tile(sensor_pos.reshape(3, 1), (1, self.frames))
+        pointing = np.tile(pointing_vec.reshape(3, 1), (1, self.frames))
 
-        # Create polynomial coefficients for row,col -> lat
-        # Primarily linear: lat = min_lat + pixel_to_deg_scale * row
-        poly_row_col_to_lat = np.zeros((self.frames, 15))
-        poly_row_col_to_lat[:, 0] = min_lat  # Constant term
-        poly_row_col_to_lat[:, 1] = self.pixel_to_deg_scale  # Linear in row (x)
-        poly_row_col_to_lat[:, 2] = 0  # No linear term in column (y)
-        # Add small nonlinear terms for realism
-        poly_row_col_to_lat[:, 3] = 1e-9  # Small x^2 term
-        poly_row_col_to_lat[:, 5] = 1e-9  # Small y^2 term
+        # Image center
+        center_row = self.rows / 2.0
+        center_col = self.columns / 2.0
 
-        # Create polynomial coefficients for row,col -> lon
-        # Primarily linear: lon = min_lon + pixel_to_deg_scale * column
-        poly_row_col_to_lon = np.zeros((self.frames, 15))
-        poly_row_col_to_lon[:, 0] = min_lon  # Constant term
-        poly_row_col_to_lon[:, 1] = 0  # No linear term in row (x)
-        poly_row_col_to_lon[:, 2] = self.pixel_to_deg_scale  # Linear in column (y)
-        # Add small nonlinear terms for realism
-        poly_row_col_to_lon[:, 3] = 1e-9  # Small x^2 term
-        poly_row_col_to_lon[:, 5] = 1e-9  # Small y^2 term
+        # Generate a grid of sample points for polynomial fitting
+        # Use more points than the polynomial order requires for better fit
+        n_samples = 20
+        sample_rows = np.linspace(0, self.rows - 1, n_samples)
+        sample_cols = np.linspace(0, self.columns - 1, n_samples)
+        col_grid, row_grid = np.meshgrid(sample_cols, sample_rows)
+        cols_flat = col_grid.flatten()
+        rows_flat = row_grid.flatten()
 
-        # Create inverse polynomials for lat,lon -> row
-        # row = (lat - min_lat) / pixel_to_deg_scale
-        poly_lat_lon_to_row = np.zeros((self.frames, 15))
-        poly_lat_lon_to_row[:, 0] = -min_lat / self.pixel_to_deg_scale  # Constant
-        poly_lat_lon_to_row[:, 1] = 1.0 / self.pixel_to_deg_scale  # Linear in lat (x)
-        poly_lat_lon_to_row[:, 2] = 0  # No linear term in lon (y)
-        # Add small compensating nonlinear terms
-        poly_lat_lon_to_row[:, 3] = -1e-9 / self.pixel_to_deg_scale  # Compensate x^2
-        poly_lat_lon_to_row[:, 5] = -1e-9 / self.pixel_to_deg_scale  # Compensate y^2
+        # Compute ARF angles for each sample point using pinhole camera model
+        # azimuth ≈ (col - center_col) * ifov (positive to the right)
+        # elevation ≈ (center_row - row) * ifov (positive up, row increases down)
+        # Add small distortion for realism
+        col_offset = cols_flat - center_col
+        row_offset = rows_flat - center_row
 
-        # Create inverse polynomials for lat,lon -> col
-        # col = (lon - min_lon) / pixel_to_deg_scale
-        poly_lat_lon_to_col = np.zeros((self.frames, 15))
-        poly_lat_lon_to_col[:, 0] = -min_lon / self.pixel_to_deg_scale  # Constant
-        poly_lat_lon_to_col[:, 1] = 0  # No linear term in lat (x)
-        poly_lat_lon_to_col[:, 2] = 1.0 / self.pixel_to_deg_scale  # Linear in lon (y)
-        # Add small compensating nonlinear terms
-        poly_lat_lon_to_col[:, 3] = -1e-9 / self.pixel_to_deg_scale  # Compensate x^2
-        poly_lat_lon_to_col[:, 5] = -1e-9 / self.pixel_to_deg_scale  # Compensate y^2
+        # Base angles (pinhole model)
+        azimuth_base = col_offset * self.ifov_rad
+        elevation_base = -row_offset * self.ifov_rad  # Negative because row increases downward
 
-        return poly_row_col_to_lat, poly_row_col_to_lon, poly_lat_lon_to_row, poly_lat_lon_to_col
+        # Add small barrel distortion (radial distortion)
+        r_squared = col_offset**2 + row_offset**2
+        distortion_factor = 1.0 + 1e-8 * r_squared
+        azimuth = azimuth_base * distortion_factor
+        elevation = elevation_base * distortion_factor
+
+        # Fit polynomials: pixel → ARF angles
+        az_coeffs, _, _, _ = fit_2d_polynomial(cols_flat, rows_flat, azimuth, self.polynomial_order)
+        el_coeffs, _, _, _ = fit_2d_polynomial(cols_flat, rows_flat, elevation, self.polynomial_order)
+
+        # Fit inverse polynomials: ARF angles → pixel
+        row_coeffs, _, _, _ = fit_2d_polynomial(azimuth, elevation, rows_flat, self.polynomial_order)
+        col_coeffs, _, _, _ = fit_2d_polynomial(azimuth, elevation, cols_flat, self.polynomial_order)
+
+        # Create arrays for all frames (same coefficients for all frames)
+        poly_pixel_to_arf_azimuth = np.tile(az_coeffs.reshape(1, -1), (self.frames, 1))
+        poly_pixel_to_arf_elevation = np.tile(el_coeffs.reshape(1, -1), (self.frames, 1))
+        poly_arf_to_row = np.tile(row_coeffs.reshape(1, -1), (self.frames, 1))
+        poly_arf_to_col = np.tile(col_coeffs.reshape(1, -1), (self.frames, 1))
+
+        return (sensor_positions, pointing, poly_pixel_to_arf_azimuth, poly_pixel_to_arf_elevation,
+                poly_arf_to_row, poly_arf_to_col)
 
     def _generate_bias_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -380,7 +413,7 @@ class Simulation:
             'name': f"{self.name} Sensor"
         }
 
-        # Use stationary sensor position at origin
+        # Default sensor position at origin (will be overwritten if geodetic enabled)
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
         sensor_times = np.array([times[0] if times is not None else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
 
@@ -402,14 +435,15 @@ class Simulation:
             sensor_kwargs['bad_pixel_masks'] = bad_pixel_masks
             sensor_kwargs['bad_pixel_mask_frames'] = bad_pixel_mask_frames
 
-        # Add geodetic polynomials to sensor if enabled
-        poly_row_col_to_lat = None
-        poly_row_col_to_lon = None
-        poly_lat_lon_to_row = None
-        poly_lat_lon_to_col = None
+        # Add ARF geolocation polynomials to sensor if enabled
+        pointing = None
+        poly_pixel_to_arf_azimuth = None
+        poly_pixel_to_arf_elevation = None
+        poly_arf_to_row = None
+        poly_arf_to_col = None
         if self.enable_geodetic:
-            (poly_row_col_to_lat, poly_row_col_to_lon,
-             poly_lat_lon_to_row, poly_lat_lon_to_col) = self._generate_geodetic_polynomials()
+            (sensor_positions, pointing, poly_pixel_to_arf_azimuth, poly_pixel_to_arf_elevation,
+             poly_arf_to_row, poly_arf_to_col) = self._generate_arf_polynomials()
 
         # Add radiometric gain if enabled
         radiometric_gain = None
@@ -421,10 +455,11 @@ class Simulation:
             positions=sensor_positions,
             times=sensor_times,
             frames=frames_array,
-            poly_row_col_to_lat=poly_row_col_to_lat,
-            poly_row_col_to_lon=poly_row_col_to_lon,
-            poly_lat_lon_to_row=poly_lat_lon_to_row,
-            poly_lat_lon_to_col=poly_lat_lon_to_col,
+            pointing=pointing,
+            poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
+            poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
+            poly_arf_to_row=poly_arf_to_row,
+            poly_arf_to_col=poly_arf_to_col,
             radiometric_gain=radiometric_gain,
             **sensor_kwargs
         )

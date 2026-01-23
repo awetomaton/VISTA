@@ -106,20 +106,8 @@ class DataLoaderThread(QThread):
             total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
             times = total_nanoseconds.astype('datetime64[ns]')
 
-        # Load polynomial coefficients for geodetic conversion
-        poly_row_col_to_lat = f.get('poly_row_col_to_lat', None)
-        poly_row_col_to_lon = f.get('poly_row_col_to_lon', None)
-        poly_lat_lon_to_row = f.get('poly_lat_lon_to_row', None)
-        poly_lat_lon_to_col = f.get('poly_lat_lon_to_col', None)
-
-        if poly_row_col_to_lat is not None:
-            poly_row_col_to_lat = poly_row_col_to_lat[:]
-        if poly_row_col_to_lon is not None:
-            poly_row_col_to_lon = poly_row_col_to_lon[:]
-        if poly_lat_lon_to_row is not None:
-            poly_lat_lon_to_row = poly_lat_lon_to_row[:]
-        if poly_lat_lon_to_col is not None:
-            poly_lat_lon_to_col = poly_lat_lon_to_col[:]
+        # Note: v1.5 format used lat/lon polynomials which are no longer supported.
+        # Geolocation will not be available for v1.5 files.
 
         # Load images with progress
         images = self._load_images_dataset(images_dataset)
@@ -148,7 +136,7 @@ class DataLoaderThread(QThread):
             bad_pixel_masks = bad_pixel_masks[:]
             bad_pixel_mask_frames = bad_pixel_mask_frames[:]
 
-        # Create SampledSensor with dummy position data
+        # Create SampledSensor with dummy position data (no geolocation for v1.5 files)
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
         sensor_times = np.array([times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
 
@@ -157,10 +145,6 @@ class DataLoaderThread(QThread):
             positions=sensor_positions,
             times=sensor_times,
             frames=frames,
-            poly_row_col_to_lat=poly_row_col_to_lat,
-            poly_row_col_to_lon=poly_row_col_to_lon,
-            poly_lat_lon_to_row=poly_lat_lon_to_row,
-            poly_lat_lon_to_col=poly_lat_lon_to_col,
             radiometric_gain=radiometric_gain,
             bias_images=bias_images,
             bias_image_frames=bias_image_frames,
@@ -258,21 +242,25 @@ class DataLoaderThread(QThread):
                 total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
                 times = total_nanoseconds.astype('datetime64[ns]')
 
-            # Load geolocation polynomials
-            poly_row_col_to_lat = None
-            poly_row_col_to_lon = None
-            poly_lat_lon_to_row = None
-            poly_lat_lon_to_col = None
+            # Load ARF geolocation polynomials
+            pointing = None
+            poly_pixel_to_arf_azimuth = None
+            poly_pixel_to_arf_elevation = None
+            poly_arf_to_row = None
+            poly_arf_to_col = None
             frames = None
 
             if 'geolocation' in sensor_group:
                 geo_group = sensor_group['geolocation']
-                poly_row_col_to_lat = geo_group['poly_row_col_to_lat'][:]
-                poly_row_col_to_lon = geo_group['poly_row_col_to_lon'][:]
-                poly_lat_lon_to_row = geo_group['poly_lat_lon_to_row'][:]
-                poly_lat_lon_to_col = geo_group['poly_lat_lon_to_col'][:]
-                frames = geo_group['frames'][:]
-            elif radiometric_gain_frames is not None:
+                # Load ARF polynomials if present
+                if 'poly_pixel_to_arf_azimuth' in geo_group:
+                    poly_pixel_to_arf_azimuth = geo_group['poly_pixel_to_arf_azimuth'][:]
+                    poly_pixel_to_arf_elevation = geo_group['poly_pixel_to_arf_elevation'][:]
+                    poly_arf_to_row = geo_group['poly_arf_to_row'][:]
+                    poly_arf_to_col = geo_group['poly_arf_to_col'][:]
+                    pointing = geo_group['pointing'][:]
+                    frames = geo_group['frames'][:]
+            if frames is None and radiometric_gain_frames is not None:
                 # Use radiometric gain frames if geolocation frames not available
                 frames = radiometric_gain_frames
 
@@ -290,10 +278,11 @@ class DataLoaderThread(QThread):
                 positions=positions,
                 times=times,
                 frames=frames,
-                poly_row_col_to_lat=poly_row_col_to_lat,
-                poly_row_col_to_lon=poly_row_col_to_lon,
-                poly_lat_lon_to_row=poly_lat_lon_to_row,
-                poly_lat_lon_to_col=poly_lat_lon_to_col,
+                pointing=pointing,
+                poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
+                poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
+                poly_arf_to_row=poly_arf_to_row,
+                poly_arf_to_col=poly_arf_to_col,
                 radiometric_gain=radiometric_gain,
                 bias_images=bias_images,
                 bias_image_frames=bias_image_frames,

@@ -3,7 +3,7 @@ Sampled sensor with interpolated position and geodetic conversion capabilities.
 
 This module defines the SampledSensor class, which extends the base Sensor class to provide
 position retrieval via interpolation/extrapolation from discrete position samples. It also
-supports geodetic coordinate conversion using 4th-order 2D polynomial coefficients and
+supports geodetic coordinate conversion using ARF (Attitude Reference Frame) polynomials and
 radiometric gain calibration.
 """
 
@@ -15,7 +15,9 @@ from scipy.interpolate import interp1d
 from typing import Optional, Tuple
 import numpy as np
 from numpy.typing import NDArray
+
 from vista.sensors.sensor import Sensor
+from vista.transforms import cartesian_to_spherical, evaluate_2d_polynomial, get_arf_transform, los_to_earth, spherical_to_cartesian
 
 
 @dataclass
@@ -43,18 +45,21 @@ class SampledSensor(Sensor):
     radiometric_gain : NDArray, optional
         1D array of multiplicative factors for each frame to convert from counts to
         irradiance in units of kW/km²/sr.
-    poly_row_col_to_lat : NDArray[np.float64], optional
-        Polynomial coefficients for converting (row, column) to latitude (degrees).
-        Shape: (num_frames, 15) for 4th order 2D polynomials.
-    poly_row_col_to_lon : NDArray[np.float64], optional
-        Polynomial coefficients for converting (row, column) to longitude (degrees).
-        Shape: (num_frames, 15) for 4th order 2D polynomials.
-    poly_lat_lon_to_row : NDArray[np.float64], optional
-        Polynomial coefficients for converting (latitude, longitude) to row.
-        Shape: (num_frames, 15) for 4th order 2D polynomials.
-    poly_lat_lon_to_col : NDArray[np.float64], optional
-        Polynomial coefficients for converting (latitude, longitude) to column.
-        Shape: (num_frames, 15) for 4th order 2D polynomials.
+    pointing : NDArray[np.float64], optional
+        Sensor pointing unit vectors in ECEF coordinates. Shape: (3, num_frames).
+        Each column is the direction the sensor is pointing for that frame.
+    poly_pixel_to_arf_azimuth : NDArray[np.float64], optional
+        Polynomial coefficients for converting (column, row) to ARF azimuth (radians).
+        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+    poly_pixel_to_arf_elevation : NDArray[np.float64], optional
+        Polynomial coefficients for converting (column, row) to ARF elevation (radians).
+        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+    poly_arf_to_row : NDArray[np.float64], optional
+        Polynomial coefficients for converting (azimuth, elevation) to row.
+        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+    poly_arf_to_col : NDArray[np.float64], optional
+        Polynomial coefficients for converting (azimuth, elevation) to column.
+        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
 
     Methods
     -------
@@ -68,6 +73,8 @@ class SampledSensor(Sensor):
     - For 1 sample: returns the same position for all query times (stationary sensor)
     - Positions must be (3, N) arrays with x, y, z in each column
     - All coordinates are in ECEF Cartesian frame with units of kilometers
+    - ARF (Attitude Reference Frame) is a local coordinate system where the X-axis
+      points along the sensor pointing direction
 
     Examples
     --------
@@ -98,10 +105,11 @@ class SampledSensor(Sensor):
     times: Optional[NDArray[np.datetime64]] = None
     frames: Optional[NDArray[np.int64]] = None
     radiometric_gain: Optional[NDArray] = None
-    poly_row_col_to_lat: Optional[NDArray[np.float64]] = None
-    poly_row_col_to_lon: Optional[NDArray[np.float64]] = None
-    poly_lat_lon_to_row: Optional[NDArray[np.float64]] = None
-    poly_lat_lon_to_col: Optional[NDArray[np.float64]] = None
+    pointing: Optional[NDArray[np.float64]] = None
+    poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]] = None
+    poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]] = None
+    poly_arf_to_row: Optional[NDArray[np.float64]] = None
+    poly_arf_to_col: Optional[NDArray[np.float64]] = None
 
     def __post_init__(self):
         """
@@ -144,52 +152,21 @@ class SampledSensor(Sensor):
             self.times = unique_times
             self.positions = self.positions[:, unique_indices]
 
-    @staticmethod
-    def _eval_polynomial_2d_order4(x: np.ndarray, y: np.ndarray, coeffs: np.ndarray) -> np.ndarray:
-        """
-        Evaluate a 2D 4th order polynomial.
-
-        The polynomial has 15 terms:
-        f(x,y) = c0 + c1*x + c2*y + c3*x^2 + c4*x*y + c5*y^2 +
-                 c6*x^3 + c7*x^2*y + c8*x*y^2 + c9*y^3 +
-                 c10*x^4 + c11*x^3*y + c12*x^2*y^2 + c13*x*y^3 + c14*y^4
-
-        Parameters
-        ----------
-        x : np.ndarray
-            X coordinates (can be scalar or array)
-        y : np.ndarray
-            Y coordinates (can be scalar or array)
-        coeffs : np.ndarray
-            Array of 15 polynomial coefficients
-
-        Returns
-        -------
-        np.ndarray
-            Evaluated polynomial values with same shape as input x and y
-        """
-        return (
-            coeffs[0] +
-            coeffs[1] * x + coeffs[2] * y +
-            coeffs[3] * x**2 + coeffs[4] * x * y + coeffs[5] * y**2 +
-            coeffs[6] * x**3 + coeffs[7] * x**2 * y + coeffs[8] * x * y**2 + coeffs[9] * y**3 +
-            coeffs[10] * x**4 + coeffs[11] * x**3 * y + coeffs[12] * x**2 * y**2 +
-            coeffs[13] * x * y**3 + coeffs[14] * y**4
-        )
-    
     def can_geolocate(self) -> bool:
         """
-        Check if sensor can convert pixels to geodetic coordiantes and vice versa
+        Check if sensor can convert pixels to geodetic coordinates and vice versa.
 
         Returns
         -------
         bool
-            True if sensor has both forward and reverse geolocation polynomials.
+            True if sensor has all required ARF geolocation data: pointing vectors
+            and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
-        return (self.poly_row_col_to_lat is not None and
-                self.poly_row_col_to_lon is not None and
-                self.poly_lat_lon_to_row is not None and
-                self.poly_lat_lon_to_col is not None)
+        return (self.pointing is not None and
+                self.poly_pixel_to_arf_azimuth is not None and
+                self.poly_pixel_to_arf_elevation is not None and
+                self.poly_arf_to_row is not None and
+                self.poly_arf_to_col is not None)
     
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
@@ -241,10 +218,11 @@ class SampledSensor(Sensor):
 
     def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
         """
-        Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
+        Convert pixel coordinates to geodetic coordinates using ARF polynomials.
 
-        Uses 4th-order 2D polynomials to map (row, column) pixel coordinates to
-        (latitude, longitude) geodetic coordinates. Assumes altitude = 0 km.
+        Uses ARF (Attitude Reference Frame) polynomials to map (row, column) pixel
+        coordinates to geodetic coordinates by ray-casting to the Earth's surface.
+        Pixels that do not intersect Earth will have NaN coordinates.
 
         Parameters
         ----------
@@ -258,52 +236,72 @@ class SampledSensor(Sensor):
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object(s) with geodetic coordinates at 0 km altitude.
+            Astropy EarthLocation object(s) with geodetic coordinates.
+            Returns NaN coordinates for pixels that do not intersect Earth.
             Returns zero coordinates if polynomials are not available or frame not found.
 
         Notes
         -----
-        - Requires poly_row_col_to_lat and poly_row_col_to_lon to be defined
+        - Requires ARF polynomials and pointing vectors to be defined
         - Frame must exist in self.frames array
-        - Altitude is always set to 0 km (ground projection)
+        - Off-Earth pixels will have NaN lat/lon/height values
         """
         # If no polynomial coefficients provided, return zeros
-        if (self.poly_row_col_to_lat is None or
-            self.poly_row_col_to_lon is None or
-            self.frames is None):
-            invalid = np.zeros_like(rows)
+        if not self.can_geolocate() or self.frames is None:
+            invalid = np.zeros_like(rows, dtype=np.float64)
             return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
 
         # Find frame index in sensor's frame array
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
             # Frame not found in sensor calibration, return zeros
-            invalid = np.zeros_like(rows)
+            invalid = np.zeros_like(rows, dtype=np.float64)
             return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
 
         frame_idx = np.where(frame_mask)[0][0]
 
         # Get polynomial coefficients for this frame
-        lat_coeffs = self.poly_row_col_to_lat[frame_idx]
-        lon_coeffs = self.poly_row_col_to_lon[frame_idx]
+        az_coeffs = self.poly_pixel_to_arf_azimuth[frame_idx]
+        el_coeffs = self.poly_pixel_to_arf_elevation[frame_idx]
 
-        # Evaluate polynomials
-        latitudes = self._eval_polynomial_2d_order4(columns, rows, lat_coeffs)
-        longitudes = self._eval_polynomial_2d_order4(columns, rows, lon_coeffs)
+        # Evaluate polynomials: pixel → ARF angles (radians)
+        azimuth = evaluate_2d_polynomial(az_coeffs, columns, rows)
+        elevation = evaluate_2d_polynomial(el_coeffs, columns, rows)
 
-        # Convert to EarthLocation using geodetic coordinates
-        return EarthLocation.from_geodetic(
-            lon=longitudes * units.deg,
-            lat=latitudes * units.deg,
-            height=0 * units.km
+        # Convert ARF spherical → ARF Cartesian unit vectors
+        arf_vectors = spherical_to_cartesian(azimuth, elevation)
+
+        # Get sensor position and pointing for this frame
+        sensor_pos = self.get_positions(self.times[frame_idx:frame_idx + 1])[:, 0]
+        sensor_pointing = self.pointing[:, frame_idx]
+
+        # Get ARF transform and invert (transpose for orthonormal matrix)
+        arf_to_ecef = get_arf_transform(sensor_pos, sensor_pointing).T
+
+        # Transform ARF → ECEF line-of-sight vectors
+        # Handle both single point and array of points
+        if arf_vectors.ndim == 1:
+            ecef_vectors = arf_to_ecef @ arf_vectors
+        else:
+            ecef_vectors = arf_to_ecef @ arf_vectors
+
+        # Ray-cast to Earth (returns NaN for non-intersecting rays)
+        _, intersections = los_to_earth(sensor_pos, ecef_vectors)
+
+        # Convert ECEF intersection → geodetic (NaN intersections remain NaN)
+        return EarthLocation.from_geocentric(
+            x=intersections[0] * units.km,
+            y=intersections[1] * units.km,
+            z=intersections[2] * units.km
         )
     
     def geodetic_to_pixel(self, frame: int, loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
+        Convert geodetic coordinates to pixel coordinates using ARF polynomials.
 
-        Uses 4th-order 2D polynomials to map (latitude, longitude) geodetic coordinates
-        to (row, column) pixel coordinates.
+        Uses ARF (Attitude Reference Frame) polynomials to map geodetic coordinates
+        (latitude, longitude, altitude) to (row, column) pixel coordinates. This
+        method properly handles targets at any altitude, not just ground level.
 
         Parameters
         ----------
@@ -321,37 +319,70 @@ class SampledSensor(Sensor):
 
         Notes
         -----
-        - Requires poly_lat_lon_to_row and poly_lat_lon_to_col to be defined
+        - Requires ARF polynomials and pointing vectors to be defined
         - Frame must exist in self.frames array
         - Returns zero coordinates if polynomials are not available or frame not found
+        - Properly handles targets at any altitude (not limited to ground level)
         """
         # If no polynomial coefficients provided, return zeros
-        if (self.poly_lat_lon_to_row is None or
-            self.poly_lat_lon_to_col is None or
-            self.frames is None):
-            invalid = np.zeros(len(loc.lat))
+        if not self.can_geolocate() or self.frames is None:
+            # Handle both scalar and array EarthLocation
+            try:
+                n_points = len(loc.lat)
+            except TypeError:
+                n_points = 1
+            invalid = np.zeros(n_points)
             return invalid, invalid
 
         # Find frame index in sensor's frame array
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
             # Frame not found in sensor calibration, return zeros
-            invalid = np.zeros(len(loc.lat))
+            try:
+                n_points = len(loc.lat)
+            except TypeError:
+                n_points = 1
+            invalid = np.zeros(n_points)
             return invalid, invalid
 
         frame_idx = np.where(frame_mask)[0][0]
 
+        # Convert geodetic → ECEF Cartesian (km)
+        target_ecef = np.array([
+            loc.geocentric[0].to(units.km).value,
+            loc.geocentric[1].to(units.km).value,
+            loc.geocentric[2].to(units.km).value
+        ])
+
+        # Ensure target_ecef is 2D (3, N) even for single point
+        if target_ecef.ndim == 1:
+            target_ecef = target_ecef.reshape(3, 1)
+
+        # Get sensor position for this frame
+        sensor_pos = self.get_positions(self.times[frame_idx:frame_idx + 1])[:, 0]
+
+        # Compute line-of-sight vectors from sensor to targets
+        los_vectors = target_ecef - sensor_pos.reshape(3, 1)
+        los_norms = np.linalg.norm(los_vectors, axis=0, keepdims=True)
+        los_vectors = los_vectors / los_norms
+
+        # Get sensor pointing and compute ECEF → ARF transform
+        sensor_pointing = self.pointing[:, frame_idx]
+        ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
+
+        # Transform ECEF LOS → ARF Cartesian
+        arf_vectors = ecef_to_arf @ los_vectors
+
+        # Convert ARF Cartesian → spherical (azimuth, elevation in radians)
+        azimuth, elevation = cartesian_to_spherical(arf_vectors)
+
         # Get polynomial coefficients for this frame
-        row_coeffs = self.poly_lat_lon_to_row[frame_idx]
-        col_coeffs = self.poly_lat_lon_to_col[frame_idx]
+        row_coeffs = self.poly_arf_to_row[frame_idx]
+        col_coeffs = self.poly_arf_to_col[frame_idx]
 
-        # Extract latitudes and longitudes
-        latitudes = loc.lat.deg
-        longitudes = loc.lon.deg
-
-        # Evaluate polynomials
-        rows = self._eval_polynomial_2d_order4(longitudes, latitudes, row_coeffs)
-        columns = self._eval_polynomial_2d_order4(longitudes, latitudes, col_coeffs)
+        # Evaluate polynomials: ARF angles → pixel coordinates
+        rows = evaluate_2d_polynomial(row_coeffs, azimuth, elevation)
+        columns = evaluate_2d_polynomial(col_coeffs, azimuth, elevation)
 
         return rows, columns
 
@@ -390,13 +421,14 @@ class SampledSensor(Sensor):
             position_group.create_dataset('unix_times', data=unix_times)
             position_group.create_dataset('unix_fine_times', data=unix_fine_times)
 
-        # Save geolocation polynomials
+        # Save ARF geolocation polynomials
         if self.can_geolocate():
             geolocation_group = group.create_group('geolocation')
-            geolocation_group.create_dataset('poly_row_col_to_lat', data=self.poly_row_col_to_lat)
-            geolocation_group.create_dataset('poly_row_col_to_lon', data=self.poly_row_col_to_lon)
-            geolocation_group.create_dataset('poly_lat_lon_to_row', data=self.poly_lat_lon_to_row)
-            geolocation_group.create_dataset('poly_lat_lon_to_col', data=self.poly_lat_lon_to_col)
+            geolocation_group.create_dataset('poly_pixel_to_arf_azimuth', data=self.poly_pixel_to_arf_azimuth)
+            geolocation_group.create_dataset('poly_pixel_to_arf_elevation', data=self.poly_pixel_to_arf_elevation)
+            geolocation_group.create_dataset('poly_arf_to_row', data=self.poly_arf_to_row)
+            geolocation_group.create_dataset('poly_arf_to_col', data=self.poly_arf_to_col)
+            geolocation_group.create_dataset('pointing', data=self.pointing)
             geolocation_group.create_dataset('frames', data=self.frames)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
