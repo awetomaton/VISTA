@@ -73,7 +73,6 @@ def create_geodetic_only_simulation(output_dir="sim_geodetic_only"):
         enable_geodetic=True,
         center_lat=40.0,
         center_lon=-105.0,
-        pixel_to_deg_scale=0.0001
     )
     sim.simulate()
     sim.save(output_dir, save_geodetic_tracks=True)
@@ -99,7 +98,6 @@ def create_times_and_geodetic_simulation(output_dir="sim_times_geodetic"):
         enable_geodetic=True,
         center_lat=40.0,
         center_lon=-105.0,
-        pixel_to_deg_scale=0.0001
     )
     sim.simulate()
     sim.save(output_dir, save_geodetic_tracks=True, save_times_only=True)
@@ -126,7 +124,6 @@ def create_all_features_simulation(output_dir="sim_all_features"):
         enable_geodetic=True,
         center_lat=40.0,
         center_lon=-105.0,
-        pixel_to_deg_scale=0.0001,
         # Sensor calibration data
         enable_bias_images=True,
         num_bias_images=2,

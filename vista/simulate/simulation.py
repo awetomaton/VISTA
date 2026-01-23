@@ -121,8 +121,11 @@ class Simulation:
         # Pointing vector is from sensor toward Earth center, normalized
         pointing_vec = -sensor_pos / np.linalg.norm(sensor_pos)
 
-        # Create position and pointing arrays for all frames (same for all frames in simulation)
-        sensor_positions = np.tile(sensor_pos.reshape(3, 1), (1, self.frames))
+        # Sensor position as single sample (stationary sensor)
+        # SampledSensor handles this by returning same position for all query times
+        sensor_positions = sensor_pos.reshape(3, 1)
+
+        # Pointing vectors need to be per-frame since geolocation code indexes by frame
         pointing = np.tile(pointing_vec.reshape(3, 1), (1, self.frames))
 
         # Image center

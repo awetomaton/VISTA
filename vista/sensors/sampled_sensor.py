@@ -271,22 +271,31 @@ class SampledSensor(Sensor):
         # Convert ARF spherical → ARF Cartesian unit vectors
         arf_vectors = spherical_to_cartesian(azimuth, elevation)
 
-        # Get sensor position and pointing for this frame
-        sensor_pos = self.get_positions(self.times[frame_idx:frame_idx + 1])[:, 0]
+        # Get sensor position for this frame
+        # For stationary sensors (single position sample), use that position directly
+        if self.positions.shape[1] == 1:
+            sensor_pos = self.positions[:, 0]
+        else:
+            # For moving sensors, interpolate position at the frame's time
+            # Use min to avoid index out of bounds for stationary sensor with single time
+            time_idx = min(frame_idx, len(self.times) - 1)
+            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+
         sensor_pointing = self.pointing[:, frame_idx]
 
         # Get ARF transform and invert (transpose for orthonormal matrix)
         arf_to_ecef = get_arf_transform(sensor_pos, sensor_pointing).T
 
         # Transform ARF → ECEF line-of-sight vectors
-        # Handle both single point and array of points
-        if arf_vectors.ndim == 1:
-            ecef_vectors = arf_to_ecef @ arf_vectors
-        else:
-            ecef_vectors = arf_to_ecef @ arf_vectors
+        ecef_vectors = arf_to_ecef @ arf_vectors
 
         # Ray-cast to Earth (returns NaN for non-intersecting rays)
         _, intersections = los_to_earth(sensor_pos, ecef_vectors)
+
+        # Ensure intersections is 2D (3, N) even for single point
+        # los_to_earth squeezes single-point results to (3,)
+        if intersections.ndim == 1:
+            intersections = intersections.reshape(3, 1)
 
         # Convert ECEF intersection → geodetic (NaN intersections remain NaN)
         return EarthLocation.from_geocentric(
@@ -359,7 +368,13 @@ class SampledSensor(Sensor):
             target_ecef = target_ecef.reshape(3, 1)
 
         # Get sensor position for this frame
-        sensor_pos = self.get_positions(self.times[frame_idx:frame_idx + 1])[:, 0]
+        # For stationary sensors (single position sample), use that position directly
+        if self.positions.shape[1] == 1:
+            sensor_pos = self.positions[:, 0]
+        else:
+            # For moving sensors, interpolate position at the frame's time
+            time_idx = min(frame_idx, len(self.times) - 1)
+            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
 
         # Compute line-of-sight vectors from sensor to targets
         los_vectors = target_ecef - sensor_pos.reshape(3, 1)
