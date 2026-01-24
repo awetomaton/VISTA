@@ -1599,7 +1599,9 @@ class VistaMainWindow(QMainWindow):
         """Handle completion of algorithms that produce multiple imagery"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
-        
+        processed_imagery = [imagery for imagery in processed_imagery if imagery.images.size != 0]
+        if len(processed_imagery) == 0:
+            return
         for imagery in processed_imagery:
             if imagery.name in existing_names:
                 QMessageBox.critical(
@@ -1629,6 +1631,8 @@ class VistaMainWindow(QMainWindow):
     def on_single_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that create single imagery"""
         # Check for duplicate imagery name
+        if processed_imagery.images.size == 0:
+            return
         existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
         if processed_imagery.name in existing_names:
             QMessageBox.critical(

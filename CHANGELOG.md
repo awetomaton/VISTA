@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed mistake in error message when trying to create track or detections manually when no sensor is selected
 - Enabled manually creating track or detection without imagery
 - Added default histogram bounds
+- Fixed bug that could occur when imagery is created with no frames
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
