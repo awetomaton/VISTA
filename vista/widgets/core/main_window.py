@@ -508,9 +508,9 @@ class VistaMainWindow(QMainWindow):
             # Deactivate all other interactive modes
             self.deactivate_all_interactive_modes(except_action=self.create_track_action)
 
-            # Check if imagery is loaded
-            if self.viewer.imagery is None:
-                # No imagery, show warning and uncheck
+            # Check if sensor is selected
+            if self.viewer.selected_sensor is None:
+                # No selected sensor, show warning and uncheck
                 QMessageBox.warning(
                     self,
                     "No Sensor",
@@ -543,9 +543,9 @@ class VistaMainWindow(QMainWindow):
             # Deactivate all other interactive modes
             self.deactivate_all_interactive_modes(except_action=self.create_detection_action)
 
-            # Check if imagery is loaded
-            if self.viewer.imagery is None:
-                # No imagery, show warning and uncheck
+            # Check if sensor is selected
+            if self.viewer.selected_sensor is None:
+                # No selected sensor, show warning and uncheck
                 QMessageBox.warning(
                     self,
                     "No Sensor",

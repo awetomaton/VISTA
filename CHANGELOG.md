@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to delete any selected detection points.
 - Added button to break tracks into detections.
 - Added button to merge detections.
+- Fixed mistake in error message when trying to create track or detections manually when no sensor is selected
+- Enabled manually creating track or detection without imagery
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
