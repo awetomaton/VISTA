@@ -105,6 +105,7 @@ class TracksPanel(QWidget):
 
         # Apply button - applies to selected rows
         self.bulk_apply_btn = QPushButton("Apply to Selected")
+        self.bulk_apply_btn.setEnabled(False)  # Disabled until tracks selected
         self.bulk_apply_btn.clicked.connect(self.apply_bulk_action)
         bulk_layout.addWidget(self.bulk_apply_btn)
         bulk_layout.addStretch()
@@ -115,11 +116,13 @@ class TracksPanel(QWidget):
 
         # Add export tracks button
         self.export_tracks_btn = QPushButton("Export Tracks")
+        self.export_tracks_btn.setEnabled(False)  # Disabled until tracks selected
         self.export_tracks_btn.clicked.connect(self.export_tracks)
         tracks_actions_layout.addWidget(self.export_tracks_btn)
 
         # Add merge selected button
         self.merge_selected_tracks_btn = QPushButton("Merge Selected")
+        self.merge_selected_tracks_btn.setEnabled(False)  # Disabled until 2+ tracks selected
         self.merge_selected_tracks_btn.clicked.connect(self.merge_selected_tracks)
         tracks_actions_layout.addWidget(self.merge_selected_tracks_btn)
 
@@ -131,6 +134,7 @@ class TracksPanel(QWidget):
 
         # Add delete selected button
         self.delete_selected_tracks_btn = QPushButton("Delete Selected")
+        self.delete_selected_tracks_btn.setEnabled(False)  # Disabled until tracks selected
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
         tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
 
@@ -143,6 +147,7 @@ class TracksPanel(QWidget):
 
         # Add extract track button
         self.extract_track_btn = QPushButton("Extract")
+        self.extract_track_btn.setEnabled(False)  # Disabled until exactly one track selected
         self.extract_track_btn.clicked.connect(self.on_extract_tracks_clicked)
         self.extract_track_btn.setToolTip("Extract image chips and detect signal pixels for selected tracks")
         tracks_actions_layout.addWidget(self.extract_track_btn)
@@ -165,6 +170,7 @@ class TracksPanel(QWidget):
 
         # Add copy to sensor button
         self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
+        self.copy_to_sensor_btn.setEnabled(False)  # Disabled until tracks selected
         self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
         self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
         tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
@@ -1475,11 +1481,21 @@ class TracksPanel(QWidget):
         self.data_changed.emit()
 
     def on_track_selection_changed(self):
-        """Handle track selection change to enable/disable Edit Track button and highlight tracks"""
+        """Handle track selection change to enable/disable buttons and highlight tracks"""
         selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+        num_selected = len(selected_rows)
+
+        # Enable buttons based on selection count
+        self.export_tracks_btn.setEnabled(num_selected >= 1)
+        self.merge_selected_tracks_btn.setEnabled(num_selected >= 2)
+        self.delete_selected_tracks_btn.setEnabled(num_selected >= 1)
+        self.extract_track_btn.setEnabled(num_selected == 1)
+        self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
+        self.bulk_apply_btn.setEnabled(num_selected >= 1)
+
         # Enable Edit Track and Split Track buttons only if exactly one track is selected
-        self.edit_track_btn.setEnabled(len(selected_rows) == 1)
-        self.split_track_btn.setEnabled(len(selected_rows) == 1)
+        self.edit_track_btn.setEnabled(num_selected == 1)
+        self.split_track_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
         if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
             self.edit_track_btn.setChecked(False)
@@ -1959,9 +1975,33 @@ class TracksPanel(QWidget):
             self.edit_extraction_btn.setChecked(False)
 
     def export_tracks(self):
-        """Export all tracks to CSV file"""
-        if not self.viewer.trackers or all(len(t.tracks) == 0 for t in self.viewer.trackers):
-            QMessageBox.warning(self, "No Tracks", "There are no tracks to export.")
+        """Export selected tracks to CSV file"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to export.")
+            return
+
+        # Collect selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                break
+
+        if not selected_tracks:
+            QMessageBox.warning(self, "No Tracks", "Could not find the selected tracks.")
             return
 
         # Get last used save file from settings
@@ -1982,22 +2022,18 @@ class TracksPanel(QWidget):
         if file_path:
             self.settings.setValue("last_tracks_export_dir", str(pathlib.Path(file_path).parent))
             try:
-                # Combine all trackers' data
+                # Combine selected tracks' data
                 all_tracks_df = pd.DataFrame()
 
-                for tracker in self.viewer.trackers:
-                    if len(tracker.tracks) > 0:
-                        tracker_df = tracker.to_dataframe()
-                        all_tracks_df = pd.concat([all_tracks_df, tracker_df], ignore_index=True)
+                for track in selected_tracks:
+                    track_df = track.to_dataframe()
+                    all_tracks_df = pd.concat([all_tracks_df, track_df], ignore_index=True)
 
                 # Save to CSV
                 all_tracks_df.to_csv(file_path, index=False)
 
-                num_tracks = sum(len(t.tracks) for t in self.viewer.trackers)
-
-                # Build success message with included options
-                message_parts = [f"Exported {num_tracks} track(s)"]
-                message = " ".join(message_parts) + f" to:\n{file_path}"
+                # Build success message
+                message = f"Exported {len(selected_tracks)} track(s) to:\n{file_path}"
                 QMessageBox.information(
                     self,
                     "Success",
