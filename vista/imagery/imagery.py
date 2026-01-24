@@ -119,6 +119,7 @@ class Imagery:
     description: str = ""
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
+    default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
     uuid: str = field(init=None, default=None)
 
     # Performance optimization: cached data structures
@@ -204,39 +205,7 @@ class Imagery:
         self._frames_sorted = None
         self._histograms = None
         self._histogram_bins = None
-
-    def _compute_histogram_bins(self, image: NDArray, min_percentile=1, max_percentile=99, bins=256):
-        """
-        Compute histogram bin edges based on image data range.
-
-        Parameters
-        ----------
-        bins : int
-            Number of histogram bins (default: 256)
-        image: NDArray
-            Image on which to base histogram bins
-        min_percentile: int
-            Minimnum image value to use for choosing histogram bins based on percentile (0-100)
-        max_percentile: int
-            Maximum image value to use for choosing histogram bins based on percentile (0-100)
-            
-        Returns
-        -------
-        NDArray
-            Array of bin edges
-        """
-        if self._histogram_bins is None:
-            # Remove zero values since there are often many of these values
-            nonzero_image = image[image != 0]
-
-            # Compute data range 
-            min = np.percentile(nonzero_image, min_percentile)
-            max = np.percentile(nonzero_image, max_percentile)
-
-            # Create bin edges spanning the range
-            self._histogram_bins = np.linspace(min, max, bins + 1)
-        
-        return self._histogram_bins
+        self.default_histogram_bounds = {}
 
     def copy(self):
         """Create a (soft) copy of this imagery"""
@@ -302,20 +271,26 @@ class Imagery:
         col_downsample = max(1, cols // max_rowcol_to_use)
         if self._histograms is None:
             self._histograms = {}
+        if self.default_histogram_bounds is None:
+            self.default_histogram_bounds = {}
 
         if frame_index not in self._histograms:
             image = self.images[frame_index, ::row_downsample, ::col_downsample]
 
-            # Get pre-computed bin edges (computed once for all frames)
-            bin_edges = self._compute_histogram_bins(
-                image,
-                min_percentile=min_percentile,
-                max_percentile=max_percentile,
-                bins=bins_to_use
-            )
-            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+            # Remove zero values since there are often many of these values
+            nonzero_image = image[image != 0]
 
-            hist_y, _ = np.histogram(image, bins=bin_edges)
+            # Compute data range 
+            if nonzero_image.size > 0:
+                hist_min = np.percentile(nonzero_image, min_percentile)
+                hist_max = np.percentile(nonzero_image, max_percentile)
+            else:
+                hist_min = -1.0
+                hist_max = 1.0
+            self.default_histogram_bounds[frame_index] = (hist_min, hist_max)
+
+            hist_y, bin_edges = np.histogram(image, bins=bins)
+            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
             nonzero_hist = hist_y > 0
             self._histograms[frame_index] = (hist_y[nonzero_hist], bin_centers[nonzero_hist])
 

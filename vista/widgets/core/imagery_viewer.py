@@ -334,7 +334,7 @@ class ImageryViewer(QWidget):
 
                 # Restore user's histogram bounds if they were manually set
                 if user_histogram_bounds is None:
-                    self.histogram.setLevels(self.histogram.plot.xData[0], self.histogram.plot.xData[-1])
+                    self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
                 else:
                     self.histogram.setLevels(*user_histogram_bounds)
 
