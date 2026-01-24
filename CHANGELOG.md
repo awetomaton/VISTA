@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to load placemarks and shape files into VISTA.
 - Added the ability to display all detections for a given detector across all time.
 - Added the ability to delete any selected detection points.
+- Added button to break tracks into detections.
+- Added button to merge detections.
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
