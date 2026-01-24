@@ -39,27 +39,31 @@ class DetectionsPanel(QWidget):
         # Visibility and management buttons
         button_layout = QHBoxLayout()
         self.toggle_visibility_btn = QPushButton("Toggle Visibility")
-        self.toggle_visibility_btn.clicked.connect(self.toggle_all_detections_visibility)
+        self.toggle_visibility_btn.setEnabled(False)  # Disabled until detectors selected
+        self.toggle_visibility_btn.clicked.connect(self.toggle_selected_detections_visibility)
         self.export_detections_btn = QPushButton("Export Detections")
+        self.export_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.export_detections_btn.clicked.connect(self.export_detections)
         self.delete_selected_detections_btn = QPushButton("Delete Selected")
+        self.delete_selected_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.delete_selected_detections_btn.clicked.connect(self.delete_selected_detections)
         button_layout.addWidget(self.toggle_visibility_btn)
         button_layout.addWidget(self.export_detections_btn)
         button_layout.addWidget(self.delete_selected_detections_btn)
 
+        # Add merge detections button
+        self.merge_detections_btn = QPushButton("Merge Detections")
+        self.merge_detections_btn.setEnabled(False)  # Disabled until 2+ detectors selected
+        self.merge_detections_btn.clicked.connect(self.merge_detections)
+        self.merge_detections_btn.setToolTip("Merge selected detectors into a single detector")
+        button_layout.addWidget(self.merge_detections_btn)
+
         # Add copy to sensor button
         self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
+        self.copy_to_sensor_btn.setEnabled(False)  # Disabled until detectors selected
         self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
         self.copy_to_sensor_btn.setToolTip("Copy selected detections to a different sensor")
         button_layout.addWidget(self.copy_to_sensor_btn)
-
-        # Add label detections button
-        self.label_detections_btn = QPushButton("Label Detections")
-        self.label_detections_btn.clicked.connect(self.label_selected_detections)
-        self.label_detections_btn.setEnabled(False)  # Disabled until detections are selected
-        self.label_detections_btn.setToolTip("Add labels to selected detection points (use 'Select Detections' tool)")
-        button_layout.addWidget(self.label_detections_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -92,6 +96,13 @@ class DetectionsPanel(QWidget):
         self.delete_selected_points_btn.clicked.connect(self.delete_selected_detection_points)
         self.delete_selected_points_btn.setToolTip("Delete selected detection points from their detectors")
         track_from_detections_layout.addWidget(self.delete_selected_points_btn)
+
+        # Add label detections button
+        self.label_detections_btn = QPushButton("Label Detections")
+        self.label_detections_btn.clicked.connect(self.label_selected_detections)
+        self.label_detections_btn.setEnabled(False)  # Disabled until detections are selected
+        self.label_detections_btn.setToolTip("Add labels to selected detection points (use 'Select Detections' tool)")
+        track_from_detections_layout.addWidget(self.label_detections_btn)
 
         track_from_detections_layout.addStretch()
         layout.addLayout(track_from_detections_layout)
@@ -575,18 +586,36 @@ class DetectionsPanel(QWidget):
                 # Emit change signal
                 self.data_changed.emit()
 
-    def toggle_all_detections_visibility(self):
-        """Toggle visibility of all detections - if any are visible, hide all; otherwise show all"""
-        if not self.viewer.detectors:
+    def toggle_selected_detections_visibility(self):
+        """Toggle visibility of selected detections - if any are visible, hide all; otherwise show all"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        if not selected_rows:
             return
 
-        # Check if any detectors are currently visible
-        any_visible = any(detector.visible for detector in self.viewer.detectors)
+        # Collect selected detectors
+        selected_detectors = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            selected_detectors.append(detector)
+                            break
+
+        if not selected_detectors:
+            return
+
+        # Check if any selected detectors are currently visible
+        any_visible = any(detector.visible for detector in selected_detectors)
 
         # If any are visible, hide all; otherwise show all
         new_visibility = not any_visible
 
-        for detector in self.viewer.detectors:
+        for detector in selected_detectors:
             detector.visible = new_visibility
 
         self.refresh_detections_table()
@@ -630,12 +659,21 @@ class DetectionsPanel(QWidget):
         self.data_changed.emit()
 
     def on_detector_selection_changed(self):
-        """Handle detector selection change to enable/disable Edit Detector button"""
+        """Handle detector selection change to enable/disable buttons"""
         selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+        num_selected = len(selected_rows)
+
+        # Enable buttons based on selection count
+        self.toggle_visibility_btn.setEnabled(num_selected >= 1)
+        self.export_detections_btn.setEnabled(num_selected >= 1)
+        self.delete_selected_detections_btn.setEnabled(num_selected >= 1)
+        self.merge_detections_btn.setEnabled(num_selected >= 2)
+        self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
+
         # Enable Edit Detector button only if exactly one detector is selected
-        self.edit_detector_btn.setEnabled(len(selected_rows) == 1)
+        self.edit_detector_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
-        if self.edit_detector_btn.isChecked() and len(selected_rows) != 1:
+        if self.edit_detector_btn.isChecked() and num_selected != 1:
             self.edit_detector_btn.setChecked(False)
 
     def on_edit_detector_clicked(self, checked):
@@ -708,9 +746,28 @@ class DetectionsPanel(QWidget):
                         main_window.statusBar().showMessage("Detector editing cancelled", 3000)
 
     def export_detections(self):
-        """Export all detections to CSV file"""
-        if not self.viewer.detectors:
-            QMessageBox.warning(self, "No Detections", "There are no detections to export.")
+        """Export selected detections to CSV file"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more detectors to export.")
+            return
+
+        # Collect selected detectors
+        selected_detectors = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            selected_detectors.append(detector)
+                            break
+
+        if not selected_detectors:
+            QMessageBox.warning(self, "No Detections", "Could not find the selected detectors.")
             return
 
         # Get last used directory from settings
@@ -731,21 +788,21 @@ class DetectionsPanel(QWidget):
         if file_path:
             self.settings.setValue("last_detections_export_dir", str(pathlib.Path(file_path).parent))
             try:
-                # Combine all detectors' data
+                # Combine selected detectors' data
                 all_detections_df = pd.DataFrame()
 
-                for detector in self.viewer.detectors:
+                for detector in selected_detectors:
                     detector_df = detector.to_dataframe()
                     all_detections_df = pd.concat([all_detections_df, detector_df], ignore_index=True)
 
                 # Save to CSV
                 all_detections_df.to_csv(file_path, index=False)
 
-                num_detections = sum(len(d.frames) for d in self.viewer.detectors)
+                num_detections = sum(len(d.frames) for d in selected_detectors)
                 QMessageBox.information(
                     self,
                     "Success",
-                    f"Exported {num_detections} detection(s) to:\n{file_path}"
+                    f"Exported {num_detections} detection(s) from {len(selected_detectors)} detector(s) to:\n{file_path}"
                 )
             except Exception as e:
                 QMessageBox.critical(
@@ -1218,3 +1275,115 @@ class DetectionsPanel(QWidget):
         main_window = QApplication.instance().activeWindow()
         if hasattr(main_window, 'select_detections_action'):
             main_window.select_detections_action.setChecked(False)
+
+    def merge_detections(self):
+        """Merge selected detectors into a single new detector"""
+        # Get selected rows from the table
+        selected_rows = sorted(set(index.row() for index in self.detections_table.selectedIndexes()))
+
+        if len(selected_rows) < 2:
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Please select at least 2 detectors to merge."
+            )
+            return
+
+        # Collect detectors from selected rows
+        detectors_to_merge = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            detectors_to_merge.append(detector)
+                            break
+
+        if len(detectors_to_merge) < 2:
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Could not find enough valid detectors to merge."
+            )
+            return
+
+        # Check that all detectors are from the same sensor (compare by identity)
+        first_detector = detectors_to_merge[0]
+        sensor = first_detector.sensor
+        if not all(d.sensor is sensor for d in detectors_to_merge):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected detectors belong to different sensors. Please select detectors from the same sensor."
+            )
+            return
+
+        # Combine all frames, rows, columns, and labels
+        all_frames = []
+        all_rows = []
+        all_columns = []
+        all_labels = []
+
+        for detector in detectors_to_merge:
+            all_frames.extend(detector.frames.tolist())
+            all_rows.extend(detector.rows.tolist())
+            all_columns.extend(detector.columns.tolist())
+            # Extend labels, padding with empty sets if needed
+            for i in range(len(detector.frames)):
+                if i < len(detector.labels):
+                    all_labels.append(detector.labels[i].copy())
+                else:
+                    all_labels.append(set())
+
+        # Create merged detector
+        merged_name = f"Merged_{first_detector.name}"
+
+        # Make sure the merged name is unique
+        existing_names = {d.name for d in self.viewer.detectors}
+        counter = 1
+        base_name = merged_name
+        while merged_name in existing_names:
+            merged_name = f"{base_name}_{counter}"
+            counter += 1
+
+        from vista.detections.detector import Detector
+        merged_detector = Detector(
+            name=merged_name,
+            frames=np.array(all_frames, dtype=np.int_),
+            rows=np.array(all_rows),
+            columns=np.array(all_columns),
+            sensor=sensor,
+            color=first_detector.color,
+            marker=first_detector.marker,
+            marker_size=first_detector.marker_size,
+            line_thickness=first_detector.line_thickness,
+            visible=True,
+            labels=all_labels,
+        )
+
+        # Add merged detector to viewer
+        self.viewer.add_detector(merged_detector)
+
+        # Delete the original detectors
+        detectors_to_delete_ids = set(id(d) for d in detectors_to_merge)
+        self.viewer.detectors = [d for d in self.viewer.detectors if id(d) not in detectors_to_delete_ids]
+
+        # Remove plot items from viewer
+        for detector in detectors_to_merge:
+            detector_id = id(detector)
+            if detector_id in self.viewer.detector_plot_items:
+                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_id])
+                del self.viewer.detector_plot_items[detector_id]
+
+        # Refresh table
+        self.refresh_detections_table()
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self,
+            "Merge Complete",
+            f"Successfully merged {len(detectors_to_merge)} detectors into '{merged_name}'.\n"
+            f"The merged detector has {len(all_frames)} detection points."
+        )

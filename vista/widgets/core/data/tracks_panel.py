@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
+from vista.detections.detector import Detector
 from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
 from vista.widgets.core.data.delegates import LabelsSelectionDialog
 from vista.tracks.track import Track
@@ -111,7 +112,7 @@ class TracksPanel(QWidget):
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
 
-        # Track actions section
+        # Multi Track actions section
         tracks_actions_layout = QHBoxLayout()
 
         # Add export tracks button
@@ -120,54 +121,6 @@ class TracksPanel(QWidget):
         self.export_tracks_btn.clicked.connect(self.export_tracks)
         tracks_actions_layout.addWidget(self.export_tracks_btn)
 
-        # Add merge selected button
-        self.merge_selected_tracks_btn = QPushButton("Merge Selected")
-        self.merge_selected_tracks_btn.setEnabled(False)  # Disabled until 2+ tracks selected
-        self.merge_selected_tracks_btn.clicked.connect(self.merge_selected_tracks)
-        tracks_actions_layout.addWidget(self.merge_selected_tracks_btn)
-
-        # Add split track button
-        self.split_track_btn = QPushButton("Split Track")
-        self.split_track_btn.setEnabled(False)  # Disabled until single track selected
-        self.split_track_btn.clicked.connect(self.split_selected_track)
-        tracks_actions_layout.addWidget(self.split_track_btn)
-
-        # Add delete selected button
-        self.delete_selected_tracks_btn = QPushButton("Delete Selected")
-        self.delete_selected_tracks_btn.setEnabled(False)  # Disabled until tracks selected
-        self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
-        tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
-
-        # Add edit track button
-        self.edit_track_btn = QPushButton("Edit Track")
-        self.edit_track_btn.setCheckable(True)
-        self.edit_track_btn.setEnabled(False)  # Disabled until single track selected
-        self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
-        tracks_actions_layout.addWidget(self.edit_track_btn)
-
-        # Add extract track button
-        self.extract_track_btn = QPushButton("Extract")
-        self.extract_track_btn.setEnabled(False)  # Disabled until exactly one track selected
-        self.extract_track_btn.clicked.connect(self.on_extract_tracks_clicked)
-        self.extract_track_btn.setToolTip("Extract image chips and detect signal pixels for selected tracks")
-        tracks_actions_layout.addWidget(self.extract_track_btn)
-
-        # Add view extraction button
-        self.view_extraction_btn = QPushButton("View Extraction")
-        self.view_extraction_btn.setCheckable(True)
-        self.view_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
-        self.view_extraction_btn.clicked.connect(self.on_view_extraction_clicked)
-        self.view_extraction_btn.setToolTip("View signal pixel overlay for selected extracted track")
-        tracks_actions_layout.addWidget(self.view_extraction_btn)
-
-        # Add edit extraction button
-        self.edit_extraction_btn = QPushButton("Edit Extraction")
-        self.edit_extraction_btn.setCheckable(True)
-        self.edit_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
-        self.edit_extraction_btn.clicked.connect(self.on_edit_extraction_clicked)
-        self.edit_extraction_btn.setToolTip("Fine-tune extraction by painting signal pixels")
-        tracks_actions_layout.addWidget(self.edit_extraction_btn)
-
         # Add copy to sensor button
         self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
         self.copy_to_sensor_btn.setEnabled(False)  # Disabled until tracks selected
@@ -175,8 +128,69 @@ class TracksPanel(QWidget):
         self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
         tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
 
+        # Add merge selected button
+        self.merge_selected_tracks_btn = QPushButton("Merge Selected")
+        self.merge_selected_tracks_btn.setEnabled(False)  # Disabled until 2+ tracks selected
+        self.merge_selected_tracks_btn.clicked.connect(self.merge_selected_tracks)
+        tracks_actions_layout.addWidget(self.merge_selected_tracks_btn)
+
+        # Add delete selected button
+        self.delete_selected_tracks_btn = QPushButton("Delete Selected")
+        self.delete_selected_tracks_btn.setEnabled(False)  # Disabled until tracks selected
+        self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
+        tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
+
         tracks_actions_layout.addStretch()
         layout.addLayout(tracks_actions_layout)
+
+        # Single Track actions section
+        track_actions_layout = QHBoxLayout()
+
+        # Add split track button
+        self.split_track_btn = QPushButton("Split Track")
+        self.split_track_btn.setEnabled(False)  # Disabled until single track selected
+        self.split_track_btn.clicked.connect(self.split_selected_track)
+        track_actions_layout.addWidget(self.split_track_btn)
+
+        # Add edit track button
+        self.edit_track_btn = QPushButton("Edit Track")
+        self.edit_track_btn.setCheckable(True)
+        self.edit_track_btn.setEnabled(False)  # Disabled until single track selected
+        self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
+        track_actions_layout.addWidget(self.edit_track_btn)
+
+        # Add extract track button
+        self.extract_track_btn = QPushButton("Extract")
+        self.extract_track_btn.setEnabled(False)  # Disabled until exactly one track selected
+        self.extract_track_btn.clicked.connect(self.on_extract_tracks_clicked)
+        self.extract_track_btn.setToolTip("Extract image chips and detect signal pixels for selected tracks")
+        track_actions_layout.addWidget(self.extract_track_btn)
+
+        # Add view extraction button
+        self.view_extraction_btn = QPushButton("View Extraction")
+        self.view_extraction_btn.setCheckable(True)
+        self.view_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
+        self.view_extraction_btn.clicked.connect(self.on_view_extraction_clicked)
+        self.view_extraction_btn.setToolTip("View signal pixel overlay for selected extracted track")
+        track_actions_layout.addWidget(self.view_extraction_btn)
+
+        # Add edit extraction button
+        self.edit_extraction_btn = QPushButton("Edit Extraction")
+        self.edit_extraction_btn.setCheckable(True)
+        self.edit_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
+        self.edit_extraction_btn.clicked.connect(self.on_edit_extraction_clicked)
+        self.edit_extraction_btn.setToolTip("Fine-tune extraction by painting signal pixels")
+        track_actions_layout.addWidget(self.edit_extraction_btn)
+
+        # Add break into detections button
+        self.break_into_detections_btn = QPushButton("Break Into Detections")
+        self.break_into_detections_btn.setEnabled(False)  # Disabled until tracks selected
+        self.break_into_detections_btn.clicked.connect(self.break_into_detections)
+        self.break_into_detections_btn.setToolTip("Convert selected tracks into detectors (one detector per track)")
+        track_actions_layout.addWidget(self.break_into_detections_btn)
+
+        track_actions_layout.addStretch()
+        layout.addLayout(track_actions_layout)
 
         # Track column visibility (all columns visible by default except what we decide to hide)
         # Column 0 (Visible) is always shown and cannot be hidden
@@ -1282,7 +1296,7 @@ class TracksPanel(QWidget):
         )
 
         # Add merged track to the tracker of the first track
-        first_tracker = tracker_map[id(first_track)]
+        first_tracker = tracker_map[first_track.uuid]
         first_tracker.tracks.append(merged_track)
 
         # Delete the original tracks
@@ -1492,6 +1506,7 @@ class TracksPanel(QWidget):
         self.extract_track_btn.setEnabled(num_selected == 1)
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
         self.bulk_apply_btn.setEnabled(num_selected >= 1)
+        self.break_into_detections_btn.setEnabled(num_selected >= 1)
 
         # Enable Edit Track and Split Track buttons only if exactly one track is selected
         self.edit_track_btn.setEnabled(num_selected == 1)
@@ -2131,3 +2146,67 @@ class TracksPanel(QWidget):
                 f"Copied {len(tracks_to_copy)} track(s) to sensor '{target_sensor.name}'.",
                 QMessageBox.StandardButton.Ok
             )
+
+    def break_into_detections(self):
+        """Convert selected tracks into detectors (one detector per track)"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to convert to detections.")
+            return
+
+        # Collect selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                break
+
+        if not selected_tracks:
+            QMessageBox.warning(self, "No Tracks", "Could not find the selected tracks.")
+            return
+
+        # Create a detector for each track
+        detectors_created = 0
+        for track in selected_tracks:
+            detector = Detector(
+                name=f"From Track: {track.name}",
+                frames=track.frames.copy(),
+                rows=track.rows.copy(),
+                columns=track.columns.copy(),
+                sensor=track.sensor,
+                color=track.color,
+                marker=track.marker,
+                marker_size=track.marker_size,
+                visible=True,
+            )
+            self.viewer.add_detector(detector)
+            detectors_created += 1
+
+        # Refresh the detections panel
+        parent_widget = self.parent()
+        while parent_widget is not None:
+            if hasattr(parent_widget, 'detections_panel'):
+                parent_widget.detections_panel.refresh_detections_table()
+                break
+            parent_widget = parent_widget.parent()
+
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self,
+            "Success",
+            f"Created {detectors_created} detector(s) from the selected tracks.",
+            QMessageBox.StandardButton.Ok
+        )
