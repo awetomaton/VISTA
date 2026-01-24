@@ -86,6 +86,13 @@ class DetectionsPanel(QWidget):
         self.edit_detector_btn.clicked.connect(self.on_edit_detector_clicked)
         track_from_detections_layout.addWidget(self.edit_detector_btn)
 
+        # Add delete selected points button
+        self.delete_selected_points_btn = QPushButton("Delete Selected Points")
+        self.delete_selected_points_btn.setEnabled(False)  # Disabled until detections are selected
+        self.delete_selected_points_btn.clicked.connect(self.delete_selected_detection_points)
+        self.delete_selected_points_btn.setToolTip("Delete selected detection points from their detectors")
+        track_from_detections_layout.addWidget(self.delete_selected_points_btn)
+
         track_from_detections_layout.addStretch()
         layout.addLayout(track_from_detections_layout)
 
@@ -909,6 +916,7 @@ class DetectionsPanel(QWidget):
             self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)
             self.add_to_existing_track_btn.setEnabled(len(detections) >= 1)
             self.label_detections_btn.setEnabled(len(detections) >= 1)
+            self.delete_selected_points_btn.setEnabled(len(detections) >= 1)
 
     def clear_detection_selection(self):
         """Clear the selected detections and update UI"""
@@ -916,6 +924,80 @@ class DetectionsPanel(QWidget):
         self.create_track_from_detections_btn.setEnabled(False)
         self.add_to_existing_track_btn.setEnabled(False)
         self.label_detections_btn.setEnabled(False)
+        self.delete_selected_points_btn.setEnabled(False)
+
+    def delete_selected_detection_points(self):
+        """Delete the selected detection points from their detectors"""
+        if len(self.selected_detections) == 0:
+            return
+
+        # Group indices by detector
+        detector_indices = {}
+        for detector, frame, index in self.selected_detections:
+            if id(detector) not in detector_indices:
+                detector_indices[id(detector)] = {'detector': detector, 'indices': []}
+            detector_indices[id(detector)]['indices'].append(index)
+
+        # Delete points from each detector (in reverse order to preserve indices)
+        total_deleted = 0
+        detectors_to_remove = []
+
+        for detector_id, data in detector_indices.items():
+            detector = data['detector']
+            indices_to_delete = sorted(data['indices'], reverse=True)
+
+            # Create mask for points to keep
+            keep_mask = np.ones(len(detector.frames), dtype=bool)
+            for idx in indices_to_delete:
+                if 0 <= idx < len(keep_mask):
+                    keep_mask[idx] = False
+                    total_deleted += 1
+
+            # Update detector arrays
+            detector.frames = detector.frames[keep_mask]
+            detector.rows = detector.rows[keep_mask]
+            detector.columns = detector.columns[keep_mask]
+
+            # Update labels if they exist
+            if detector.labels and len(detector.labels) > 0:
+                detector.labels = [label for i, label in enumerate(detector.labels) if keep_mask[i]]
+
+            # Invalidate frame index cache
+            detector._frame_index = None
+
+            # Check if detector is now empty
+            if len(detector.frames) == 0:
+                detectors_to_remove.append(detector)
+
+        # Remove empty detectors
+        for detector in detectors_to_remove:
+            if detector in self.viewer.detectors:
+                self.viewer.detectors.remove(detector)
+
+        # Clear selected detections in viewer
+        self.viewer.selected_detections = []
+        self.viewer._update_selected_detections_display()
+
+        # Clear our selection
+        self.clear_detection_selection()
+
+        # Update viewer display
+        self.viewer.update_overlays()
+
+        # Refresh the table
+        self.refresh_detections_table()
+
+        # Emit data changed signal
+        self.data_changed.emit()
+
+        # Show confirmation
+        QMessageBox.information(
+            self,
+            "Points Deleted",
+            f"Deleted {total_deleted} detection point(s)." +
+            (f"\n{len(detectors_to_remove)} empty detector(s) were also removed." if detectors_to_remove else ""),
+            QMessageBox.StandardButton.Ok
+        )
 
     def create_track_from_selected_detections(self):
         """Create a track from selected detections"""

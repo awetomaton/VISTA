@@ -829,25 +829,30 @@ class ImageryViewer(QWidget):
                 if all_contained:
                     selected_items['tracks'].append(track)
 
-        # Check detections at current frame (each detection checked individually)
+        # Check detections (visible detections based on complete mode)
         for detector in self.detectors:
             if not detector.visible:
                 continue
             if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
                 continue
 
-            rows, cols = detector.get_detections_at_frame(self.current_frame_number)
-            if len(rows) == 0:
-                continue
-
-            # Get indices for detections at current frame
-            frame_mask = detector.frames == self.current_frame_number
-            indices = np.where(frame_mask)[0]
+            if detector.complete:
+                # Check all detections when complete mode is enabled
+                rows, cols = detector.rows, detector.columns
+                indices = np.arange(len(detector.frames))
+            else:
+                # Check only detections at current frame
+                rows, cols = detector.get_detections_at_frame(self.current_frame_number)
+                if len(rows) == 0:
+                    continue
+                frame_mask = detector.frames == self.current_frame_number
+                indices = np.where(frame_mask)[0]
 
             for i, (row, col) in enumerate(zip(rows, cols)):
                 if lasso_polygon.contains(Point(col, row)):
                     # Store as (detector, frame, original_index)
-                    selected_items['detections'].append((detector, self.current_frame_number, int(indices[i])))
+                    detection_frame = detector.frames[indices[i]]
+                    selected_items['detections'].append((detector, int(detection_frame), int(indices[i])))
 
         # Check AOIs (wholly contained = ALL 4 corners inside)
         for aoi in self.aois:
@@ -2137,16 +2142,25 @@ class ImageryViewer(QWidget):
                     if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
                         continue
 
-                    # Find detections at current frame
-                    mask = detector.frames == self.current_frame_number
-                    if not np.any(mask):
+                    # Get visible detections based on complete mode
+                    if detector.complete:
+                        # All detections are visible
+                        rows = detector.rows
+                        cols = detector.columns
+                        indices = np.arange(len(detector.frames))
+                    else:
+                        # Only detections at current frame
+                        mask = detector.frames == self.current_frame_number
+                        if not np.any(mask):
+                            continue
+                        rows = detector.rows[mask]
+                        cols = detector.columns[mask]
+                        indices = np.where(mask)[0]
+
+                    if len(rows) == 0:
                         continue
 
-                    rows = detector.rows[mask]
-                    cols = detector.columns[mask]
-                    indices = np.where(mask)[0]
-
-                    # Calculate distances to all detections at this frame
+                    # Calculate distances to all visible detections
                     distances = np.sqrt((cols - col)**2 + (rows - row)**2)
                     min_idx = np.argmin(distances)
                     min_distance = distances[min_idx]
@@ -2155,7 +2169,8 @@ class ImageryViewer(QWidget):
                     if min_distance < tolerance and min_distance < closest_distance:
                         closest_distance = min_distance
                         original_index = indices[min_idx]
-                        closest_detection = (detector, self.current_frame_number, int(original_index))
+                        detection_frame = int(detector.frames[original_index])
+                        closest_detection = (detector, detection_frame, int(original_index))
 
                 # If we found a detection, add/toggle in selection
                 if closest_detection:

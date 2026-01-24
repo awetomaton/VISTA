@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Track Interpolator algorithm (Filters > Track Filters > Track Interpolator) to fill missing frames in track trajectories.
 - Added Savitzky-Golay Filter algorithm (Filters > Track Filters > Savitzky-Golay Filter) to smooth track trajectories.
 - Added the ability to load placemarks and shape files into VISTA.
+- Added the ability to display all detections for a given detector across all time.
+- Added the ability to delete any selected detection points.
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 

@@ -628,6 +628,13 @@ class VistaMainWindow(QMainWindow):
         else:
             # Disable lasso selection mode
             self.viewer.set_lasso_selection_mode(False)
+
+            # Clear all selections made by lasso
+            self.viewer.set_selected_tracks(set())  # Clear track selection in viewer
+            self.viewer.selected_detections = []  # Clear detection selection in viewer
+            self.viewer._update_selected_detections_display()
+            self.data_manager.detections_panel.clear_detection_selection()  # Clear detection selection in panel
+
             self.statusBar().showMessage("Lasso selection mode disabled", 3000)
 
     def on_lasso_selection_completed(self, selected_items):
