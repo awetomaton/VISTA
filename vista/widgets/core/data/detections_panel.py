@@ -91,9 +91,9 @@ class DetectionsPanel(QWidget):
 
         # Detections table
         self.detections_table = QTableWidget()
-        self.detections_table.setColumnCount(7)
+        self.detections_table.setColumnCount(8)
         self.detections_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness"
+            "Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"
         ])
 
         # Enable row selection via vertical header
@@ -113,6 +113,7 @@ class DetectionsPanel(QWidget):
         self.detections_table.setColumnWidth(4, 80)  # Set reasonably large width to accomodate delegate
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Size (numeric)
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line thickness (numeric)
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
 
         self.detections_table.cellChanged.connect(self.on_detection_cell_changed)
 
@@ -209,6 +210,12 @@ class DetectionsPanel(QWidget):
                     line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
                     self.detections_table.setItem(row, 6, line_thickness_item)
 
+                    # Complete checkbox
+                    complete_item = QTableWidgetItem()
+                    complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
+                    self.detections_table.setItem(row, 7, complete_item)
+
                 except Exception as e:
                     print(f"Error adding detector '{detector.name}' to table at row {row}: {e}")
                     traceback.print_exc()
@@ -221,7 +228,7 @@ class DetectionsPanel(QWidget):
 
     def _update_detections_header_icons(self):
         """Update header labels to show filter indicators"""
-        base_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness"]
+        base_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -522,6 +529,9 @@ class DetectionsPanel(QWidget):
                 detector.line_thickness = int(item.text())
             except ValueError:
                 pass
+        elif column == 7:  # Complete
+            item = self.detections_table.item(row, column)
+            detector.complete = item.checkState() == Qt.CheckState.Checked
 
         # Invalidate caches if styling properties were modified
         if column in [3, 4, 5, 6]:  # Color, Marker, Size, Line thickness

@@ -82,6 +82,7 @@ class Detector:
     marker_size: int = 10
     line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
+    complete: bool = False  # Show all detections across all frames (like track.complete)
     labels: list[set[str]] = field(default_factory=list)  # List of label sets, one per detection point
 
     # Performance optimization: cached data structures

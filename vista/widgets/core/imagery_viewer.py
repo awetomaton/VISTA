@@ -482,25 +482,38 @@ class ImageryViewer(QWidget):
                 scatter.setData(x=[], y=[])  # Hide by setting empty data
                 continue
 
-            # Get detections at current frame using optimized O(1) lookup
-            rows, cols = detector.get_detections_at_frame(frame_num)
+            # Get detections - either all (complete mode) or just current frame
+            if detector.complete:
+                # Show all detections across all frames
+                rows, cols = detector.rows.copy(), detector.columns.copy()
+            else:
+                # Get detections at current frame using optimized O(1) lookup
+                rows, cols = detector.get_detections_at_frame(frame_num)
 
             # Apply label filter if detections panel has active filters
             if len(rows) > 0:
                 try:
                     if hasattr(self, 'data_manager') and self.data_manager is not None:
                         if hasattr(self.data_manager, 'detections_panel'):
-                            # Get full frame mask for label filtering
-                            frame_mask = detector.frames == frame_num
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
-                            combined_mask = frame_mask & label_mask
-                            if np.any(combined_mask):
-                                rows = detector.rows[combined_mask]
-                                cols = detector.columns[combined_mask]
+                            if detector.complete:
+                                # For complete mode, just apply label filter
+                                if np.any(label_mask):
+                                    rows = detector.rows[label_mask]
+                                    cols = detector.columns[label_mask]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
                             else:
-                                rows, cols = np.array([]), np.array([])
+                                # For current frame mode, combine frame and label filters
+                                frame_mask = detector.frames == frame_num
+                                combined_mask = frame_mask & label_mask
+                                if np.any(combined_mask):
+                                    rows = detector.rows[combined_mask]
+                                    cols = detector.columns[combined_mask]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
                 except AttributeError:
-                    pass  # Use unfiltered rows/cols from get_detections_at_frame
+                    pass  # Use unfiltered rows/cols
 
             if len(rows) > 0:
                 scatter.setData(
