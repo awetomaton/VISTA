@@ -140,6 +140,13 @@ class TracksPanel(QWidget):
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
         tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
 
+        # Add label selected button
+        self.label_selected_btn = QPushButton("Label Selected")
+        self.label_selected_btn.setEnabled(False)  # Disabled until tracks selected
+        self.label_selected_btn.clicked.connect(self.label_selected_tracks)
+        self.label_selected_btn.setToolTip("Add labels to selected tracks")
+        tracks_actions_layout.addWidget(self.label_selected_btn)
+
         tracks_actions_layout.addStretch()
         layout.addLayout(tracks_actions_layout)
 
@@ -1503,6 +1510,7 @@ class TracksPanel(QWidget):
         self.export_tracks_btn.setEnabled(num_selected >= 1)
         self.merge_selected_tracks_btn.setEnabled(num_selected >= 2)
         self.delete_selected_tracks_btn.setEnabled(num_selected >= 1)
+        self.label_selected_btn.setEnabled(num_selected >= 1)
         self.extract_track_btn.setEnabled(num_selected == 1)
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
         self.bulk_apply_btn.setEnabled(num_selected >= 1)
@@ -2210,3 +2218,59 @@ class TracksPanel(QWidget):
             f"Created {detectors_created} detector(s) from the selected tracks.",
             QMessageBox.StandardButton.Ok
         )
+
+    def label_selected_tracks(self):
+        """Add labels to selected tracks"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to label.")
+            return
+
+        # Collect selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                break
+
+        if not selected_tracks:
+            QMessageBox.warning(self, "No Tracks", "Could not find the selected tracks.")
+            return
+
+        # Get all available labels
+        available_labels = LabelsManagerDialog.get_available_labels()
+
+        # Show dialog with no labels pre-selected (user will select what to add)
+        dialog = LabelsSelectionDialog(available_labels, set(), self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected_labels = dialog.get_selected_labels()
+
+            if not selected_labels:
+                return
+
+            # Add selected labels to each selected track
+            for track in selected_tracks:
+                track.labels.update(selected_labels)
+
+            # Refresh the table and emit data changed
+            self.refresh_tracks_table()
+            self.data_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Labels Added",
+                f"Added {len(selected_labels)} label(s) to {len(selected_tracks)} track(s).",
+                QMessageBox.StandardButton.Ok
+            )
