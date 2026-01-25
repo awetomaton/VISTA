@@ -13,12 +13,12 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
 from vista.detections.detector import Detector
-from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
-from vista.widgets.core.data.delegates import LabelsSelectionDialog
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
-from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineStyleDelegate, MarkerDelegate
+from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
+from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.widgets.core.data.track_plot_window import TrackPlotWindow
 
 
 class TracksPanel(QWidget):
@@ -30,6 +30,9 @@ class TracksPanel(QWidget):
         super().__init__()
         self.viewer = viewer
         self.settings = QSettings("VISTA", "DataManager")
+
+        # Track plot windows (multiple windows allowed)
+        self.track_plot_windows = []
 
         # Connect to viewer signals
         self.viewer.extraction_editing_ended.connect(self.on_extraction_editing_ended)
@@ -146,6 +149,13 @@ class TracksPanel(QWidget):
         self.label_selected_btn.clicked.connect(self.label_selected_tracks)
         self.label_selected_btn.setToolTip("Add labels to selected tracks")
         tracks_actions_layout.addWidget(self.label_selected_btn)
+
+        # Add plot track details button
+        self.plot_details_btn = QPushButton("Plot Track Details")
+        self.plot_details_btn.setEnabled(False)  # Disabled until tracks selected
+        self.plot_details_btn.clicked.connect(self.on_plot_track_details_clicked)
+        self.plot_details_btn.setToolTip("Plot point-by-point data for selected tracks")
+        tracks_actions_layout.addWidget(self.plot_details_btn)
 
         tracks_actions_layout.addStretch()
         layout.addLayout(tracks_actions_layout)
@@ -1594,6 +1604,7 @@ class TracksPanel(QWidget):
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
         self.bulk_apply_btn.setEnabled(num_selected >= 1)
         self.break_into_detections_btn.setEnabled(num_selected >= 1)
+        self.plot_details_btn.setEnabled(num_selected >= 1)
 
         # Enable Edit Track and Split Track buttons only if exactly one track is selected
         self.edit_track_btn.setEnabled(num_selected == 1)
@@ -1668,6 +1679,9 @@ class TracksPanel(QWidget):
 
         # Update viewer with selected tracks
         self.viewer.set_selected_tracks(selected_track_ids)
+
+        # Update track plot windows if any are visible
+        self._update_track_plot_windows()
 
     def select_tracks_by_uuid(self, track_uuids):
         """
@@ -2353,3 +2367,83 @@ class TracksPanel(QWidget):
                 f"Added {len(selected_labels)} label(s) to {len(selected_tracks)} track(s).",
                 QMessageBox.StandardButton.Ok
             )
+
+    def on_plot_track_details_clicked(self):
+        """Handle Plot Track Details button click"""
+        # Always create a new plot window (allows multiple windows)
+        plot_window = TrackPlotWindow(self, self.viewer)
+
+        # Connect to frame_changed signal
+        self.viewer.frame_changed.connect(plot_window.on_frame_changed)
+
+        # Connect to destroyed signal to remove from list when closed
+        plot_window.destroyed.connect(lambda: self._remove_plot_window(plot_window))
+
+        # Add to list
+        self.track_plot_windows.append(plot_window)
+
+        # Show and bring to front
+        plot_window.show()
+        plot_window.raise_()
+        plot_window.activateWindow()
+
+        # Update with currently selected tracks
+        self._update_single_plot_window(plot_window)
+
+    def _remove_plot_window(self, window):
+        """Remove a plot window from the list when it's closed"""
+        if window in self.track_plot_windows:
+            self.track_plot_windows.remove(window)
+
+    def _update_track_plot_windows(self):
+        """Update all visible track plot windows with currently selected tracks"""
+        # Clean up closed windows first
+        self.track_plot_windows = [w for w in self.track_plot_windows if w.isVisible()]
+
+        if not self.track_plot_windows:
+            return
+
+        # Get selected tracks (compute once for all windows)
+        selected_tracks, tracker_map = self._get_selected_tracks_for_plot()
+
+        # Update all visible windows
+        for window in self.track_plot_windows:
+            window.set_tracks(selected_tracks, tracker_map)
+            window.on_frame_changed(self.viewer.current_frame_number)
+
+    def _update_single_plot_window(self, window):
+        """Update a single plot window with currently selected tracks"""
+        if not window.isVisible():
+            return
+
+        selected_tracks, tracker_map = self._get_selected_tracks_for_plot()
+        window.set_tracks(selected_tracks, tracker_map)
+        window.on_frame_changed(self.viewer.current_frame_number)
+
+    def _get_selected_tracks_for_plot(self):
+        """Get currently selected tracks and tracker map for plotting"""
+        selected_tracks = []
+        tracker_map = {}  # track.uuid -> tracker name
+
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+        for row in selected_rows:
+            # Get track info from table
+            tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+            name_item = self.tracks_table.item(row, 2)  # Track name column
+
+            if tracker_item and name_item:
+                tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+                track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_name = tracker_item.text()
+
+                # Find the actual track object
+                for tracker in self.viewer.trackers:
+                    if id(tracker) == tracker_id:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                tracker_map[track.uuid] = tracker_name
+                                break
+                        break
+
+        return selected_tracks, tracker_map

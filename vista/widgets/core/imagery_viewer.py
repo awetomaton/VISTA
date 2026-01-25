@@ -70,6 +70,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
     lasso_selection_completed = pyqtSignal(dict)
 
+    # Signal emitted when frame changes (emits frame number)
+    frame_changed = pyqtSignal(int)
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -352,6 +355,9 @@ class ImageryViewer(QWidget):
         # Update tooltips if mouse was previously hovering and tooltips are enabled
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
             self._update_tooltips_at_position(self.last_mouse_pos)
+
+        # Emit frame_changed signal
+        self.frame_changed.emit(frame_number)
 
         # Performance monitoring
         if ENABLE_PERF_MONITORING and perf_start is not None:
