@@ -55,10 +55,6 @@ class TrackPlotWindow(QWidget):
         self._static_plot_items = []  # List of (track, PlotDataItem)
         self._animated_plot_items = []  # List of (track, PlotDataItem)
 
-        # Store original data ranges for symlog tick regeneration on zoom
-        self._static_y_range_original = (0, 1)  # (min, max) in original space
-        self._animated_y_range_original = (0, 1)
-
         self.setWindowTitle("Track Details Plot")
         self.setWindowFlags(Qt.WindowType.Window)
         self.resize(800, 600)
@@ -339,7 +335,7 @@ class TrackPlotWindow(QWidget):
         y_clamped = np.clip(y, -300, 300)
         return np.sign(y_clamped) * (10 ** np.abs(y_clamped) - 1)
 
-    def _get_symlog_ticks(self, y_min, y_max, view_y_min=None, view_y_max=None):
+    def _get_symlog_ticks(self, view_y_min, view_y_max):
         """
         Generate tick positions and labels for symlog Y-axis.
 
@@ -350,27 +346,18 @@ class TrackPlotWindow(QWidget):
 
         Parameters
         ----------
-        y_min : float
-            Minimum Y value (in original, untransformed space)
-        y_max : float
-            Maximum Y value (in original, untransformed space)
-        view_y_min : float, optional
-            Minimum visible Y value (in symlog space) for filtering ticks
-        view_y_max : float, optional
-            Maximum visible Y value (in symlog space) for filtering ticks
+        view_y_min : float
+            Minimum visible Y value (in symlog space)
+        view_y_max : float
+            Maximum visible Y value (in symlog space)
 
         Returns
         -------
         list
             List of (position, label) tuples for axis ticks
         """
-        # Use visible range if provided, otherwise use full data range
-        if view_y_min is not None and view_y_max is not None:
-            symlog_min = view_y_min
-            symlog_max = view_y_max
-        else:
-            symlog_min = float(self._symlog(np.array([y_min]))[0])
-            symlog_max = float(self._symlog(np.array([y_max]))[0])
+        symlog_min = view_y_min
+        symlog_max = view_y_max
 
         symlog_span = symlog_max - symlog_min
         if symlog_span <= 0:
@@ -595,7 +582,7 @@ class TrackPlotWindow(QWidget):
         else:
             return f"{val:.1e}"
 
-    def _apply_symlog_ticks(self, plot_widget, y_min, y_max, view_range=None):
+    def _apply_symlog_ticks(self, plot_widget, view_range):
         """
         Apply symlog tick marks to a plot's Y-axis.
 
@@ -603,16 +590,11 @@ class TrackPlotWindow(QWidget):
         ----------
         plot_widget : pg.PlotWidget
             The plot widget to modify
-        y_min : float
-            Minimum Y value (in original space)
-        y_max : float
-            Maximum Y value (in original space)
-        view_range : tuple, optional
-            (view_y_min, view_y_max) in symlog space for filtering ticks
+        view_range : tuple
+            (view_y_min, view_y_max) in symlog space
         """
-        view_y_min = view_range[0] if view_range else None
-        view_y_max = view_range[1] if view_range else None
-        ticks = self._get_symlog_ticks(y_min, y_max, view_y_min, view_y_max)
+        view_y_min, view_y_max = view_range
+        ticks = self._get_symlog_ticks(view_y_min, view_y_max)
         # Format for pyqtgraph: list of lists, where each inner list is for a tick level
         # Level 0 = major ticks, level 1 = minor ticks (empty)
         axis = plot_widget.getAxis('left')
@@ -630,9 +612,7 @@ class TrackPlotWindow(QWidget):
         # ranges is [[x_min, x_max], [y_min, y_max]]
         if len(ranges) >= 2:
             y_range = ranges[1]
-            y_min_orig, y_max_orig = self._static_y_range_original
-            if y_min_orig != float('inf'):
-                self._apply_symlog_ticks(self.static_plot, y_min_orig, y_max_orig, view_range=y_range)
+            self._apply_symlog_ticks(self.static_plot, y_range)
 
     def _on_animated_range_changed(self, viewbox, ranges):
         """Handle animated plot view range change for dynamic symlog ticks."""
@@ -641,9 +621,7 @@ class TrackPlotWindow(QWidget):
         # ranges is [[x_min, x_max], [y_min, y_max]]
         if len(ranges) >= 2:
             y_range = ranges[1]
-            y_min_orig, y_max_orig = self._animated_y_range_original
-            if y_min_orig != float('inf'):
-                self._apply_symlog_ticks(self.animated_plot, y_min_orig, y_max_orig, view_range=y_range)
+            self._apply_symlog_ticks(self.animated_plot, y_range)
 
     def _on_animated_legend_toggled(self, state):
         """Toggle animated plot legend visibility"""
@@ -994,8 +972,6 @@ class TrackPlotWindow(QWidget):
         assignments = self._assign_colors_and_symbols(color_by)
 
         use_symlog = self.static_symlog_y.isChecked()
-        y_min_original = float('inf')
-        y_max_original = float('-inf')
 
         for track in self.tracks:
             data = self._get_plottable_data(track)
@@ -1005,11 +981,6 @@ class TrackPlotWindow(QWidget):
 
             x_data = data[x_axis]
             y_data_original = data[y_axis]
-
-            # Track min/max in original space for tick generation
-            if len(y_data_original) > 0:
-                y_min_original = min(y_min_original, np.min(y_data_original))
-                y_max_original = max(y_max_original, np.max(y_data_original))
 
             # Apply symlog transform if enabled
             y_data = self._symlog(y_data_original) if use_symlog else y_data_original
@@ -1036,13 +1007,12 @@ class TrackPlotWindow(QWidget):
         y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
         self.static_plot.setLabel('left', y_label)
 
-        # Store original range for dynamic tick updates on zoom
-        if y_min_original != float('inf'):
-            self._static_y_range_original = (y_min_original, y_max_original)
-
         # Apply custom symlog ticks or clear them
-        if use_symlog and y_min_original != float('inf'):
-            self._apply_symlog_ticks(self.static_plot, y_min_original, y_max_original)
+        if use_symlog:
+            # Get the current view range from the viewbox (in symlog space)
+            view_range = self.static_plot.getViewBox().viewRange()
+            y_range = view_range[1]  # [y_min, y_max] in symlog space
+            self._apply_symlog_ticks(self.static_plot, y_range)
         else:
             self._clear_custom_ticks(self.static_plot)
 
@@ -1070,8 +1040,6 @@ class TrackPlotWindow(QWidget):
         assignments = self._assign_colors_and_symbols(color_by)
 
         use_symlog = self.animated_symlog_y.isChecked()
-        y_min_original = float('inf')
-        y_max_original = float('-inf')
 
         for track in self.tracks:
             data = self._get_plottable_data(track)
@@ -1097,11 +1065,6 @@ class TrackPlotWindow(QWidget):
 
             x_filtered = x_data[mask]
             y_filtered_original = y_data_original[mask]
-
-            # Track min/max in original space for tick generation
-            if len(y_filtered_original) > 0:
-                y_min_original = min(y_min_original, np.min(y_filtered_original))
-                y_max_original = max(y_max_original, np.max(y_filtered_original))
 
             # Apply symlog transform if enabled
             y_filtered = self._symlog(y_filtered_original) if use_symlog else y_filtered_original
@@ -1142,13 +1105,12 @@ class TrackPlotWindow(QWidget):
         y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
         self.animated_plot.setLabel('left', y_label)
 
-        # Store original range for dynamic tick updates on zoom
-        if y_min_original != float('inf'):
-            self._animated_y_range_original = (y_min_original, y_max_original)
-
         # Apply custom symlog ticks or clear them
-        if use_symlog and y_min_original != float('inf'):
-            self._apply_symlog_ticks(self.animated_plot, y_min_original, y_max_original)
+        if use_symlog:
+            # Get the current view range from the viewbox (in symlog space)
+            view_range = self.animated_plot.getViewBox().viewRange()
+            y_range = view_range[1]  # [y_min, y_max] in symlog space
+            self._apply_symlog_ticks(self.animated_plot, y_range)
         else:
             self._clear_custom_ticks(self.animated_plot)
 
