@@ -222,6 +222,12 @@ class TracksPanel(QWidget):
         # Load saved column visibility settings
         self.load_track_column_visibility()
 
+        # Hidden columns indicator label
+        self.hidden_columns_label = QLabel()
+        self.hidden_columns_label.setStyleSheet("color: gray; font-style: italic; font-size: 11px;")
+        self.hidden_columns_label.setVisible(False)
+        layout.addWidget(self.hidden_columns_label)
+
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
         self.tracks_table.setColumnCount(15)  # Added Extracted and Avg SNR columns
@@ -271,6 +277,15 @@ class TracksPanel(QWidget):
         self.tracks_table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tracks_table.horizontalHeader().customContextMenuRequested.connect(self.on_track_header_context_menu)
 
+        # Enable column reordering via drag and drop
+        self.tracks_table.horizontalHeader().setSectionsMovable(True)
+        self.tracks_table.horizontalHeader().setDragEnabled(True)
+        self.tracks_table.horizontalHeader().setDragDropMode(QHeaderView.DragDropMode.InternalMove)
+        self.tracks_table.horizontalHeader().sectionMoved.connect(self.on_track_column_moved)
+
+        # Load saved column order
+        self.load_track_column_order()
+
         # Track column filters and sort state
         # Filter structure: column_index -> {'type': 'set'/'text'/'numeric', 'values': set()/dict}
         # For 'set' type: {'type': 'set', 'values': set of values}
@@ -297,6 +312,9 @@ class TracksPanel(QWidget):
         self.tracks_table.cellClicked.connect(self.on_tracks_cell_clicked)
 
         layout.addWidget(self.tracks_table)
+
+        # Apply column visibility after table is created
+        self.apply_track_column_visibility()
 
         self.setLayout(layout)
 
@@ -635,16 +653,15 @@ class TracksPanel(QWidget):
             action = QAction(column_names[col_idx], columns_menu)  # Make columns_menu the parent
             action.setCheckable(True)
             action.setChecked(self.track_column_visibility.get(col_idx, True))
-            # Use a more explicit connection to avoid lambda issues
-            action.setData(col_idx)  # Store the column index in the action's data
-            action.triggered.connect(self._on_column_visibility_toggled)
+            # Use lambda to capture column index and pass checked state directly
+            action.triggered.connect(lambda checked, col=col_idx: self.toggle_track_column_visibility(col, checked))
             columns_menu.addAction(action)
 
         menu.addMenu(columns_menu)
 
         menu.exec(header.mapToGlobal(pos))
 
-    def _on_column_visibility_toggled(self, checked):
+    def _on_column_visibility_toggled(self):
         """Handle column visibility toggle from context menu"""
         # Get the action that triggered this slot
         action = self.sender()
@@ -656,8 +673,9 @@ class TracksPanel(QWidget):
         if column_idx is None:
             return
 
-        # Toggle the column visibility
-        self.toggle_track_column_visibility(column_idx, checked)
+        # Get the checked state directly from the action to ensure correctness
+        visible = action.isChecked()
+        self.toggle_track_column_visibility(column_idx, visible)
 
     def load_track_column_visibility(self):
         """Load track column visibility settings from QSettings"""
@@ -666,6 +684,16 @@ class TracksPanel(QWidget):
             key = f"track_column_{col_idx}_visible"
             saved_value = self.settings.value(key, True, type=bool)
             self.track_column_visibility[col_idx] = saved_value
+
+    def apply_track_column_visibility(self):
+        """Apply column visibility settings to the table and update indicator"""
+        # Actually hide/show the columns in the table
+        for col_idx in range(1, 15):
+            visible = self.track_column_visibility.get(col_idx, True)
+            self.tracks_table.setColumnHidden(col_idx, not visible)
+
+        # Update the hidden columns indicator
+        self.update_hidden_columns_indicator()
 
     def save_track_column_visibility(self):
         """Save track column visibility settings to QSettings"""
@@ -685,6 +713,9 @@ class TracksPanel(QWidget):
         # If showing the column, resize it appropriately
         if visible:
             self._resize_track_column(column_idx)
+
+        # Update hidden columns indicator
+        self.update_hidden_columns_indicator()
 
     def _resize_track_column(self, column_idx):
         """Resize a track column based on its index"""
@@ -709,6 +740,54 @@ class TracksPanel(QWidget):
             self.tracks_table.setColumnWidth(column_idx, 120)
         else:  # All other columns
             header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.ResizeToContents)
+
+        # Update hidden columns indicator
+        self.update_hidden_columns_indicator()
+
+    def load_track_column_order(self):
+        """Load track column order from QSettings"""
+        saved_order = self.settings.value("track_column_order", None)
+        if saved_order:
+            header = self.tracks_table.horizontalHeader()
+            try:
+                # saved_order is a list of logical indices in visual order
+                for visual_idx, logical_idx in enumerate(saved_order):
+                    logical_idx = int(logical_idx)
+                    current_visual = header.visualIndex(logical_idx)
+                    if current_visual != visual_idx:
+                        header.moveSection(current_visual, visual_idx)
+            except (ValueError, TypeError):
+                pass  # Ignore invalid saved order
+
+    def save_track_column_order(self):
+        """Save track column order to QSettings"""
+        header = self.tracks_table.horizontalHeader()
+        # Get logical indices in visual order
+        order = [header.logicalIndex(visual_idx) for visual_idx in range(header.count())]
+        self.settings.setValue("track_column_order", order)
+
+    def on_track_column_moved(self, logical_index, old_visual_index, new_visual_index):
+        """Handle column reordering via drag and drop"""
+        self.save_track_column_order()
+
+    def update_hidden_columns_indicator(self):
+        """Update the hidden columns indicator label"""
+        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker",
+                        "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line",
+                        "Line Style", "Extracted", "Avg SNR"]
+
+        hidden_columns = []
+        for col_idx, visible in self.track_column_visibility.items():
+            if not visible and col_idx < len(column_names):
+                hidden_columns.append(column_names[col_idx])
+
+        if hidden_columns:
+            self.hidden_columns_label.setText(
+                f"Hidden columns ({len(hidden_columns)}): {', '.join(hidden_columns)} — Right-click header to show"
+            )
+            self.hidden_columns_label.setVisible(True)
+        else:
+            self.hidden_columns_label.setVisible(False)
 
     def sort_tracks_column(self, column, order):
         """Sort tracks by column"""

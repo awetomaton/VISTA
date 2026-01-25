@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug that could occur when imagery is created with no frames
 - Added the ability to bulk label tracks
 - Added decimating coadd option
+- Added the ability to re-order detection and track table columns
+- Added hidden detection/track table column indicator
+- Update detection/track tables so that hidden columns are persisted
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 

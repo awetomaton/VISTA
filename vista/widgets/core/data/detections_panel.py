@@ -107,6 +107,28 @@ class DetectionsPanel(QWidget):
         track_from_detections_layout.addStretch()
         layout.addLayout(track_from_detections_layout)
 
+        # Detection column visibility (all columns visible by default)
+        # Column 0 (Visible) is always shown and cannot be hidden
+        self.detection_column_visibility = {
+            0: True,   # Visible - always shown
+            1: True,   # Name
+            2: True,   # Labels
+            3: True,   # Color
+            4: True,   # Marker
+            5: True,   # Marker Size
+            6: True,   # Line Thickness
+            7: True,   # Complete
+        }
+
+        # Load saved column visibility settings
+        self.load_detection_column_visibility()
+
+        # Hidden columns indicator label
+        self.hidden_columns_label = QLabel()
+        self.hidden_columns_label.setStyleSheet("color: gray; font-style: italic; font-size: 11px;")
+        self.hidden_columns_label.setVisible(False)
+        layout.addWidget(self.hidden_columns_label)
+
         # Detections table
         self.detections_table = QTableWidget()
         self.detections_table.setColumnCount(8)
@@ -155,10 +177,22 @@ class DetectionsPanel(QWidget):
         self.detections_table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.detections_table.horizontalHeader().customContextMenuRequested.connect(self.on_detections_header_context_menu)
 
+        # Enable column reordering via drag and drop
+        self.detections_table.horizontalHeader().setSectionsMovable(True)
+        self.detections_table.horizontalHeader().setDragEnabled(True)
+        self.detections_table.horizontalHeader().setDragDropMode(QHeaderView.DragDropMode.InternalMove)
+        self.detections_table.horizontalHeader().sectionMoved.connect(self.on_detection_column_moved)
+
+        # Load saved column order
+        self.load_detection_column_order()
+
         # Detection column filters and sort state
         self.detection_column_filters = {}
 
         layout.addWidget(self.detections_table)
+
+        # Apply column visibility after table is created
+        self.apply_detection_column_visibility()
 
         self.setLayout(layout)
 
@@ -333,6 +367,26 @@ class DetectionsPanel(QWidget):
         clear_all_filters_action.setEnabled(bool(self.detection_column_filters))
         menu.addAction(clear_all_filters_action)
 
+        menu.addSeparator()
+
+        # Column visibility submenu (always available)
+        column_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
+        columns_menu = QMenu("Show/Hide Columns", menu)
+
+        for col_idx in range(len(column_names)):
+            # Column 0 (Visible) cannot be hidden
+            if col_idx == 0:
+                continue
+
+            action = QAction(column_names[col_idx], columns_menu)
+            action.setCheckable(True)
+            action.setChecked(self.detection_column_visibility.get(col_idx, True))
+            # Use lambda to capture column index and pass checked state directly
+            action.triggered.connect(lambda checked, col=col_idx: self.toggle_detection_column_visibility(col, checked))
+            columns_menu.addAction(action)
+
+        menu.addMenu(columns_menu)
+
         menu.exec(header.mapToGlobal(pos))
 
     def show_detection_filter_dialog(self, column):
@@ -443,6 +497,95 @@ class DetectionsPanel(QWidget):
         # Update viewer to show all detections
         if hasattr(self.viewer, 'update_detection_display'):
             self.viewer.update_detection_display()
+
+    def _on_detection_column_visibility_toggled(self):
+        """Handle column visibility toggle from context menu"""
+        action = self.sender()
+        if action is None:
+            return
+
+        column_idx = action.data()
+        if column_idx is None:
+            return
+
+        # Get the checked state directly from the action to ensure correctness
+        visible = action.isChecked()
+        self.toggle_detection_column_visibility(column_idx, visible)
+
+    def load_detection_column_visibility(self):
+        """Load detection column visibility settings from QSettings"""
+        for col_idx in range(1, 8):
+            key = f"detection_column_{col_idx}_visible"
+            saved_value = self.settings.value(key, True, type=bool)
+            self.detection_column_visibility[col_idx] = saved_value
+
+    def apply_detection_column_visibility(self):
+        """Apply column visibility settings to the table and update indicator"""
+        # Actually hide/show the columns in the table
+        for col_idx in range(1, 8):
+            visible = self.detection_column_visibility.get(col_idx, True)
+            self.detections_table.setColumnHidden(col_idx, not visible)
+
+        # Update the hidden columns indicator
+        self.update_hidden_columns_indicator()
+
+    def save_detection_column_visibility(self):
+        """Save detection column visibility settings to QSettings"""
+        for col_idx in range(1, 8):
+            key = f"detection_column_{col_idx}_visible"
+            self.settings.setValue(key, self.detection_column_visibility.get(col_idx, True))
+
+    def toggle_detection_column_visibility(self, column_idx, visible):
+        """Toggle visibility of a detection table column"""
+        self.detection_column_visibility[column_idx] = visible
+        self.detections_table.setColumnHidden(column_idx, not visible)
+
+        # Save the updated visibility settings
+        self.save_detection_column_visibility()
+
+        # Update hidden columns indicator
+        self.update_hidden_columns_indicator()
+
+    def load_detection_column_order(self):
+        """Load detection column order from QSettings"""
+        saved_order = self.settings.value("detection_column_order", None)
+        if saved_order:
+            header = self.detections_table.horizontalHeader()
+            try:
+                for visual_idx, logical_idx in enumerate(saved_order):
+                    logical_idx = int(logical_idx)
+                    current_visual = header.visualIndex(logical_idx)
+                    if current_visual != visual_idx:
+                        header.moveSection(current_visual, visual_idx)
+            except (ValueError, TypeError):
+                pass
+
+    def save_detection_column_order(self):
+        """Save detection column order to QSettings"""
+        header = self.detections_table.horizontalHeader()
+        order = [header.logicalIndex(visual_idx) for visual_idx in range(header.count())]
+        self.settings.setValue("detection_column_order", order)
+
+    def on_detection_column_moved(self, logical_index, old_visual_index, new_visual_index):
+        """Handle column reordering via drag and drop"""
+        self.save_detection_column_order()
+
+    def update_hidden_columns_indicator(self):
+        """Update the hidden columns indicator label"""
+        column_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
+
+        hidden_columns = []
+        for col_idx, visible in self.detection_column_visibility.items():
+            if not visible and col_idx < len(column_names):
+                hidden_columns.append(column_names[col_idx])
+
+        if hidden_columns:
+            self.hidden_columns_label.setText(
+                f"Hidden columns ({len(hidden_columns)}): {', '.join(hidden_columns)} — Right-click header to show"
+            )
+            self.hidden_columns_label.setVisible(True)
+        else:
+            self.hidden_columns_label.setVisible(False)
 
     def get_filtered_detection_mask(self, detector):
         """
