@@ -55,6 +55,10 @@ class TrackPlotWindow(QWidget):
         self._static_plot_items = []  # List of (track, PlotDataItem)
         self._animated_plot_items = []  # List of (track, PlotDataItem)
 
+        # Store original data ranges for symlog tick regeneration on zoom
+        self._static_y_range_original = (0, 1)  # (min, max) in original space
+        self._animated_y_range_original = (0, 1)
+
         self.setWindowTitle("Track Details Plot")
         self.setWindowFlags(Qt.WindowType.Window)
         self.resize(800, 600)
@@ -63,6 +67,10 @@ class TrackPlotWindow(QWidget):
 
         # Connect tab change to update only the visible plot
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
+
+        # Connect to view range changed for dynamic symlog tick updates
+        self.static_plot.getViewBox().sigRangeChanged.connect(self._on_static_range_changed)
+        self.animated_plot.getViewBox().sigRangeChanged.connect(self._on_animated_range_changed)
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -310,6 +318,332 @@ class TrackPlotWindow(QWidget):
             Transformed data
         """
         return np.sign(x) * np.log10(1 + np.abs(x))
+
+    def _inverse_symlog(self, y):
+        """
+        Inverse of symlog transform.
+
+        inverse_symlog(y) = sign(y) * (10^|y| - 1)
+
+        Parameters
+        ----------
+        y : float or np.ndarray
+            Value in symlog space
+
+        Returns
+        -------
+        float or np.ndarray
+            Value in original space
+        """
+        # Clamp to avoid overflow (10^308 is near float max)
+        y_clamped = np.clip(y, -300, 300)
+        return np.sign(y_clamped) * (10 ** np.abs(y_clamped) - 1)
+
+    def _get_symlog_ticks(self, y_min, y_max, view_y_min=None, view_y_max=None):
+        """
+        Generate tick positions and labels for symlog Y-axis.
+
+        Dynamically generates ticks based on the visible range by creating
+        evenly-spaced positions in symlog space and converting them to
+        "nice" values in original space. Tick density continuously scales
+        with zoom level.
+
+        Parameters
+        ----------
+        y_min : float
+            Minimum Y value (in original, untransformed space)
+        y_max : float
+            Maximum Y value (in original, untransformed space)
+        view_y_min : float, optional
+            Minimum visible Y value (in symlog space) for filtering ticks
+        view_y_max : float, optional
+            Maximum visible Y value (in symlog space) for filtering ticks
+
+        Returns
+        -------
+        list
+            List of (position, label) tuples for axis ticks
+        """
+        # Use visible range if provided, otherwise use full data range
+        if view_y_min is not None and view_y_max is not None:
+            symlog_min = view_y_min
+            symlog_max = view_y_max
+        else:
+            symlog_min = float(self._symlog(np.array([y_min]))[0])
+            symlog_max = float(self._symlog(np.array([y_max]))[0])
+
+        symlog_span = symlog_max - symlog_min
+        if symlog_span <= 0:
+            return [(0.0, "0")]
+
+        # Convert visible symlog range to original space for granularity calculation
+        visible_orig_min = float(self._inverse_symlog(symlog_min))
+        visible_orig_max = float(self._inverse_symlog(symlog_max))
+        visible_range_orig = (visible_orig_min, visible_orig_max)
+
+        # Target approximately 8 ticks, regardless of zoom level
+        target_ticks = 8
+        tick_spacing_symlog = symlog_span / target_ticks
+
+        # Generate evenly-spaced positions in symlog space
+        ticks = []
+
+        # Start from a position just below the visible minimum
+        start_pos = symlog_min - tick_spacing_symlog
+        end_pos = symlog_max + tick_spacing_symlog
+
+        pos = start_pos
+        while pos <= end_pos:
+            # Convert position from symlog space to original value
+            orig_val = float(self._inverse_symlog(pos))
+
+            # Round to a "nice" value based on the visible range
+            nice_val = self._round_to_nice(orig_val, tick_spacing_symlog, visible_range_orig)
+
+            # Skip if rounding returned 0 for non-zero input (indicates error)
+            if nice_val == 0 and abs(orig_val) > 1e-10:
+                pos += tick_spacing_symlog
+                continue
+
+            # Get the actual symlog position for this nice value
+            nice_pos = float(self._symlog(np.array([nice_val]))[0])
+
+            # Only add if within visible range (with small margin)
+            margin = tick_spacing_symlog * 0.5
+            if symlog_min - margin <= nice_pos <= symlog_max + margin:
+                label = self._format_tick_label(nice_val)
+                ticks.append((nice_pos, label))
+
+            pos += tick_spacing_symlog
+
+        # Always try to include 0 if it's in or near the visible range
+        zero_margin = tick_spacing_symlog
+        if symlog_min - zero_margin <= 0 <= symlog_max + zero_margin:
+            # Check if 0 is already in ticks (close enough)
+            has_zero = any(abs(t[0]) < tick_spacing_symlog * 0.3 for t in ticks)
+            if not has_zero:
+                ticks.append((0.0, "0"))
+
+        # Remove duplicates (same position or very close positions)
+        ticks = self._dedupe_ticks(ticks, tick_spacing_symlog * 0.3)
+
+        # Sort by position
+        ticks.sort(key=lambda x: x[0])
+
+        return ticks
+
+    def _round_to_nice(self, value, symlog_spacing, visible_range_orig=None):
+        """
+        Round a value to a "nice" number for tick labels.
+
+        The niceness depends on the current zoom level (symlog_spacing) and
+        the visible range in original space.
+
+        Parameters
+        ----------
+        value : float
+            Value to round
+        symlog_spacing : float
+            Current tick spacing in symlog space (indicates zoom level)
+        visible_range_orig : tuple, optional
+            (min, max) of the visible range in original space, used to
+            determine appropriate rounding granularity
+
+        Returns
+        -------
+        float
+            Rounded "nice" value
+        """
+        if value == 0:
+            return 0.0
+
+        sign = np.sign(value)
+        abs_val = abs(value)
+
+        if abs_val < 1e-10:
+            return 0.0
+
+        # Determine the order of magnitude, with protection against log of 0
+        try:
+            log_val = np.log10(abs_val)
+            if not np.isfinite(log_val):
+                return 0.0
+            magnitude = 10 ** np.floor(log_val)
+        except (ValueError, FloatingPointError):
+            return 0.0
+
+        if magnitude == 0 or not np.isfinite(magnitude):
+            return 0.0
+
+        # Normalized value (between 1 and 10)
+        normalized = abs_val / magnitude
+
+        # Determine appropriate rounding granularity based on both symlog_spacing
+        # and the visible range in original space
+        if visible_range_orig is not None:
+            orig_min, orig_max = visible_range_orig
+            orig_span = abs(orig_max - orig_min)
+            # Use the span to determine granularity
+            # If viewing a small span (e.g., 10-15), we want integer ticks
+            if orig_span > 0:
+                # Target ~8 ticks, so each tick represents orig_span/8 in original space
+                tick_step = orig_span / 8
+                # Determine rounding step based on tick_step magnitude
+                if tick_step < 0.5:
+                    # Very fine - round to 0.1
+                    rounding_step = 0.1
+                elif tick_step < 2:
+                    # Fine - round to 0.5 or 1
+                    rounding_step = 0.5 if tick_step < 1 else 1
+                elif tick_step < 10:
+                    # Medium - round to integers
+                    rounding_step = 1
+                elif tick_step < 50:
+                    # Coarser
+                    rounding_step = 5
+                else:
+                    # Use magnitude-based rounding
+                    rounding_step = None
+            else:
+                rounding_step = None
+        else:
+            rounding_step = None
+
+        # If we have a specific rounding step, use it directly
+        if rounding_step is not None and rounding_step > 0:
+            rounded_val = round(abs_val / rounding_step) * rounding_step
+            return sign * rounded_val
+
+        # Fallback: magnitude-based rounding with nice factors
+        # Choose rounding granularity based on zoom level
+        if symlog_spacing < 0.05:
+            # Very zoomed in - every 0.1 of normalized
+            nice_factors = [i / 10 for i in range(1, 101)]  # 0.1 to 10.0
+        elif symlog_spacing < 0.1:
+            # Zoomed in - every 0.5 of normalized
+            nice_factors = [i / 2 for i in range(1, 21)]  # 0.5 to 10.0
+        elif symlog_spacing < 0.3:
+            # Moderately zoomed - integers
+            nice_factors = list(range(1, 11))  # 1 to 10
+        elif symlog_spacing < 0.5:
+            # Less zoomed - 1-2-5 pattern
+            nice_factors = [1, 2, 5, 10]
+        else:
+            # Zoomed out - just powers of 10
+            nice_factors = [1, 10]
+
+        # Find the closest nice factor
+        closest = min(nice_factors, key=lambda f: abs(normalized - f))
+
+        return sign * closest * magnitude
+
+    def _dedupe_ticks(self, ticks, min_spacing):
+        """
+        Remove duplicate ticks that are too close together.
+
+        Parameters
+        ----------
+        ticks : list
+            List of (position, label) tuples
+        min_spacing : float
+            Minimum spacing between ticks in symlog space
+
+        Returns
+        -------
+        list
+            Deduplicated list of ticks
+        """
+        if len(ticks) <= 1:
+            return ticks
+
+        # Sort by position
+        sorted_ticks = sorted(ticks, key=lambda x: x[0])
+
+        result = [sorted_ticks[0]]
+        for tick in sorted_ticks[1:]:
+            # Only add if far enough from the last added tick
+            if abs(tick[0] - result[-1][0]) >= min_spacing:
+                result.append(tick)
+
+        return result
+
+    def _format_tick_label(self, val):
+        """
+        Format a tick value as a label string.
+
+        Parameters
+        ----------
+        val : float
+            Value to format
+
+        Returns
+        -------
+        str
+            Formatted label
+        """
+        abs_val = abs(val)
+        if abs_val == 0:
+            return "0"
+        elif abs_val >= 10000:
+            return f"{val:.0e}"
+        elif abs_val >= 100:
+            return f"{val:.0f}"
+        elif abs_val >= 1:
+            return f"{val:g}"
+        elif abs_val >= 0.01:
+            return f"{val:.2g}"
+        else:
+            return f"{val:.1e}"
+
+    def _apply_symlog_ticks(self, plot_widget, y_min, y_max, view_range=None):
+        """
+        Apply symlog tick marks to a plot's Y-axis.
+
+        Parameters
+        ----------
+        plot_widget : pg.PlotWidget
+            The plot widget to modify
+        y_min : float
+            Minimum Y value (in original space)
+        y_max : float
+            Maximum Y value (in original space)
+        view_range : tuple, optional
+            (view_y_min, view_y_max) in symlog space for filtering ticks
+        """
+        view_y_min = view_range[0] if view_range else None
+        view_y_max = view_range[1] if view_range else None
+        ticks = self._get_symlog_ticks(y_min, y_max, view_y_min, view_y_max)
+        # Format for pyqtgraph: list of lists, where each inner list is for a tick level
+        # Level 0 = major ticks, level 1 = minor ticks (empty)
+        axis = plot_widget.getAxis('left')
+        axis.setTicks([ticks, []])
+
+    def _clear_custom_ticks(self, plot_widget):
+        """Clear custom tick marks from a plot's Y-axis."""
+        axis = plot_widget.getAxis('left')
+        axis.setTicks(None)
+
+    def _on_static_range_changed(self, viewbox, ranges):
+        """Handle static plot view range change for dynamic symlog ticks."""
+        if not self.static_symlog_y.isChecked():
+            return
+        # ranges is [[x_min, x_max], [y_min, y_max]]
+        if len(ranges) >= 2:
+            y_range = ranges[1]
+            y_min_orig, y_max_orig = self._static_y_range_original
+            if y_min_orig != float('inf'):
+                self._apply_symlog_ticks(self.static_plot, y_min_orig, y_max_orig, view_range=y_range)
+
+    def _on_animated_range_changed(self, viewbox, ranges):
+        """Handle animated plot view range change for dynamic symlog ticks."""
+        if not self.animated_symlog_y.isChecked():
+            return
+        # ranges is [[x_min, x_max], [y_min, y_max]]
+        if len(ranges) >= 2:
+            y_range = ranges[1]
+            y_min_orig, y_max_orig = self._animated_y_range_original
+            if y_min_orig != float('inf'):
+                self._apply_symlog_ticks(self.animated_plot, y_min_orig, y_max_orig, view_range=y_range)
 
     def _on_animated_legend_toggled(self, state):
         """Toggle animated plot legend visibility"""
@@ -659,6 +993,10 @@ class TrackPlotWindow(QWidget):
         color_by = 'track' if self.static_color_by_track.isChecked() else 'tracker'
         assignments = self._assign_colors_and_symbols(color_by)
 
+        use_symlog = self.static_symlog_y.isChecked()
+        y_min_original = float('inf')
+        y_max_original = float('-inf')
+
         for track in self.tracks:
             data = self._get_plottable_data(track)
 
@@ -666,11 +1004,15 @@ class TrackPlotWindow(QWidget):
                 continue
 
             x_data = data[x_axis]
-            y_data = data[y_axis]
+            y_data_original = data[y_axis]
+
+            # Track min/max in original space for tick generation
+            if len(y_data_original) > 0:
+                y_min_original = min(y_min_original, np.min(y_data_original))
+                y_max_original = max(y_max_original, np.max(y_data_original))
 
             # Apply symlog transform if enabled
-            if self.static_symlog_y.isChecked():
-                y_data = self._symlog(y_data)
+            y_data = self._symlog(y_data_original) if use_symlog else y_data_original
 
             assignment = assignments.get(track.uuid, {'color': 'g', 'symbol': 'o', 'name': track.name})
 
@@ -691,8 +1033,18 @@ class TrackPlotWindow(QWidget):
 
         # Set axis labels
         self.static_plot.setLabel('bottom', x_axis)
-        y_label = f"{y_axis} (symlog)" if self.static_symlog_y.isChecked() else y_axis
+        y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
         self.static_plot.setLabel('left', y_label)
+
+        # Store original range for dynamic tick updates on zoom
+        if y_min_original != float('inf'):
+            self._static_y_range_original = (y_min_original, y_max_original)
+
+        # Apply custom symlog ticks or clear them
+        if use_symlog and y_min_original != float('inf'):
+            self._apply_symlog_ticks(self.static_plot, y_min_original, y_max_original)
+        else:
+            self._clear_custom_ticks(self.static_plot)
 
     def update_animated_plot(self):
         """Update the animated plot based on current frame"""
@@ -717,6 +1069,10 @@ class TrackPlotWindow(QWidget):
         color_by = 'track' if self.animated_color_by_track.isChecked() else 'tracker'
         assignments = self._assign_colors_and_symbols(color_by)
 
+        use_symlog = self.animated_symlog_y.isChecked()
+        y_min_original = float('inf')
+        y_max_original = float('-inf')
+
         for track in self.tracks:
             data = self._get_plottable_data(track)
 
@@ -724,7 +1080,7 @@ class TrackPlotWindow(QWidget):
                 continue
 
             x_data = data[x_axis]
-            y_data = data[y_axis]
+            y_data_original = data[y_axis]
             frames = track.frames
 
             # Filter data based on display mode
@@ -740,12 +1096,15 @@ class TrackPlotWindow(QWidget):
                 continue
 
             x_filtered = x_data[mask]
-            y_filtered = y_data[mask]
+            y_filtered_original = y_data_original[mask]
+
+            # Track min/max in original space for tick generation
+            if len(y_filtered_original) > 0:
+                y_min_original = min(y_min_original, np.min(y_filtered_original))
+                y_max_original = max(y_max_original, np.max(y_filtered_original))
 
             # Apply symlog transform if enabled
-            use_symlog = self.animated_symlog_y.isChecked()
-            if use_symlog:
-                y_filtered = self._symlog(y_filtered)
+            y_filtered = self._symlog(y_filtered_original) if use_symlog else y_filtered_original
 
             assignment = assignments.get(track.uuid, {'color': 'g', 'symbol': 'o', 'name': track.name})
 
@@ -768,7 +1127,7 @@ class TrackPlotWindow(QWidget):
             current_idx = np.where(frames == current_frame)[0]
             if len(current_idx) > 0:
                 idx = current_idx[0]
-                y_current = self._symlog(np.array([y_data[idx]]))[0] if use_symlog else y_data[idx]
+                y_current = self._symlog(np.array([y_data_original[idx]]))[0] if use_symlog else y_data_original[idx]
                 self.animated_plot.plot(
                     [x_data[idx]], [y_current],
                     pen=None,
@@ -780,8 +1139,18 @@ class TrackPlotWindow(QWidget):
 
         # Set axis labels
         self.animated_plot.setLabel('bottom', x_axis)
-        y_label = f"{y_axis} (symlog)" if self.animated_symlog_y.isChecked() else y_axis
+        y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
         self.animated_plot.setLabel('left', y_label)
+
+        # Store original range for dynamic tick updates on zoom
+        if y_min_original != float('inf'):
+            self._animated_y_range_original = (y_min_original, y_max_original)
+
+        # Apply custom symlog ticks or clear them
+        if use_symlog and y_min_original != float('inf'):
+            self._apply_symlog_ticks(self.animated_plot, y_min_original, y_max_original)
+        else:
+            self._clear_custom_ticks(self.animated_plot)
 
     def export_data(self):
         """Export currently plotted data to CSV"""
