@@ -136,7 +136,7 @@ class Imagery:
         self.sensor.add_imagery(self)
     
     def __getitem__(self, s):
-        if isinstance(s, slice):
+        if isinstance(s, (list, np.ndarray, slice)):
             # Handle slice objects
             imagery_slice = self.copy()
             imagery_slice.images = imagery_slice.images[s]
@@ -144,7 +144,7 @@ class Imagery:
             imagery_slice.times = imagery_slice.times[s] if imagery_slice.times is not None else None
             return imagery_slice
         else:
-            raise TypeError("Invalid index or slice type.")
+            raise TypeError("Invalid index or slice type. Use slice, list, or numpy array.")
         
     def __len__(self):
         return self.images.shape[0]

@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added default histogram bounds
 - Fixed bug that could occur when imagery is created with no frames
 - Added the ability to bulk label tracks
+- Added decimating coadd option
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
