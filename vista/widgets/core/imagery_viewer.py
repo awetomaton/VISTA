@@ -717,8 +717,10 @@ class ImageryViewer(QWidget):
                 if isinstance(self.selected_detections_plot, list):
                     for plot in self.selected_detections_plot:
                         self.plot_item.removeItem(plot)
+                        plot.deleteLater()  # Prevent memory leak
                 else:
                     self.plot_item.removeItem(self.selected_detections_plot)
+                    self.selected_detections_plot.deleteLater()  # Prevent memory leak
                 self.selected_detections_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -1151,8 +1153,8 @@ class ImageryViewer(QWidget):
         # Disconnect the snap handler from drawing
         try:
             roi.sigRegionChanged.disconnect()
-        except:
-            pass
+        except (TypeError, RuntimeError):
+            pass  # Signal was not connected or already disconnected
 
         # Update text position and bounds when ROI moves
         roi.sigRegionChanged.connect(lambda: self.update_aoi_from_roi(aoi, roi))
@@ -1295,6 +1297,7 @@ class ImageryViewer(QWidget):
             if feature._plot_items:
                 for item in feature._plot_items:
                     self.plot_item.removeItem(item)
+                    item.deleteLater()  # Prevent memory leak
                 feature._plot_items = []
 
             # Remove from list
@@ -1306,6 +1309,7 @@ class ImageryViewer(QWidget):
         if feature._plot_items:
             for item in feature._plot_items:
                 self.plot_item.removeItem(item)
+                item.deleteLater()  # Prevent memory leak
             feature._plot_items = []
 
         # Re-render if visible
@@ -2199,8 +2203,10 @@ class ImageryViewer(QWidget):
             if isinstance(self.temp_track_plot, list):
                 for plot in self.temp_track_plot:
                     self.plot_item.removeItem(plot)
+                    plot.deleteLater()  # Prevent memory leak
             else:
                 self.plot_item.removeItem(self.temp_track_plot)
+                self.temp_track_plot.deleteLater()  # Prevent memory leak
 
         if len(self.current_track_data) == 0:
             self.temp_track_plot = None
@@ -2259,8 +2265,10 @@ class ImageryViewer(QWidget):
             if isinstance(self.temp_detection_plot, list):
                 for plot in self.temp_detection_plot:
                     self.plot_item.removeItem(plot)
+                    plot.deleteLater()  # Prevent memory leak
             else:
                 self.plot_item.removeItem(self.temp_detection_plot)
+                self.temp_detection_plot.deleteLater()  # Prevent memory leak
 
         if len(self.current_detection_data) == 0:
             self.temp_detection_plot = None
@@ -2298,8 +2306,10 @@ class ImageryViewer(QWidget):
             if isinstance(self.selected_detections_plot, list):
                 for plot in self.selected_detections_plot:
                     self.plot_item.removeItem(plot)
+                    plot.deleteLater()  # Prevent memory leak
             else:
                 self.plot_item.removeItem(self.selected_detections_plot)
+                self.selected_detections_plot.deleteLater()  # Prevent memory leak
             self.selected_detections_plot = None
 
         # If no detections selected, nothing to draw

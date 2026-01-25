@@ -833,6 +833,10 @@ class VistaMainWindow(QMainWindow):
             # All files loaded
             return
 
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
         file_path = self.detections_file_queue.pop(0)
 
         # Create and start loader thread
@@ -847,8 +851,8 @@ class VistaMainWindow(QMainWindow):
         if self.progress_dialog:
             try:
                 self.progress_dialog.canceled.disconnect()
-            except:
-                pass
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
         self.loader_thread.start()
@@ -1012,6 +1016,10 @@ class VistaMainWindow(QMainWindow):
             # All files loaded
             return
 
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
         file_path = self.tracks_file_queue.pop(0)
 
         # Create and start loader thread
@@ -1030,8 +1038,8 @@ class VistaMainWindow(QMainWindow):
         if self.progress_dialog:
             try:
                 self.progress_dialog.canceled.disconnect()
-            except:
-                pass
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
         self.loader_thread.start()
@@ -1174,6 +1182,10 @@ class VistaMainWindow(QMainWindow):
             # All files loaded
             return
 
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
         file_path = self.aois_file_queue.pop(0)
 
         # Create and start loader thread
@@ -1188,8 +1200,8 @@ class VistaMainWindow(QMainWindow):
         if self.progress_dialog:
             try:
                 self.progress_dialog.canceled.disconnect()
-            except:
-                pass
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
         self.loader_thread.start()
@@ -1469,8 +1481,8 @@ class VistaMainWindow(QMainWindow):
             # Disconnect canceled signal before closing to prevent false "Loading cancelled" message
             try:
                 self.progress_dialog.canceled.disconnect(self.on_loading_cancelled)
-            except:
-                pass  # Signal may not be connected
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.close()
             self.progress_dialog = None
 
@@ -1533,8 +1545,8 @@ class VistaMainWindow(QMainWindow):
         if self.viewer.point_selection_dialog is not None:
             try:
                 self.viewer.point_selection_dialog.visibility_changed.disconnect(self.on_point_selection_visibility_changed)
-            except:
-                pass  # Not connected yet
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.viewer.point_selection_dialog.visibility_changed.connect(self.on_point_selection_visibility_changed)
 
     def on_point_selection_visibility_changed(self, visible):
@@ -1692,7 +1704,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.sensor.bias_images is None:
+        elif self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.bias_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with bias images",
@@ -1723,7 +1735,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.sensor.uniformity_gain_images is None:
+        elif self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.uniformity_gain_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with uniformity gain images",

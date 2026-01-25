@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added hidden detection/track table column indicator
 - Update detection/track tables so that hidden columns are persisted
 - Added ability to view static or animated plots (synchronized to player) of track data.
+- Fixed a variety of issues that could result in excessive memory usage growth during long sessions.
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
