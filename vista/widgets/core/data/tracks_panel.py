@@ -624,7 +624,7 @@ class TracksPanel(QWidget):
         menu.addSeparator()
 
         # Column visibility submenu (always available)
-        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
+        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"]
         columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
 
         for col_idx in range(len(column_names)):
@@ -662,7 +662,7 @@ class TracksPanel(QWidget):
     def load_track_column_visibility(self):
         """Load track column visibility settings from QSettings"""
         # Load each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 13):
+        for col_idx in range(1, 15):
             key = f"track_column_{col_idx}_visible"
             saved_value = self.settings.value(key, True, type=bool)
             self.track_column_visibility[col_idx] = saved_value
@@ -670,9 +670,9 @@ class TracksPanel(QWidget):
     def save_track_column_visibility(self):
         """Save track column visibility settings to QSettings"""
         # Save each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 12):
+        for col_idx in range(1, 15):
             key = f"track_column_{col_idx}_visible"
-            self.settings.setValue(key, self.track_column_visibility[col_idx])
+            self.settings.setValue(key, self.track_column_visibility.get(col_idx, True))
 
     def toggle_track_column_visibility(self, column_idx, visible):
         """Toggle visibility of a track table column"""
