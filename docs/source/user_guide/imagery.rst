@@ -18,7 +18,9 @@ To load imagery in the VISTA GUI:
 2. Select an HDF5 file (``.h5`` or ``.hdf5``)
 3. VISTA will automatically detect the format and load all sensors and imagery
 
-
+.. image:: /_static/images/user_guide_imagery_loading.gif
+   :alt: Loading imagery
+   :align: center
 
 From Python API
 ~~~~~~~~~~~~~~~
@@ -284,7 +286,7 @@ Version 1.7 (Current)
 - All other features from version 1.6 retained
 
 Version 1.6 (Legacy, Deprecated)
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Hierarchical structure with ``sensors/`` root group
 - Supports multiple sensors per file
@@ -439,7 +441,7 @@ Conversion between ARF Cartesian and spherical coordinates:
 
    # Cartesian (x, y, z) to spherical (azimuth, elevation)
    azimuth = arctan2(y, z)
-   elevation = arctan2(x, sqrt(y² + z²))
+   elevation = arctan2(x, sqrt(y**2 + z**2))
 
    # Spherical to Cartesian
    x = cos(elevation) * cos(azimuth)
@@ -605,10 +607,69 @@ VISTA supports efficient imagery slicing:
    if frame_idx is not None:
        frame_data = imagery.images[frame_idx]
 
+Imagery Controls
+----------------
+
+Pan and Zoom
+~~~~~~~~~~~~
+
+* Left-click and drag on the imagery viewer to pan.
+* Use scroll-wheel to zoom. Reset view using the context menu (right-click) and press "View All" or click the "A" in the lower-left of the imagery viewer.
+
+.. image:: /_static/images/user_guide_imagery_zoom_pan.gif
+   :alt: imagery zoom / pan
+   :align: center
+
+Histogram
+~~~~~~~~~
+
+* Left-click and drag the histogram boundary box to shift the histogram range displayed in the viewer. 
+* Left-click and drag the bounds of the histogram to adjust its size. 
+* Right-click on the gradient bar to adust the gradient color. 
+* Left-click on the gradient bar to add ticks
+* Left-click and drag on gradient bar ticks to adjust
+
+.. image:: /_static/images/user_guide_imagery_histogram.gif
+   :alt: Imagery histogram
+   :align: center
+
+Playback
+~~~~~~~~
+
+* Drag the slider to slide through frames.
+* Click the play/pause button (or press spacebar) to play or pause imagery animation.
+* Click the reverse button to reverse playback direction.
+* Click the Prevous Frame or Next Frame buttons or use (left arrow/right arrow or A/D) to step forward or backward by one frame.
+* Check the "Bounce" checkbox to enable setting frames to bounce between. 
+* Adjust the player's objective Frames-Per-Second (FPS) using the FPS input or dial.
+
+.. image:: /_static/images/user_guide_imagery_playback.gif
+   :alt: Imagery playback
+   :align: center
+
+.. note::
+   The FPS defines the _objective_ FPS which may be unachievable on data and systems. In these cases, the playback is as 
+   quick as possible.
+
+Tooltips
+~~~~~~~~
+
+* Select the geospatial tooltip to view the latitude / longitude corresponding to the hovered location in the imagery
+* Select the pixel details tooltip to view the row, column, counts for the hovered location in the imagery. The tooltip 
+  gives counts for the nearest hovered pixel.
+
+.. image:: /_static/images/user_guide_imagery_tooltips.gif
+   :alt: Imagery tooltips
+   :align: center
+
 Treatments and Processing
 --------------------------
 
 VISTA provides several image treatment operations accessible through the GUI:
+
+Subset Frames
+~~~~~~~~~~~~~
+This tool crops the imagery to a subset of the input frames.
 
 Radiometric Corrections
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -636,12 +697,20 @@ Background Removal
    Separates low-rank background from sparse foreground using robust PCA.
    Access via **Algorithms → Background Removal → Robust PCA**
 
+.. image:: /_static/images/user_guide_imagery_background_removal.gif
+   :alt: Background removal
+   :align: center
+
 Enhancement
 ~~~~~~~~~~~
 
 **Frame Coaddition**
    Improves SNR by averaging multiple frames.
    Access via **Algorithms → Enhancement → Coadd Frames**
+
+.. image:: /_static/images/user_guide_imagery_enhancement.gif
+   :alt: Enhancement
+   :align: center
 
 Saving and Exporting
 --------------------
@@ -655,6 +724,10 @@ To save imagery with all metadata and calibration:
 2. Click **File → Save**
 3. Choose output filename
 4. File is saved in 1.7 HDF5 format with all associated data
+
+.. image:: /_static/images/user_guide_imagery_export.gif
+   :alt: Imagery export
+   :align: center
 
 Export Specific Frames
 ~~~~~~~~~~~~~~~~~~~~~~~

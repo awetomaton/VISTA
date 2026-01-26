@@ -72,6 +72,10 @@ instance/
 docs/_build/
 docs/build/
 docs/source/api/generated/
+docs/source/generated/
+docs/source/.doctrees/
+docs/*~
+docs/*.bak
 
 # PyBuilder
 .pybuilder/

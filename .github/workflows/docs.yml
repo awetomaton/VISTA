@@ -24,6 +24,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for all branches and tags
+          lfs: true       # Enable Git LFS to download large files (GIFs, images)
+
+      - name: Checkout LFS objects
+        run: git lfs checkout
 
       - name: Set up Python
         uses: actions/setup-python@v5

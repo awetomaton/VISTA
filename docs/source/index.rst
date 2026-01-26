@@ -54,11 +54,11 @@ Documentation Contents
 
    getting_started/installation
    getting_started/quickstart
-   user_guide/interface
    user_guide/imagery
    user_guide/detections
    user_guide/tracking
    user_guide/algorithms
+   user_guide/interface
 
 .. toctree::
    :maxdepth: 2
