@@ -379,6 +379,10 @@ Apply property changes to multiple selected tracks:
 3. Set the **Value** using the appropriate control
 4. Click **Apply to Selected**
 
+.. image:: /_static/images/user_guide_tracks_bulk.gif
+   :alt: Bulk track actions
+   :align: center
+
 This is useful for:
 
 - Hiding multiple tracks at once
@@ -406,7 +410,27 @@ Copy selected tracks to a different sensor or the same sensor (useful for compar
 
 Merge Selected
 ~~~~~~~~~~~~~~
-Merge multiple selected tracks into a single track by concatenating their points
+
+To combine multiple tracks into one:
+
+1. Select two or more tracks in the Tracks panel
+2. Click **Merge Selected**
+3. A new track is created containing all points from selected tracks
+4. Points are automatically sorted by frame number
+5. Original tracks are preserved
+
+.. image:: /_static/images/user_guide_tracks_merge.gif
+   :alt: Bulk track actions
+   :align: center
+
+Use cases:
+
+- Combining fragmented tracks from the same object
+- Manually fixing tracking gaps
+- Consolidating results from multiple tracking runs
+
+.. warning::
+   Merging tracks does not remove duplicate frames. If tracks overlap in time, you may need to manually edit the merged result.
 
 Delete Selected
 ~~~~~~~~~~~~~~~
@@ -418,7 +442,11 @@ Apply labels to selected tracks for categorization
 
 Plot Track Details
 ~~~~~~~~~~~~~~~~~~
-Open a plotting window showing track details as a static plot or animated over time.
+Open plotting windows showing track details as a static plot or animated over time.
+
+.. image:: /_static/images/user_guide_tracks_detail_plots.gif
+   :alt: Track detail plots
+   :align: center
 
 .. _track-operations:
 
@@ -445,49 +473,30 @@ Use cases:
 - Isolating specific trajectory segments for analysis
 - Removing problematic sections while preserving good data
 
-Merge Tracks
-~~~~~~~~~~~~
-
-To combine multiple tracks into one:
-
-1. Select two or more tracks in the Tracks panel (Ctrl+Click)
-2. Click **Merge Selected**
-3. A new track is created containing all points from selected tracks
-4. Points are automatically sorted by frame number
-5. Original tracks are preserved
-
-Use cases:
-
-- Combining fragmented tracks from the same object
-- Manually fixing tracking gaps
-- Consolidating results from multiple tracking runs
-
-.. warning::
-   Merging tracks does not remove duplicate frames. If tracks overlap in time, you may need to manually edit the merged result.
-
 Edit Track
 ~~~~~~~~~~
 
 Interactive track editing allows manual refinement:
 
 1. Select a single track
-2. Click **Edit Track** (button becomes highlighted)
+2. Press **Edit Track**
 3. Edit track points:
 
-   - **Move point**: Click and drag existing point
    - **Add point**: Navigate to frame, Ctrl+Click at desired location
-   - **Delete point**: Right-click on point
-   - **Navigate**: Use arrow keys or Page Up/Down to change frames
+   - **Delete point**: Click on point that already exists
+   - **Navigate**: Use left/right arrow keys and A/D to change frames
 
-4. Click **Save Changes** or press Enter to accept
-5. Click **Cancel** or press Escape to discard changes
+4. Uncheck **Edit Track** to complete edited track
+
+.. image:: /_static/images/user_guide_tracks_edit.gif
+   :alt: Split track
+   :align: center
 
 Tips for editing:
 
 - Zoom in for precise positioning
 - Use keyboard navigation for efficiency
 - Changes are shown in real-time
-- Editing is non-destructive until saved
 
 .. _track-extraction:
 
@@ -506,6 +515,10 @@ For each track point, extraction:
 3. Computes local noise statistics from background annulus
 4. Optionally updates track coordinates to signal blob centroid
 
+.. image:: /_static/images/user_guide_tracks_extraction.gif
+   :alt: Extract tracks
+   :align: center
+
 Extraction results are stored in the track's ``extraction_metadata`` and can be:
 
 - Viewed as overlays in the viewer
@@ -518,7 +531,7 @@ Running Track Extraction
 To extract signal information for a track:
 
 1. Select a single track in the Tracks panel
-2. Click **Extract** button
+2. Press **Extract** button
 3. Configure extraction parameters:
 
    **Chip Parameters**
@@ -538,7 +551,7 @@ To extract signal information for a track:
       - **Update Centroids**: If checked, refine track positions using signal blob centroids
       - **Max Centroid Shift**: Maximum allowed position update (pixels)
 
-4. Click **Run**
+4. Press **Run**
 5. Extraction metadata is stored in the track
 
 Viewing Extraction Results
@@ -547,18 +560,18 @@ Viewing Extraction Results
 To view extracted signal pixels:
 
 1. Select a track with extraction metadata
-2. Click **View Extraction** (button becomes highlighted)
+2. Press **View Extraction**
 3. Navigate through frames to see signal pixel overlay
 4. Signal pixels are highlighted in the viewer
-5. Click **View Extraction** again to hide overlay
+5. Press **View Extraction** again to hide overlay
 
 Editing Extraction Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To manually refine signal masks:
 
-1. Select a track with extraction metadata
-2. Click **Edit Extraction** (button becomes highlighted)
+1. Select an extracted track
+2. Press **Edit Extraction**
 3. Paint or erase signal pixels:
 
    - **Paint**: Left-click and drag to mark pixels as signal
@@ -566,8 +579,12 @@ To manually refine signal masks:
    - **Adjust brush**: Use mouse wheel to change brush size
    - **Navigate**: Arrow keys or Page Up/Down to change frames
 
-4. Click **Save Changes** to update extraction metadata
-5. Click **Cancel** or press Escape to discard changes
+4. Press **Save Changes** to update extraction metadata
+5. Press **Cancel** or press Escape to discard changes
+
+.. image:: /_static/images/user_guide_tracks_edit_extraction.gif
+   :alt: Edit extracted tracks
+   :align: center
 
 Use cases:
 
@@ -580,7 +597,12 @@ Use cases:
 Track Analysis and Refinement
 ------------------------------
 
-VISTA provides several algorithms for analyzing and refining track trajectories, accessible through **Algorithms > Track Analysis** in the main menu.
+VISTA provides several algorithms for analyzing and refining track trajectories, accessible through 
+**Algorithms > Track Analysis** in the main menu.
+
+.. image:: /_static/images/user_guide_tracks_interpolate.gif
+   :alt: Interpolate tracks
+   :align: center
 
 Interpolation
 ~~~~~~~~~~~~~
@@ -598,7 +620,7 @@ Interpolation
 - **Track**: Select track to interpolate
 - **Method**: Interpolation method
 
-  - ``linear``: Linear interpolation (default)
+  - ``linear``: Linear interpolation
   - ``nearest``: Nearest-neighbor
   - ``quadratic``: Quadratic spline
   - ``cubic``: Cubic spline
@@ -732,7 +754,7 @@ Via GUI:
 
 1. Open Data Manager > Tracks tab
 2. Select a Sensor
-3. Click **Load Tracks**
+3. Press **Load Tracks**
 4. Browse to CSV file
 5. Tracks are loaded and added to the sensor
 
@@ -757,7 +779,7 @@ Exporting to CSV
 Via GUI:
 
 1. Select tracks in Tracks panel
-2. Click **Export Tracks**
+2. Press **Export Tracks**
 3. Choose save location
 4. Tracks are exported with all columns
 
@@ -781,7 +803,7 @@ Create tracks by clicking through frames:
 
 1. Load imagery for a sensor
 2. Open Data Manager > Tracks tab
-3. Click **Manual Track**
+3. Press **Manual Track**
 4. Navigate through frames, clicking object positions
 5. Press Enter to finish
 6. Repeat for additional objects
@@ -810,7 +832,7 @@ Improve track quality through analysis operations:
 2. Run **Algorithms > Track Analysis > Interpolation** to fill gaps
 3. Run **Algorithms > Track Analysis > Savitzky-Golay** to smooth positions
 4. Select track and click **Extract** for signal analysis
-5. Click **Edit Extraction** to refine signal masks
+5. Press **Edit Extraction** to refine signal masks
 6. Export refined tracks for further analysis
 
 Workflow 4: Comparative Analysis
