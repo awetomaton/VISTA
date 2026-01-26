@@ -73,7 +73,7 @@ To create a track manually by clicking points across frames:
    - Click on a point again to delete it
 
 Loading Tracks from CSV
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 To load tracks from a CSV file:
 
@@ -444,9 +444,9 @@ Plot Track Details
 ~~~~~~~~~~~~~~~~~~
 Open plotting windows showing track details as a static plot or animated over time.
 
-.. image:: /_static/images/user_guide_tracks_detail_plots.gif
-   :alt: Track detail plots
-   :align: center
+.. .. image:: /_static/images/user_guide_tracks_detail_plots.gif
+..    :alt: Track detail plots
+..    :align: center
 
 .. _track-operations:
 
@@ -506,7 +506,7 @@ Track Extraction
 Track extraction analyzes imagery around track points to extract signal information and refine positions.
 
 What is Track Extraction?
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For each track point, extraction:
 
@@ -526,7 +526,7 @@ Extraction results are stored in the track's ``extraction_metadata`` and can be:
 - Exported for external analysis
 
 Running Track Extraction
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 To extract signal information for a track:
 
@@ -555,7 +555,7 @@ To extract signal information for a track:
 5. Extraction metadata is stored in the track
 
 Viewing Extraction Results
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To view extracted signal pixels:
 
@@ -566,7 +566,7 @@ To view extracted signal pixels:
 5. Press **View Extraction** again to hide overlay
 
 Editing Extraction Results
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To manually refine signal masks:
 
@@ -595,7 +595,7 @@ Use cases:
 .. _track-analysis:
 
 Track Analysis and Refinement
-------------------------------
+-----------------------------
 
 VISTA provides several algorithms for analyzing and refining track trajectories, accessible through 
 **Algorithms > Track Analysis** in the main menu.
@@ -644,7 +644,7 @@ Interpolation
    interpolated_track = results['interpolated_track']
 
 Smoothing (Savitzky-Golay)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Savitzky-Golay Filter** smooths track positions while preserving trajectory features better than simple averaging.
 
@@ -684,7 +684,7 @@ Smoothing (Savitzky-Golay)
    smoothed_track = results['smoothed_track']
 
 Exporting and Importing Tracks
--------------------------------
+------------------------------
 
 .. _tracks-csv-format:
 
@@ -797,7 +797,7 @@ Common Workflows
 ----------------
 
 Workflow 1: Manual Tracking
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create tracks by clicking through frames:
 
@@ -810,7 +810,7 @@ Create tracks by clicking through frames:
 7. Export tracks to CSV when complete
 
 Workflow 2: Automated Tracking
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use detection algorithms to create tracks automatically:
 
@@ -824,7 +824,7 @@ Use detection algorithms to create tracks automatically:
 8. Refine using split, merge, or edit operations
 
 Workflow 3: Track Refinement
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Improve track quality through analysis operations:
 
@@ -836,7 +836,7 @@ Improve track quality through analysis operations:
 6. Export refined tracks for further analysis
 
 Workflow 4: Comparative Analysis
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Compare multiple tracking algorithms:
 
@@ -976,6 +976,5 @@ See Also
 --------
 
 - :doc:`detections` - Creating and managing detections
-- :doc:`algorithms` - Overview of all algorithms
 - :doc:`../api/tracks` - Track API reference
 - :doc:`../api/algorithms` - Tracking algorithms API reference

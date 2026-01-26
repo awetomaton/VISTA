@@ -17,13 +17,18 @@ class SubsetFramesProcessingThread(QThread):
 
     def __init__(self, imagery, start_frame, end_frame, aoi=None):
         """
-        Initialize the processing thread
+        Initialize the processing thread.
 
-        Args:
-            imagery: Imagery object to process
-            start_frame: Starting frame index (inclusive)
-            end_frame: Ending frame index (inclusive)
-            aoi: Optional AOI object to process subset of imagery
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to process
+        start_frame : int
+            Starting frame index (inclusive)
+        end_frame : int
+            Ending frame index (inclusive)
+        aoi : AOI, optional
+            AOI object to process subset of imagery, by default None
         """
         super().__init__()
         self.imagery = imagery
@@ -90,12 +95,16 @@ class SubsetFramesWidget(QDialog):
 
     def __init__(self, parent=None, imagery=None, aois=None):
         """
-        Initialize the Subset Frames configuration widget
+        Initialize the Subset Frames configuration widget.
 
-        Args:
-            parent: Parent widget
-            imagery: Imagery object to process
-            aois: List of AOI objects to choose from (optional)
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        imagery : Imagery, optional
+            Imagery object to process, by default None
+        aois : list of AOI, optional
+            List of AOI objects to choose from, by default None
         """
         super().__init__(parent)
         self.imagery = imagery

@@ -5,7 +5,6 @@ Fix GIF loop counts to make them loop infinitely.
 Usage:
     python fix_gif_loops.py
 """
-import os
 from pathlib import Path
 from PIL import Image
 

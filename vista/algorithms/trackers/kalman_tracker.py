@@ -125,23 +125,28 @@ def run_kalman_tracker(detectors, config):
     """
     Run Kalman filter tracker on detections using a custom implementation.
 
-    Args:
-        detectors: List of Detector objects to use as input
-        config: Dictionary containing tracker configuration:
+    Parameters
+    ----------
+    detectors : list of Detector
+        List of Detector objects to use as input
+    config : dict
+        Dictionary containing tracker configuration:
 
-            - tracker_name: Name for the resulting tracker
-            - process_noise: Process noise for constant velocity model
-            - measurement_noise: Measurement noise covariance
-            - gating_distance: Mahalanobis distance threshold for gating
-            - min_detections: Minimum detections required to initiate track
-            - delete_threshold: Covariance trace threshold for track deletion
+        - tracker_name: Name for the resulting tracker
+        - process_noise: Process noise for constant velocity model
+        - measurement_noise: Measurement noise covariance
+        - gating_distance: Mahalanobis distance threshold for gating
+        - min_detections: Minimum detections required to initiate track
+        - delete_threshold: Covariance trace threshold for track deletion
 
-    Returns:
+    Returns
+    -------
+    list of dict
         List of track data dictionaries, each containing:
 
-            - 'frames': numpy array of frame numbers
-            - 'rows': numpy array of row coordinates
-            - 'columns': numpy array of column coordinates
+        - 'frames': numpy array of frame numbers
+        - 'rows': numpy array of row coordinates
+        - 'columns': numpy array of column coordinates
     """
     # Extract configuration
     process_noise = config['process_noise']

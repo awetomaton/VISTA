@@ -12,14 +12,22 @@ def show_copy_to_sensor_dialog(parent, viewer, item_type_singular, item_type_plu
     """
     Show a dialog to select a target sensor for copying data objects.
 
-    Args:
-        parent: Parent widget for the dialog
-        viewer: VISTA viewer object containing sensors
-        item_type_singular: Singular name of item type (e.g., "detector", "track")
-        item_type_plural: Plural name of item type (e.g., "detectors", "tracks")
-        has_filters: Whether the data panel currently has active filters
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget for the dialog
+    viewer : ImageryViewer
+        VISTA viewer object containing sensors
+    item_type_singular : str
+        Singular name of item type (e.g., "detector", "track")
+    item_type_plural : str
+        Plural name of item type (e.g., "detectors", "tracks")
+    has_filters : bool, optional
+        Whether the data panel currently has active filters, by default False
 
-    Returns:
+    Returns
+    -------
+    tuple of (Sensor, bool) or (None, None)
         Tuple of (target_sensor, copy_filtered_only) or (None, None) if cancelled
     """
     # Check if sensors are available
@@ -76,13 +84,19 @@ def export_table_to_csv(parent, table_widget, default_filename):
     """
     Export a QTableWidget to CSV file.
 
-    Args:
-        parent: Parent widget for the file dialog
-        table_widget: QTableWidget to export
-        default_filename: Default filename for the save dialog
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget for the file dialog
+    table_widget : QTableWidget
+        QTableWidget to export
+    default_filename : str
+        Default filename for the save dialog
 
-    Returns:
-        bool: True if export was successful, False otherwise
+    Returns
+    -------
+    bool
+        True if export was successful, False otherwise
     """
     # Get save file name
     file_path, _ = QFileDialog.getSaveFileName(
@@ -147,10 +161,14 @@ def setup_table_column_delegate(table, column_index, delegate):
     """
     Setup a delegate for a specific table column.
 
-    Args:
-        table: QTableWidget
-        column_index: Column index to apply delegate to
-        delegate: QStyledItemDelegate instance
+    Parameters
+    ----------
+    table : QTableWidget
+        QTableWidget to setup delegate for
+    column_index : int
+        Column index to apply delegate to
+    delegate : QStyledItemDelegate
+        QStyledItemDelegate instance
     """
     table.setItemDelegateForColumn(column_index, delegate)
 
@@ -159,11 +177,16 @@ def get_selected_table_item_ids(table, id_column=0):
     """
     Get IDs of selected items from a table.
 
-    Args:
-        table: QTableWidget
-        id_column: Column index where ID is stored in UserRole (default: 0)
+    Parameters
+    ----------
+    table : QTableWidget
+        QTableWidget to get selected IDs from
+    id_column : int, optional
+        Column index where ID is stored in UserRole, by default 0
 
-    Returns:
+    Returns
+    -------
+    set
         Set of selected item IDs
     """
     selected_rows = set(index.row() for index in table.selectedIndexes())
@@ -183,9 +206,12 @@ def show_filter_not_supported_message(parent, feature_name):
     """
     Show a message that filtering is not currently supported.
 
-    Args:
-        parent: Parent widget
-        feature_name: Name of the feature (e.g., "Label filtering")
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget
+    feature_name : str
+        Name of the feature (e.g., "Label filtering")
     """
     QMessageBox.information(
         parent,
@@ -199,10 +225,14 @@ def create_filter_indicator_text(num_filters):
     """
     Create filter indicator text for display.
 
-    Args:
-        num_filters: Number of active filters
+    Parameters
+    ----------
+    num_filters : int
+        Number of active filters
 
-    Returns:
+    Returns
+    -------
+    str
         String to display (e.g., "🔍 (2)" or "")
     """
     if num_filters > 0:
@@ -214,11 +244,16 @@ def apply_label_filter_to_data(data_object, filter_dict):
     """
     Apply label filtering to a data object (Detection or Track).
 
-    Args:
-        data_object: Object with 'labels' attribute (Detector or Track)
-        filter_dict: Dictionary mapping label names to include/exclude status
+    Parameters
+    ----------
+    data_object : Detector or Track
+        Object with 'labels' attribute (Detector or Track)
+    filter_dict : dict
+        Dictionary mapping label names to include/exclude status
 
-    Returns:
+    Returns
+    -------
+    ndarray
         numpy boolean mask array indicating which items pass the filter
     """
     if not filter_dict or not hasattr(data_object, 'labels'):
@@ -243,13 +278,19 @@ def confirm_deletion(parent, num_items, item_type_plural):
     """
     Show a confirmation dialog for deleting items.
 
-    Args:
-        parent: Parent widget
-        num_items: Number of items to delete
-        item_type_plural: Plural name of item type (e.g., "detectors", "tracks")
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget
+    num_items : int
+        Number of items to delete
+    item_type_plural : str
+        Plural name of item type (e.g., "detectors", "tracks")
 
-    Returns:
-        bool: True if user confirmed, False otherwise
+    Returns
+    -------
+    bool
+        True if user confirmed, False otherwise
     """
     reply = QMessageBox.question(
         parent,

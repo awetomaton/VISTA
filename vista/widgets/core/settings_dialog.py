@@ -13,8 +13,10 @@ class ImagerySettingsTab(QVBoxLayout):
         """
         Initialize the Imagery settings tab
 
-        Args:
-            settings: QSettings object for storing/loading settings
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings
         """
         super().__init__()
         self.settings = settings
@@ -121,8 +123,10 @@ class SettingsDialog(QDialog):
         """
         Initialize the Settings dialog
 
-        Args:
-            parent: Parent widget
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
         """
         super().__init__(parent)
         self.settings = QSettings("Vista", "VistaApp")

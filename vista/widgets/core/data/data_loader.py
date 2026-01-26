@@ -34,12 +34,18 @@ class DataLoaderThread(QThread):
         """
         Initialize the data loader thread
 
-        Args:
-            file_path: Path to the file to load
-            data_type: Type of data to load ('imagery', 'detections', 'tracks', 'aois')
-            file_format: Format of the file ('hdf5' or 'csv')
-            sensor: Optional Sensor object for track/detection association and geodetic mapping
-            imagery: Optional Imagery object for time-to-frame mapping (for tracks with times)
+        Parameters
+        ----------
+        file_path : str or Path
+            Path to the file to load
+        data_type : str
+            Type of data to load ('imagery', 'detections', 'tracks', 'aois')
+        file_format : str, optional
+            Format of the file ('hdf5' or 'csv'), by default 'hdf5'
+        sensor : Sensor, optional
+            Optional Sensor object for track/detection association and geodetic mapping, by default None
+        imagery : Imagery, optional
+            Optional Imagery object for time-to-frame mapping (for tracks with times), by default None
         """
         super().__init__()
         self.file_path = file_path

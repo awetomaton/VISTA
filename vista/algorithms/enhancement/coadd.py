@@ -18,9 +18,12 @@ class Coaddition:
         """
         Initialize the Coaddition algorithm.
 
-        Args:
-            imagery: Imagery object to process
-            window_size: Number of frames to sum in the running window
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to process
+        window_size : int
+            Number of frames to sum in the running window
         """
         self.imagery = imagery
         self.window_size = window_size
@@ -36,8 +39,10 @@ class Coaddition:
         """
         Process the next frame and return the coadded result.
 
-        Returns:
-            Tuple of (frame_index, coadded_frame) where coadded_frame is the sum
+        Returns
+        -------
+        tuple
+            (frame_index, coadded_frame) where coadded_frame is the sum
             of frames within the window centered on the current frame.
         """
         if self.current_frame_idx >= len(self.imagery):

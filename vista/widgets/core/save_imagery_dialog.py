@@ -18,10 +18,14 @@ class SaveImageryDialog(QDialog):
         """
         Initialize the Save Imagery dialog.
 
-        Args:
-            sensors: List of Sensor objects available in the viewer
-            imageries: List of Imagery objects available in the viewer
-            parent: Parent widget
+        Parameters
+        ----------
+        sensors : list of Sensor
+            List of Sensor objects available in the viewer
+        imageries : list of Imagery
+            List of Imagery objects available in the viewer
+        parent : QWidget, optional
+            Parent widget, by default None
         """
         super().__init__(parent)
         self.sensors = sensors
@@ -136,8 +140,10 @@ class SaveImageryDialog(QDialog):
         """
         Get the selected sensors and imagery.
 
-        Returns:
-            dict: Dictionary mapping sensor names (str) to lists of selected Imagery objects
+        Returns
+        -------
+        dict
+            Dictionary mapping sensor names (str) to lists of selected Imagery objects
         """
         selected_map = {}
 

@@ -145,6 +145,5 @@ Next Steps
 ----------
 
 * Learn more about the :doc:`../user_guide/interface`
-* Explore :doc:`../user_guide/algorithms` for available processing options
 * Check the :doc:`../api/imagery` for programmatic usage
 * Read about :doc:`../developer_guide/extending` to add custom algorithms

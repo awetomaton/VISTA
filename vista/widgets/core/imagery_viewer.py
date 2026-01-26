@@ -653,8 +653,10 @@ class ImageryViewer(QWidget):
         """
         Set which tracks are selected for highlighting.
 
-        Args:
-            track_ids: Set of track UUIDs (track.uuid) to highlight
+        Parameters
+        ----------
+        track_ids : set
+            Set of track UUIDs (track.uuid) to highlight
         """
         self.selected_track_ids = track_ids
         self.update_overlays()
@@ -663,8 +665,10 @@ class ImageryViewer(QWidget):
         """
         Filter displayed imagery, tracks, and detections by sensor.
 
-        Args:
-            sensor: Sensor object to filter by, or None to show all
+        Parameters
+        ----------
+        sensor : Sensor or None
+            Sensor object to filter by, or None to show all
         """
         self.selected_sensor = sensor
 
@@ -691,8 +695,10 @@ class ImageryViewer(QWidget):
         """
         Enable or disable track selection mode.
 
-        Args:
-            enabled: Boolean indicating whether track selection mode is enabled
+        Parameters
+        ----------
+        enabled : bool
+            Boolean indicating whether track selection mode is enabled
         """
         self.track_selection_mode = enabled
         # Update cursor based on all interactive modes
@@ -702,8 +708,10 @@ class ImageryViewer(QWidget):
         """
         Enable or disable detection selection mode.
 
-        Args:
-            enabled: Boolean indicating whether detection selection mode is enabled
+        Parameters
+        ----------
+        enabled : bool
+            Boolean indicating whether detection selection mode is enabled
         """
         self.detection_selection_mode = enabled
         if enabled:
@@ -1943,8 +1951,10 @@ class ImageryViewer(QWidget):
         """
         Show or hide the point selection dialog.
 
-        Args:
-            visible: Boolean indicating whether dialog should be visible
+        Parameters
+        ----------
+        visible : bool
+            Boolean indicating whether dialog should be visible
         """
         if visible:
             self._show_point_selection_dialog()
@@ -1955,7 +1965,9 @@ class ImageryViewer(QWidget):
         """
         Check if point selection dialog is currently visible.
 
-        Returns:
+        Returns
+        -------
+        bool
             Boolean indicating visibility
         """
         if self.point_selection_dialog is None:
@@ -1966,12 +1978,17 @@ class ImageryViewer(QWidget):
         """
         Refine a clicked point location using the selected mode from the point selection dialog.
 
-        Args:
-            row (float): Clicked row coordinate
-            col (float): Clicked column coordinate
+        Parameters
+        ----------
+        row : float
+            Clicked row coordinate
+        col : float
+            Clicked column coordinate
 
-        Returns:
-            tuple: (refined_row, refined_col) - refined coordinates
+        Returns
+        -------
+        tuple
+            (refined_row, refined_col) - refined coordinates
         """
         if self.point_selection_dialog is None or self.imagery is None:
             # No dialog or no imagery, return verbatim

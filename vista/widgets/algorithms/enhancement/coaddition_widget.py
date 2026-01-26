@@ -20,7 +20,7 @@ class CoadditionProcessingThread(QThread):
 
     def __init__(self, imagery, window_size, aoi=None, decimating=False):
         """
-        Initialize the processing thread
+        Initialize the processing thread.
 
         Parameters
         ----------
@@ -29,10 +29,10 @@ class CoadditionProcessingThread(QThread):
         window_size : int
             Number of frames to sum in the running window
         aoi : AOI, optional
-            AOI object to process subset of imagery
+            AOI object to process subset of imagery, by default None
         decimating : bool, optional
             If True, use decimating coaddition (one output per window).
-            If False, use streaming coaddition (one output per input frame).
+            If False, use streaming coaddition (one output per input frame), by default False
         """
         super().__init__()
         self.imagery = imagery
@@ -187,12 +187,16 @@ class CoadditionWidget(QDialog):
 
     def __init__(self, parent=None, imagery=None, aois=None):
         """
-        Initialize the Coaddition configuration widget
+        Initialize the Coaddition configuration widget.
 
-        Args:
-            parent: Parent widget
-            imagery: Imagery object to process
-            aois: List of AOI objects to choose from (optional)
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        imagery : Imagery, optional
+            Imagery object to process, by default None
+        aois : list of AOI, optional
+            List of AOI objects to choose from, by default None
         """
         super().__init__(parent)
         self.imagery = imagery

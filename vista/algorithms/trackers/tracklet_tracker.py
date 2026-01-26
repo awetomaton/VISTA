@@ -145,27 +145,32 @@ def run_tracklet_tracker(detectors, config):
     - Smoothness scoring based on velocity/position consistency
     - Hungarian algorithm for optimal linking
 
-    Args:
-        detectors: List of Detector objects to use as input
-        config: Dictionary containing tracker configuration:
+    Parameters
+    ----------
+    detectors : list of Detector
+        List of Detector objects to use as input
+    config : dict
+        Dictionary containing tracker configuration:
 
-            - tracker_name: Name for the resulting tracker
-            - initial_search_radius: Max distance for tracklet formation (default: 10.0)
-            - max_velocity_change: Max velocity change for tracklet formation (default: 5.0)
-            - min_tracklet_length: Minimum detections for valid tracklet (default: 3)
-            - max_consecutive_misses: Max consecutive missed detections in Stage 1 (default: 2)
-            - min_detection_rate: Minimum detection rate (hits/age) for tracklets (default: 0.6)
-            - max_linking_gap: Maximum frame gap to link tracklets (default: 10)
-            - linking_search_radius: Max distance for tracklet linking (default: 30.0)
-            - smoothness_weight: Weight for smoothness in linking cost (default: 1.0)
-            - min_track_length: Minimum detections for final track (default: 5)
+        - tracker_name: Name for the resulting tracker
+        - initial_search_radius: Max distance for tracklet formation (default: 10.0)
+        - max_velocity_change: Max velocity change for tracklet formation (default: 5.0)
+        - min_tracklet_length: Minimum detections for valid tracklet (default: 3)
+        - max_consecutive_misses: Max consecutive missed detections in Stage 1 (default: 2)
+        - min_detection_rate: Minimum detection rate (hits/age) for tracklets (default: 0.6)
+        - max_linking_gap: Maximum frame gap to link tracklets (default: 10)
+        - linking_search_radius: Max distance for tracklet linking (default: 30.0)
+        - smoothness_weight: Weight for smoothness in linking cost (default: 1.0)
+        - min_track_length: Minimum detections for final track (default: 5)
 
-    Returns:
-        List[dict]: List of track data dictionaries, each containing:
+    Returns
+    -------
+    list of dict
+        List of track data dictionaries, each containing:
 
-            - 'frames': numpy array of frame numbers
-            - 'rows': numpy array of row coordinates
-            - 'columns': numpy array of column coordinates
+        - 'frames': numpy array of frame numbers
+        - 'rows': numpy array of row coordinates
+        - 'columns': numpy array of column coordinates
     """
     # Extract configuration with smart defaults
     tracker_name = config.get('tracker_name', 'Tracklet Tracker')

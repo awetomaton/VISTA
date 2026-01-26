@@ -1,5 +1,5 @@
 VISTA Documentation
-==================
+===================
 
 **Viewing, Imagery, Spatial Tracking and Analysis**
 
@@ -63,7 +63,6 @@ Documentation Contents
    user_guide/features
    user_guide/detections
    user_guide/tracks
-   user_guide/algorithms
    user_guide/interface
 
 .. toctree::

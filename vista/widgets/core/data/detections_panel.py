@@ -591,10 +591,14 @@ class DetectionsPanel(QWidget):
         """
         Get a boolean mask indicating which detection points should be visible for a detector.
 
-        Args:
-            detector: Detector object to filter
+        Parameters
+        ----------
+        detector : Detector
+            Detector object to filter
 
-        Returns:
+        Returns
+        -------
+        ndarray
             numpy boolean array where True means the detection should be visible
         """
         if not self.detection_column_filters:

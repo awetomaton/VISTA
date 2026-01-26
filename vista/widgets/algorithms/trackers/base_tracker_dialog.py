@@ -23,10 +23,14 @@ class BaseTrackingWorker(QThread):
         """
         Initialize the tracking worker.
 
-        Args:
-            detectors: List of Detector objects to use for tracking
-            tracker_config: Dictionary of tracker configuration parameters
-            algorithm_function: Function to call for tracking (e.g., run_simple_tracker)
+        Parameters
+        ----------
+        detectors : list of Detector
+            List of Detector objects to use for tracking
+        tracker_config : dict
+            Dictionary of tracker configuration parameters
+        algorithm_function : callable
+            Function to call for tracking (e.g., run_simple_tracker)
         """
         super().__init__()
         self.detectors = detectors
@@ -68,17 +72,28 @@ class BaseTrackingDialog(QDialog):
         """
         Initialize the base tracking dialog.
 
-        Args:
-            viewer: VISTA viewer object
-            parent: Parent widget (default: None)
-            algorithm_function: Function to call for tracking (e.g., run_simple_tracker)
-            settings_name: Name for QSettings storage (default: "BaseTracker")
-            window_title: Window title (default: "Tracker")
-            description: HTML description text for the tracker
-            default_track_color: Default color for created tracks (default: 'b')
-            default_track_marker: Default marker for created tracks (default: 's')
-            default_track_line_width: Default line width for created tracks (default: 2)
-            default_track_marker_size: Default marker size for created tracks (default: 10)
+        Parameters
+        ----------
+        viewer : object
+            VISTA viewer object
+        parent : QWidget, optional
+            Parent widget, by default None
+        algorithm_function : callable, optional
+            Function to call for tracking (e.g., run_simple_tracker), by default None
+        settings_name : str, optional
+            Name for QSettings storage, by default "BaseTracker"
+        window_title : str, optional
+            Window title, by default "Tracker"
+        description : str, optional
+            HTML description text for the tracker, by default ""
+        default_track_color : str, optional
+            Default color for created tracks, by default 'b'
+        default_track_marker : str, optional
+            Default marker for created tracks, by default 's'
+        default_track_line_width : int, optional
+            Default line width for created tracks, by default 2
+        default_track_marker_size : int, optional
+            Default marker size for created tracks, by default 10
         """
         super().__init__(parent)
         self.viewer = viewer
@@ -163,9 +178,11 @@ class BaseTrackingDialog(QDialog):
         Add algorithm-specific parameters to the form layout.
         Override this method in subclasses to add custom parameters.
 
-        Args:
-            main_layout: The main QVBoxLayout - use this if you need to add custom group boxes.
-                        For simple parameters, add to self.params_layout (QFormLayout).
+        Parameters
+        ----------
+        main_layout : QVBoxLayout
+            The main QVBoxLayout - use this if you need to add custom group boxes.
+            For simple parameters, add to self.params_layout (QFormLayout).
         """
         pass
 
@@ -191,7 +208,9 @@ class BaseTrackingDialog(QDialog):
         Build configuration dictionary for the tracker.
         Override this method in subclasses to add custom parameters.
 
-        Returns:
+        Returns
+        -------
+        dict
             Dictionary of tracker configuration parameters
         """
         config = {'tracker_name': self.name_input.currentText()}

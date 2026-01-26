@@ -19,8 +19,10 @@ class DataManagerPanel(QWidget):
         """
         Initialize the data manager panel.
 
-        Args:
-            viewer: ImageryViewer instance
+        Parameters
+        ----------
+        viewer : ImageryViewer
+            ImageryViewer instance
         """
         super().__init__()
         self.viewer = viewer
@@ -94,8 +96,10 @@ class DataManagerPanel(QWidget):
         Handle track selection from viewer click.
         Forwards to tracks panel or detections panel depending on state.
 
-        Args:
-            track: Track object that was clicked
+        Parameters
+        ----------
+        track : Track
+            Track object that was clicked
         """
         # Check if detections panel is waiting for track selection
         if self.detections_panel.waiting_for_track_selection:
@@ -109,8 +113,10 @@ class DataManagerPanel(QWidget):
         Handle detection selection from viewer click.
         Forwards to detections panel.
 
-        Args:
-            detections: List of tuples [(detector, frame, index), ...]
+        Parameters
+        ----------
+        detections : list of tuple
+            List of tuples [(detector, frame, index), ...]
         """
         self.detections_panel.on_detections_selected_in_viewer(detections)
 

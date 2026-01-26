@@ -669,7 +669,6 @@ See Also
 
 - :doc:`tracks` - Connecting detections into trajectories
 - :doc:`features` - AOIs and placemarks for spatial reference
-- :doc:`algorithms` - Detailed algorithm documentation
 - :doc:`imagery` - Preprocessing imagery before detection
 
 **API References:**
