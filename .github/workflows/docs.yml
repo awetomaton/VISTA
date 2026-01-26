@@ -48,6 +48,10 @@ jobs:
         run: |
           cd docs
           sphinx-multiversion source build/html
+        env:
+          # Install the package for each version that sphinx-multiversion builds
+          # The {git_root} placeholder is replaced with the temp checkout path
+          SPH_MV_PRE_BUILD_COMMAND: "pip install -q -e {git_root}"
 
       - name: Create version selector redirect
         run: |

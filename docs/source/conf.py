@@ -7,7 +7,11 @@ import os
 import sys
 
 # Add the project root directory to the Python path
-sys.path.insert(0, os.path.abspath('../..'))
+# This needs to work both for regular builds and sphinx-multiversion builds
+# where the source might be in a temporary directory
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # Import the version from the package
 import vista
@@ -75,6 +79,7 @@ autodoc_mock_imports = [
     'PyQt6.QtGui',
     'PyQt6.QtWidgets',
     'PyQt6.QtOpenGLWidgets',
+    'pyqtgraph',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
