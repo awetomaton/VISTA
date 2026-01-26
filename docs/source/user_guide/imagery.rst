@@ -628,6 +628,9 @@ Histogram
 * Right-click on the gradient bar to adust the gradient color. 
 * Left-click on the gradient bar to add ticks
 * Left-click and drag on gradient bar ticks to adjust
+* Use scrollwheel to zoom in and out on the histogram
+* Right click on the histogram and press "View All" to reset histogram view
+* Click and drag empty area of histogram to pan left and right
 
 .. image:: /_static/images/user_guide_imagery_histogram.gif
    :alt: Imagery histogram

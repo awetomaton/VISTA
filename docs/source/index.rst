@@ -62,7 +62,7 @@ Documentation Contents
    user_guide/imagery
    user_guide/features
    user_guide/detections
-   user_guide/tracking
+   user_guide/tracks
    user_guide/algorithms
    user_guide/interface
 

@@ -27,6 +27,8 @@ Detections in VISTA are:
 **Exportable**
    Save detections to CSV or other formats for analysis or sharing
 
+.. _manual-detection_creation:
+
 Manually Create Detections
 --------------------------
 Users can create detections manually using the create detections tool. With this tool selection users can click 
@@ -40,7 +42,16 @@ points using one of several methods:
    :alt: Create detections
    :align: center
 
-De-select the create detections tool to create a new set of detections (a detector) in the detections panel.
+De-select the create detections tool to create a new set of detections (a detector) in the Detections Panel.
+
+Convert Tracks into Detections
+------------------------------
+Users can also create detections by converting a track into detections by selecting tracks in the Tracks Panel and 
+pressing the Break Into Detections button.
+
+.. image:: /_static/images/user_guide_detectors_from_tracks.gif
+   :alt: Create detections from tracks
+   :align: center
 
 .. _detection-algorithms:
 
@@ -220,29 +231,74 @@ The Detections Panel displays:
 - **Statistics**: Detection counts per frame, spatial distribution
 
 .. image:: /_static/images/user_guide_detectors_controls.gif
-   :alt: Shapefiles
+   :alt: Detector controls
    :align: center
+
+Export Detections
+~~~~~~~~~~~~~~~~~
+Users can export selected detections by pressing the Export Detections button in the Detections Panel.
 
 Merge Detections
 ~~~~~~~~~~~~~~~~
+Users may merge detectors by selecting multiple detector rows and pressing Merge Detections.
+
+.. image:: /_static/images/user_guide_detectors_merge.gif
+   :alt: Merge detections
+   :align: center
 
 Copy Detections
 ~~~~~~~~~~~~~~~
+Users may copy detectors between sensors or on the same sensor by selecting detector rows and pressing the Copy to 
+Sensor button. Users may copy only detections that are filtered by label by checking the Copy only filtered detections.
+
+.. image:: /_static/images/user_guide_detectors_copy.gif
+   :alt: Merge detections
+   :align: center
+
+.. note::
+   For real world applications, copying detections between sensors may require mapping detections in one sensor to 
+   another through some transform operation. The functionality built into VISTA directly copies the detection frames, 
+   rows, columns. It is left to users to add any transforms needed for their real-world applications.
 
 Detection Selection Actions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Users can conduct several actions once detections are selected. Users can select detections with the select detections 
-or lasso tools.
+Users can conduct several actions in the Detections Panel once detections are selected. Users can select detections with 
+the select detections or lasso tools.
 
+Create Track
+^^^^^^^^^^^^
+Users can create a track from detections by pressing the Create Track button.
+
+.. image:: /_static/images/user_guide_detectors_create_track.gif
+   :alt: Merge detections
+   :align: center
+
+Add to Track
+^^^^^^^^^^^^
+Users can create a track from detections by pressing the Add to Track button.
+
+.. image:: /_static/images/user_guide_detectors_add_to_track.gif
+   :alt: Merge detections
+   :align: center
+
+Edit Detector
+^^^^^^^^^^^^^
+Users can add or remove detections by selecting a single detector row and pressing the Edit Detector button. Users can 
+add new detection points using any of the options described in the :ref:`Manually Create Detections section <manual-detection_creation>`.
+Users may also remove existing detections by clicking on them.
+
+.. image:: /_static/images/user_guide_detectors_edit.gif
+   :alt: Edit detections
+   :align: center
 
 Labeling Detections
 ~~~~~~~~~~~~~~~~~~~
-Users can label detections by selecting a set of detections with the select detections or lasso tools. The 
-Label Detections button is enabled on the Detections panel once detections are selected. With detections selected,
-press Label Detections to label a set of detections. Users may filter detections for a specific set of labels by 
-right clicking on the Labels column in the detections table and setting a filter.
+Users can label detections by pressing the Label Detections button. Users may filter detections for a specific set of 
+labels by right clicking on the Labels column in the detections table and setting a filter.
 
-
+.. image:: /_static/images/user_guide_detectors_label.gif
+   :alt: Label detections
+   :align: center
 
 Programmatically Filtering Detections
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
