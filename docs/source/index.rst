@@ -24,6 +24,11 @@ Key Features
 * **Interactive analysis tools** for feature extraction and track refinement
 * **Export capabilities** for processed imagery and analysis results
 
+.. note::
+   The algorithms and objects included in VISTA are basic and are provided for an initial capability and to illustrates 
+   how different types of algorithms and objects are implemented in VISTA. It is anticipated that for real-applications,
+   the user will need to add their own Sensor class and algorithms.
+
 Quick Start
 -----------
 
@@ -55,6 +60,7 @@ Documentation Contents
    getting_started/installation
    getting_started/quickstart
    user_guide/imagery
+   user_guide/features
    user_guide/detections
    user_guide/tracking
    user_guide/algorithms

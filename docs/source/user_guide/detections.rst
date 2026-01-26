@@ -11,11 +11,6 @@ Detection Algorithms
 
 Overview of available detection methods and when to use each one.
 
-Configuring Detectors
----------------------
-
-How to set parameters for optimal detection performance.
-
 Managing Detections
 -------------------
 
