@@ -70,7 +70,7 @@ class CFAR:
     -----
     - Detection threshold formula (above mode): pixel > mean + threshold_deviation * std
     - Detection threshold formula (below mode): pixel < mean - threshold_deviation * std
-    - Detection threshold formula (both mode): |pixel - mean| > threshold_deviation * std
+    - Detection threshold formula (both mode): ``|pixel - mean|`` > threshold_deviation * std
     - Detected pixels are grouped into connected blobs using 8-connectivity
     - Blobs are filtered by area (min_area <= area <= max_area)
     - Blob centroids are returned as sub-pixel coordinates

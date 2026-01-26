@@ -31,7 +31,7 @@ class SimpleThreshold:
 
             - 'above': Detect pixels > threshold (default)
             - 'below': Detect pixels < -threshold (negative values)
-            - 'both': Detect pixels where |pixel| > threshold (absolute value)
+            - 'both': Detect pixels where ``|pixel|`` > threshold (absolute value)
         """
         self.threshold = threshold
         self.min_area = min_area
