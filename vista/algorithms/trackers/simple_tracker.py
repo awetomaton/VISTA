@@ -4,9 +4,45 @@ from scipy.optimize import linear_sum_assignment
 
 
 class SimpleTrack:
-    """Simple track using running average for position prediction"""
+    """
+    Simple track using running average for position prediction.
+
+    This track class maintains a history of detected positions and predicts
+    future positions using linear extrapolation based on recent velocity.
+
+    Attributes
+    ----------
+    id : int
+        Unique identifier for this track.
+    positions : list of ndarray
+        List of (x, y) position arrays for each detection/prediction.
+    frames : list of int
+        Frame numbers corresponding to each position.
+    max_search_radius : float
+        Maximum distance to search for associated detections.
+    hits : int
+        Number of times this track was updated with a detection.
+    misses : int
+        Number of consecutive frames without a detection.
+    age : int
+        Total number of frames this track has existed.
+    """
 
     def __init__(self, detection_pos, frame, track_id, max_search_radius):
+        """
+        Initialize a new track.
+
+        Parameters
+        ----------
+        detection_pos : ndarray
+            Initial (x, y) position of the detection.
+        frame : int
+            Frame number where this track was initiated.
+        track_id : int
+            Unique identifier for this track.
+        max_search_radius : float
+            Maximum distance to search for associated detections.
+        """
         self.id = track_id
         self.positions = [detection_pos.copy()]
         self.frames = [frame]
@@ -18,7 +54,21 @@ class SimpleTrack:
         self.age = 1
 
     def predict_position(self):
-        """Predict next position using velocity estimate"""
+        """
+        Predict next position using velocity estimate.
+
+        Returns
+        -------
+        ndarray
+            Predicted (x, y) position for the next frame. If fewer than 2
+            positions exist, returns the last known position. Otherwise,
+            uses linear extrapolation from the last 2-3 positions.
+
+        Notes
+        -----
+        The prediction uses up to the last 3 positions to estimate velocity,
+        providing more stable predictions than using only the last 2 positions.
+        """
         if len(self.positions) < 2:
             # No velocity estimate yet, use last position
             return self.positions[-1]
@@ -35,12 +85,39 @@ class SimpleTrack:
             return recent_positions[-1]
 
     def distance_to(self, detection_pos):
-        """Euclidean distance to predicted position"""
+        """
+        Compute Euclidean distance from detection to predicted position.
+
+        Parameters
+        ----------
+        detection_pos : ndarray
+            The (x, y) position of a detection to compare against.
+
+        Returns
+        -------
+        float
+            Euclidean distance between the detection and this track's
+            predicted position.
+        """
         pred = self.predict_position()
         return np.linalg.norm(detection_pos - pred)
 
     def update(self, detection_pos, frame):
-        """Update track with new detection"""
+        """
+        Update track with a new detection.
+
+        Parameters
+        ----------
+        detection_pos : ndarray
+            The (x, y) position of the new detection.
+        frame : int
+            Frame number of the new detection.
+
+        Notes
+        -----
+        This method appends the new position to the track history, increments
+        the hit count, resets the consecutive miss count, and increments age.
+        """
         self.positions.append(detection_pos.copy())
         self.frames.append(frame)
         self.hits += 1
@@ -48,7 +125,20 @@ class SimpleTrack:
         self.age += 1
 
     def mark_missed(self, frame):
-        """Mark frame as missed, add predicted position"""
+        """
+        Mark a frame as missed and add predicted position.
+
+        Parameters
+        ----------
+        frame : int
+            Frame number that was missed (no detection associated).
+
+        Notes
+        -----
+        When a track is not associated with any detection in a frame,
+        this method adds the predicted position to maintain track continuity.
+        It increments both the consecutive miss count and the track age.
+        """
         pred_pos = self.predict_position()
         self.positions.append(pred_pos)
         self.frames.append(frame)
@@ -56,7 +146,25 @@ class SimpleTrack:
         self.age += 1
 
     def quality_score(self):
-        """Track quality score (higher is better)"""
+        """
+        Compute track quality score (higher is better).
+
+        Returns
+        -------
+        float
+            Quality score between 0 and 1, representing track reliability.
+            Calculated as detection rate multiplied by a recency penalty
+            factor that heavily penalizes recent misses.
+
+        Notes
+        -----
+        The quality score combines two factors:
+        - Detection rate: ratio of hits to total age
+        - Recency penalty: exponential decay based on consecutive misses
+
+        This score helps identify high-quality tracks for retention and
+        low-quality tracks for deletion.
+        """
         if self.age == 0:
             return 0
         # Detection rate weighted by age
@@ -71,20 +179,62 @@ def run_simple_tracker(detectors, config):
     Run simple nearest-neighbor tracker with adaptive parameters.
 
     This tracker automatically adapts to the data and requires minimal configuration.
+    It uses Hungarian algorithm for detection-to-track association and automatically
+    computes search radius and maximum track age if not provided.
 
-    Args:
-        detectors: List of Detector objects to use as input
-        config: Dictionary containing tracker configuration:
-            - tracker_name: Name for the resulting tracker
-            - max_search_radius: Maximum distance to search for associations (optional, auto-computed if not provided)
-            - min_track_length: Minimum number of detections for a valid track (default: 5)
-            - max_age: Maximum frames a track can go without detection (default: auto-computed)
+    Parameters
+    ----------
+    detectors : list of Detector
+        List of Detector objects to use as input. Each detector should have
+        frames, columns, and rows attributes containing detection data.
+    config : dict
+        Dictionary containing tracker configuration with the following keys:
 
-    Returns:
+        - tracker_name : str, optional
+            Name for the resulting tracker. Default is 'Simple Tracker'.
+        - max_search_radius : float, optional
+            Maximum distance to search for associations. If not provided,
+            automatically computed from detection nearest-neighbor statistics.
+        - min_track_length : int, optional
+            Minimum number of detections for a valid track. Default is 5.
+        - max_age : int, optional
+            Maximum frames a track can go without detection before deletion.
+            If not provided, automatically computed based on frame gaps.
+
+    Returns
+    -------
+    list of dict
         List of track data dictionaries, each containing:
-            - 'frames': numpy array of frame numbers
-            - 'rows': numpy array of row coordinates
-            - 'columns': numpy array of column coordinates
+
+        - 'frames' : ndarray
+            Array of frame numbers where track appears.
+        - 'rows' : ndarray
+            Array of row (y) coordinates for each frame.
+        - 'columns' : ndarray
+            Array of column (x) coordinates for each frame.
+
+    Notes
+    -----
+    The tracker performs the following steps:
+    1. Collects all detections organized by frame
+    2. Auto-computes max_search_radius using 90th percentile of nearest-neighbor
+       distances if not provided
+    3. Auto-computes max_age based on average frame gaps if not provided
+    4. Associates detections to tracks using Hungarian algorithm
+    5. Creates new tracks from unassociated detections
+    6. Marks missed detections for tracks without associations
+    7. Deletes tracks that exceed max_age or have poor quality scores
+    8. Returns tracks that meet minimum length requirement
+
+    Examples
+    --------
+    >>> config = {
+    ...     'tracker_name': 'My Tracker',
+    ...     'min_track_length': 5,
+    ...     'max_search_radius': 10.0
+    ... }
+    >>> tracks = run_simple_tracker(detectors, config)
+    >>> print(f"Found {len(tracks)} tracks")
     """
     # Extract configuration with smart defaults
     tracker_name = config.get('tracker_name', 'Simple Tracker')

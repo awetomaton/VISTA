@@ -1,0 +1,13 @@
+# Sphinx build outputs
+build/
+_build/
+
+# Auto-generated files
+source/generated/
+
+# Sphinx cache
+source/.doctrees/
+
+# Backup files
+*~
+*.bak

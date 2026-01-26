@@ -18,14 +18,20 @@ class SimpleThreshold:
         """
         Initialize the Simple Threshold detector.
 
-        Args:
-            threshold: Intensity threshold for detection
-            min_area: Minimum detection area in pixels
-            max_area: Maximum detection area in pixels
-            detection_mode: Detection mode - 'above', 'below', or 'both'
-                'above': Detect pixels > threshold (default)
-                'below': Detect pixels < -threshold (negative values)
-                'both': Detect pixels where |pixel| > threshold (absolute value)
+        Parameters
+        ----------
+        threshold : float
+            Intensity threshold for detection.
+        min_area : int, optional
+            Minimum detection area in pixels. Default is 1.
+        max_area : int, optional
+            Maximum detection area in pixels. Default is 1000.
+        detection_mode : {'above', 'below', 'both'}, optional
+            Detection mode controlling how threshold is applied:
+
+            - 'above': Detect pixels > threshold (default)
+            - 'below': Detect pixels < -threshold (negative values)
+            - 'both': Detect pixels where |pixel| > threshold (absolute value)
         """
         self.threshold = threshold
         self.min_area = min_area
@@ -36,12 +42,31 @@ class SimpleThreshold:
         """
         Process a single image and return detections.
 
-        Args:
-            image: 2D numpy array to process
+        Parameters
+        ----------
+        image : ndarray
+            2D numpy array representing a single image frame to process.
 
-        Returns:
-            Tuple of (rows, columns) where rows and columns are arrays
-            of detection centroids.
+        Returns
+        -------
+        rows : ndarray
+            Array of row coordinates (y-positions) for detection centroids.
+        columns : ndarray
+            Array of column coordinates (x-positions) for detection centroids.
+
+        Raises
+        ------
+        ValueError
+            If detection_mode is not 'above', 'below', or 'both'.
+
+        Notes
+        -----
+        The detector:
+        1. Applies threshold based on detection_mode to create a binary mask
+        2. Labels connected components in the binary mask
+        3. Filters regions by area (min_area <= area <= max_area)
+        4. Computes weighted centroids for qualifying regions
+        5. Returns centroid coordinates as (rows, columns) tuple
         """
         # Apply threshold based on detection mode
         if self.detection_mode == 'above':

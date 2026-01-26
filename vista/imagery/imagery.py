@@ -333,7 +333,7 @@ class Imagery:
         This method writes only imagery-specific data:
         - Image arrays (chunked for efficient loading)
         - Frame numbers
-        - Times (as unix_times and unix_fine_times)
+        - Times (as unix_nanoseconds)
         - Row/column offsets
         - Metadata attributes (name, description, uuid)
 
@@ -354,13 +354,9 @@ class Imagery:
 
         # Save times if present
         if self.times is not None:
-            # Convert datetime64 to unix seconds + nanoseconds
-            total_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            unix_times = (total_nanoseconds // 1_000_000_000).astype(np.int64)
-            unix_fine_times = (total_nanoseconds % 1_000_000_000).astype(np.int64)
-
-            group.create_dataset('unix_times', data=unix_times)
-            group.create_dataset('unix_fine_times', data=unix_fine_times)
+            # Convert datetime64 to unix nanoseconds
+            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
+            group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
 
 
 def save_imagery_hdf5(
@@ -408,7 +404,7 @@ def save_imagery_hdf5(
 
     with h5py.File(file_path, 'w') as f:
         # Set root attributes
-        f.attrs['format_version'] = '1.6'
+        f.attrs['format_version'] = '1.7'
         f.attrs['created'] = str(np.datetime64('now').astype(str))
 
         # Create sensors group

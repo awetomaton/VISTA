@@ -99,15 +99,20 @@ class DataLoaderThread(QThread):
 
         # Load time data
         times = None
-        if 'unix_time' in f and 'unix_fine_time' in f:
+        if 'unix_nanoseconds' in f:
+            # version 1.7+ format with combined nanoseconds
+            unix_nanoseconds = f['unix_nanoseconds'][:]
+            times = unix_nanoseconds.astype('datetime64[ns]')
+        elif 'unix_time' in f and 'unix_fine_time' in f:
+            # version 1.5 format with split fields (backward compatibility)
             unix_time = f['unix_time'][:]
             unix_fine_time = f['unix_fine_time'][:]
             # Combine into total nanoseconds and convert to datetime64[ns]
             total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
             times = total_nanoseconds.astype('datetime64[ns]')
 
-        # Note: v1.5 format used lat/lon polynomials which are no longer supported.
-        # Geolocation will not be available for v1.5 files.
+        # Note: version 1.5 format used lat/lon polynomials which are no longer supported.
+        # Geolocation will not be available for version 1.5 files.
 
         # Load images with progress
         images = self._load_images_dataset(images_dataset)
@@ -237,10 +242,16 @@ class DataLoaderThread(QThread):
                 positions = pos_group['positions'][:]
 
                 # Load times
-                unix_times = pos_group['unix_times'][:]
-                unix_fine_times = pos_group['unix_fine_times'][:]
-                total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
-                times = total_nanoseconds.astype('datetime64[ns]')
+                if 'unix_nanoseconds' in pos_group:
+                    # version 1.7+ format with combined nanoseconds
+                    unix_nanoseconds = pos_group['unix_nanoseconds'][:]
+                    times = unix_nanoseconds.astype('datetime64[ns]')
+                elif 'unix_times' in pos_group and 'unix_fine_times' in pos_group:
+                    # version 1.6 format with split fields (backward compatibility)
+                    unix_times = pos_group['unix_times'][:]
+                    unix_fine_times = pos_group['unix_fine_times'][:]
+                    total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
+                    times = total_nanoseconds.astype('datetime64[ns]')
 
             # Load ARF geolocation polynomials
             pointing = None
@@ -324,7 +335,12 @@ class DataLoaderThread(QThread):
 
         # Load times if present
         times = None
-        if 'unix_times' in img_group and 'unix_fine_times' in img_group:
+        if 'unix_nanoseconds' in img_group:
+            # version 1.7+ format with combined nanoseconds
+            unix_nanoseconds = img_group['unix_nanoseconds'][:]
+            times = unix_nanoseconds.astype('datetime64[ns]')
+        elif 'unix_times' in img_group and 'unix_fine_times' in img_group:
+            # version 1.6 format with split fields (backward compatibility)
             unix_times = img_group['unix_times'][:]
             unix_fine_times = img_group['unix_fine_times'][:]
             total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
