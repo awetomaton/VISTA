@@ -8,11 +8,8 @@ Main Window Layout
 
 The VISTA main window consists of several key areas:
 
-.. figure:: ../_static/images/main_window.png
-   :alt: VISTA Main Window
-   :align: center
-
-   VISTA Main Window Layout (placeholder for future screenshot)
+.. note::
+   A screenshot of the VISTA Main Window will be added here in a future update.
 
 Components
 ~~~~~~~~~~

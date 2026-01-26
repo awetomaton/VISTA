@@ -23,8 +23,8 @@ Detectors
    :toctree: generated/
    :nosignatures:
 
-   detectors.threshold.simple_threshold_detector
-   detectors.cfar.cfar_detector
+   detectors.threshold.SimpleThreshold
+   detectors.cfar.CFAR
 
 Detection algorithms identify objects of interest in imagery based on intensity, contrast, or other features.
 
@@ -32,13 +32,10 @@ Example:
 
 .. code-block:: python
 
-   from vista.algorithms.detectors.threshold import simple_threshold_detector
+   from vista.algorithms.detectors.threshold import SimpleThreshold
 
-   detections = simple_threshold_detector(
-       imagery.data,
-       threshold=10.0,
-       min_area=5
-   )
+   detector = SimpleThreshold(threshold=10.0, min_area=5)
+   rows, columns = detector(image)
 
 Trackers
 --------
@@ -47,10 +44,10 @@ Trackers
    :toctree: generated/
    :nosignatures:
 
-   trackers.simple_tracker.SimpleTracker
-   trackers.kalman_tracker.KalmanTracker
-   trackers.network_flow_tracker.NetworkFlowTracker
-   trackers.tracklet_tracker.TrackletTracker
+   trackers.simple_tracker.run_simple_tracker
+   trackers.kalman_tracker.run_kalman_tracker
+   trackers.network_flow_tracker.run_network_flow_tracker
+   trackers.tracklet_tracker.run_tracklet_tracker
 
 Tracking algorithms associate detections across frames to form object trajectories.
 
@@ -58,14 +55,17 @@ Example:
 
 .. code-block:: python
 
-   from vista.algorithms.trackers.kalman_tracker import KalmanTracker
+   from vista.algorithms.trackers.kalman_tracker import run_kalman_tracker
 
-   tracker = KalmanTracker(
-       max_distance=10.0,
-       max_age=5,
-       min_hits=3
-   )
-   tracks = tracker.track(detections)
+   config = {
+       'tracker_name': 'My Tracker',
+       'gating_distance': 10.0,
+       'min_detections': 3,
+       'process_noise': 1.0,
+       'measurement_noise': 1.0,
+       'delete_threshold': 100.0
+   }
+   tracks = run_kalman_tracker(detectors, config)
 
 Background Removal
 ------------------
@@ -74,8 +74,8 @@ Background Removal
    :toctree: generated/
    :nosignatures:
 
-   background_removal.temporal_median.temporal_median_background
-   background_removal.robust_pca.robust_pca_background
+   background_removal.temporal_median.TemporalMedian
+   background_removal.robust_pca.run_robust_pca
 
 Background removal algorithms separate moving objects from static background.
 
@@ -83,10 +83,10 @@ Example:
 
 .. code-block:: python
 
-   from vista.algorithms.background_removal.temporal_median import temporal_median_background
+   from vista.algorithms.background_removal.temporal_median import TemporalMedian
 
-   background = temporal_median_background(imagery.data, window_size=10)
-   foreground = imagery.data - background
+   temporal_median = TemporalMedian(imagery, background=5, offset=2)
+   frame_idx, foreground = temporal_median()
 
 Enhancement
 -----------
@@ -95,7 +95,7 @@ Enhancement
    :toctree: generated/
    :nosignatures:
 
-   enhancement.coadd.coadd_frames
+   enhancement.coadd.Coaddition
 
 Enhancement algorithms improve image quality for better visualization and analysis.
 
@@ -103,9 +103,10 @@ Example:
 
 .. code-block:: python
 
-   from vista.algorithms.enhancement.coadd import coadd_frames
+   from vista.algorithms.enhancement.coadd import Coaddition
 
-   enhanced = coadd_frames(imagery.data, num_frames=5)
+   coaddition = Coaddition(imagery, window_size=5)
+   frame_idx, enhanced = coaddition()
 
 Track Analysis
 --------------
@@ -114,9 +115,9 @@ Track Analysis
    :toctree: generated/
    :nosignatures:
 
-   tracks.interpolation.interpolate_tracks
-   tracks.savitzky_golay.smooth_tracks
-   tracks.extraction.extract_track_features
+   tracks.interpolation.TrackInterpolation
+   tracks.savitzky_golay.SavitzkyGolayFilter
+   tracks.extraction.TrackExtraction
 
 Track analysis algorithms refine and analyze track data.
 
@@ -124,14 +125,18 @@ Example:
 
 .. code-block:: python
 
-   from vista.algorithms.tracks.interpolation import interpolate_tracks
-   from vista.algorithms.tracks.savitzky_golay import smooth_tracks
+   from vista.algorithms.tracks.interpolation import TrackInterpolation
+   from vista.algorithms.tracks.savitzky_golay import SavitzkyGolayFilter
 
    # Fill gaps in tracks
-   interpolated = interpolate_tracks(tracks, max_gap=5)
+   interpolator = TrackInterpolation(track, method='linear')
+   results = interpolator()
+   interpolated_track = results['interpolated_track']
 
    # Smooth trajectories
-   smoothed = smooth_tracks(tracks, window_size=5, poly_order=2)
+   smoother = SavitzkyGolayFilter(track, radius=2, polyorder=2)
+   results = smoother()
+   smoothed_track = results['smoothed_track']
 
 Module Reference
 ----------------
