@@ -67,6 +67,16 @@ autodoc_default_options = {
 autodoc_typehints = 'description'
 autodoc_typehints_description_target = 'documented'
 
+# Mock imports for packages that can't be imported in CI environment
+# (e.g., PyQt6 requires graphics libraries like libEGL.so.1)
+autodoc_mock_imports = [
+    'PyQt6',
+    'PyQt6.QtCore',
+    'PyQt6.QtGui',
+    'PyQt6.QtWidgets',
+    'PyQt6.QtOpenGLWidgets',
+]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
