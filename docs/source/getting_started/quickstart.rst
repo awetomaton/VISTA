@@ -131,12 +131,7 @@ Keyboard Shortcuts
 Common keyboard shortcuts:
 
 * ``Space``: Play/Pause playback
-* ``Left/Right Arrow``: Previous/Next frame
-* ``Home/End``: First/Last frame
-* ``+/-``: Zoom in/out
-* ``Ctrl+O``: Open file
-* ``Ctrl+S``: Save imagery
-* ``Ctrl+Q``: Quit application
+* ``Left/Right Arrow`` or ``A/D``: Previous/Next frame
 
 Next Steps
 ----------

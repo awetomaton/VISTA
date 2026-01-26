@@ -1,0 +1,13 @@
+{# Version selector for sphinx-multiversion #}
+{% if versions %}
+<div class="sidebar-version-selector">
+  <label for="version-selector" class="sidebar-version-label">Version:</label>
+  <select id="version-selector" onchange="window.location.href = this.value + window.location.pathname.replace(/^\/[^\/]+/, '')">
+    {% for item in versions %}
+    <option value="{{ item.url }}" {% if item.name == current_version %}selected{% endif %}>
+      {{ item.name }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
+{% endif %}

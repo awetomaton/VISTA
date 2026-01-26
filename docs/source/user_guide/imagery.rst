@@ -6,17 +6,19 @@ This guide covers loading, managing, and processing imagery in VISTA.
 Loading Imagery
 ---------------
 
-VISTA supports loading imagery from HDF5 files and can work with both the current v1.6 format
-and legacy v1.5 format. See :doc:`../api/imagery` for programmatic details.
+VISTA supports loading imagery from HDF5 files and can work with version 1.5, 1.6, and 1.7 formats. 
+See :doc:`../api/imagery` for programmatic details.
 
 From the GUI
 ~~~~~~~~~~~~
 
 To load imagery in the VISTA GUI:
 
-1. Click **File → Open** or press **Ctrl+O**
+1. Click **File → Open**
 2. Select an HDF5 file (``.h5`` or ``.hdf5``)
 3. VISTA will automatically detect the format and load all sensors and imagery
+
+
 
 From Python API
 ~~~~~~~~~~~~~~~
@@ -42,14 +44,14 @@ Format Overview
 
 **Current Version:** 1.7 (simplified timestamps with nanosecond precision)
 
-**Legacy Support:** v1.6 (hierarchical with split timestamps), v1.5 (flat structure, deprecated)
+**Legacy Support:** version 1.6 (hierarchical with split timestamps), version 1.5 (flat structure, deprecated)
 
-The v1.7 format uses a hierarchical sensor-based structure allowing multiple sensors
+The version 1.7 format uses a hierarchical sensor-based structure allowing multiple sensors
 and multiple imagery datasets per sensor in a single file, with simplified timestamp
 storage using a single nanosecond field.
 
-File Structure (v1.7)
-~~~~~~~~~~~~~~~~~~~~~
+File Structure (version 1.7)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The HDF5 file has the following hierarchical structure:
 
@@ -279,9 +281,9 @@ Version 1.7 (Current)
 - Uses single ``unix_nanoseconds`` field for timestamps (int64)
 - Simplified timestamp storage with nanosecond precision
 - Valid time range: 1970-01-01 to 2262-04-11 (292 years)
-- All other features from v1.6 retained
+- All other features from version 1.6 retained
 
-Version 1.6 (Legacy)
+Version 1.6 (Legacy, Deprecated)
 ^^^^^^^^^^^^^^^^^^^^
 
 - Hierarchical structure with ``sensors/`` root group
@@ -289,6 +291,11 @@ Version 1.6 (Legacy)
 - Supports multiple imagery datasets per sensor
 - Uses split ``unix_times`` and ``unix_fine_times`` fields
 - Fully supported for loading (backward compatible)
+
+.. warning::
+   When opening version 1.6 files, VISTA displays a deprecation warning.
+   Convert legacy files to version 1.7 format by loading and re-saving through
+   the GUI: **File → Open** (load version 1.5) then **File → Save** (saves as version 1.7).
 
 Version 1.5 (Legacy, Deprecated)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -299,9 +306,9 @@ Version 1.5 (Legacy, Deprecated)
 - Will be removed in a future VISTA version
 
 .. warning::
-   When opening v1.5 files, VISTA displays a deprecation warning.
-   Convert legacy files to v1.7 format by loading and re-saving through
-   the GUI: **File → Open** (load v1.5) then **File → Save** (saves as v1.7).
+   When opening version 1.5 files, VISTA displays a deprecation warning.
+   Convert legacy files to version 1.7 format by loading and re-saving through
+   the GUI: **File → Open** (load version 1.5) then **File → Save** (saves as version 1.7).
 
 .. _arf-coordinate-system:
 
@@ -645,7 +652,7 @@ Save Entire Dataset
 To save imagery with all metadata and calibration:
 
 1. Select imagery in the **Imagery Panel**
-2. Click **File → Save** or press **Ctrl+S**
+2. Click **File → Save**
 3. Choose output filename
 4. File is saved in 1.7 HDF5 format with all associated data
 

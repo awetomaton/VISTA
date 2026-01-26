@@ -153,10 +153,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# User defined
+# User defined - cache directories only
 _cache
-_static
-_templates
 
 tests/data/*
 data/**

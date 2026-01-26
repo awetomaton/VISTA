@@ -1,0 +1,18 @@
+{% extends "!base.html" %}
+
+{# Inject version selector at the top of the sidebar #}
+{% block announcement %}
+  {{ super() }}
+  {% if versions %}
+  <div class="sidebar-version-selector">
+    <label for="version-selector" class="sidebar-version-label">Documentation Version:</label>
+    <select id="version-selector">
+      {% for item in versions %}
+      <option value="{{ item.url }}" {% if item.name == current_version %}selected{% endif %}>
+        {{ item.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+{% endblock %}
