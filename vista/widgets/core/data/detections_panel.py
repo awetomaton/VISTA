@@ -101,7 +101,7 @@ class DetectionsPanel(QWidget):
         self.label_detections_btn = QPushButton("Label Detections")
         self.label_detections_btn.clicked.connect(self.label_selected_detections)
         self.label_detections_btn.setEnabled(False)  # Disabled until detections are selected
-        self.label_detections_btn.setToolTip("Add labels to selected detection points (use 'Select Detections' tool)")
+        self.label_detections_btn.setToolTip("Set labels on selected detection points (replaces existing labels)")
         track_from_detections_layout.addWidget(self.label_detections_btn)
 
         track_from_detections_layout.addStretch()
@@ -1082,17 +1082,14 @@ class DetectionsPanel(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_labels = dialog.get_selected_labels()
 
-            if not selected_labels:
-                return
-
-            # Add selected labels to each selected detection point
+            # Set selected labels to each selected detection point (empty set clears labels)
             for detector, _frame, index in self.selected_detections:
                 # Ensure labels list is initialized and has enough entries
                 while len(detector.labels) <= index:
                     detector.labels.append(set())
 
-                # Add labels to this specific detection
-                detector.labels[index].update(selected_labels)
+                # Replace labels for this specific detection
+                detector.labels[index] = selected_labels.copy()
 
             # Refresh the table and emit data changed
             self.refresh_detections_table()
@@ -1105,7 +1102,7 @@ class DetectionsPanel(QWidget):
             QMessageBox.information(
                 self,
                 "Success",
-                f"Added {len(selected_labels)} label(s) to {len(self.selected_detections)} detection(s).",
+                f"Set {len(selected_labels)} label(s) on {len(self.selected_detections)} detection(s).",
                 QMessageBox.StandardButton.Ok
             )
 

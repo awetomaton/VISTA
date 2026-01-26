@@ -147,7 +147,7 @@ class TracksPanel(QWidget):
         self.label_selected_btn = QPushButton("Label Selected")
         self.label_selected_btn.setEnabled(False)  # Disabled until tracks selected
         self.label_selected_btn.clicked.connect(self.label_selected_tracks)
-        self.label_selected_btn.setToolTip("Add labels to selected tracks")
+        self.label_selected_btn.setToolTip("Set labels on selected tracks (replaces existing labels)")
         tracks_actions_layout.addWidget(self.label_selected_btn)
 
         # Add plot track details button
@@ -2313,7 +2313,7 @@ class TracksPanel(QWidget):
         )
 
     def label_selected_tracks(self):
-        """Add labels to selected tracks"""
+        """Set labels on selected tracks"""
         # Get selected rows from the table
         selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
 
@@ -2345,17 +2345,14 @@ class TracksPanel(QWidget):
         # Get all available labels
         available_labels = LabelsManagerDialog.get_available_labels()
 
-        # Show dialog with no labels pre-selected (user will select what to add)
+        # Show dialog with no labels pre-selected (user will select what to set)
         dialog = LabelsSelectionDialog(available_labels, set(), self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_labels = dialog.get_selected_labels()
 
-            if not selected_labels:
-                return
-
-            # Add selected labels to each selected track
+            # Replace labels for each selected track (empty set clears labels)
             for track in selected_tracks:
-                track.labels.update(selected_labels)
+                track.labels = selected_labels.copy()
 
             # Refresh the table and emit data changed
             self.refresh_tracks_table()
@@ -2363,8 +2360,8 @@ class TracksPanel(QWidget):
 
             QMessageBox.information(
                 self,
-                "Labels Added",
-                f"Added {len(selected_labels)} label(s) to {len(selected_tracks)} track(s).",
+                "Labels Set",
+                f"Set {len(selected_labels)} label(s) on {len(selected_tracks)} track(s).",
                 QMessageBox.StandardButton.Ok
             )
 

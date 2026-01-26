@@ -856,6 +856,35 @@ class ImageryViewer(QWidget):
                 frame_mask = detector.frames == self.current_frame_number
                 indices = np.where(frame_mask)[0]
 
+            # Apply label filter if detections panel has active filters
+            if len(rows) > 0:
+                try:
+                    if hasattr(self, 'data_manager') and self.data_manager is not None:
+                        if hasattr(self.data_manager, 'detections_panel'):
+                            label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                            if detector.complete:
+                                # For complete mode, just apply label filter
+                                if np.any(label_mask):
+                                    # Filter rows, cols, and indices to match label_mask
+                                    rows = detector.rows[label_mask]
+                                    cols = detector.columns[label_mask]
+                                    indices = np.where(label_mask)[0]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
+                                    indices = np.array([])
+                            else:
+                                # For current frame mode, combine frame and label filters
+                                combined_mask = frame_mask & label_mask
+                                if np.any(combined_mask):
+                                    rows = detector.rows[combined_mask]
+                                    cols = detector.columns[combined_mask]
+                                    indices = np.where(combined_mask)[0]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
+                                    indices = np.array([])
+                except AttributeError:
+                    pass  # Use unfiltered rows/cols/indices
+
             for i, (row, col) in enumerate(zip(rows, cols)):
                 if lasso_polygon.contains(Point(col, row)):
                     # Store as (detector, frame, original_index)
@@ -2166,6 +2195,35 @@ class ImageryViewer(QWidget):
                         rows = detector.rows[mask]
                         cols = detector.columns[mask]
                         indices = np.where(mask)[0]
+
+                    # Apply label filter if detections panel has active filters
+                    if len(rows) > 0:
+                        try:
+                            if hasattr(self, 'data_manager') and self.data_manager is not None:
+                                if hasattr(self.data_manager, 'detections_panel'):
+                                    label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                                    if detector.complete:
+                                        # For complete mode, just apply label filter
+                                        if np.any(label_mask):
+                                            rows = detector.rows[label_mask]
+                                            cols = detector.columns[label_mask]
+                                            indices = np.where(label_mask)[0]
+                                        else:
+                                            rows, cols = np.array([]), np.array([])
+                                            indices = np.array([])
+                                    else:
+                                        # For current frame mode, combine frame and label filters
+                                        frame_mask = detector.frames == self.current_frame_number
+                                        combined_mask = frame_mask & label_mask
+                                        if np.any(combined_mask):
+                                            rows = detector.rows[combined_mask]
+                                            cols = detector.columns[combined_mask]
+                                            indices = np.where(combined_mask)[0]
+                                        else:
+                                            rows, cols = np.array([]), np.array([])
+                                            indices = np.array([])
+                        except AttributeError:
+                            pass  # Use unfiltered rows/cols/indices
 
                     if len(rows) == 0:
                         continue

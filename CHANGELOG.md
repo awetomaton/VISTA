@@ -19,23 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to delete any selected detection points.
 - Added button to break tracks into detections.
 - Added button to merge detections.
-- Fixed mistake in error message when trying to create track or detections manually when no sensor is selected
-- Enabled manually creating track or detection without imagery
-- Added default histogram bounds
-- Fixed bug that could occur when imagery is created with no frames
-- Added the ability to bulk label tracks
-- Added decimating coadd option
-- Added the ability to re-order detection and track table columns
-- Added hidden detection/track table column indicator
-- Update detection/track tables so that hidden columns are persisted
+- Enabled manually creating track or detection without imagery.
+- Added default histogram bounds.
+- Added the ability to bulk label tracks.
+- Added decimating coadd option.
+- Added the ability to re-order detection and track table columns.
+- Added hidden detection/track table column indicator.
+- Update detection/track tables so that hidden columns are persisted.
 - Added ability to view static or animated plots (synchronized to player) of track data.
-- Fixed a variety of issues that could result in excessive memory usage growth during long sessions.
 - Combined `unix_time` and `unix_fine_time` into `unix_nanoseconds` which provides nanosecond precision until April 11, 2262.
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
   or creating new tracks, the new track would show as highlighted even though they were not yet selected.
 - Fixed bug where package distributions were missing some files from MANIFEST
+- Fixed several issues that could result in excessive memory usage growth during long sessions.
+- Fixed issue where users could only add detection / track labels rather than completely resetting them.
+- Fixed bug that could occur when imagery is created with no frames.
+- Fixed mistake in error message when trying to create track or detections manually when no sensor is selected.
 
 ## [1.6.5] - 2025-12-13
 
