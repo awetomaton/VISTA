@@ -32,7 +32,19 @@ class AOI:
             self.name = "AOI"
 
     def update_from_roi(self, roi_item: pg.RectROI):
-        """Update position and size from the ROI item"""
+        """
+        Update position and size from the ROI item.
+
+        Parameters
+        ----------
+        roi_item : pg.RectROI
+            PyQtGraph RectROI item to extract position and size from.
+
+        Notes
+        -----
+        Updates the x, y, width, and height attributes of this AOI to match
+        the current position and size of the provided ROI item.
+        """
         if roi_item:
             pos = roi_item.pos()
             size = roi_item.size()
@@ -43,10 +55,14 @@ class AOI:
 
     def get_bounds(self):
         """
-        Get the bounds of the AOI
+        Get the bounds of the AOI.
 
-        Returns:
-            tuple: (x_min, y_min, x_max, y_max)
+        Returns
+        -------
+        tuple of float
+            Bounds as (x_min, y_min, x_max, y_max), where x_min and y_min
+            are the top-left coordinates, and x_max and y_max are the
+            bottom-right coordinates.
         """
         return (
             self.x,
@@ -57,20 +73,33 @@ class AOI:
 
     def contains_point(self, x: float, y: float) -> bool:
         """
-        Check if a point is within the AOI
+        Check if a point is within the AOI.
 
-        Args:
-            x: X coordinate (column)
-            y: Y coordinate (row)
+        Parameters
+        ----------
+        x : float
+            X coordinate (column) to check.
+        y : float
+            Y coordinate (row) to check.
 
-        Returns:
-            bool: True if point is within AOI
+        Returns
+        -------
+        bool
+            True if the point (x, y) is within the AOI bounds, False otherwise.
         """
         x_min, y_min, x_max, y_max = self.get_bounds()
         return x_min <= x <= x_max and y_min <= y <= y_max
 
     def to_dict(self):
-        """Convert AOI to dictionary for serialization"""
+        """
+        Convert AOI to dictionary for serialization.
+
+        Returns
+        -------
+        dict
+            Dictionary containing all AOI attributes:
+            name, x, y, width, height, visible, and color.
+        """
         return {
             'name': self.name,
             'x': self.x,
@@ -83,7 +112,20 @@ class AOI:
 
     @classmethod
     def from_dict(cls, data: dict):
-        """Create AOI from dictionary"""
+        """
+        Create AOI from dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing AOI attributes. Must include: name, x, y,
+            width, height. Optional: visible, color.
+
+        Returns
+        -------
+        AOI
+            New AOI instance created from the dictionary data.
+        """
         return cls(
             name=data['name'],
             x=data['x'],

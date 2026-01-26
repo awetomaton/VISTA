@@ -8,10 +8,14 @@ def show_error_with_traceback(parent, error_message, title="Processing Error"):
     """
     Display an error message with optional detailed traceback.
 
-    Args:
-        parent: Parent widget for the message box
-        error_message: Error message, optionally containing "\n\nTraceback:\n" separator
-        title: Window title for the message box (default: "Processing Error")
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget for the message box
+    error_message : str
+        Error message, optionally containing "\n\nTraceback:\n" separator
+    title : str, optional
+        Window title for the message box, by default "Processing Error"
     """
     msg_box = QMessageBox(parent)
     msg_box.setIcon(QMessageBox.Icon.Critical)
@@ -33,13 +37,20 @@ def create_progress_dialog(parent, title, message="Initializing...", cancel_text
     """
     Create a standard progress dialog for algorithm processing.
 
-    Args:
-        parent: Parent widget for the progress dialog
-        title: Window title for the progress dialog
-        message: Initial message to display (default: "Initializing...")
-        cancel_text: Text for the cancel button (default: "Cancel")
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget for the progress dialog
+    title : str
+        Window title for the progress dialog
+    message : str, optional
+        Initial message to display, by default "Initializing..."
+    cancel_text : str, optional
+        Text for the cancel button, by default "Cancel"
 
-    Returns:
+    Returns
+    -------
+    QProgressDialog
         QProgressDialog configured for algorithm processing
     """
     progress_dialog = QProgressDialog(message, cancel_text, 0, 0, parent)
@@ -52,10 +63,14 @@ def create_aoi_selector(aois=None):
     """
     Create a ComboBox for AOI selection with standard "Full Image" option.
 
-    Args:
-        aois: List of AOI objects to populate (default: None/empty list)
+    Parameters
+    ----------
+    aois : list of AOI, optional
+        List of AOI objects to populate, by default None
 
-    Returns:
+    Returns
+    -------
+    QComboBox
         QComboBox configured with AOI options
     """
     aoi_combo = QComboBox()
@@ -72,7 +87,9 @@ def create_frame_range_spinboxes():
     """
     Create standard start/end frame spinboxes for frame range selection.
 
-    Returns:
+    Returns
+    -------
+    tuple of (QSpinBox, QSpinBox)
         Tuple of (start_spinbox, end_spinbox) configured for frame range
     """
     # Start frame spinbox
@@ -97,9 +114,12 @@ def populate_detector_list_by_sensor(list_widget, viewer):
     """
     Populate a list widget with detectors filtered by the viewer's selected sensor.
 
-    Args:
-        list_widget: QListWidget to populate with detector names
-        viewer: VISTA viewer object containing detectors and selected_sensor
+    Parameters
+    ----------
+    list_widget : QListWidget
+        QListWidget to populate with detector names
+    viewer : VISTA
+        VISTA viewer object containing detectors and selected_sensor
     """
     list_widget.clear()
 
@@ -114,11 +134,16 @@ def format_exception_with_traceback(exception, prefix="Error"):
     """
     Format an exception with full traceback for error reporting.
 
-    Args:
-        exception: Exception object
-        prefix: Prefix for the error message (default: "Error")
+    Parameters
+    ----------
+    exception : Exception
+        Exception object
+    prefix : str, optional
+        Prefix for the error message, by default "Error"
 
-    Returns:
+    Returns
+    -------
+    str
         Formatted error message string with traceback
     """
     tb_str = traceback.format_exc()

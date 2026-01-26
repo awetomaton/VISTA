@@ -11,16 +11,24 @@ def map_times_to_frames(
     """
     Map track times to imagery frames using nearest time before track time.
 
-    Args:
-        track_times: Array of datetime64 times for track points
-        imagery_times: Array of datetime64 times for imagery frames
-        imagery_frames: Array of frame numbers corresponding to imagery_times
+    Parameters
+    ----------
+    track_times : NDArray[np.datetime64]
+        Array of datetime64 times for track points
+    imagery_times : NDArray[np.datetime64]
+        Array of datetime64 times for imagery frames
+    imagery_frames : NDArray[np.int_]
+        Array of frame numbers corresponding to imagery_times
 
-    Returns:
+    Returns
+    -------
+    NDArray[np.int_]
         Array of frame numbers for each track time
 
-    Raises:
-        ValueError: If track times fall before all imagery times
+    Raises
+    ------
+    ValueError
+        If track times fall before all imagery times
     """
     if len(imagery_times) == 0:
         raise ValueError("Imagery has no times defined")

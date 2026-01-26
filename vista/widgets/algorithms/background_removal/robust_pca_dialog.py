@@ -23,14 +23,22 @@ class RobustPCAProcessingThread(QThread):
         """
         Initialize the processing thread
 
-        Args:
-            imagery: Imagery object to process
-            lambda_param: Lambda parameter (None for auto)
-            tolerance: Convergence tolerance
-            max_iter: Maximum iterations
-            aoi: Optional AOI object to process subset of imagery
-            start_frame: Starting frame index (default: 0)
-            end_frame: Ending frame index exclusive (default: None for all frames)
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to process
+        lambda_param : float or None
+            Lambda parameter (None for auto)
+        tolerance : float
+            Convergence tolerance
+        max_iter : int
+            Maximum iterations
+        aoi : AOI, optional
+            AOI object to process subset of imagery, by default None
+        start_frame : int, optional
+            Starting frame index, by default 0
+        end_frame : int, optional
+            Ending frame index exclusive, by default None for all frames
         """
         super().__init__()
         self.imagery = imagery
@@ -50,13 +58,19 @@ class RobustPCAProcessingThread(QThread):
         """
         Callback function called after each RPCA iteration.
 
-        Args:
-            iteration: Current iteration number (1-indexed)
-            max_iter: Maximum number of iterations
-            rel_error: Current relative error
+        Parameters
+        ----------
+        iteration : int
+            Current iteration number (1-indexed)
+        max_iter : int
+            Maximum number of iterations
+        rel_error : float
+            Current relative error
 
-        Returns:
-            bool: True to continue processing, False to cancel
+        Returns
+        -------
+        bool
+            True to continue processing, False to cancel
         """
         # Update progress - use determinate progress bar during iterations
         self.progress_updated.emit(iteration, max_iter)
@@ -168,10 +182,14 @@ class RobustPCADialog(QDialog):
         """
         Initialize the Robust PCA dialog
 
-        Args:
-            parent: Parent widget
-            imagery: Imagery object to process
-            aois: List of AOI objects to choose from (optional)
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        imagery : Imagery, optional
+            Imagery object to process, by default None
+        aois : list of AOI, optional
+            List of AOI objects to choose from, by default None
         """
         super().__init__(parent)
         self.imagery = imagery

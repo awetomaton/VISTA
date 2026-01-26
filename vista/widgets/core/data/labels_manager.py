@@ -13,9 +13,12 @@ class LabelsManagerDialog(QDialog):
         """
         Initialize the labels manager dialog.
 
-        Args:
-            parent: Parent widget
-            viewer: ImageryViewer instance to remove labels from tracks and detections
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        viewer : ImageryViewer, optional
+            ImageryViewer instance to remove labels from tracks and detections, by default None
         """
         super().__init__(parent)
         self.viewer = viewer

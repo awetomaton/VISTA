@@ -204,10 +204,14 @@ class LabelsSelectionDialog(QDialog):
         """
         Initialize the labels selection dialog.
 
-        Args:
-            available_labels: List of all available label names
-            current_labels: Set of currently selected labels
-            parent: Parent widget
+        Parameters
+        ----------
+        available_labels : list of str
+            List of all available label names
+        current_labels : set of str
+            Set of currently selected labels
+        parent : QWidget, optional
+            Parent widget, by default None
         """
         super().__init__(parent)
         self.current_labels = current_labels

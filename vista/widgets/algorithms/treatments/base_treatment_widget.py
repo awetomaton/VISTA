@@ -23,9 +23,12 @@ class BaseTreatmentThread(QThread):
         """
         Initialize the processing thread.
 
-        Args:
-            imagery: Imagery object to process
-            aoi: Optional AOI object to process subset of imagery
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to process
+        aoi : AOI, optional
+            AOI object to process subset of imagery, by default None
         """
         super().__init__()
         self.imagery = imagery
@@ -40,12 +43,18 @@ class BaseTreatmentThread(QThread):
         """
         Process a single frame. Override this method in subclasses.
 
-        Args:
-            frame_data: The image data for this frame
-            frame_index: Index in the temp_imagery arrays
-            frame_number: Actual frame number from original imagery
+        Parameters
+        ----------
+        frame_data : ndarray
+            The image data for this frame
+        frame_index : int
+            Index in the temp_imagery arrays
+        frame_number : int
+            Actual frame number from original imagery
 
-        Returns:
+        Returns
+        -------
+        ndarray
             Processed frame data
         """
         raise NotImplementedError("Subclasses must implement process_frame()")
@@ -55,7 +64,9 @@ class BaseTreatmentThread(QThread):
         Get the suffix to add to the processed imagery name.
         Override in subclasses (e.g., "BR", "NUC").
 
-        Returns:
+        Returns
+        -------
+        str
             String suffix for processed imagery name
         """
         return "Processed"
@@ -136,12 +147,18 @@ class BaseTreatmentWidget(QDialog):
         """
         Initialize the base treatment configuration widget.
 
-        Args:
-            parent: Parent widget
-            imagery: Imagery object to process
-            aois: List of AOI objects to choose from (optional)
-            window_title: Window title (default: "Treatment")
-            description: Description text for the treatment
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        imagery : Imagery, optional
+            Imagery object to process, by default None
+        aois : list of AOI, optional
+            List of AOI objects to choose from, by default None
+        window_title : str, optional
+            Window title, by default "Treatment"
+        description : str, optional
+            Description text for the treatment, by default ""
         """
         super().__init__(parent)
         self.imagery = imagery
@@ -217,8 +234,10 @@ class BaseTreatmentWidget(QDialog):
         Add treatment-specific UI elements.
         Override this method in subclasses if needed.
 
-        Args:
-            layout: QVBoxLayout to add elements to
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            QVBoxLayout to add elements to
         """
         pass
 
@@ -227,11 +246,16 @@ class BaseTreatmentWidget(QDialog):
         Create the processing thread for this treatment.
         Must be implemented by subclasses.
 
-        Args:
-            imagery: Imagery object to process
-            aoi: Optional AOI object
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to process
+        aoi : AOI, optional
+            AOI object
 
-        Returns:
+        Returns
+        -------
+        BaseTreatmentThread
             BaseTreatmentThread instance
         """
         raise NotImplementedError("Subclasses must implement create_processing_thread()")
@@ -241,8 +265,10 @@ class BaseTreatmentWidget(QDialog):
         Validate that the sensor has required data for this treatment.
         Override in subclasses to check for specific sensor properties.
 
-        Returns:
-            Tuple of (is_valid: bool, error_message: str)
+        Returns
+        -------
+        tuple of (bool, str)
+            Tuple containing (is_valid, error_message)
         """
         return True, ""
 
@@ -299,8 +325,10 @@ class BaseTreatmentWidget(QDialog):
         Enable or disable treatment-specific UI elements.
         Override in subclasses if there are custom UI elements.
 
-        Args:
-            enabled: True to enable, False to disable
+        Parameters
+        ----------
+        enabled : bool
+            True to enable, False to disable
         """
         pass
 

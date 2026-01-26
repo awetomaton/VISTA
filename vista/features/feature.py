@@ -26,12 +26,27 @@ class Feature:
     _plot_items: Optional[list] = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
-        """Initialize plot items list"""
+        """
+        Initialize plot items list.
+
+        Notes
+        -----
+        Called automatically after __init__. Initializes the _plot_items
+        list which stores PyQtGraph plot items for visualization.
+        """
         if self._plot_items is None:
             self._plot_items = []
 
     def to_dict(self):
-        """Convert Feature to dictionary for serialization"""
+        """
+        Convert Feature to dictionary for serialization.
+
+        Returns
+        -------
+        dict
+            Dictionary containing all feature attributes: name, feature_type,
+            geometry, visible, color, and uuid. Suitable for JSON serialization.
+        """
         return {
             'name': self.name,
             'feature_type': self.feature_type,
@@ -43,7 +58,21 @@ class Feature:
 
     @classmethod
     def from_dict(cls, data: dict):
-        """Create Feature from dictionary"""
+        """
+        Create Feature from dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing feature attributes. Must include: name,
+            feature_type, geometry. Optional: visible, color, uuid.
+
+        Returns
+        -------
+        Feature
+            New Feature instance created from the dictionary data. If uuid
+            is not provided, a new UUID is generated.
+        """
         return cls(
             name=data['name'],
             feature_type=data['feature_type'],
@@ -77,7 +106,14 @@ class ShapefileFeature(Feature):
     properties: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        """Set feature type to shapefile"""
+        """
+        Initialize shapefile feature.
+
+        Notes
+        -----
+        Calls parent __post_init__ to initialize plot items, then sets
+        feature_type to "shapefile".
+        """
         super().__post_init__()
         self.feature_type = "shapefile"
 
@@ -103,6 +139,13 @@ class PlacemarkFeature(Feature):
     """
 
     def __post_init__(self):
-        """Set feature type to placemark"""
+        """
+        Initialize placemark feature.
+
+        Notes
+        -----
+        Calls parent __post_init__ to initialize plot items, then sets
+        feature_type to "placemark".
+        """
         super().__post_init__()
         self.feature_type = "placemark"

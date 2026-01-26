@@ -6,12 +6,16 @@
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
 ![Version](https://img.shields.io/badge/version-1.7.0-blue)
-![Python](https://img.shields.io/badge/python-3.9+-blue)
+![Python](https://img.shields.io/badge/python-3.13+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
 
+**Documentation**: https://awetomaton.github.io/VISTA/
+
+**Source Code**: https://github.com/awetomaton/VISTA
+
 ## Watch the demo!
-[![Watch the demo](/docs/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=9eRo5S4yLTs)
+[![Watch the demo](docs/source/_static/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=9eRo5S4yLTs)
 
 ## Important Assumptions
 

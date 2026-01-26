@@ -34,12 +34,18 @@ class DataLoaderThread(QThread):
         """
         Initialize the data loader thread
 
-        Args:
-            file_path: Path to the file to load
-            data_type: Type of data to load ('imagery', 'detections', 'tracks', 'aois')
-            file_format: Format of the file ('hdf5' or 'csv')
-            sensor: Optional Sensor object for track/detection association and geodetic mapping
-            imagery: Optional Imagery object for time-to-frame mapping (for tracks with times)
+        Parameters
+        ----------
+        file_path : str or Path
+            Path to the file to load
+        data_type : str
+            Type of data to load ('imagery', 'detections', 'tracks', 'aois')
+        file_format : str, optional
+            Format of the file ('hdf5' or 'csv'), by default 'hdf5'
+        sensor : Sensor, optional
+            Optional Sensor object for track/detection association and geodetic mapping, by default None
+        imagery : Imagery, optional
+            Optional Imagery object for time-to-frame mapping (for tracks with times), by default None
         """
         super().__init__()
         self.file_path = file_path
@@ -70,23 +76,23 @@ class DataLoaderThread(QThread):
             self.error_occurred.emit(f"Error loading {self.data_type}: {str(e)}")
 
     def _load_imagery(self):
-        """Load imagery from HDF5 file (supports both v1.5 and v1.6 formats)"""
+        """Load imagery from HDF5 file (supports both 1.5 and 1.6 formats)"""
         with h5py.File(self.file_path, 'r') as f:
             # Detect format version
             if 'sensors' in f:
-                # New v1.6 hierarchical format
+                # New 1.6+ hierarchical format
                 self._load_imagery_v16(f)
             else:
-                # Old v1.5 flat format (legacy support)
+                # Old 1.5 flat format (legacy support)
                 self._load_imagery_v15(f)
 
     def _load_imagery_v15(self, f: h5py.File):
-        """Load imagery from legacy v1.5 HDF5 format"""
+        """Load imagery from legacy 1.5 HDF5 format"""
         # Emit deprecation warning to be shown in a dialog
         self.warning_occurred.emit(
             "Deprecated File Format",
-            "The v1.5 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
-            "Please re-save your imagery files using the new v1.6 format:\n"
+            "The 1.5 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
+            "Please re-save your imagery files using the new 1.7 format:\n"
             "File > Save Imagery (HDF5)"
         )
 
@@ -99,15 +105,20 @@ class DataLoaderThread(QThread):
 
         # Load time data
         times = None
-        if 'unix_time' in f and 'unix_fine_time' in f:
+        if 'unix_nanoseconds' in f:
+            # version 1.7+ format with combined nanoseconds
+            unix_nanoseconds = f['unix_nanoseconds'][:]
+            times = unix_nanoseconds.astype('datetime64[ns]')
+        elif 'unix_time' in f and 'unix_fine_time' in f:
+            # version 1.5 format with split fields (backward compatibility)
             unix_time = f['unix_time'][:]
             unix_fine_time = f['unix_fine_time'][:]
             # Combine into total nanoseconds and convert to datetime64[ns]
             total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
             times = total_nanoseconds.astype('datetime64[ns]')
 
-        # Note: v1.5 format used lat/lon polynomials which are no longer supported.
-        # Geolocation will not be available for v1.5 files.
+        # Note: version 1.5 format used lat/lon polynomials which are no longer supported.
+        # Geolocation will not be available for version 1.5 files.
 
         # Load images with progress
         images = self._load_images_dataset(images_dataset)
@@ -136,7 +147,7 @@ class DataLoaderThread(QThread):
             bad_pixel_masks = bad_pixel_masks[:]
             bad_pixel_mask_frames = bad_pixel_mask_frames[:]
 
-        # Create SampledSensor with dummy position data (no geolocation for v1.5 files)
+        # Create SampledSensor with dummy position data (no geolocation for 1.5 files)
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
         sensor_times = np.array([times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
 
@@ -167,11 +178,9 @@ class DataLoaderThread(QThread):
         self._compute_histograms_and_emit(imagery, sensor)
 
     def _load_imagery_v16(self, f: h5py.File):
-        """Load imagery from v1.6 hierarchical HDF5 format"""
-        sensors_group = f['sensors']
+        """Load imagery from 1.6+ hierarchical HDF5 format"""
 
-        # For now, load all sensors and all imagery
-        # TODO: In the future, present a dialog to let user select which ones to load
+        sensors_group = f['sensors']
 
         for sensor_name in sensors_group.keys():
             sensor_group = sensors_group[sensor_name]
@@ -237,10 +246,16 @@ class DataLoaderThread(QThread):
                 positions = pos_group['positions'][:]
 
                 # Load times
-                unix_times = pos_group['unix_times'][:]
-                unix_fine_times = pos_group['unix_fine_times'][:]
-                total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
-                times = total_nanoseconds.astype('datetime64[ns]')
+                if 'unix_nanoseconds' in pos_group:
+                    # version 1.7+ format with combined nanoseconds
+                    unix_nanoseconds = pos_group['unix_nanoseconds'][:]
+                    times = unix_nanoseconds.astype('datetime64[ns]')
+                elif 'unix_times' in pos_group and 'unix_fine_times' in pos_group:
+                    # version 1.6 format with split fields (backward compatibility)
+                    unix_times = pos_group['unix_times'][:]
+                    unix_fine_times = pos_group['unix_fine_times'][:]
+                    total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
+                    times = total_nanoseconds.astype('datetime64[ns]')
 
             # Load ARF geolocation polynomials
             pointing = None
@@ -324,7 +339,19 @@ class DataLoaderThread(QThread):
 
         # Load times if present
         times = None
-        if 'unix_times' in img_group and 'unix_fine_times' in img_group:
+        if 'unix_nanoseconds' in img_group:
+            # version 1.7+ format with combined nanoseconds
+            unix_nanoseconds = img_group['unix_nanoseconds'][:]
+            times = unix_nanoseconds.astype('datetime64[ns]')
+        elif 'unix_times' in img_group and 'unix_fine_times' in img_group:
+            # Emit deprecation warning to be shown in a dialog
+            self.warning_occurred.emit(
+                "Deprecated File Format",
+                "The 1.6 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
+                "Please re-save your imagery files using the new 1.7 format:\n"
+                "File > Save Imagery (HDF5)"
+            )
+            # version 1.6 format with split fields (backward compatibility)
             unix_times = img_group['unix_times'][:]
             unix_fine_times = img_group['unix_fine_times'][:]
             total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)

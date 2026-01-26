@@ -15,11 +15,16 @@ def shrinkage_operator(X, tau):
     """
     Soft-thresholding (shrinkage) operator for sparse component.
 
-    Args:
-        X: Input matrix
-        tau: Threshold parameter
+    Parameters
+    ----------
+    X : ndarray
+        Input matrix
+    tau : float
+        Threshold parameter
 
-    Returns:
+    Returns
+    -------
+    ndarray
         Thresholded matrix
     """
     return np.sign(X) * np.maximum(np.abs(X) - tau, 0)
@@ -29,11 +34,16 @@ def singular_value_threshold(X, tau):
     """
     Singular Value Thresholding (SVT) operator for low-rank component.
 
-    Args:
-        X: Input matrix
-        tau: Threshold parameter
+    Parameters
+    ----------
+    X : ndarray
+        Input matrix
+    tau : float
+        Threshold parameter
 
-    Returns:
+    Returns
+    -------
+    ndarray
         Low-rank approximation of X
     """
     U, s, Vt = np.linalg.svd(X, full_matrices=False)
@@ -53,19 +63,29 @@ def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=100
         minimize ||L||_* + λ||S||_1
         subject to L + S = M
 
-    Args:
-        M: Input matrix (each column is a vectorized image frame)
-        lambda_param: Sparsity parameter (default: 1/sqrt(max(m,n)))
-        mu: Augmented Lagrangian parameter (default: auto)
-        tol: Convergence tolerance
-        max_iter: Maximum iterations
-        callback: Optional callback function called after each iteration.
-                  Called with (iteration, max_iter, rel_error).
-                  Should return False to cancel processing.
+    Parameters
+    ----------
+    M : ndarray
+        Input matrix (each column is a vectorized image frame)
+    lambda_param : float, optional
+        Sparsity parameter, by default 1/sqrt(max(m,n))
+    mu : float, optional
+        Augmented Lagrangian parameter, by default auto
+    tol : float, optional
+        Convergence tolerance, by default 1e-7
+    max_iter : int, optional
+        Maximum iterations, by default 1000
+    callback : callable, optional
+        Optional callback function called after each iteration.
+        Called with (iteration, max_iter, rel_error).
+        Should return False to cancel processing.
 
-    Returns:
-        L: Low-rank component (background)
-        S: Sparse component (foreground)
+    Returns
+    -------
+    L : ndarray
+        Low-rank component (background)
+    S : ndarray
+        Sparse component (foreground)
     """
     m, n = M.shape
 
@@ -114,19 +134,28 @@ def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000, callback=
     """
     Apply Robust PCA background subtraction to a 3D array of images.
 
-    Args:
-        images: 3D numpy array (num_frames, height, width) containing image data
-        lambda_param: Sparsity parameter (default: auto = 1/sqrt(max(m,n)))
-        tol: Convergence tolerance (default: 1e-7)
-        max_iter: Maximum iterations (default: 1000)
-        callback: Optional callback function called after each iteration.
-                  Called with (iteration, max_iter, rel_error).
-                  Should return False to cancel processing.
+    Parameters
+    ----------
+    images : ndarray
+        3D numpy array (num_frames, height, width) containing image data
+    lambda_param : float, optional
+        Sparsity parameter, by default auto = 1/sqrt(max(m,n))
+    tol : float, optional
+        Convergence tolerance, by default 1e-7
+    max_iter : int, optional
+        Maximum iterations, by default 1000
+    callback : callable, optional
+        Optional callback function called after each iteration.
+        Called with (iteration, max_iter, rel_error).
+        Should return False to cancel processing.
 
-    Returns:
-        Tuple of (background_images, foreground_images):
-            - background_images: Low-rank background component (same shape as input)
-            - foreground_images: Sparse foreground component (same shape as input)
+    Returns
+    -------
+    tuple of (ndarray, ndarray)
+        (background_images, foreground_images) where:
+
+        - background_images: Low-rank background component (same shape as input)
+        - foreground_images: Sparse foreground component (same shape as input)
     """
     # Get dimensions
     num_frames, height, width = images.shape

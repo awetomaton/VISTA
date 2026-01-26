@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.7.0] - TBD
+## [1.7.0] - 2026-1-25
 
 ### Improvements
 - Modified VISTA `SampledSensor` objects to define pointing in an Attitude Reference Frame (ARF) to enable off and on Earth ray projection
@@ -15,11 +15,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Track Interpolator algorithm (Filters > Track Filters > Track Interpolator) to fill missing frames in track trajectories.
 - Added Savitzky-Golay Filter algorithm (Filters > Track Filters > Savitzky-Golay Filter) to smooth track trajectories.
 - Added the ability to load placemarks and shape files into VISTA.
+- Added the ability to display all detections for a given detector across all time.
+- Added the ability to delete any selected detection points.
+- Added button to break tracks into detections.
+- Added button to merge detections.
+- Enabled manually creating track or detection without imagery.
+- Added default histogram bounds.
+- Added the ability to bulk label tracks.
+- Added decimating coadd option.
+- Added the ability to re-order detection and track table columns.
+- Added hidden detection/track table column indicator.
+- Update detection/track tables so that hidden columns are persisted.
+- Added ability to view static or animated plots (synchronized to player) of track data.
+- Combined `unix_time` and `unix_fine_time` into `unix_nanoseconds` which provides nanosecond precision until April 11, 2262.
+- Added the ability to set track line style as a bulk action.
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 
   or creating new tracks, the new track would show as highlighted even though they were not yet selected.
 - Fixed bug where package distributions were missing some files from MANIFEST
+- Fixed several issues that could result in excessive memory usage growth during long sessions.
+- Fixed issue where users could only add detection / track labels rather than completely resetting them.
+- Fixed bug that could occur when imagery is created with no frames.
+- Fixed mistake in error message when trying to create track or detections manually when no sensor is selected.
 
 ## [1.6.5] - 2025-12-13
 

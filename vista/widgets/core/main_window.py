@@ -508,9 +508,9 @@ class VistaMainWindow(QMainWindow):
             # Deactivate all other interactive modes
             self.deactivate_all_interactive_modes(except_action=self.create_track_action)
 
-            # Check if imagery is loaded
-            if self.viewer.imagery is None:
-                # No imagery, show warning and uncheck
+            # Check if sensor is selected
+            if self.viewer.selected_sensor is None:
+                # No selected sensor, show warning and uncheck
                 QMessageBox.warning(
                     self,
                     "No Sensor",
@@ -543,9 +543,9 @@ class VistaMainWindow(QMainWindow):
             # Deactivate all other interactive modes
             self.deactivate_all_interactive_modes(except_action=self.create_detection_action)
 
-            # Check if imagery is loaded
-            if self.viewer.imagery is None:
-                # No imagery, show warning and uncheck
+            # Check if sensor is selected
+            if self.viewer.selected_sensor is None:
+                # No selected sensor, show warning and uncheck
                 QMessageBox.warning(
                     self,
                     "No Sensor",
@@ -628,6 +628,13 @@ class VistaMainWindow(QMainWindow):
         else:
             # Disable lasso selection mode
             self.viewer.set_lasso_selection_mode(False)
+
+            # Clear all selections made by lasso
+            self.viewer.set_selected_tracks(set())  # Clear track selection in viewer
+            self.viewer.selected_detections = []  # Clear detection selection in viewer
+            self.viewer._update_selected_detections_display()
+            self.data_manager.detections_panel.clear_detection_selection()  # Clear detection selection in panel
+
             self.statusBar().showMessage("Lasso selection mode disabled", 3000)
 
     def on_lasso_selection_completed(self, selected_items):
@@ -826,6 +833,10 @@ class VistaMainWindow(QMainWindow):
             # All files loaded
             return
 
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
         file_path = self.detections_file_queue.pop(0)
 
         # Create and start loader thread
@@ -840,8 +851,8 @@ class VistaMainWindow(QMainWindow):
         if self.progress_dialog:
             try:
                 self.progress_dialog.canceled.disconnect()
-            except:
-                pass
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
         self.loader_thread.start()
@@ -1005,6 +1016,10 @@ class VistaMainWindow(QMainWindow):
             # All files loaded
             return
 
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
         file_path = self.tracks_file_queue.pop(0)
 
         # Create and start loader thread
@@ -1023,8 +1038,8 @@ class VistaMainWindow(QMainWindow):
         if self.progress_dialog:
             try:
                 self.progress_dialog.canceled.disconnect()
-            except:
-                pass
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
         self.loader_thread.start()
@@ -1167,6 +1182,10 @@ class VistaMainWindow(QMainWindow):
             # All files loaded
             return
 
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
         file_path = self.aois_file_queue.pop(0)
 
         # Create and start loader thread
@@ -1181,8 +1200,8 @@ class VistaMainWindow(QMainWindow):
         if self.progress_dialog:
             try:
                 self.progress_dialog.canceled.disconnect()
-            except:
-                pass
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
         self.loader_thread.start()
@@ -1462,8 +1481,8 @@ class VistaMainWindow(QMainWindow):
             # Disconnect canceled signal before closing to prevent false "Loading cancelled" message
             try:
                 self.progress_dialog.canceled.disconnect(self.on_loading_cancelled)
-            except:
-                pass  # Signal may not be connected
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.progress_dialog.close()
             self.progress_dialog = None
 
@@ -1526,8 +1545,8 @@ class VistaMainWindow(QMainWindow):
         if self.viewer.point_selection_dialog is not None:
             try:
                 self.viewer.point_selection_dialog.visibility_changed.disconnect(self.on_point_selection_visibility_changed)
-            except:
-                pass  # Not connected yet
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
             self.viewer.point_selection_dialog.visibility_changed.connect(self.on_point_selection_visibility_changed)
 
     def on_point_selection_visibility_changed(self, visible):
@@ -1592,7 +1611,9 @@ class VistaMainWindow(QMainWindow):
         """Handle completion of algorithms that produce multiple imagery"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
-        
+        processed_imagery = [imagery for imagery in processed_imagery if imagery.images.size != 0]
+        if len(processed_imagery) == 0:
+            return
         for imagery in processed_imagery:
             if imagery.name in existing_names:
                 QMessageBox.critical(
@@ -1622,6 +1643,8 @@ class VistaMainWindow(QMainWindow):
     def on_single_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that create single imagery"""
         # Check for duplicate imagery name
+        if processed_imagery.images.size == 0:
+            return
         existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
         if processed_imagery.name in existing_names:
             QMessageBox.critical(
@@ -1681,7 +1704,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.sensor.bias_images is None:
+        elif self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.bias_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with bias images",
@@ -1712,7 +1735,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.sensor.uniformity_gain_images is None:
+        elif self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.uniformity_gain_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with uniformity gain images",

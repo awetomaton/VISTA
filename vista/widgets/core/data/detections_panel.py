@@ -39,27 +39,31 @@ class DetectionsPanel(QWidget):
         # Visibility and management buttons
         button_layout = QHBoxLayout()
         self.toggle_visibility_btn = QPushButton("Toggle Visibility")
-        self.toggle_visibility_btn.clicked.connect(self.toggle_all_detections_visibility)
+        self.toggle_visibility_btn.setEnabled(False)  # Disabled until detectors selected
+        self.toggle_visibility_btn.clicked.connect(self.toggle_selected_detections_visibility)
         self.export_detections_btn = QPushButton("Export Detections")
+        self.export_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.export_detections_btn.clicked.connect(self.export_detections)
         self.delete_selected_detections_btn = QPushButton("Delete Selected")
+        self.delete_selected_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.delete_selected_detections_btn.clicked.connect(self.delete_selected_detections)
         button_layout.addWidget(self.toggle_visibility_btn)
         button_layout.addWidget(self.export_detections_btn)
         button_layout.addWidget(self.delete_selected_detections_btn)
 
+        # Add merge detections button
+        self.merge_detections_btn = QPushButton("Merge Detections")
+        self.merge_detections_btn.setEnabled(False)  # Disabled until 2+ detectors selected
+        self.merge_detections_btn.clicked.connect(self.merge_detections)
+        self.merge_detections_btn.setToolTip("Merge selected detectors into a single detector")
+        button_layout.addWidget(self.merge_detections_btn)
+
         # Add copy to sensor button
         self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
+        self.copy_to_sensor_btn.setEnabled(False)  # Disabled until detectors selected
         self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
         self.copy_to_sensor_btn.setToolTip("Copy selected detections to a different sensor")
         button_layout.addWidget(self.copy_to_sensor_btn)
-
-        # Add label detections button
-        self.label_detections_btn = QPushButton("Label Detections")
-        self.label_detections_btn.clicked.connect(self.label_selected_detections)
-        self.label_detections_btn.setEnabled(False)  # Disabled until detections are selected
-        self.label_detections_btn.setToolTip("Add labels to selected detection points (use 'Select Detections' tool)")
-        button_layout.addWidget(self.label_detections_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -86,14 +90,50 @@ class DetectionsPanel(QWidget):
         self.edit_detector_btn.clicked.connect(self.on_edit_detector_clicked)
         track_from_detections_layout.addWidget(self.edit_detector_btn)
 
+        # Add delete selected points button
+        self.delete_selected_points_btn = QPushButton("Delete Selected Points")
+        self.delete_selected_points_btn.setEnabled(False)  # Disabled until detections are selected
+        self.delete_selected_points_btn.clicked.connect(self.delete_selected_detection_points)
+        self.delete_selected_points_btn.setToolTip("Delete selected detection points from their detectors")
+        track_from_detections_layout.addWidget(self.delete_selected_points_btn)
+
+        # Add label detections button
+        self.label_detections_btn = QPushButton("Label Detections")
+        self.label_detections_btn.clicked.connect(self.label_selected_detections)
+        self.label_detections_btn.setEnabled(False)  # Disabled until detections are selected
+        self.label_detections_btn.setToolTip("Set labels on selected detection points (replaces existing labels)")
+        track_from_detections_layout.addWidget(self.label_detections_btn)
+
         track_from_detections_layout.addStretch()
         layout.addLayout(track_from_detections_layout)
 
+        # Detection column visibility (all columns visible by default)
+        # Column 0 (Visible) is always shown and cannot be hidden
+        self.detection_column_visibility = {
+            0: True,   # Visible - always shown
+            1: True,   # Name
+            2: True,   # Labels
+            3: True,   # Color
+            4: True,   # Marker
+            5: True,   # Marker Size
+            6: True,   # Line Thickness
+            7: True,   # Complete
+        }
+
+        # Load saved column visibility settings
+        self.load_detection_column_visibility()
+
+        # Hidden columns indicator label
+        self.hidden_columns_label = QLabel()
+        self.hidden_columns_label.setStyleSheet("color: gray; font-style: italic; font-size: 11px;")
+        self.hidden_columns_label.setVisible(False)
+        layout.addWidget(self.hidden_columns_label)
+
         # Detections table
         self.detections_table = QTableWidget()
-        self.detections_table.setColumnCount(7)
+        self.detections_table.setColumnCount(8)
         self.detections_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness"
+            "Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"
         ])
 
         # Enable row selection via vertical header
@@ -113,6 +153,7 @@ class DetectionsPanel(QWidget):
         self.detections_table.setColumnWidth(4, 80)  # Set reasonably large width to accomodate delegate
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Size (numeric)
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line thickness (numeric)
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
 
         self.detections_table.cellChanged.connect(self.on_detection_cell_changed)
 
@@ -136,10 +177,22 @@ class DetectionsPanel(QWidget):
         self.detections_table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.detections_table.horizontalHeader().customContextMenuRequested.connect(self.on_detections_header_context_menu)
 
+        # Enable column reordering via drag and drop
+        self.detections_table.horizontalHeader().setSectionsMovable(True)
+        self.detections_table.horizontalHeader().setDragEnabled(True)
+        self.detections_table.horizontalHeader().setDragDropMode(QHeaderView.DragDropMode.InternalMove)
+        self.detections_table.horizontalHeader().sectionMoved.connect(self.on_detection_column_moved)
+
+        # Load saved column order
+        self.load_detection_column_order()
+
         # Detection column filters and sort state
         self.detection_column_filters = {}
 
         layout.addWidget(self.detections_table)
+
+        # Apply column visibility after table is created
+        self.apply_detection_column_visibility()
 
         self.setLayout(layout)
 
@@ -209,6 +262,12 @@ class DetectionsPanel(QWidget):
                     line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
                     self.detections_table.setItem(row, 6, line_thickness_item)
 
+                    # Complete checkbox
+                    complete_item = QTableWidgetItem()
+                    complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
+                    self.detections_table.setItem(row, 7, complete_item)
+
                 except Exception as e:
                     print(f"Error adding detector '{detector.name}' to table at row {row}: {e}")
                     traceback.print_exc()
@@ -221,7 +280,7 @@ class DetectionsPanel(QWidget):
 
     def _update_detections_header_icons(self):
         """Update header labels to show filter indicators"""
-        base_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness"]
+        base_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -307,6 +366,26 @@ class DetectionsPanel(QWidget):
         clear_all_filters_action.triggered.connect(self.clear_detection_filters)
         clear_all_filters_action.setEnabled(bool(self.detection_column_filters))
         menu.addAction(clear_all_filters_action)
+
+        menu.addSeparator()
+
+        # Column visibility submenu (always available)
+        column_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
+        columns_menu = QMenu("Show/Hide Columns", menu)
+
+        for col_idx in range(len(column_names)):
+            # Column 0 (Visible) cannot be hidden
+            if col_idx == 0:
+                continue
+
+            action = QAction(column_names[col_idx], columns_menu)
+            action.setCheckable(True)
+            action.setChecked(self.detection_column_visibility.get(col_idx, True))
+            # Use lambda to capture column index and pass checked state directly
+            action.triggered.connect(lambda checked, col=col_idx: self.toggle_detection_column_visibility(col, checked))
+            columns_menu.addAction(action)
+
+        menu.addMenu(columns_menu)
 
         menu.exec(header.mapToGlobal(pos))
 
@@ -419,14 +498,107 @@ class DetectionsPanel(QWidget):
         if hasattr(self.viewer, 'update_detection_display'):
             self.viewer.update_detection_display()
 
+    def _on_detection_column_visibility_toggled(self):
+        """Handle column visibility toggle from context menu"""
+        action = self.sender()
+        if action is None:
+            return
+
+        column_idx = action.data()
+        if column_idx is None:
+            return
+
+        # Get the checked state directly from the action to ensure correctness
+        visible = action.isChecked()
+        self.toggle_detection_column_visibility(column_idx, visible)
+
+    def load_detection_column_visibility(self):
+        """Load detection column visibility settings from QSettings"""
+        for col_idx in range(1, 8):
+            key = f"detection_column_{col_idx}_visible"
+            saved_value = self.settings.value(key, True, type=bool)
+            self.detection_column_visibility[col_idx] = saved_value
+
+    def apply_detection_column_visibility(self):
+        """Apply column visibility settings to the table and update indicator"""
+        # Actually hide/show the columns in the table
+        for col_idx in range(1, 8):
+            visible = self.detection_column_visibility.get(col_idx, True)
+            self.detections_table.setColumnHidden(col_idx, not visible)
+
+        # Update the hidden columns indicator
+        self.update_hidden_columns_indicator()
+
+    def save_detection_column_visibility(self):
+        """Save detection column visibility settings to QSettings"""
+        for col_idx in range(1, 8):
+            key = f"detection_column_{col_idx}_visible"
+            self.settings.setValue(key, self.detection_column_visibility.get(col_idx, True))
+
+    def toggle_detection_column_visibility(self, column_idx, visible):
+        """Toggle visibility of a detection table column"""
+        self.detection_column_visibility[column_idx] = visible
+        self.detections_table.setColumnHidden(column_idx, not visible)
+
+        # Save the updated visibility settings
+        self.save_detection_column_visibility()
+
+        # Update hidden columns indicator
+        self.update_hidden_columns_indicator()
+
+    def load_detection_column_order(self):
+        """Load detection column order from QSettings"""
+        saved_order = self.settings.value("detection_column_order", None)
+        if saved_order:
+            header = self.detections_table.horizontalHeader()
+            try:
+                for visual_idx, logical_idx in enumerate(saved_order):
+                    logical_idx = int(logical_idx)
+                    current_visual = header.visualIndex(logical_idx)
+                    if current_visual != visual_idx:
+                        header.moveSection(current_visual, visual_idx)
+            except (ValueError, TypeError):
+                pass
+
+    def save_detection_column_order(self):
+        """Save detection column order to QSettings"""
+        header = self.detections_table.horizontalHeader()
+        order = [header.logicalIndex(visual_idx) for visual_idx in range(header.count())]
+        self.settings.setValue("detection_column_order", order)
+
+    def on_detection_column_moved(self, logical_index, old_visual_index, new_visual_index):
+        """Handle column reordering via drag and drop"""
+        self.save_detection_column_order()
+
+    def update_hidden_columns_indicator(self):
+        """Update the hidden columns indicator label"""
+        column_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
+
+        hidden_columns = []
+        for col_idx, visible in self.detection_column_visibility.items():
+            if not visible and col_idx < len(column_names):
+                hidden_columns.append(column_names[col_idx])
+
+        if hidden_columns:
+            self.hidden_columns_label.setText(
+                f"Hidden columns ({len(hidden_columns)}): {', '.join(hidden_columns)} — Right-click header to show"
+            )
+            self.hidden_columns_label.setVisible(True)
+        else:
+            self.hidden_columns_label.setVisible(False)
+
     def get_filtered_detection_mask(self, detector):
         """
         Get a boolean mask indicating which detection points should be visible for a detector.
 
-        Args:
-            detector: Detector object to filter
+        Parameters
+        ----------
+        detector : Detector
+            Detector object to filter
 
-        Returns:
+        Returns
+        -------
+        ndarray
             numpy boolean array where True means the detection should be visible
         """
         if not self.detection_column_filters:
@@ -522,6 +694,9 @@ class DetectionsPanel(QWidget):
                 detector.line_thickness = int(item.text())
             except ValueError:
                 pass
+        elif column == 7:  # Complete
+            item = self.detections_table.item(row, column)
+            detector.complete = item.checkState() == Qt.CheckState.Checked
 
         # Invalidate caches if styling properties were modified
         if column in [3, 4, 5, 6]:  # Color, Marker, Size, Line thickness
@@ -558,18 +733,36 @@ class DetectionsPanel(QWidget):
                 # Emit change signal
                 self.data_changed.emit()
 
-    def toggle_all_detections_visibility(self):
-        """Toggle visibility of all detections - if any are visible, hide all; otherwise show all"""
-        if not self.viewer.detectors:
+    def toggle_selected_detections_visibility(self):
+        """Toggle visibility of selected detections - if any are visible, hide all; otherwise show all"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        if not selected_rows:
             return
 
-        # Check if any detectors are currently visible
-        any_visible = any(detector.visible for detector in self.viewer.detectors)
+        # Collect selected detectors
+        selected_detectors = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            selected_detectors.append(detector)
+                            break
+
+        if not selected_detectors:
+            return
+
+        # Check if any selected detectors are currently visible
+        any_visible = any(detector.visible for detector in selected_detectors)
 
         # If any are visible, hide all; otherwise show all
         new_visibility = not any_visible
 
-        for detector in self.viewer.detectors:
+        for detector in selected_detectors:
             detector.visible = new_visibility
 
         self.refresh_detections_table()
@@ -613,12 +806,21 @@ class DetectionsPanel(QWidget):
         self.data_changed.emit()
 
     def on_detector_selection_changed(self):
-        """Handle detector selection change to enable/disable Edit Detector button"""
+        """Handle detector selection change to enable/disable buttons"""
         selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+        num_selected = len(selected_rows)
+
+        # Enable buttons based on selection count
+        self.toggle_visibility_btn.setEnabled(num_selected >= 1)
+        self.export_detections_btn.setEnabled(num_selected >= 1)
+        self.delete_selected_detections_btn.setEnabled(num_selected >= 1)
+        self.merge_detections_btn.setEnabled(num_selected >= 2)
+        self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
+
         # Enable Edit Detector button only if exactly one detector is selected
-        self.edit_detector_btn.setEnabled(len(selected_rows) == 1)
+        self.edit_detector_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
-        if self.edit_detector_btn.isChecked() and len(selected_rows) != 1:
+        if self.edit_detector_btn.isChecked() and num_selected != 1:
             self.edit_detector_btn.setChecked(False)
 
     def on_edit_detector_clicked(self, checked):
@@ -691,9 +893,28 @@ class DetectionsPanel(QWidget):
                         main_window.statusBar().showMessage("Detector editing cancelled", 3000)
 
     def export_detections(self):
-        """Export all detections to CSV file"""
-        if not self.viewer.detectors:
-            QMessageBox.warning(self, "No Detections", "There are no detections to export.")
+        """Export selected detections to CSV file"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.detections_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more detectors to export.")
+            return
+
+        # Collect selected detectors
+        selected_detectors = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            selected_detectors.append(detector)
+                            break
+
+        if not selected_detectors:
+            QMessageBox.warning(self, "No Detections", "Could not find the selected detectors.")
             return
 
         # Get last used directory from settings
@@ -714,21 +935,21 @@ class DetectionsPanel(QWidget):
         if file_path:
             self.settings.setValue("last_detections_export_dir", str(pathlib.Path(file_path).parent))
             try:
-                # Combine all detectors' data
+                # Combine selected detectors' data
                 all_detections_df = pd.DataFrame()
 
-                for detector in self.viewer.detectors:
+                for detector in selected_detectors:
                     detector_df = detector.to_dataframe()
                     all_detections_df = pd.concat([all_detections_df, detector_df], ignore_index=True)
 
                 # Save to CSV
                 all_detections_df.to_csv(file_path, index=False)
 
-                num_detections = sum(len(d.frames) for d in self.viewer.detectors)
+                num_detections = sum(len(d.frames) for d in selected_detectors)
                 QMessageBox.information(
                     self,
                     "Success",
-                    f"Exported {num_detections} detection(s) to:\n{file_path}"
+                    f"Exported {num_detections} detection(s) from {len(selected_detectors)} detector(s) to:\n{file_path}"
                 )
             except Exception as e:
                 QMessageBox.critical(
@@ -865,17 +1086,14 @@ class DetectionsPanel(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_labels = dialog.get_selected_labels()
 
-            if not selected_labels:
-                return
-
-            # Add selected labels to each selected detection point
+            # Set selected labels to each selected detection point (empty set clears labels)
             for detector, _frame, index in self.selected_detections:
                 # Ensure labels list is initialized and has enough entries
                 while len(detector.labels) <= index:
                     detector.labels.append(set())
 
-                # Add labels to this specific detection
-                detector.labels[index].update(selected_labels)
+                # Replace labels for this specific detection
+                detector.labels[index] = selected_labels.copy()
 
             # Refresh the table and emit data changed
             self.refresh_detections_table()
@@ -888,7 +1106,7 @@ class DetectionsPanel(QWidget):
             QMessageBox.information(
                 self,
                 "Success",
-                f"Added {len(selected_labels)} label(s) to {len(self.selected_detections)} detection(s).",
+                f"Set {len(selected_labels)} label(s) on {len(self.selected_detections)} detection(s).",
                 QMessageBox.StandardButton.Ok
             )
 
@@ -899,6 +1117,7 @@ class DetectionsPanel(QWidget):
             self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)
             self.add_to_existing_track_btn.setEnabled(len(detections) >= 1)
             self.label_detections_btn.setEnabled(len(detections) >= 1)
+            self.delete_selected_points_btn.setEnabled(len(detections) >= 1)
 
     def clear_detection_selection(self):
         """Clear the selected detections and update UI"""
@@ -906,6 +1125,80 @@ class DetectionsPanel(QWidget):
         self.create_track_from_detections_btn.setEnabled(False)
         self.add_to_existing_track_btn.setEnabled(False)
         self.label_detections_btn.setEnabled(False)
+        self.delete_selected_points_btn.setEnabled(False)
+
+    def delete_selected_detection_points(self):
+        """Delete the selected detection points from their detectors"""
+        if len(self.selected_detections) == 0:
+            return
+
+        # Group indices by detector
+        detector_indices = {}
+        for detector, frame, index in self.selected_detections:
+            if id(detector) not in detector_indices:
+                detector_indices[id(detector)] = {'detector': detector, 'indices': []}
+            detector_indices[id(detector)]['indices'].append(index)
+
+        # Delete points from each detector (in reverse order to preserve indices)
+        total_deleted = 0
+        detectors_to_remove = []
+
+        for detector_id, data in detector_indices.items():
+            detector = data['detector']
+            indices_to_delete = sorted(data['indices'], reverse=True)
+
+            # Create mask for points to keep
+            keep_mask = np.ones(len(detector.frames), dtype=bool)
+            for idx in indices_to_delete:
+                if 0 <= idx < len(keep_mask):
+                    keep_mask[idx] = False
+                    total_deleted += 1
+
+            # Update detector arrays
+            detector.frames = detector.frames[keep_mask]
+            detector.rows = detector.rows[keep_mask]
+            detector.columns = detector.columns[keep_mask]
+
+            # Update labels if they exist
+            if detector.labels and len(detector.labels) > 0:
+                detector.labels = [label for i, label in enumerate(detector.labels) if keep_mask[i]]
+
+            # Invalidate frame index cache
+            detector._frame_index = None
+
+            # Check if detector is now empty
+            if len(detector.frames) == 0:
+                detectors_to_remove.append(detector)
+
+        # Remove empty detectors
+        for detector in detectors_to_remove:
+            if detector in self.viewer.detectors:
+                self.viewer.detectors.remove(detector)
+
+        # Clear selected detections in viewer
+        self.viewer.selected_detections = []
+        self.viewer._update_selected_detections_display()
+
+        # Clear our selection
+        self.clear_detection_selection()
+
+        # Update viewer display
+        self.viewer.update_overlays()
+
+        # Refresh the table
+        self.refresh_detections_table()
+
+        # Emit data changed signal
+        self.data_changed.emit()
+
+        # Show confirmation
+        QMessageBox.information(
+            self,
+            "Points Deleted",
+            f"Deleted {total_deleted} detection point(s)." +
+            (f"\n{len(detectors_to_remove)} empty detector(s) were also removed." if detectors_to_remove else ""),
+            QMessageBox.StandardButton.Ok
+        )
 
     def create_track_from_selected_detections(self):
         """Create a track from selected detections"""
@@ -1126,3 +1419,115 @@ class DetectionsPanel(QWidget):
         main_window = QApplication.instance().activeWindow()
         if hasattr(main_window, 'select_detections_action'):
             main_window.select_detections_action.setChecked(False)
+
+    def merge_detections(self):
+        """Merge selected detectors into a single new detector"""
+        # Get selected rows from the table
+        selected_rows = sorted(set(index.row() for index in self.detections_table.selectedIndexes()))
+
+        if len(selected_rows) < 2:
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Please select at least 2 detectors to merge."
+            )
+            return
+
+        # Collect detectors from selected rows
+        detectors_to_merge = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    for detector in self.viewer.detectors:
+                        if id(detector) == detector_id:
+                            detectors_to_merge.append(detector)
+                            break
+
+        if len(detectors_to_merge) < 2:
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Could not find enough valid detectors to merge."
+            )
+            return
+
+        # Check that all detectors are from the same sensor (compare by identity)
+        first_detector = detectors_to_merge[0]
+        sensor = first_detector.sensor
+        if not all(d.sensor is sensor for d in detectors_to_merge):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected detectors belong to different sensors. Please select detectors from the same sensor."
+            )
+            return
+
+        # Combine all frames, rows, columns, and labels
+        all_frames = []
+        all_rows = []
+        all_columns = []
+        all_labels = []
+
+        for detector in detectors_to_merge:
+            all_frames.extend(detector.frames.tolist())
+            all_rows.extend(detector.rows.tolist())
+            all_columns.extend(detector.columns.tolist())
+            # Extend labels, padding with empty sets if needed
+            for i in range(len(detector.frames)):
+                if i < len(detector.labels):
+                    all_labels.append(detector.labels[i].copy())
+                else:
+                    all_labels.append(set())
+
+        # Create merged detector
+        merged_name = f"Merged_{first_detector.name}"
+
+        # Make sure the merged name is unique
+        existing_names = {d.name for d in self.viewer.detectors}
+        counter = 1
+        base_name = merged_name
+        while merged_name in existing_names:
+            merged_name = f"{base_name}_{counter}"
+            counter += 1
+
+        from vista.detections.detector import Detector
+        merged_detector = Detector(
+            name=merged_name,
+            frames=np.array(all_frames, dtype=np.int_),
+            rows=np.array(all_rows),
+            columns=np.array(all_columns),
+            sensor=sensor,
+            color=first_detector.color,
+            marker=first_detector.marker,
+            marker_size=first_detector.marker_size,
+            line_thickness=first_detector.line_thickness,
+            visible=True,
+            labels=all_labels,
+        )
+
+        # Add merged detector to viewer
+        self.viewer.add_detector(merged_detector)
+
+        # Delete the original detectors
+        detectors_to_delete_ids = set(id(d) for d in detectors_to_merge)
+        self.viewer.detectors = [d for d in self.viewer.detectors if id(d) not in detectors_to_delete_ids]
+
+        # Remove plot items from viewer
+        for detector in detectors_to_merge:
+            detector_id = id(detector)
+            if detector_id in self.viewer.detector_plot_items:
+                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_id])
+                del self.viewer.detector_plot_items[detector_id]
+
+        # Refresh table
+        self.refresh_detections_table()
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self,
+            "Merge Complete",
+            f"Successfully merged {len(detectors_to_merge)} detectors into '{merged_name}'.\n"
+            f"The merged detector has {len(all_frames)} detection points."
+        )

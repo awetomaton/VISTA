@@ -12,12 +12,13 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
 
-from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
-from vista.widgets.core.data.delegates import LabelsSelectionDialog
+from vista.detections.detector import Detector
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
-from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineStyleDelegate, MarkerDelegate
+from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
+from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.widgets.core.data.track_plot_window import TrackPlotWindow
 
 
 class TracksPanel(QWidget):
@@ -29,6 +30,9 @@ class TracksPanel(QWidget):
         super().__init__()
         self.viewer = viewer
         self.settings = QSettings("VISTA", "DataManager")
+
+        # Track plot windows (multiple windows allowed)
+        self.track_plot_windows = []
 
         # Connect to viewer signals
         self.viewer.extraction_editing_ended.connect(self.on_extraction_editing_ended)
@@ -47,7 +51,7 @@ class TracksPanel(QWidget):
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
         self.bulk_property_combo.addItems([
-            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Marker Size", "Labels"
+            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels"
         ])
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
@@ -89,6 +93,11 @@ class TracksPanel(QWidget):
         self.bulk_line_width_spinbox.setMaximumWidth(60)
         bulk_layout.addWidget(self.bulk_line_width_spinbox)
 
+        # Line Style dropdown
+        self.bulk_line_style_combo = QComboBox()
+        self.bulk_line_style_combo.addItems(['Solid', 'Dash', 'Dot', 'Dash-Dot', 'Dash-Dot-Dot'])
+        bulk_layout.addWidget(self.bulk_line_style_combo)
+
         # Marker Size spinbox
         self.bulk_marker_size_spinbox = QSpinBox()
         self.bulk_marker_size_spinbox.setMinimum(1)
@@ -105,47 +114,79 @@ class TracksPanel(QWidget):
 
         # Apply button - applies to selected rows
         self.bulk_apply_btn = QPushButton("Apply to Selected")
+        self.bulk_apply_btn.setEnabled(False)  # Disabled until tracks selected
         self.bulk_apply_btn.clicked.connect(self.apply_bulk_action)
         bulk_layout.addWidget(self.bulk_apply_btn)
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
 
-        # Track actions section
+        # Multi Track actions section
         tracks_actions_layout = QHBoxLayout()
 
         # Add export tracks button
         self.export_tracks_btn = QPushButton("Export Tracks")
+        self.export_tracks_btn.setEnabled(False)  # Disabled until tracks selected
         self.export_tracks_btn.clicked.connect(self.export_tracks)
         tracks_actions_layout.addWidget(self.export_tracks_btn)
 
+        # Add copy to sensor button
+        self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
+        self.copy_to_sensor_btn.setEnabled(False)  # Disabled until tracks selected
+        self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
+        self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
+        tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
+
         # Add merge selected button
         self.merge_selected_tracks_btn = QPushButton("Merge Selected")
+        self.merge_selected_tracks_btn.setEnabled(False)  # Disabled until 2+ tracks selected
         self.merge_selected_tracks_btn.clicked.connect(self.merge_selected_tracks)
         tracks_actions_layout.addWidget(self.merge_selected_tracks_btn)
+
+        # Add delete selected button
+        self.delete_selected_tracks_btn = QPushButton("Delete Selected")
+        self.delete_selected_tracks_btn.setEnabled(False)  # Disabled until tracks selected
+        self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
+        tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
+
+        # Add label selected button
+        self.label_selected_btn = QPushButton("Label Selected")
+        self.label_selected_btn.setEnabled(False)  # Disabled until tracks selected
+        self.label_selected_btn.clicked.connect(self.label_selected_tracks)
+        self.label_selected_btn.setToolTip("Set labels on selected tracks (replaces existing labels)")
+        tracks_actions_layout.addWidget(self.label_selected_btn)
+
+        # Add plot track details button
+        self.plot_details_btn = QPushButton("Plot Track Details")
+        self.plot_details_btn.setEnabled(False)  # Disabled until tracks selected
+        self.plot_details_btn.clicked.connect(self.on_plot_track_details_clicked)
+        self.plot_details_btn.setToolTip("Plot point-by-point data for selected tracks")
+        tracks_actions_layout.addWidget(self.plot_details_btn)
+
+        tracks_actions_layout.addStretch()
+        layout.addLayout(tracks_actions_layout)
+
+        # Single Track actions section
+        track_actions_layout = QHBoxLayout()
 
         # Add split track button
         self.split_track_btn = QPushButton("Split Track")
         self.split_track_btn.setEnabled(False)  # Disabled until single track selected
         self.split_track_btn.clicked.connect(self.split_selected_track)
-        tracks_actions_layout.addWidget(self.split_track_btn)
-
-        # Add delete selected button
-        self.delete_selected_tracks_btn = QPushButton("Delete Selected")
-        self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
-        tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
+        track_actions_layout.addWidget(self.split_track_btn)
 
         # Add edit track button
         self.edit_track_btn = QPushButton("Edit Track")
         self.edit_track_btn.setCheckable(True)
         self.edit_track_btn.setEnabled(False)  # Disabled until single track selected
         self.edit_track_btn.clicked.connect(self.on_edit_track_clicked)
-        tracks_actions_layout.addWidget(self.edit_track_btn)
+        track_actions_layout.addWidget(self.edit_track_btn)
 
         # Add extract track button
         self.extract_track_btn = QPushButton("Extract")
+        self.extract_track_btn.setEnabled(False)  # Disabled until exactly one track selected
         self.extract_track_btn.clicked.connect(self.on_extract_tracks_clicked)
         self.extract_track_btn.setToolTip("Extract image chips and detect signal pixels for selected tracks")
-        tracks_actions_layout.addWidget(self.extract_track_btn)
+        track_actions_layout.addWidget(self.extract_track_btn)
 
         # Add view extraction button
         self.view_extraction_btn = QPushButton("View Extraction")
@@ -153,7 +194,7 @@ class TracksPanel(QWidget):
         self.view_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
         self.view_extraction_btn.clicked.connect(self.on_view_extraction_clicked)
         self.view_extraction_btn.setToolTip("View signal pixel overlay for selected extracted track")
-        tracks_actions_layout.addWidget(self.view_extraction_btn)
+        track_actions_layout.addWidget(self.view_extraction_btn)
 
         # Add edit extraction button
         self.edit_extraction_btn = QPushButton("Edit Extraction")
@@ -161,16 +202,17 @@ class TracksPanel(QWidget):
         self.edit_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
         self.edit_extraction_btn.clicked.connect(self.on_edit_extraction_clicked)
         self.edit_extraction_btn.setToolTip("Fine-tune extraction by painting signal pixels")
-        tracks_actions_layout.addWidget(self.edit_extraction_btn)
+        track_actions_layout.addWidget(self.edit_extraction_btn)
 
-        # Add copy to sensor button
-        self.copy_to_sensor_btn = QPushButton("Copy to Sensor")
-        self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
-        self.copy_to_sensor_btn.setToolTip("Copy selected tracks to a different sensor")
-        tracks_actions_layout.addWidget(self.copy_to_sensor_btn)
+        # Add break into detections button
+        self.break_into_detections_btn = QPushButton("Break Into Detections")
+        self.break_into_detections_btn.setEnabled(False)  # Disabled until tracks selected
+        self.break_into_detections_btn.clicked.connect(self.break_into_detections)
+        self.break_into_detections_btn.setToolTip("Convert selected tracks into detectors (one detector per track)")
+        track_actions_layout.addWidget(self.break_into_detections_btn)
 
-        tracks_actions_layout.addStretch()
-        layout.addLayout(tracks_actions_layout)
+        track_actions_layout.addStretch()
+        layout.addLayout(track_actions_layout)
 
         # Track column visibility (all columns visible by default except what we decide to hide)
         # Column 0 (Visible) is always shown and cannot be hidden
@@ -194,6 +236,12 @@ class TracksPanel(QWidget):
 
         # Load saved column visibility settings
         self.load_track_column_visibility()
+
+        # Hidden columns indicator label
+        self.hidden_columns_label = QLabel()
+        self.hidden_columns_label.setStyleSheet("color: gray; font-style: italic; font-size: 11px;")
+        self.hidden_columns_label.setVisible(False)
+        layout.addWidget(self.hidden_columns_label)
 
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
@@ -244,6 +292,15 @@ class TracksPanel(QWidget):
         self.tracks_table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tracks_table.horizontalHeader().customContextMenuRequested.connect(self.on_track_header_context_menu)
 
+        # Enable column reordering via drag and drop
+        self.tracks_table.horizontalHeader().setSectionsMovable(True)
+        self.tracks_table.horizontalHeader().setDragEnabled(True)
+        self.tracks_table.horizontalHeader().setDragDropMode(QHeaderView.DragDropMode.InternalMove)
+        self.tracks_table.horizontalHeader().sectionMoved.connect(self.on_track_column_moved)
+
+        # Load saved column order
+        self.load_track_column_order()
+
         # Track column filters and sort state
         # Filter structure: column_index -> {'type': 'set'/'text'/'numeric', 'values': set()/dict}
         # For 'set' type: {'type': 'set', 'values': set of values}
@@ -270,6 +327,9 @@ class TracksPanel(QWidget):
         self.tracks_table.cellClicked.connect(self.on_tracks_cell_clicked)
 
         layout.addWidget(self.tracks_table)
+
+        # Apply column visibility after table is created
+        self.apply_track_column_visibility()
 
         self.setLayout(layout)
 
@@ -597,7 +657,7 @@ class TracksPanel(QWidget):
         menu.addSeparator()
 
         # Column visibility submenu (always available)
-        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style"]
+        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"]
         columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
 
         for col_idx in range(len(column_names)):
@@ -608,16 +668,15 @@ class TracksPanel(QWidget):
             action = QAction(column_names[col_idx], columns_menu)  # Make columns_menu the parent
             action.setCheckable(True)
             action.setChecked(self.track_column_visibility.get(col_idx, True))
-            # Use a more explicit connection to avoid lambda issues
-            action.setData(col_idx)  # Store the column index in the action's data
-            action.triggered.connect(self._on_column_visibility_toggled)
+            # Use lambda to capture column index and pass checked state directly
+            action.triggered.connect(lambda checked, col=col_idx: self.toggle_track_column_visibility(col, checked))
             columns_menu.addAction(action)
 
         menu.addMenu(columns_menu)
 
         menu.exec(header.mapToGlobal(pos))
 
-    def _on_column_visibility_toggled(self, checked):
+    def _on_column_visibility_toggled(self):
         """Handle column visibility toggle from context menu"""
         # Get the action that triggered this slot
         action = self.sender()
@@ -629,23 +688,34 @@ class TracksPanel(QWidget):
         if column_idx is None:
             return
 
-        # Toggle the column visibility
-        self.toggle_track_column_visibility(column_idx, checked)
+        # Get the checked state directly from the action to ensure correctness
+        visible = action.isChecked()
+        self.toggle_track_column_visibility(column_idx, visible)
 
     def load_track_column_visibility(self):
         """Load track column visibility settings from QSettings"""
         # Load each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 13):
+        for col_idx in range(1, 15):
             key = f"track_column_{col_idx}_visible"
             saved_value = self.settings.value(key, True, type=bool)
             self.track_column_visibility[col_idx] = saved_value
 
+    def apply_track_column_visibility(self):
+        """Apply column visibility settings to the table and update indicator"""
+        # Actually hide/show the columns in the table
+        for col_idx in range(1, 15):
+            visible = self.track_column_visibility.get(col_idx, True)
+            self.tracks_table.setColumnHidden(col_idx, not visible)
+
+        # Update the hidden columns indicator
+        self.update_hidden_columns_indicator()
+
     def save_track_column_visibility(self):
         """Save track column visibility settings to QSettings"""
         # Save each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 12):
+        for col_idx in range(1, 15):
             key = f"track_column_{col_idx}_visible"
-            self.settings.setValue(key, self.track_column_visibility[col_idx])
+            self.settings.setValue(key, self.track_column_visibility.get(col_idx, True))
 
     def toggle_track_column_visibility(self, column_idx, visible):
         """Toggle visibility of a track table column"""
@@ -658,6 +728,9 @@ class TracksPanel(QWidget):
         # If showing the column, resize it appropriately
         if visible:
             self._resize_track_column(column_idx)
+
+        # Update hidden columns indicator
+        self.update_hidden_columns_indicator()
 
     def _resize_track_column(self, column_idx):
         """Resize a track column based on its index"""
@@ -682,6 +755,54 @@ class TracksPanel(QWidget):
             self.tracks_table.setColumnWidth(column_idx, 120)
         else:  # All other columns
             header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.ResizeToContents)
+
+        # Update hidden columns indicator
+        self.update_hidden_columns_indicator()
+
+    def load_track_column_order(self):
+        """Load track column order from QSettings"""
+        saved_order = self.settings.value("track_column_order", None)
+        if saved_order:
+            header = self.tracks_table.horizontalHeader()
+            try:
+                # saved_order is a list of logical indices in visual order
+                for visual_idx, logical_idx in enumerate(saved_order):
+                    logical_idx = int(logical_idx)
+                    current_visual = header.visualIndex(logical_idx)
+                    if current_visual != visual_idx:
+                        header.moveSection(current_visual, visual_idx)
+            except (ValueError, TypeError):
+                pass  # Ignore invalid saved order
+
+    def save_track_column_order(self):
+        """Save track column order to QSettings"""
+        header = self.tracks_table.horizontalHeader()
+        # Get logical indices in visual order
+        order = [header.logicalIndex(visual_idx) for visual_idx in range(header.count())]
+        self.settings.setValue("track_column_order", order)
+
+    def on_track_column_moved(self, logical_index, old_visual_index, new_visual_index):
+        """Handle column reordering via drag and drop"""
+        self.save_track_column_order()
+
+    def update_hidden_columns_indicator(self):
+        """Update the hidden columns indicator label"""
+        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker",
+                        "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line",
+                        "Line Style", "Extracted", "Avg SNR"]
+
+        hidden_columns = []
+        for col_idx, visible in self.track_column_visibility.items():
+            if not visible and col_idx < len(column_names):
+                hidden_columns.append(column_names[col_idx])
+
+        if hidden_columns:
+            self.hidden_columns_label.setText(
+                f"Hidden columns ({len(hidden_columns)}): {', '.join(hidden_columns)} — Right-click header to show"
+            )
+            self.hidden_columns_label.setVisible(True)
+        else:
+            self.hidden_columns_label.setVisible(False)
 
     def sort_tracks_column(self, column, order):
         """Sort tracks by column"""
@@ -1019,6 +1140,7 @@ class TracksPanel(QWidget):
         # Invalidate caches if styling properties were modified
         if column in [5, 6, 7, 8, 12]:  # Color, Marker, Line Width, Marker Size, Line Style
             track.invalidate_caches()
+            self.viewer.update_overlays()  # Refresh viewer to show styling changes
 
         self.data_changed.emit()
 
@@ -1077,6 +1199,7 @@ class TracksPanel(QWidget):
         self.bulk_color_btn.hide()
         self.bulk_marker_combo.hide()
         self.bulk_line_width_spinbox.hide()
+        self.bulk_line_style_combo.hide()
         self.bulk_marker_size_spinbox.hide()
         self.bulk_labels_btn.hide()
 
@@ -1092,6 +1215,8 @@ class TracksPanel(QWidget):
             self.bulk_marker_combo.show()
         elif property_name == "Line Width":
             self.bulk_line_width_spinbox.show()
+        elif property_name == "Line Style":
+            self.bulk_line_style_combo.show()
         elif property_name == "Marker Size":
             self.bulk_marker_size_spinbox.show()
         elif property_name == "Labels":
@@ -1136,6 +1261,15 @@ class TracksPanel(QWidget):
             'Diamond': 'd', 'Plus': '+', 'Cross': 'x', 'Star': 'star'
         }
 
+        # Map line style display names to Qt style names
+        line_style_map = {
+            'Solid': 'SolidLine',
+            'Dash': 'DashLine',
+            'Dot': 'DotLine',
+            'Dash-Dot': 'DashDotLine',
+            'Dash-Dot-Dot': 'DashDotDotLine'
+        }
+
         # Apply to all selected tracks
         for row in selected_rows:
             # Get tracker and track names from the table
@@ -1176,6 +1310,10 @@ class TracksPanel(QWidget):
             elif property_name == "Line Width":
                 track.line_width = self.bulk_line_width_spinbox.value()
                 track.invalidate_caches()  # Line width affects cached pen
+            elif property_name == "Line Style":
+                style_name = self.bulk_line_style_combo.currentText()
+                track.line_style = line_style_map.get(style_name, 'SolidLine')
+                track.invalidate_caches()  # Line style affects cached pen
             elif property_name == "Marker Size":
                 track.marker_size = self.bulk_marker_size_spinbox.value()
                 track.invalidate_caches()  # Marker size affects rendering
@@ -1183,6 +1321,7 @@ class TracksPanel(QWidget):
                 track.labels = self.bulk_labels.copy()
 
         self.refresh_tracks_table()
+        self.viewer.update_overlays()  # Refresh viewer to show changes
         self.data_changed.emit()
 
     def merge_selected_tracks(self):
@@ -1276,7 +1415,7 @@ class TracksPanel(QWidget):
         )
 
         # Add merged track to the tracker of the first track
-        first_tracker = tracker_map[id(first_track)]
+        first_tracker = tracker_map[first_track.uuid]
         first_tracker.tracks.append(merged_track)
 
         # Delete the original tracks
@@ -1397,14 +1536,18 @@ class TracksPanel(QWidget):
         # Remove the original track
         parent_tracker.tracks.remove(track_to_split)
 
-        # Remove plot items from viewer
-        track_id = id(track_to_split)
+        # Remove plot items from viewer (use UUID, not object id)
+        track_id = track_to_split.uuid
         if track_id in self.viewer.track_path_items:
             self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
             del self.viewer.track_path_items[track_id]
         if track_id in self.viewer.track_marker_items:
             self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
             del self.viewer.track_marker_items[track_id]
+
+        # Remove from selected tracks if it was selected
+        if track_id in self.viewer.selected_track_ids:
+            self.viewer.selected_track_ids.remove(track_id)
 
         # Add the new tracks
         parent_tracker.tracks.append(first_track)
@@ -1475,11 +1618,24 @@ class TracksPanel(QWidget):
         self.data_changed.emit()
 
     def on_track_selection_changed(self):
-        """Handle track selection change to enable/disable Edit Track button and highlight tracks"""
+        """Handle track selection change to enable/disable buttons and highlight tracks"""
         selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+        num_selected = len(selected_rows)
+
+        # Enable buttons based on selection count
+        self.export_tracks_btn.setEnabled(num_selected >= 1)
+        self.merge_selected_tracks_btn.setEnabled(num_selected >= 2)
+        self.delete_selected_tracks_btn.setEnabled(num_selected >= 1)
+        self.label_selected_btn.setEnabled(num_selected >= 1)
+        self.extract_track_btn.setEnabled(num_selected == 1)
+        self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
+        self.bulk_apply_btn.setEnabled(num_selected >= 1)
+        self.break_into_detections_btn.setEnabled(num_selected >= 1)
+        self.plot_details_btn.setEnabled(num_selected >= 1)
+
         # Enable Edit Track and Split Track buttons only if exactly one track is selected
-        self.edit_track_btn.setEnabled(len(selected_rows) == 1)
-        self.split_track_btn.setEnabled(len(selected_rows) == 1)
+        self.edit_track_btn.setEnabled(num_selected == 1)
+        self.split_track_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
         if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
             self.edit_track_btn.setChecked(False)
@@ -1550,6 +1706,9 @@ class TracksPanel(QWidget):
 
         # Update viewer with selected tracks
         self.viewer.set_selected_tracks(selected_track_ids)
+
+        # Update track plot windows if any are visible
+        self._update_track_plot_windows()
 
     def select_tracks_by_uuid(self, track_uuids):
         """
@@ -1959,9 +2118,33 @@ class TracksPanel(QWidget):
             self.edit_extraction_btn.setChecked(False)
 
     def export_tracks(self):
-        """Export all tracks to CSV file"""
-        if not self.viewer.trackers or all(len(t.tracks) == 0 for t in self.viewer.trackers):
-            QMessageBox.warning(self, "No Tracks", "There are no tracks to export.")
+        """Export selected tracks to CSV file"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to export.")
+            return
+
+        # Collect selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                break
+
+        if not selected_tracks:
+            QMessageBox.warning(self, "No Tracks", "Could not find the selected tracks.")
             return
 
         # Get last used save file from settings
@@ -1982,22 +2165,18 @@ class TracksPanel(QWidget):
         if file_path:
             self.settings.setValue("last_tracks_export_dir", str(pathlib.Path(file_path).parent))
             try:
-                # Combine all trackers' data
+                # Combine selected tracks' data
                 all_tracks_df = pd.DataFrame()
 
-                for tracker in self.viewer.trackers:
-                    if len(tracker.tracks) > 0:
-                        tracker_df = tracker.to_dataframe()
-                        all_tracks_df = pd.concat([all_tracks_df, tracker_df], ignore_index=True)
+                for track in selected_tracks:
+                    track_df = track.to_dataframe()
+                    all_tracks_df = pd.concat([all_tracks_df, track_df], ignore_index=True)
 
                 # Save to CSV
                 all_tracks_df.to_csv(file_path, index=False)
 
-                num_tracks = sum(len(t.tracks) for t in self.viewer.trackers)
-
-                # Build success message with included options
-                message_parts = [f"Exported {num_tracks} track(s)"]
-                message = " ".join(message_parts) + f" to:\n{file_path}"
+                # Build success message
+                message = f"Exported {len(selected_tracks)} track(s) to:\n{file_path}"
                 QMessageBox.information(
                     self,
                     "Success",
@@ -2095,3 +2274,200 @@ class TracksPanel(QWidget):
                 f"Copied {len(tracks_to_copy)} track(s) to sensor '{target_sensor.name}'.",
                 QMessageBox.StandardButton.Ok
             )
+
+    def break_into_detections(self):
+        """Convert selected tracks into detectors (one detector per track)"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to convert to detections.")
+            return
+
+        # Collect selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                break
+
+        if not selected_tracks:
+            QMessageBox.warning(self, "No Tracks", "Could not find the selected tracks.")
+            return
+
+        # Create a detector for each track
+        detectors_created = 0
+        for track in selected_tracks:
+            detector = Detector(
+                name=f"From Track: {track.name}",
+                frames=track.frames.copy(),
+                rows=track.rows.copy(),
+                columns=track.columns.copy(),
+                sensor=track.sensor,
+                color=track.color,
+                marker=track.marker,
+                marker_size=track.marker_size,
+                visible=True,
+            )
+            self.viewer.add_detector(detector)
+            detectors_created += 1
+
+        # Refresh the detections panel
+        parent_widget = self.parent()
+        while parent_widget is not None:
+            if hasattr(parent_widget, 'detections_panel'):
+                parent_widget.detections_panel.refresh_detections_table()
+                break
+            parent_widget = parent_widget.parent()
+
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self,
+            "Success",
+            f"Created {detectors_created} detector(s) from the selected tracks.",
+            QMessageBox.StandardButton.Ok
+        )
+
+    def label_selected_tracks(self):
+        """Set labels on selected tracks"""
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to label.")
+            return
+
+        # Collect selected tracks
+        selected_tracks = []
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)  # Track name column
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+                tracker_name = tracker_item.text() if tracker_item else None
+
+                # Find the track in the viewer
+                for tracker in self.viewer.trackers:
+                    if tracker_name is None or tracker.name == tracker_name:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                break
+
+        if not selected_tracks:
+            QMessageBox.warning(self, "No Tracks", "Could not find the selected tracks.")
+            return
+
+        # Get all available labels
+        available_labels = LabelsManagerDialog.get_available_labels()
+
+        # Show dialog with no labels pre-selected (user will select what to set)
+        dialog = LabelsSelectionDialog(available_labels, set(), self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected_labels = dialog.get_selected_labels()
+
+            # Replace labels for each selected track (empty set clears labels)
+            for track in selected_tracks:
+                track.labels = selected_labels.copy()
+
+            # Refresh the table and emit data changed
+            self.refresh_tracks_table()
+            self.data_changed.emit()
+
+            QMessageBox.information(
+                self,
+                "Labels Set",
+                f"Set {len(selected_labels)} label(s) on {len(selected_tracks)} track(s).",
+                QMessageBox.StandardButton.Ok
+            )
+
+    def on_plot_track_details_clicked(self):
+        """Handle Plot Track Details button click"""
+        # Always create a new plot window (allows multiple windows)
+        plot_window = TrackPlotWindow(self, self.viewer)
+
+        # Connect to frame_changed signal
+        self.viewer.frame_changed.connect(plot_window.on_frame_changed)
+
+        # Connect to destroyed signal to remove from list when closed
+        plot_window.destroyed.connect(lambda: self._remove_plot_window(plot_window))
+
+        # Add to list
+        self.track_plot_windows.append(plot_window)
+
+        # Show and bring to front
+        plot_window.show()
+        plot_window.raise_()
+        plot_window.activateWindow()
+
+        # Update with currently selected tracks
+        self._update_single_plot_window(plot_window)
+
+    def _remove_plot_window(self, window):
+        """Remove a plot window from the list when it's closed"""
+        if window in self.track_plot_windows:
+            self.track_plot_windows.remove(window)
+
+    def _update_track_plot_windows(self):
+        """Update all visible track plot windows with currently selected tracks"""
+        # Clean up closed windows first
+        self.track_plot_windows = [w for w in self.track_plot_windows if w.isVisible()]
+
+        if not self.track_plot_windows:
+            return
+
+        # Get selected tracks (compute once for all windows)
+        selected_tracks, tracker_map = self._get_selected_tracks_for_plot()
+
+        # Update all visible windows
+        for window in self.track_plot_windows:
+            window.set_tracks(selected_tracks, tracker_map)
+            window.on_frame_changed(self.viewer.current_frame_number)
+
+    def _update_single_plot_window(self, window):
+        """Update a single plot window with currently selected tracks"""
+        if not window.isVisible():
+            return
+
+        selected_tracks, tracker_map = self._get_selected_tracks_for_plot()
+        window.set_tracks(selected_tracks, tracker_map)
+        window.on_frame_changed(self.viewer.current_frame_number)
+
+    def _get_selected_tracks_for_plot(self):
+        """Get currently selected tracks and tracker map for plotting"""
+        selected_tracks = []
+        tracker_map = {}  # track.uuid -> tracker name
+
+        selected_rows = set(index.row() for index in self.tracks_table.selectedIndexes())
+        for row in selected_rows:
+            # Get track info from table
+            tracker_item = self.tracks_table.item(row, 1)  # Tracker column
+            name_item = self.tracks_table.item(row, 2)  # Track name column
+
+            if tracker_item and name_item:
+                tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+                track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                tracker_name = tracker_item.text()
+
+                # Find the actual track object
+                for tracker in self.viewer.trackers:
+                    if id(tracker) == tracker_id:
+                        for track in tracker.tracks:
+                            if track.uuid == track_uuid:
+                                selected_tracks.append(track)
+                                tracker_map[track.uuid] = tracker_name
+                                break
+                        break
+
+        return selected_tracks, tracker_map

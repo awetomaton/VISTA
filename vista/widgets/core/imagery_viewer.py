@@ -70,6 +70,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
     lasso_selection_completed = pyqtSignal(dict)
 
+    # Signal emitted when frame changes (emits frame number)
+    frame_changed = pyqtSignal(int)
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -334,7 +337,7 @@ class ImageryViewer(QWidget):
 
                 # Restore user's histogram bounds if they were manually set
                 if user_histogram_bounds is None:
-                    self.histogram.setLevels(self.histogram.plot.xData[0], self.histogram.plot.xData[-1])
+                    self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
                 else:
                     self.histogram.setLevels(*user_histogram_bounds)
 
@@ -352,6 +355,9 @@ class ImageryViewer(QWidget):
         # Update tooltips if mouse was previously hovering and tooltips are enabled
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
             self._update_tooltips_at_position(self.last_mouse_pos)
+
+        # Emit frame_changed signal
+        self.frame_changed.emit(frame_number)
 
         # Performance monitoring
         if ENABLE_PERF_MONITORING and perf_start is not None:
@@ -482,25 +488,38 @@ class ImageryViewer(QWidget):
                 scatter.setData(x=[], y=[])  # Hide by setting empty data
                 continue
 
-            # Get detections at current frame using optimized O(1) lookup
-            rows, cols = detector.get_detections_at_frame(frame_num)
+            # Get detections - either all (complete mode) or just current frame
+            if detector.complete:
+                # Show all detections across all frames
+                rows, cols = detector.rows.copy(), detector.columns.copy()
+            else:
+                # Get detections at current frame using optimized O(1) lookup
+                rows, cols = detector.get_detections_at_frame(frame_num)
 
             # Apply label filter if detections panel has active filters
             if len(rows) > 0:
                 try:
                     if hasattr(self, 'data_manager') and self.data_manager is not None:
                         if hasattr(self.data_manager, 'detections_panel'):
-                            # Get full frame mask for label filtering
-                            frame_mask = detector.frames == frame_num
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
-                            combined_mask = frame_mask & label_mask
-                            if np.any(combined_mask):
-                                rows = detector.rows[combined_mask]
-                                cols = detector.columns[combined_mask]
+                            if detector.complete:
+                                # For complete mode, just apply label filter
+                                if np.any(label_mask):
+                                    rows = detector.rows[label_mask]
+                                    cols = detector.columns[label_mask]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
                             else:
-                                rows, cols = np.array([]), np.array([])
+                                # For current frame mode, combine frame and label filters
+                                frame_mask = detector.frames == frame_num
+                                combined_mask = frame_mask & label_mask
+                                if np.any(combined_mask):
+                                    rows = detector.rows[combined_mask]
+                                    cols = detector.columns[combined_mask]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
                 except AttributeError:
-                    pass  # Use unfiltered rows/cols from get_detections_at_frame
+                    pass  # Use unfiltered rows/cols
 
             if len(rows) > 0:
                 scatter.setData(
@@ -634,8 +653,10 @@ class ImageryViewer(QWidget):
         """
         Set which tracks are selected for highlighting.
 
-        Args:
-            track_ids: Set of track UUIDs (track.uuid) to highlight
+        Parameters
+        ----------
+        track_ids : set
+            Set of track UUIDs (track.uuid) to highlight
         """
         self.selected_track_ids = track_ids
         self.update_overlays()
@@ -644,8 +665,10 @@ class ImageryViewer(QWidget):
         """
         Filter displayed imagery, tracks, and detections by sensor.
 
-        Args:
-            sensor: Sensor object to filter by, or None to show all
+        Parameters
+        ----------
+        sensor : Sensor or None
+            Sensor object to filter by, or None to show all
         """
         self.selected_sensor = sensor
 
@@ -672,8 +695,10 @@ class ImageryViewer(QWidget):
         """
         Enable or disable track selection mode.
 
-        Args:
-            enabled: Boolean indicating whether track selection mode is enabled
+        Parameters
+        ----------
+        enabled : bool
+            Boolean indicating whether track selection mode is enabled
         """
         self.track_selection_mode = enabled
         # Update cursor based on all interactive modes
@@ -683,8 +708,10 @@ class ImageryViewer(QWidget):
         """
         Enable or disable detection selection mode.
 
-        Args:
-            enabled: Boolean indicating whether detection selection mode is enabled
+        Parameters
+        ----------
+        enabled : bool
+            Boolean indicating whether detection selection mode is enabled
         """
         self.detection_selection_mode = enabled
         if enabled:
@@ -698,8 +725,10 @@ class ImageryViewer(QWidget):
                 if isinstance(self.selected_detections_plot, list):
                     for plot in self.selected_detections_plot:
                         self.plot_item.removeItem(plot)
+                        plot.deleteLater()  # Prevent memory leak
                 else:
                     self.plot_item.removeItem(self.selected_detections_plot)
+                    self.selected_detections_plot.deleteLater()  # Prevent memory leak
                 self.selected_detections_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -816,25 +845,59 @@ class ImageryViewer(QWidget):
                 if all_contained:
                     selected_items['tracks'].append(track)
 
-        # Check detections at current frame (each detection checked individually)
+        # Check detections (visible detections based on complete mode)
         for detector in self.detectors:
             if not detector.visible:
                 continue
             if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
                 continue
 
-            rows, cols = detector.get_detections_at_frame(self.current_frame_number)
-            if len(rows) == 0:
-                continue
+            if detector.complete:
+                # Check all detections when complete mode is enabled
+                rows, cols = detector.rows, detector.columns
+                indices = np.arange(len(detector.frames))
+            else:
+                # Check only detections at current frame
+                rows, cols = detector.get_detections_at_frame(self.current_frame_number)
+                if len(rows) == 0:
+                    continue
+                frame_mask = detector.frames == self.current_frame_number
+                indices = np.where(frame_mask)[0]
 
-            # Get indices for detections at current frame
-            frame_mask = detector.frames == self.current_frame_number
-            indices = np.where(frame_mask)[0]
+            # Apply label filter if detections panel has active filters
+            if len(rows) > 0:
+                try:
+                    if hasattr(self, 'data_manager') and self.data_manager is not None:
+                        if hasattr(self.data_manager, 'detections_panel'):
+                            label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                            if detector.complete:
+                                # For complete mode, just apply label filter
+                                if np.any(label_mask):
+                                    # Filter rows, cols, and indices to match label_mask
+                                    rows = detector.rows[label_mask]
+                                    cols = detector.columns[label_mask]
+                                    indices = np.where(label_mask)[0]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
+                                    indices = np.array([])
+                            else:
+                                # For current frame mode, combine frame and label filters
+                                combined_mask = frame_mask & label_mask
+                                if np.any(combined_mask):
+                                    rows = detector.rows[combined_mask]
+                                    cols = detector.columns[combined_mask]
+                                    indices = np.where(combined_mask)[0]
+                                else:
+                                    rows, cols = np.array([]), np.array([])
+                                    indices = np.array([])
+                except AttributeError:
+                    pass  # Use unfiltered rows/cols/indices
 
             for i, (row, col) in enumerate(zip(rows, cols)):
                 if lasso_polygon.contains(Point(col, row)):
                     # Store as (detector, frame, original_index)
-                    selected_items['detections'].append((detector, self.current_frame_number, int(indices[i])))
+                    detection_frame = detector.frames[indices[i]]
+                    selected_items['detections'].append((detector, int(detection_frame), int(indices[i])))
 
         # Check AOIs (wholly contained = ALL 4 corners inside)
         for aoi in self.aois:
@@ -1127,8 +1190,8 @@ class ImageryViewer(QWidget):
         # Disconnect the snap handler from drawing
         try:
             roi.sigRegionChanged.disconnect()
-        except:
-            pass
+        except (TypeError, RuntimeError):
+            pass  # Signal was not connected or already disconnected
 
         # Update text position and bounds when ROI moves
         roi.sigRegionChanged.connect(lambda: self.update_aoi_from_roi(aoi, roi))
@@ -1271,6 +1334,7 @@ class ImageryViewer(QWidget):
             if feature._plot_items:
                 for item in feature._plot_items:
                     self.plot_item.removeItem(item)
+                    item.deleteLater()  # Prevent memory leak
                 feature._plot_items = []
 
             # Remove from list
@@ -1282,6 +1346,7 @@ class ImageryViewer(QWidget):
         if feature._plot_items:
             for item in feature._plot_items:
                 self.plot_item.removeItem(item)
+                item.deleteLater()  # Prevent memory leak
             feature._plot_items = []
 
         # Re-render if visible
@@ -1886,8 +1951,10 @@ class ImageryViewer(QWidget):
         """
         Show or hide the point selection dialog.
 
-        Args:
-            visible: Boolean indicating whether dialog should be visible
+        Parameters
+        ----------
+        visible : bool
+            Boolean indicating whether dialog should be visible
         """
         if visible:
             self._show_point_selection_dialog()
@@ -1898,7 +1965,9 @@ class ImageryViewer(QWidget):
         """
         Check if point selection dialog is currently visible.
 
-        Returns:
+        Returns
+        -------
+        bool
             Boolean indicating visibility
         """
         if self.point_selection_dialog is None:
@@ -1909,12 +1978,17 @@ class ImageryViewer(QWidget):
         """
         Refine a clicked point location using the selected mode from the point selection dialog.
 
-        Args:
-            row (float): Clicked row coordinate
-            col (float): Clicked column coordinate
+        Parameters
+        ----------
+        row : float
+            Clicked row coordinate
+        col : float
+            Clicked column coordinate
 
-        Returns:
-            tuple: (refined_row, refined_col) - refined coordinates
+        Returns
+        -------
+        tuple
+            (refined_row, refined_col) - refined coordinates
         """
         if self.point_selection_dialog is None or self.imagery is None:
             # No dialog or no imagery, return verbatim
@@ -2124,16 +2198,54 @@ class ImageryViewer(QWidget):
                     if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
                         continue
 
-                    # Find detections at current frame
-                    mask = detector.frames == self.current_frame_number
-                    if not np.any(mask):
+                    # Get visible detections based on complete mode
+                    if detector.complete:
+                        # All detections are visible
+                        rows = detector.rows
+                        cols = detector.columns
+                        indices = np.arange(len(detector.frames))
+                    else:
+                        # Only detections at current frame
+                        mask = detector.frames == self.current_frame_number
+                        if not np.any(mask):
+                            continue
+                        rows = detector.rows[mask]
+                        cols = detector.columns[mask]
+                        indices = np.where(mask)[0]
+
+                    # Apply label filter if detections panel has active filters
+                    if len(rows) > 0:
+                        try:
+                            if hasattr(self, 'data_manager') and self.data_manager is not None:
+                                if hasattr(self.data_manager, 'detections_panel'):
+                                    label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                                    if detector.complete:
+                                        # For complete mode, just apply label filter
+                                        if np.any(label_mask):
+                                            rows = detector.rows[label_mask]
+                                            cols = detector.columns[label_mask]
+                                            indices = np.where(label_mask)[0]
+                                        else:
+                                            rows, cols = np.array([]), np.array([])
+                                            indices = np.array([])
+                                    else:
+                                        # For current frame mode, combine frame and label filters
+                                        frame_mask = detector.frames == self.current_frame_number
+                                        combined_mask = frame_mask & label_mask
+                                        if np.any(combined_mask):
+                                            rows = detector.rows[combined_mask]
+                                            cols = detector.columns[combined_mask]
+                                            indices = np.where(combined_mask)[0]
+                                        else:
+                                            rows, cols = np.array([]), np.array([])
+                                            indices = np.array([])
+                        except AttributeError:
+                            pass  # Use unfiltered rows/cols/indices
+
+                    if len(rows) == 0:
                         continue
 
-                    rows = detector.rows[mask]
-                    cols = detector.columns[mask]
-                    indices = np.where(mask)[0]
-
-                    # Calculate distances to all detections at this frame
+                    # Calculate distances to all visible detections
                     distances = np.sqrt((cols - col)**2 + (rows - row)**2)
                     min_idx = np.argmin(distances)
                     min_distance = distances[min_idx]
@@ -2142,7 +2254,8 @@ class ImageryViewer(QWidget):
                     if min_distance < tolerance and min_distance < closest_distance:
                         closest_distance = min_distance
                         original_index = indices[min_idx]
-                        closest_detection = (detector, self.current_frame_number, int(original_index))
+                        detection_frame = int(detector.frames[original_index])
+                        closest_detection = (detector, detection_frame, int(original_index))
 
                 # If we found a detection, add/toggle in selection
                 if closest_detection:
@@ -2165,8 +2278,10 @@ class ImageryViewer(QWidget):
             if isinstance(self.temp_track_plot, list):
                 for plot in self.temp_track_plot:
                     self.plot_item.removeItem(plot)
+                    plot.deleteLater()  # Prevent memory leak
             else:
                 self.plot_item.removeItem(self.temp_track_plot)
+                self.temp_track_plot.deleteLater()  # Prevent memory leak
 
         if len(self.current_track_data) == 0:
             self.temp_track_plot = None
@@ -2225,8 +2340,10 @@ class ImageryViewer(QWidget):
             if isinstance(self.temp_detection_plot, list):
                 for plot in self.temp_detection_plot:
                     self.plot_item.removeItem(plot)
+                    plot.deleteLater()  # Prevent memory leak
             else:
                 self.plot_item.removeItem(self.temp_detection_plot)
+                self.temp_detection_plot.deleteLater()  # Prevent memory leak
 
         if len(self.current_detection_data) == 0:
             self.temp_detection_plot = None
@@ -2264,8 +2381,10 @@ class ImageryViewer(QWidget):
             if isinstance(self.selected_detections_plot, list):
                 for plot in self.selected_detections_plot:
                     self.plot_item.removeItem(plot)
+                    plot.deleteLater()  # Prevent memory leak
             else:
                 self.plot_item.removeItem(self.selected_detections_plot)
+                self.selected_detections_plot.deleteLater()  # Prevent memory leak
             self.selected_detections_plot = None
 
         # If no detections selected, nothing to draw

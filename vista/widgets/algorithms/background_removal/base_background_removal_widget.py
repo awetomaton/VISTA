@@ -24,13 +24,20 @@ class BaseBackgroundRemovalThread(QThread):
         """
         Initialize the processing thread.
 
-        Args:
-            imagery: Imagery object to process
-            algorithm_class: Background removal algorithm class to instantiate
-            algorithm_params: Dictionary of parameters to pass to algorithm constructor
-            aoi: Optional AOI object to process subset of imagery
-            start_frame: Starting frame index (default: 0)
-            end_frame: Ending frame index exclusive (default: None for all frames)
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to process
+        algorithm_class : type
+            Background removal algorithm class to instantiate
+        algorithm_params : dict
+            Dictionary of parameters to pass to algorithm constructor
+        aoi : AOI, optional
+            AOI object to process subset of imagery, by default None
+        start_frame : int, optional
+            Starting frame index, by default 0
+        end_frame : int, optional
+            Ending frame index exclusive, by default None for all frames
         """
         super().__init__()
         self.imagery = imagery
@@ -123,14 +130,22 @@ class BaseBackgroundRemovalWidget(QDialog):
         """
         Initialize the base background removal configuration widget.
 
-        Args:
-            parent: Parent widget
-            imagery: Imagery object to process
-            aois: List of AOI objects to choose from (optional)
-            algorithm_class: Background removal algorithm class
-            settings_name: Name for QSettings storage (default: "BaseBackgroundRemoval")
-            window_title: Window title (default: "Background Removal")
-            description: Description text for the algorithm
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        imagery : Imagery, optional
+            Imagery object to process, by default None
+        aois : list of AOI, optional
+            List of AOI objects to choose from, by default None
+        algorithm_class : type, optional
+            Background removal algorithm class, by default None
+        settings_name : str, optional
+            Name for QSettings storage, by default "BaseBackgroundRemoval"
+        window_title : str, optional
+            Window title, by default "Background Removal"
+        description : str, optional
+            Description text for the algorithm, by default ""
         """
         super().__init__(parent)
         self.imagery = imagery
@@ -225,8 +240,10 @@ class BaseBackgroundRemovalWidget(QDialog):
         Add algorithm-specific parameters to the layout.
         Override this method in subclasses to add custom parameters.
 
-        Args:
-            layout: QVBoxLayout to add parameters to
+        Parameters
+        ----------
+        layout : QVBoxLayout
+            QVBoxLayout to add parameters to
         """
         pass
 
@@ -251,7 +268,9 @@ class BaseBackgroundRemovalWidget(QDialog):
         Build parameter dictionary for the algorithm.
         Override this method in subclasses to add custom parameters.
 
-        Returns:
+        Returns
+        -------
+        dict
             Dictionary of algorithm parameters
         """
         return {}
@@ -261,8 +280,10 @@ class BaseBackgroundRemovalWidget(QDialog):
         Validate algorithm parameters before running.
         Override this method in subclasses for custom validation.
 
-        Returns:
-            Tuple of (is_valid: bool, error_message: str)
+        Returns
+        -------
+        tuple of (bool, str)
+            Tuple containing (is_valid, error_message)
         """
         return True, ""
 
@@ -316,8 +337,10 @@ class BaseBackgroundRemovalWidget(QDialog):
         Enable or disable parameter widgets.
         Override to handle custom parameter widgets.
 
-        Args:
-            enabled: True to enable, False to disable
+        Parameters
+        ----------
+        enabled : bool
+            True to enable, False to disable
         """
         self.aoi_combo.setEnabled(enabled)
         self.start_frame_spinbox.setEnabled(enabled)

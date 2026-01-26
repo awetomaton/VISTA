@@ -428,13 +428,9 @@ class SampledSensor(Sensor):
             position_group = group.create_group('position')
             position_group.create_dataset('positions', data=self.positions)
 
-            # Convert times to unix_times and unix_fine_times
-            total_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            unix_times = (total_nanoseconds // 1_000_000_000).astype(np.int64)
-            unix_fine_times = (total_nanoseconds % 1_000_000_000).astype(np.int64)
-
-            position_group.create_dataset('unix_times', data=unix_times)
-            position_group.create_dataset('unix_fine_times', data=unix_fine_times)
+            # Convert times to unix nanoseconds
+            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
+            position_group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
 
         # Save ARF geolocation polynomials
         if self.can_geolocate():

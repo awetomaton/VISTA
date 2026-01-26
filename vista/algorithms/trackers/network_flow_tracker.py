@@ -14,25 +14,33 @@ def run_network_flow_tracker(detectors, config):
     minimum-cost flow from source to sink using Bellman-Ford successive shortest paths.
 
     Key features:
+
     - Negative link costs incentivize longer tracks over many short tracks
     - Smoothness penalty encourages constant-velocity, straight-line paths
     - Global optimization finds better solutions than greedy local association
 
-    Args:
-        detectors: List of Detector objects to use as input
-        config: Dictionary containing tracker configuration:
-            - tracker_name: Name for the resulting tracker
-            - max_gap: Maximum frame gap to search for associations (default: 5)
-            - max_distance: Maximum spatial distance for associations (default: 50.0)
-            - entrance_cost: Cost for starting a new track (default: 50.0)
-            - exit_cost: Cost for ending a track (default: 50.0)
-            - min_track_length: Minimum detections required for valid track (default: 3)
+    Parameters
+    ----------
+    detectors : list of Detector
+        List of Detector objects to use as input
+    config : dict
+        Dictionary containing tracker configuration:
 
-    Returns:
+        - tracker_name: Name for the resulting tracker
+        - max_gap: Maximum frame gap to search for associations (default: 5)
+        - max_distance: Maximum spatial distance for associations (default: 50.0)
+        - entrance_cost: Cost for starting a new track (default: 50.0)
+        - exit_cost: Cost for ending a track (default: 50.0)
+        - min_track_length: Minimum detections required for valid track (default: 3)
+
+    Returns
+    -------
+    list of dict
         List of track data dictionaries, each containing:
-            - 'frames': numpy array of frame numbers
-            - 'rows': numpy array of row coordinates
-            - 'columns': numpy array of column coordinates
+
+        - 'frames': numpy array of frame numbers
+        - 'rows': numpy array of row coordinates
+        - 'columns': numpy array of column coordinates
     """
     # Extract configuration with defaults
     tracker_name = config.get('tracker_name', 'Network Flow Tracker')
@@ -207,12 +215,16 @@ def solve_min_cost_flow(detections, edges):
     2. Time flows forward only (frame_i → frame_j where j > i)
     3. Sink has no outgoing edges
 
-    Args:
-        detections: List of detection dictionaries
-        edges: List of edge dictionaries with 'from', 'to', 'cost'
+    Parameters
+    ----------
+    detections : list
+        List of detection dictionaries
+    edges : list
+        List of edge dictionaries with 'from', 'to', 'cost'
 
-    Returns:
-        List of tracks, where each track is a list of detection dictionaries
+    Returns
+    -------
+    list : List of tracks, where each track is a list of detection dictionaries
     """
     used_detections = set()
     tracks = []
@@ -250,12 +262,16 @@ def find_shortest_path(edges, used_detections):
     Bellman-Ford handles negative edge weights (unlike Dijkstra).
     This is necessary because link costs are negative to incentivize longer tracks.
 
-    Args:
-        edges: List of edge dictionaries
-        used_detections: Set of detection IDs already used in tracks
+    Parameters
+    ----------
+    edges : list
+        List of edge dictionaries
+    used_detections : list
+        Set of detection IDs already used in tracks
 
-    Returns:
-        List of node IDs representing path from source to sink, or None if no path exists
+    Returns
+    -------
+    list : List of node IDs representing path from source to sink, or None if no path exists
     """
     # Build edge list excluding used detections
     valid_edges = []

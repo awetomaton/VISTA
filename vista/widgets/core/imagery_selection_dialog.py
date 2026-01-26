@@ -13,11 +13,16 @@ class ImagerySelectionDialog(QDialog):
         """
         Initialize the imagery selection dialog
 
-        Args:
-            imageries: List of Imagery objects to choose from
-            parent: Parent widget
-            needs_time_mapping: True if time-to-frame mapping is needed
-            needs_geodetic_mapping: True if geodetic-to-pixel mapping is needed
+        Parameters
+        ----------
+        imageries : list of Imagery
+            List of Imagery objects to choose from
+        parent : QWidget, optional
+            Parent widget, by default None
+        needs_time_mapping : bool, optional
+            True if time-to-frame mapping is needed, by default True
+        needs_geodetic_mapping : bool, optional
+            True if geodetic-to-pixel mapping is needed, by default False
         """
         super().__init__(parent)
         self.imageries = imageries
@@ -147,7 +152,9 @@ class ImagerySelectionDialog(QDialog):
         """
         Get the selected imagery
 
-        Returns:
+        Returns
+        -------
+        Imagery or None
             Selected Imagery object or None if cancelled
         """
         return self.selected_imagery

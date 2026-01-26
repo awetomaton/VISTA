@@ -15,18 +15,28 @@ def map_geodetic_to_pixel(
     """
     Map geodetic coordinates (lat/lon/alt) to pixel coordinates (row/col) using sensor.
 
-    Args:
-        latitudes: Array of latitude values in degrees
-        longitudes: Array of longitude values in degrees
-        altitudes: Array of altitude values in meters
-        frames: Array of frame numbers corresponding to each position
-        sensor: Sensor object with geodetic_to_pixel conversion capability
+    Parameters
+    ----------
+    latitudes : NDArray[np.float64]
+        Array of latitude values in degrees
+    longitudes : NDArray[np.float64]
+        Array of longitude values in degrees
+    altitudes : NDArray[np.float64]
+        Array of altitude values in meters
+    frames : NDArray[np.int_]
+        Array of frame numbers corresponding to each position
+    sensor : Sensor
+        Sensor object with geodetic_to_pixel conversion capability
 
-    Returns:
+    Returns
+    -------
+    tuple of (NDArray[np.float64], NDArray[np.float64])
         Tuple of (rows, columns) arrays
 
-    Raises:
-        ValueError: If sensor lacks geodetic conversion capability
+    Raises
+    ------
+    ValueError
+        If sensor lacks geodetic conversion capability
     """
     if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
         raise ValueError(

@@ -179,10 +179,12 @@ class Simulation:
         """
         Generate synthetic bias/dark frames with fixed-pattern noise.
 
-        Returns:
-            Tuple of (bias_images, bias_image_frames)
-                bias_images: 3D array (num_bias_images, rows, columns)
-                bias_image_frames: 1D array of frame numbers where each bias becomes applicable
+        Returns
+        -------
+        bias_images : np.ndarray
+            3D array (num_bias_images, rows, columns)
+        bias_image_frames : np.ndarray
+            1D array of frame numbers where each bias becomes applicable
         """
         bias_images = np.zeros((self.num_bias_images, self.rows, self.columns), dtype=np.float32)
 
@@ -215,10 +217,12 @@ class Simulation:
         """
         Generate synthetic flat-field/gain correction images.
 
-        Returns:
-            Tuple of (uniformity_gain_images, uniformity_gain_image_frames)
-                uniformity_gain_images: 3D array (num_gains, rows, columns)
-                uniformity_gain_image_frames: 1D array of frame numbers where each gain becomes applicable
+        Returns
+        -------
+        uniformity_gain_images : np.ndarray
+            3D array (num_gains, rows, columns)
+        uniformity_gain_image_frames : np.ndarray
+            1D array of frame numbers where each gain becomes applicable
         """
         uniformity_gain_images = np.zeros((self.num_uniformity_gains, self.rows, self.columns), dtype=np.float32)
 
@@ -256,10 +260,12 @@ class Simulation:
         """
         Generate synthetic bad pixel masks.
 
-        Returns:
-            Tuple of (bad_pixel_masks, bad_pixel_mask_frames)
-                bad_pixel_masks: 3D array (num_masks, rows, columns)
-                bad_pixel_mask_frames: 1D array of frame numbers where each mask becomes applicable
+        Returns
+        -------
+        bad_pixel_masks : np.ndarray
+            3D array (num_masks, rows, columns)
+        bad_pixel_mask_frames : np.ndarray
+            1D array of frame numbers where each mask becomes applicable
         """
         bad_pixel_masks = np.zeros((self.num_bad_pixel_masks, self.rows, self.columns), dtype=np.float32)
 
@@ -298,8 +304,10 @@ class Simulation:
 
         One value per frame with Gaussian variation around the mean.
 
-        Returns:
-            radiometric_gains: 1D array of gain values (one per frame)
+        Returns
+        -------
+        radiometric_gains : np.ndarray
+            1D array of gain values (one per frame)
         """
         # Generate radiometric gain values (one per frame)
         # Use Gaussian distribution around the mean with specified std
@@ -318,12 +326,15 @@ class Simulation:
         """
         Save simulation data to directory
 
-        Args:
-            dir: Directory to save to
-            save_geodetic_tracks: If True and geodetic is enabled, save tracks with
-                                 Lat/Lon/Alt instead of Row/Column
-            save_times_only: If True and times are enabled, save tracks with Times
-                           instead of Frames (for testing time-to-frame mapping)
+        Parameters
+        ----------
+        dir : str or pathlib.Path
+            Directory to save to
+        save_geodetic_tracks : bool, optional
+            If True and geodetic is enabled, save tracks with Lat/Lon/Alt instead of Row/Column, by default False
+        save_times_only : bool, optional
+            If True and times are enabled, save tracks with Times instead of Frames (for testing time-to-frame
+            mapping), by default False
         """
         dir = pathlib.Path(dir)
         dir.mkdir(parents=True, exist_ok=True)
