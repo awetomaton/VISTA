@@ -303,6 +303,250 @@ Version 1.5 (Legacy, Deprecated)
    Convert legacy files to v1.7 format by loading and re-saving through
    the GUI: **File → Open** (load v1.5) then **File → Save** (saves as v1.7).
 
+.. _arf-coordinate-system:
+
+Attitude Reference Frame (ARF)
+-------------------------------
+
+The Attitude Reference Frame (ARF) is a local sensor-centric coordinate system used in VISTA
+for efficient pixel-to-geodetic coordinate transformations and geolocation calculations.
+
+Purpose
+~~~~~~~
+
+The ARF serves as an intermediate coordinate system in the transformation chain between
+image pixel coordinates and Earth-centered, Earth-fixed (ECEF) geodetic coordinates:
+
+.. code-block:: text
+
+   Pixel (row, col) → ARF (azimuth, elevation) → ECEF (lat, lon, alt)
+                    ↑                          ↑
+             Polynomial transforms      Earth intersection
+
+Using ARF as an intermediate step provides several benefits:
+
+- **Compact polynomial representation**: ARF angles change smoothly across the image,
+  allowing accurate polynomial approximations with low-order terms
+- **Sensor independence**: ARF is defined relative to sensor pointing, not absolute coordinates
+- **Numerical stability**: Local coordinates avoid precision issues with large ECEF values
+- **Physical intuition**: Azimuth/elevation angles are easier to interpret than ECEF vectors
+
+ARF Definition
+~~~~~~~~~~~~~~
+
+The ARF is a right-handed Cartesian coordinate system defined by three orthonormal axes
+relative to the sensor's position and pointing direction:
+
+**X-axis (Boresight)**
+   Points along the sensor's boresight (pointing direction). This is the primary viewing
+   direction of the sensor.
+
+**Z-axis (North-aligned)**
+   Points as close to North as possible while remaining orthogonal to the X-axis.
+   Specifically, it's the component of the "toward North pole" vector that is perpendicular
+   to the boresight.
+
+**Y-axis (Completes right-hand system)**
+   Computed as the cross product of X and Z axes: **Y = X × Z**. This creates a
+   right-handed coordinate system.
+
+.. note::
+   The ARF rotates with the sensor. As the sensor moves and its pointing changes,
+   the ARF axes change accordingly. This makes ARF a *dynamic* coordinate system
+   that must be recomputed for each sensor position and pointing angle.
+
+Mathematical Construction
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Given sensor position **P** (in ECEF coordinates, km) and sensor pointing unit vector **D**
+(in ECEF), the ARF transformation matrix is constructed as follows:
+
+1. **X-axis**: ARF X-axis = sensor pointing direction
+
+   .. math::
+
+      \mathbf{\hat{x}}_{ARF} = \mathbf{D}
+
+2. **Northish vector**: Vector from sensor toward North pole
+
+   .. math::
+
+      \mathbf{N}_{pole} = [0, 0, 6356.752314245]^T \text{ km (Earth polar radius)}
+
+   .. math::
+
+      \mathbf{\hat{N}} = \frac{\mathbf{N}_{pole} - \mathbf{P}}{|\mathbf{N}_{pole} - \mathbf{P}|}
+
+3. **Z-axis**: Orthogonal component of northish vector
+
+   Remove the projection of ARF X-axis onto the northish vector:
+
+   .. math::
+
+      \mathbf{z}_{ARF} = \mathbf{\hat{N}} - (\mathbf{\hat{x}}_{ARF} \cdot \mathbf{\hat{N}}) \mathbf{\hat{x}}_{ARF}
+
+   Normalize to unit vector:
+
+   .. math::
+
+      \mathbf{\hat{z}}_{ARF} = \frac{\mathbf{z}_{ARF}}{|\mathbf{z}_{ARF}|}
+
+4. **Y-axis**: Cross product of X and Z
+
+   .. math::
+
+      \mathbf{y}_{ARF} = \mathbf{\hat{x}}_{ARF} \times \mathbf{\hat{z}}_{ARF}
+
+   Normalize to ensure unit length:
+
+   .. math::
+
+      \mathbf{\hat{y}}_{ARF} = \frac{\mathbf{y}_{ARF}}{|\mathbf{y}_{ARF}|}
+
+5. **Transformation matrix**: Converts global vectors to ARF
+
+   .. math::
+
+      \mathbf{M}_{global \rightarrow ARF} = \begin{bmatrix}
+         \mathbf{\hat{x}}_{ARF}^T \\
+         \mathbf{\hat{y}}_{ARF}^T \\
+         \mathbf{\hat{z}}_{ARF}^T
+      \end{bmatrix}
+
+ARF Angles
+~~~~~~~~~~
+
+Directions in ARF are commonly expressed as spherical coordinates (azimuth, elevation):
+
+**Azimuth**
+   Angle in radians measured counter-clockwise from the ARF Y-axis in the Y-Z plane.
+   Range: [-π, π] radians (-180° to 180°)
+
+**Elevation**
+   Angle in radians measured from the Y-Z plane toward the ARF X-axis.
+   Range: [-π/2, π/2] radians (-90° to 90°)
+
+Conversion between ARF Cartesian and spherical coordinates:
+
+.. code-block:: python
+
+   # Cartesian (x, y, z) to spherical (azimuth, elevation)
+   azimuth = arctan2(y, z)
+   elevation = arctan2(x, sqrt(y² + z²))
+
+   # Spherical to Cartesian
+   x = cos(elevation) * cos(azimuth)
+   y = cos(elevation) * sin(azimuth)
+   z = sin(elevation)
+
+Usage in Geolocation
+~~~~~~~~~~~~~~~~~~~~
+
+VISTA uses ARF in the pixel-to-geodetic transformation pipeline stored in the HDF5
+geolocation data:
+
+**Step 1: Pixel → ARF angles**
+   2D polynomials map pixel coordinates to ARF azimuth and elevation:
+
+   .. code-block:: python
+
+      azimuth = evaluate_2d_polynomial(poly_pixel_to_arf_azimuth, row, col)
+      elevation = evaluate_2d_polynomial(poly_pixel_to_arf_elevation, row, col)
+
+**Step 2: ARF angles → ECEF direction**
+   Convert ARF angles to Cartesian unit vector, then transform to ECEF:
+
+   .. code-block:: python
+
+      arf_vector = spherical_to_cartesian(azimuth, elevation)
+      ecef_direction = arf_to_global_matrix @ arf_vector
+
+**Step 3: ECEF direction → Ground intersection**
+   Ray-trace from sensor position along ECEF direction to intersect Earth ellipsoid:
+
+   .. code-block:: python
+
+      lat, lon, alt = earth_intersection(sensor_pos, ecef_direction)
+
+**Inverse: ECEF → ARF angles → Pixel**
+   The reverse transformation uses different polynomial coefficients:
+
+   .. code-block:: python
+
+      # ECEF direction → ARF angles
+      arf_vector = global_to_arf_matrix @ ecef_direction
+      azimuth, elevation = cartesian_to_spherical(arf_vector)
+
+      # ARF angles → Pixel coordinates
+      row = evaluate_2d_polynomial(poly_arf_to_row, azimuth, elevation)
+      col = evaluate_2d_polynomial(poly_arf_to_col, azimuth, elevation)
+
+Polynomial Coefficients
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The geolocation data in HDF5 files stores polynomial coefficients for these transformations:
+
+:poly_pixel_to_arf_azimuth: Maps (row, col) → ARF azimuth
+:poly_pixel_to_arf_elevation: Maps (row, col) → ARF elevation
+:poly_arf_to_row: Maps (ARF azimuth, ARF elevation) → pixel row
+:poly_arf_to_col: Maps (ARF azimuth, ARF elevation) → pixel column
+
+Each polynomial coefficient array has shape ``(num_frames, num_coefficients)``, where:
+
+- ``num_frames``: Number of frames with polynomial data
+- ``num_coefficients``: ``(order + 1) * (order + 2) / 2`` for polynomial of given order
+
+Polynomial terms are ordered by total degree, then by decreasing powers of the first variable:
+
+- Order 0: ``c₀`` (1 coefficient)
+- Order 1: ``c₁·x + c₂·y`` (3 coefficients total)
+- Order 2: ``c₃·x² + c₄·x·y + c₅·y²`` (6 coefficients total)
+- Order 3: ``c₆·x³ + c₇·x²·y + c₈·x·y² + c₉·y³`` (10 coefficients total)
+
+Example: ARF Transform
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   import numpy as np
+   from vista.transforms.arf import get_arf_transform
+
+   # Sensor position in ECEF (km)
+   sensor_pos = np.array([5000, 2000, 3000])
+
+   # Sensor pointing direction (unit vector in ECEF)
+   sensor_pointing = np.array([0.0, 0.0, -1.0])  # Pointing down (nadir)
+
+   # Get transformation matrix: global → ARF
+   global_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
+
+   # Transform a vector from global ECEF to ARF
+   global_vector = np.array([1.0, 0.0, 0.0])  # East direction
+   arf_vector = global_to_arf @ global_vector
+
+   print(f"Global vector: {global_vector}")
+   print(f"ARF vector: {arf_vector}")
+
+   # Get inverse transform: ARF → global
+   arf_to_global = global_to_arf.T  # Orthonormal matrix: inverse = transpose
+   global_vector_reconstructed = arf_to_global @ arf_vector
+   print(f"Reconstructed: {global_vector_reconstructed}")
+
+See Also
+~~~~~~~~
+
+For a detailed illustrated explanation of the ARF coordinate system with visualizations
+and examples, see the Jupyter notebook:
+
+   ``notebooks/attitude_reference_frame.ipynb``
+
+API references:
+
+- :func:`vista.transforms.arf.get_arf_transform` - Compute ARF transformation matrix
+- :func:`vista.transforms.transforms.spherical_to_cartesian` - Convert angles to vectors
+- :func:`vista.transforms.transforms.cartesian_to_spherical` - Convert vectors to angles
+- :func:`vista.transforms.polynomials.evaluate_2d_polynomial` - Evaluate 2D polynomials
+
 Imagery Properties
 ------------------
 
@@ -403,7 +647,7 @@ To save imagery with all metadata and calibration:
 1. Select imagery in the **Imagery Panel**
 2. Click **File → Save** or press **Ctrl+S**
 3. Choose output filename
-4. File is saved in v1.6 HDF5 format with all associated data
+4. File is saved in 1.7 HDF5 format with all associated data
 
 Export Specific Frames
 ~~~~~~~~~~~~~~~~~~~~~~~
