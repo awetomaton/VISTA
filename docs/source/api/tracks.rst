@@ -27,7 +27,7 @@ VISTA includes several tracking algorithms:
 * **Network Flow Tracker**: Global optimization using network flow
 * **Tracklet Tracker**: Two-stage tracklet-based tracking
 
-See :doc:`../user_guide/tracking` for detailed information on each algorithm.
+See :doc:`../user_guide/tracks` for detailed information on each algorithm.
 
 Basic Usage
 -----------

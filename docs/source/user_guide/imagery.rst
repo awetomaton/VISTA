@@ -798,5 +798,5 @@ See Also
 
 - :doc:`../api/imagery` - Imagery API reference
 - :doc:`detections` - Working with detections
-- :doc:`tracking` - Object tracking workflows
+- :doc:`tracks` - Object tracking workflows
 - :doc:`algorithms` - Available algorithms

@@ -3,7 +3,7 @@ Object Detection
 
 VISTA provides tools for detecting objects and points of interest in multi-frame imagery.
 Detections represent individual observations without temporal association—they are
-"what" and "where" without "when" continuity. To connect detections across time, see :doc:`tracking`.
+"what" and "where" without "when" continuity. To connect detections across time, see :doc:`tracks`.
 
 .. _detection-overview:
 
@@ -667,7 +667,7 @@ See Also
 
 **Related Sections:**
 
-- :doc:`tracking` - Connecting detections into trajectories
+- :doc:`tracks` - Connecting detections into trajectories
 - :doc:`features` - AOIs and placemarks for spatial reference
 - :doc:`algorithms` - Detailed algorithm documentation
 - :doc:`imagery` - Preprocessing imagery before detection
