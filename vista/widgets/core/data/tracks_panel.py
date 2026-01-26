@@ -51,7 +51,7 @@ class TracksPanel(QWidget):
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
         self.bulk_property_combo.addItems([
-            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Marker Size", "Labels"
+            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels"
         ])
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
@@ -92,6 +92,11 @@ class TracksPanel(QWidget):
         self.bulk_line_width_spinbox.setValue(2)
         self.bulk_line_width_spinbox.setMaximumWidth(60)
         bulk_layout.addWidget(self.bulk_line_width_spinbox)
+
+        # Line Style dropdown
+        self.bulk_line_style_combo = QComboBox()
+        self.bulk_line_style_combo.addItems(['Solid', 'Dash', 'Dot', 'Dash-Dot', 'Dash-Dot-Dot'])
+        bulk_layout.addWidget(self.bulk_line_style_combo)
 
         # Marker Size spinbox
         self.bulk_marker_size_spinbox = QSpinBox()
@@ -1135,6 +1140,7 @@ class TracksPanel(QWidget):
         # Invalidate caches if styling properties were modified
         if column in [5, 6, 7, 8, 12]:  # Color, Marker, Line Width, Marker Size, Line Style
             track.invalidate_caches()
+            self.viewer.update_overlays()  # Refresh viewer to show styling changes
 
         self.data_changed.emit()
 
@@ -1193,6 +1199,7 @@ class TracksPanel(QWidget):
         self.bulk_color_btn.hide()
         self.bulk_marker_combo.hide()
         self.bulk_line_width_spinbox.hide()
+        self.bulk_line_style_combo.hide()
         self.bulk_marker_size_spinbox.hide()
         self.bulk_labels_btn.hide()
 
@@ -1208,6 +1215,8 @@ class TracksPanel(QWidget):
             self.bulk_marker_combo.show()
         elif property_name == "Line Width":
             self.bulk_line_width_spinbox.show()
+        elif property_name == "Line Style":
+            self.bulk_line_style_combo.show()
         elif property_name == "Marker Size":
             self.bulk_marker_size_spinbox.show()
         elif property_name == "Labels":
@@ -1252,6 +1261,15 @@ class TracksPanel(QWidget):
             'Diamond': 'd', 'Plus': '+', 'Cross': 'x', 'Star': 'star'
         }
 
+        # Map line style display names to Qt style names
+        line_style_map = {
+            'Solid': 'SolidLine',
+            'Dash': 'DashLine',
+            'Dot': 'DotLine',
+            'Dash-Dot': 'DashDotLine',
+            'Dash-Dot-Dot': 'DashDotDotLine'
+        }
+
         # Apply to all selected tracks
         for row in selected_rows:
             # Get tracker and track names from the table
@@ -1292,6 +1310,10 @@ class TracksPanel(QWidget):
             elif property_name == "Line Width":
                 track.line_width = self.bulk_line_width_spinbox.value()
                 track.invalidate_caches()  # Line width affects cached pen
+            elif property_name == "Line Style":
+                style_name = self.bulk_line_style_combo.currentText()
+                track.line_style = line_style_map.get(style_name, 'SolidLine')
+                track.invalidate_caches()  # Line style affects cached pen
             elif property_name == "Marker Size":
                 track.marker_size = self.bulk_marker_size_spinbox.value()
                 track.invalidate_caches()  # Marker size affects rendering
@@ -1299,6 +1321,7 @@ class TracksPanel(QWidget):
                 track.labels = self.bulk_labels.copy()
 
         self.refresh_tracks_table()
+        self.viewer.update_overlays()  # Refresh viewer to show changes
         self.data_changed.emit()
 
     def merge_selected_tracks(self):
@@ -1513,14 +1536,18 @@ class TracksPanel(QWidget):
         # Remove the original track
         parent_tracker.tracks.remove(track_to_split)
 
-        # Remove plot items from viewer
-        track_id = id(track_to_split)
+        # Remove plot items from viewer (use UUID, not object id)
+        track_id = track_to_split.uuid
         if track_id in self.viewer.track_path_items:
             self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
             del self.viewer.track_path_items[track_id]
         if track_id in self.viewer.track_marker_items:
             self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
             del self.viewer.track_marker_items[track_id]
+
+        # Remove from selected tracks if it was selected
+        if track_id in self.viewer.selected_track_ids:
+            self.viewer.selected_track_ids.remove(track_id)
 
         # Add the new tracks
         parent_tracker.tracks.append(first_track)

@@ -216,6 +216,7 @@ def run_simple_tracker(detectors, config):
     Notes
     -----
     The tracker performs the following steps:
+
     1. Collects all detections organized by frame
     2. Auto-computes max_search_radius using 90th percentile of nearest-neighbor
        distances if not provided

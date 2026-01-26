@@ -349,15 +349,10 @@ Algorithm Comparison
      - Many parameters to tune
      - High
 
-Managing Tracks
----------------
-
-The **Tracks Panel** in the Data Manager provides tools for viewing, modifying, and analyzing tracks.
-
 Tracks Panel Overview
-~~~~~~~~~~~~~~~~~~~~~
-
-The Tracks panel displays all tracks for the selected Sensor in a table with columns:
+---------------------
+The **Tracks Panel** in the Data Manager provides tools for viewing, modifying, and analyzing tracks. The Tracks panel 
+displays all tracks for the selected Sensor in a table with columns:
 
 - **Visible**: Checkbox to show/hide track
 - **Name**: Track identifier
@@ -392,58 +387,44 @@ This is useful for:
 - Setting tail length for multiple tracks
 
 Track Selection Actions
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
 These actions work on one or more selected tracks:
 
 Export Tracks
-"""""""""""""
-   Export selected tracks to CSV file with all coordinates and styling
+~~~~~~~~~~~~~
+Export selected tracks to CSV file with all coordinates and styling.
 
-**Copy to Sensor**
-   Copy selected tracks to a different sensor (useful for comparing across sensors)
+Copy to Sensor
+~~~~~~~~~~~~~~
+Copy selected tracks to a different sensor or the same sensor (useful for comparing across sensors).
 
-**Merge Selected**
-   Merge multiple selected tracks into a single track by concatenating their points
+.. note::
+   For real world applications, copying tracks between sensors may require mapping tracks in one sensor to 
+   another through some transform operation. The functionality built into VISTA directly copies the tracks' frames, 
+   rows, columns. It is left to users to add any transforms needed for their real-world applications.
 
-**Delete Selected**
-   Remove selected tracks from the tracker
+Merge Selected
+~~~~~~~~~~~~~~
+Merge multiple selected tracks into a single track by concatenating their points
 
-**Label Selected**
-   Apply labels to selected tracks for categorization
+Delete Selected
+~~~~~~~~~~~~~~~
+Remove selected tracks from the tracker
 
-**Plot Track Details**
-   Open a plotting window showing position, velocity, and other track metrics over time
+Label Selected
+~~~~~~~~~~~~~~
+Apply labels to selected tracks for categorization
 
-Single Track Actions
-^^^^^^^^^^^^^^^^^^^^
-
-These actions require exactly one selected track:
-
-**Split Track**
-   Split a track into two separate tracks at a specified frame
-
-**Edit Track**
-   Enter interactive editing mode:
-
-   - Click and drag to move track points
-   - Right-click to delete points
-   - Ctrl+Click to add new points
-   - Press Enter to save or Escape to cancel
-
-**Extract**
-   Extract image chips around track points and detect signal pixels (see :ref:`track-extraction`)
-
-**View Extraction**
-   View signal pixel overlay for extracted tracks
-
-**Edit Extraction**
-   Fine-tune signal masks by painting/erasing pixels interactively
+Plot Track Details
+~~~~~~~~~~~~~~~~~~
+Open a plotting window showing track details as a static plot or animated over time.
 
 .. _track-operations:
 
 Track Operations
 ----------------
+These actions require selecting exactly one track.
 
 Split Track
 ~~~~~~~~~~~
@@ -451,12 +432,12 @@ Split Track
 To split a track at a specific frame:
 
 1. Select a single track in the Tracks panel
-2. Click **Split Track**
-3. Enter the frame number where the split should occur
-4. Two new tracks are created:
+2. Navigate to the frame number where the split should occur
+3. Click **Split Track**
 
-   - Track 1: Points from start to split frame (inclusive)
-   - Track 2: Points after split frame
+.. image:: /_static/images/user_guide_tracks_split.gif
+   :alt: Split track
+   :align: center
 
 Use cases:
 

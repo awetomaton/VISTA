@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update detection/track tables so that hidden columns are persisted.
 - Added ability to view static or animated plots (synchronized to player) of track data.
 - Combined `unix_time` and `unix_fine_time` into `unix_nanoseconds` which provides nanosecond precision until April 11, 2262.
+- Added the ability to set track line style as a bulk action.
 
 ### Bug Fixes
 - Fixed bug where the indices of selected tracks were remembered such that after deleting selected tracks and loading 

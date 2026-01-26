@@ -14,6 +14,7 @@ def run_network_flow_tracker(detectors, config):
     minimum-cost flow from source to sink using Bellman-Ford successive shortest paths.
 
     Key features:
+
     - Negative link costs incentivize longer tracks over many short tracks
     - Smoothness penalty encourages constant-velocity, straight-line paths
     - Global optimization finds better solutions than greedy local association
@@ -21,6 +22,7 @@ def run_network_flow_tracker(detectors, config):
     Args:
         detectors: List of Detector objects to use as input
         config: Dictionary containing tracker configuration:
+
             - tracker_name: Name for the resulting tracker
             - max_gap: Maximum frame gap to search for associations (default: 5)
             - max_distance: Maximum spatial distance for associations (default: 50.0)
@@ -30,6 +32,7 @@ def run_network_flow_tracker(detectors, config):
 
     Returns:
         List of track data dictionaries, each containing:
+
             - 'frames': numpy array of frame numbers
             - 'rows': numpy array of row coordinates
             - 'columns': numpy array of column coordinates

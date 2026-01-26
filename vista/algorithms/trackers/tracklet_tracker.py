@@ -134,11 +134,13 @@ def run_tracklet_tracker(detectors, config):
     move smoothly. It uses a two-stage approach:
 
     Stage 1: Form high-confidence tracklets with strict association criteria
+
     - Small search radius for initial associations
     - Velocity consistency checking
     - "M out of N" approach: allows small detection gaps
 
     Stage 2: Link tracklets using global optimization
+
     - Velocity extrapolation for gap filling
     - Smoothness scoring based on velocity/position consistency
     - Hungarian algorithm for optimal linking
@@ -146,6 +148,7 @@ def run_tracklet_tracker(detectors, config):
     Args:
         detectors: List of Detector objects to use as input
         config: Dictionary containing tracker configuration:
+
             - tracker_name: Name for the resulting tracker
             - initial_search_radius: Max distance for tracklet formation (default: 10.0)
             - max_velocity_change: Max velocity change for tracklet formation (default: 5.0)
@@ -159,6 +162,7 @@ def run_tracklet_tracker(detectors, config):
 
     Returns:
         List[dict]: List of track data dictionaries, each containing:
+
             - 'frames': numpy array of frame numbers
             - 'rows': numpy array of row coordinates
             - 'columns': numpy array of column coordinates

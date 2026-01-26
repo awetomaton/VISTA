@@ -76,6 +76,7 @@ docs/source/generated/
 docs/source/.doctrees/
 docs/*~
 docs/*.bak
+docs/build*.txt
 
 # PyBuilder
 .pybuilder/

@@ -128,6 +128,7 @@ def run_kalman_tracker(detectors, config):
     Args:
         detectors: List of Detector objects to use as input
         config: Dictionary containing tracker configuration:
+
             - tracker_name: Name for the resulting tracker
             - process_noise: Process noise for constant velocity model
             - measurement_noise: Measurement noise covariance
@@ -137,6 +138,7 @@ def run_kalman_tracker(detectors, config):
 
     Returns:
         List of track data dictionaries, each containing:
+
             - 'frames': numpy array of frame numbers
             - 'rows': numpy array of row coordinates
             - 'columns': numpy array of column coordinates
