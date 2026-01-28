@@ -113,6 +113,11 @@ class Track:
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
     # Extraction metadata
     extraction_metadata: Optional[dict] = None  # Dict containing 'chip_size', 'chips', 'signal_masks', 'noise_stds'
+    # Uncertainty visualization (2D covariance matrix: [[C00, C01], [C01, C11]])
+    covariance_00: Optional[NDArray[np.float64]] = None  # Row variance (C_row_row)
+    covariance_01: Optional[NDArray[np.float64]] = None  # Row-column covariance (C_row_col)
+    covariance_11: Optional[NDArray[np.float64]] = None  # Column variance (C_col_col)
+    show_uncertainty: bool = False  # Whether to display uncertainty ellipses
     # Private attributes
     _length: int = field(init=False, default=None)
 
@@ -143,6 +148,14 @@ class Track:
                     'signal_masks': track_slice.extraction_metadata['signal_masks'][s],
                     'noise_stds': track_slice.extraction_metadata['noise_stds'][s],
                 }
+
+            # Slice uncertainty data if present
+            if track_slice.covariance_00 is not None:
+                track_slice.covariance_00 = track_slice.covariance_00[s]
+            if track_slice.covariance_01 is not None:
+                track_slice.covariance_01 = track_slice.covariance_01[s]
+            if track_slice.covariance_11 is not None:
+                track_slice.covariance_11 = track_slice.covariance_11[s]
 
             return track_slice
         else:
@@ -281,6 +294,77 @@ class Track:
 
         return self._cached_brush
 
+    def has_uncertainty(self) -> bool:
+        """
+        Check if track has uncertainty data.
+
+        Returns
+        -------
+        bool
+            True if track has all three covariance matrix elements (C00, C01, C11), False otherwise
+        """
+        return (self.covariance_00 is not None and
+                self.covariance_01 is not None and
+                self.covariance_11 is not None)
+
+    def get_uncertainty_ellipse_parameters(self) -> Optional[tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]]:
+        """
+        Convert covariance matrix to ellipse parameters for visualization.
+
+        Computes the semi-major axis length, semi-minor axis length, and rotation angle
+        from the 2D covariance matrix at each track point.
+
+        Returns
+        -------
+        Optional[tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]]
+            Tuple of (semi_major_axis, semi_minor_axis, rotation_degrees) arrays, or None if no uncertainty data.
+            Rotation is in degrees, counter-clockwise from horizontal (positive column axis).
+        """
+        if not self.has_uncertainty():
+            return None
+
+        # Eigenvalue decomposition of 2x2 covariance matrix
+        # For [[C00, C01], [C01, C11]], eigenvalues are:
+        # lambda = 0.5 * (C00 + C11 +/- sqrt((C00 - C11)^2 + 4*C01^2))
+
+        trace = self.covariance_00 + self.covariance_11
+        det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
+        discriminant = np.sqrt(np.maximum((self.covariance_00 - self.covariance_11)**2 + 4 * self.covariance_01**2, 0))
+
+        lambda1 = 0.5 * (trace + discriminant)  # Larger eigenvalue
+        lambda2 = 0.5 * (trace - discriminant)  # Smaller eigenvalue
+
+        # Semi-axes are square roots of eigenvalues
+        semi_major = np.sqrt(np.maximum(lambda1, 0))
+        semi_minor = np.sqrt(np.maximum(lambda2, 0))
+
+        # Rotation angle (in degrees, counter-clockwise from horizontal)
+        # arctan2(2*C01, C00 - C11) gives twice the rotation angle
+        rotation_rad = 0.5 * np.arctan2(2 * self.covariance_01, self.covariance_00 - self.covariance_11)
+        rotation_deg = np.degrees(rotation_rad)
+
+        return semi_major, semi_minor, rotation_deg
+
+    def get_uncertainty_radius(self) -> Optional[NDArray[np.float64]]:
+        """
+        Compute the geometric mean radius of uncertainty ellipses.
+
+        The geometric mean radius is computed as the fourth root of the covariance
+        matrix determinant: sqrt(sqrt(det(Cov))) = sqrt(sqrt(C00*C11 - C01^2)).
+        This represents the radius of a circle with the same area as the uncertainty ellipse.
+
+        Returns
+        -------
+        Optional[NDArray[np.float64]]
+            Array of geometric mean radii for each track point, or None if uncertainty data is not available
+        """
+        if not self.has_uncertainty():
+            return None
+
+        # Geometric mean radius = sqrt(det(covariance_matrix))
+        det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
+        return np.sqrt(np.maximum(det, 0))
+
     def get_times(self) -> NDArray[np.datetime64]:
         """
         Get timestamps for each track point using sensor imagery times.
@@ -394,6 +478,14 @@ class Track:
             else:
                 kwargs["labels"] = set()
 
+        # Handle uncertainty data (optional) - covariance matrix elements
+        if "Covariance 00" in df.columns:
+            kwargs["covariance_00"] = df["Covariance 00"].to_numpy(dtype=np.float64)
+        if "Covariance 01" in df.columns:
+            kwargs["covariance_01"] = df["Covariance 01"].to_numpy(dtype=np.float64)
+        if "Covariance 11" in df.columns:
+            kwargs["covariance_11"] = df["Covariance 11"].to_numpy(dtype=np.float64)
+
         # Handle times (optional)
         times = None
         if "Times" in df.columns:
@@ -445,6 +537,13 @@ class Track:
                 f"Track '{name}' must have either 'Rows' and 'Columns' columns, "
                 "or 'Latitude', 'Longitude', and 'Altitude' columns"
             )
+
+        # Enable show_uncertainty by default if uncertainty data is present
+        if ('covariance_00' in kwargs and 'covariance_01' in kwargs and
+                'covariance_11' in kwargs):
+            # Only set to True if not already explicitly set
+            if 'show_uncertainty' not in kwargs:
+                kwargs['show_uncertainty'] = True
 
         return cls(
             name = name,
@@ -511,6 +610,10 @@ class Track:
             line_style = self.line_style,
             labels = self.labels.copy(),
             extraction_metadata = extraction_metadata_copy,
+            covariance_00 = self.covariance_00.copy() if self.covariance_00 is not None else None,
+            covariance_01 = self.covariance_01.copy() if self.covariance_01 is not None else None,
+            covariance_11 = self.covariance_11.copy() if self.covariance_11 is not None else None,
+            show_uncertainty = self.show_uncertainty,
         )
     
     def to_dataframe(self) -> pd.DataFrame:
@@ -558,5 +661,12 @@ class Track:
         track_times = self.get_times()
         if track_times is not None:
             data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+
+        # Include uncertainty data if present
+        if self.has_uncertainty():
+            data["Covariance 00"] = self.covariance_00
+            data["Covariance 01"] = self.covariance_01
+            data["Covariance 11"] = self.covariance_11
+
         return pd.DataFrame(data)
     

@@ -141,12 +141,15 @@ def create_all_features_simulation(output_dir="sim_all_features"):
         # Earth background
         enable_earth_background=True,
         earth_jitter_std=0.15,
-        earth_scale=1.0
+        earth_scale=1.0,
+        # Track uncertainty
+        enable_track_uncertainty=True,
+        uncertainty_sigma_range=(1.0, 3.0)
     )
     sim.simulate()
     sim.save(output_dir)  # Don't remove any columns
     print(f"Saved to {output_dir}/")
-    print(f"  - Tracks have: Frames, Times, Rows, Columns")
+    print(f"  - Tracks have: Frames, Times, Rows, Columns, Uncertainty Ellipses")
     print(f"  - Imagery has:")
     print(f"    * times and geodetic conversion polynomials")
     print(f"    * bias_images (2 bias frames)")

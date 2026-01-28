@@ -65,6 +65,9 @@ class Simulation:
     enable_earth_background: bool = False  # If True, use Earth image as background
     earth_jitter_std: float = 1.0  # Standard deviation of random jitter per frame (pixels)
     earth_scale: float = 1.0  # Scale factor for earth image intensity
+    # Track uncertainty parameters
+    enable_track_uncertainty: bool = False  # If True, generate uncertainty ellipses for tracks
+    uncertainty_sigma_range: Tuple[float, float] = (1.0, 3.0)  # Range for sigma values (pixels)
     start: Optional[any] = None
     imagery: Optional[Imagery] = None
     detectors: Optional[List[Detector]] = None
@@ -611,13 +614,50 @@ class Simulation:
                     frames[i] = f
                     rows[i] = row
                     columns[i] = column
-                
+
+                # Generate uncertainty data if enabled
+                covariance_00 = None
+                covariance_01 = None
+                covariance_11 = None
+                if self.enable_track_uncertainty:
+                    # Generate random positive semi-definite covariance matrices
+                    # Strategy: Generate diagonal covariance, then apply random rotation
+                    # This ensures the matrix is always positive semi-definite
+
+                    # Generate random variances (diagonal elements)
+                    var_row = np.random.uniform(
+                        self.uncertainty_sigma_range[0]**2,
+                        self.uncertainty_sigma_range[1]**2,
+                        size=track_life
+                    )
+                    var_col = np.random.uniform(
+                        self.uncertainty_sigma_range[0]**2,
+                        self.uncertainty_sigma_range[1]**2,
+                        size=track_life
+                    )
+
+                    # Generate random rotation angles to create off-diagonal correlation
+                    rotation_rad = np.random.uniform(0, 2 * np.pi, size=track_life)
+
+                    # Apply rotation to create covariance matrix: C = R @ diag(var_row, var_col) @ R^T
+                    # where R is the rotation matrix
+                    cos_theta = np.cos(rotation_rad)
+                    sin_theta = np.sin(rotation_rad)
+
+                    # Covariance matrix elements after rotation
+                    covariance_00 = var_row * cos_theta**2 + var_col * sin_theta**2
+                    covariance_11 = var_row * sin_theta**2 + var_col * cos_theta**2
+                    covariance_01 = (var_row - var_col) * cos_theta * sin_theta
+
                 tracker_tracks.append(Track(
                     name=f"Tracker {tracker_index} - Track {track_index}",
                     frames = frames,
                     rows = rows,
                     columns = columns,
                     sensor = sensor,
+                    covariance_00 = covariance_00,
+                    covariance_01 = covariance_01,
+                    covariance_11 = covariance_11,
                 ))
 
                 # Simulate detections of this tracker's tracks

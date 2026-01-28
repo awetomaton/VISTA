@@ -745,6 +745,7 @@ class TrackPlotWindow(QWidget):
         has_time = False
         has_geolocation = False
         has_extraction = False
+        has_uncertainty = False
 
         for track in self.tracks:
             # Check time
@@ -760,6 +761,10 @@ class TrackPlotWindow(QWidget):
             if track.extraction_metadata is not None:
                 has_extraction = True
 
+            # Check uncertainty
+            if track.has_uncertainty():
+                has_uncertainty = True
+
         if has_geolocation:
             geo_options = ['ARF Azimuth (rad)', 'ARF Elevation (rad)', 'Latitude', 'Longitude']
             x_axis_options.extend(geo_options)
@@ -769,6 +774,11 @@ class TrackPlotWindow(QWidget):
             extraction_options = ['Signal Total', 'Signal Pixels', 'Noise']
             x_axis_options.extend(extraction_options)
             y_axis_options.extend(extraction_options)
+
+        if has_uncertainty:
+            uncertainty_options = ['Uncertainty Radius']
+            x_axis_options.extend(uncertainty_options)
+            y_axis_options.extend(uncertainty_options)
 
         # Update X-axis combo boxes
         for combo in [self.static_x_combo, self.animated_x_combo]:
@@ -892,6 +902,11 @@ class TrackPlotWindow(QWidget):
                 data['Signal Pixels'] = np.sum(masks, axis=(1, 2)).astype(float)
             if noise is not None:
                 data['Noise'] = noise
+
+        # Add uncertainty radius if available
+        uncertainty_radius = track.get_uncertainty_radius()
+        if uncertainty_radius is not None:
+            data['Uncertainty Radius'] = uncertainty_radius
 
         # Cache the data
         self._cached_data[track.uuid] = data

@@ -1,7 +1,7 @@
 """Settings dialog for global VISTA application configuration"""
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (
-    QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
+    QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
     QGroupBox, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 )
 
@@ -116,6 +116,112 @@ class ImagerySettingsTab(QVBoxLayout):
         )
 
 
+class TrackVisualizationSettingsTab(QVBoxLayout):
+    """Tab for configuring track visualization settings"""
+
+    def __init__(self, settings):
+        """
+        Initialize the Track Visualization settings tab
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings
+        """
+        super().__init__()
+        self.settings = settings
+
+        # Create uncertainty ellipse settings group
+        uncertainty_group = QGroupBox("Uncertainty Ellipse")
+        uncertainty_layout = QFormLayout()
+
+        # Line style dropdown
+        self.ellipse_style_combo = QComboBox()
+        self.ellipse_style_combo.addItems([
+            'Solid',
+            'Dash',
+            'Dot',
+            'Dash-Dot',
+            'Dash-Dot-Dot'
+        ])
+        self.ellipse_style_combo.setToolTip(
+            "Line style for uncertainty ellipses.\n"
+            "Default: Dash"
+        )
+        uncertainty_layout.addRow("Line Style:", self.ellipse_style_combo)
+
+        # Line width spinbox
+        self.ellipse_width_spinbox = QSpinBox()
+        self.ellipse_width_spinbox.setRange(1, 10)
+        self.ellipse_width_spinbox.setValue(1)
+        self.ellipse_width_spinbox.setToolTip(
+            "Line width for uncertainty ellipses (pixels).\n"
+            "Default: 1"
+        )
+        uncertainty_layout.addRow("Line Width:", self.ellipse_width_spinbox)
+
+        # Scale factor spinbox
+        self.ellipse_scale_spinbox = QDoubleSpinBox()
+        self.ellipse_scale_spinbox.setRange(0.1, 10.0)
+        self.ellipse_scale_spinbox.setValue(1.0)
+        self.ellipse_scale_spinbox.setSingleStep(0.1)
+        self.ellipse_scale_spinbox.setDecimals(1)
+        self.ellipse_scale_spinbox.setToolTip(
+            "Scale factor for uncertainty ellipses.\n"
+            "1.0 = 1-sigma (~68% confidence)\n"
+            "2.0 = 2-sigma (~95% confidence)\n"
+            "3.0 = 3-sigma (~99.7% confidence)\n"
+            "Default: 1.0"
+        )
+        uncertainty_layout.addRow("Scale Factor:", self.ellipse_scale_spinbox)
+
+        uncertainty_group.setLayout(uncertainty_layout)
+        self.addWidget(uncertainty_group)
+
+        self.addStretch()
+
+        # Load saved settings
+        self.load_settings()
+
+    def load_settings(self):
+        """Load settings from QSettings"""
+        # Map internal style names to display names
+        style_map = {
+            'SolidLine': 'Solid',
+            'DashLine': 'Dash',
+            'DotLine': 'Dot',
+            'DashDotLine': 'Dash-Dot',
+            'DashDotDotLine': 'Dash-Dot-Dot'
+        }
+        internal_style = self.settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
+        display_style = style_map.get(internal_style, 'Dash')
+        self.ellipse_style_combo.setCurrentText(display_style)
+
+        self.ellipse_width_spinbox.setValue(
+            self.settings.value("tracks/uncertainty_line_width", 1, type=int)
+        )
+        self.ellipse_scale_spinbox.setValue(
+            self.settings.value("tracks/uncertainty_scale", 1.0, type=float)
+        )
+
+    def save_settings(self):
+        """Save settings to QSettings"""
+        # Map display names back to internal style names
+        style_map = {
+            'Solid': 'SolidLine',
+            'Dash': 'DashLine',
+            'Dot': 'DotLine',
+            'Dash-Dot': 'DashDotLine',
+            'Dash-Dot-Dot': 'DashDotDotLine'
+        }
+        display_style = self.ellipse_style_combo.currentText()
+        internal_style = style_map.get(display_style, 'DashLine')
+        self.settings.setValue("tracks/uncertainty_line_style", internal_style)
+
+        self.settings.setValue("tracks/uncertainty_line_width", self.ellipse_width_spinbox.value())
+        self.settings.setValue("tracks/uncertainty_scale", self.ellipse_scale_spinbox.value())
+
+
 class SettingsDialog(QDialog):
     """Main settings dialog for VISTA application"""
 
@@ -156,6 +262,17 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(imagery_container, "Imagery")
 
+        # Create Track Visualization settings tab
+        self.track_viz_tab = TrackVisualizationSettingsTab(self.settings)
+        track_viz_widget = QVBoxLayout()
+        track_viz_widget.addLayout(self.track_viz_tab)
+
+        # Create a container widget for the tab
+        track_viz_container = QWidget()
+        track_viz_container.setLayout(track_viz_widget)
+
+        self.tabs.addTab(track_viz_container, "Track Visualization")
+
         layout.addWidget(self.tabs)
 
         # Add standard dialog buttons
@@ -173,6 +290,7 @@ class SettingsDialog(QDialog):
     def apply_settings(self):
         """Apply settings without closing dialog"""
         self.imagery_tab.save_settings()
+        self.track_viz_tab.save_settings()
 
     def accept_settings(self):
         """Accept and save settings, then close dialog"""

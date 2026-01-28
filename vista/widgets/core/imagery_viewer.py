@@ -3,8 +3,8 @@ import numpy as np
 import os
 import pyqtgraph as pg
 import time
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout
+from PyQt6.QtCore import Qt, QRectF, QSettings, pyqtSignal
+from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QWidget, QVBoxLayout
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
@@ -91,6 +91,7 @@ class ImageryViewer(QWidget):
         self.detector_plot_items = {}  # id(detector) -> ScatterPlotItem
         self.track_path_items = {}  # track.uuid -> PlotCurveItem (for track path)
         self.track_marker_items = {}  # track.uuid -> ScatterPlotItem (for current position)
+        self.track_uncertainty_items = {}  # track.uuid -> list of QGraphicsEllipseItem (for uncertainty ellipses)
 
         # Set of selected track IDs for highlighting
         self.selected_track_ids = set()
@@ -630,6 +631,89 @@ class ImageryViewer(QWidget):
                         path.setData(x=[], y=[])
                         marker.setData(x=[], y=[])
 
+                # Render uncertainty ellipse for current frame only
+                if track.show_uncertainty and track.has_uncertainty() and track.visible:
+                    # Filter by sensor
+                    if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                        # Remove ellipse if switching sensors
+                        if track_id in self.track_uncertainty_items:
+                            for item in self.track_uncertainty_items[track_id]:
+                                self.plot_item.removeItem(item)
+                            del self.track_uncertainty_items[track_id]
+                        continue
+
+                    # Get track data at current frame
+                    track_data = track.get_track_data_at_frame(frame_num)
+                    if track_data is not None:
+                        # Get settings
+                        settings = QSettings("Vista", "VistaApp")
+                        uncertainty_style = settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
+                        uncertainty_width = settings.value("tracks/uncertainty_line_width", 1, type=int)
+                        uncertainty_scale = settings.value("tracks/uncertainty_scale", 1.0, type=float)
+
+                        # Find index for current frame
+                        track._build_frame_index()
+                        idx = track._frame_index.get(frame_num)
+                        if idx is not None:
+                            row = track.rows[idx]
+                            col = track.columns[idx]
+
+                            # Get ellipse parameters from covariance matrix
+                            ellipse_params = track.get_uncertainty_ellipse_parameters()
+                            if ellipse_params is not None:
+                                semi_major, semi_minor, rotation_deg = ellipse_params
+
+                                # Apply uncertainty scale to semi-axes
+                                scaled_semi_major = semi_major[idx] * uncertainty_scale
+                                scaled_semi_minor = semi_minor[idx] * uncertainty_scale
+                                rot = rotation_deg[idx]
+
+                                # Remove old ellipse
+                                if track_id in self.track_uncertainty_items:
+                                    for item in self.track_uncertainty_items[track_id]:
+                                        self.plot_item.removeItem(item)
+
+                                # Create ellipse bounding rectangle
+                                # Center at (col, row), size (2*semi_major, 2*semi_minor)
+                                # Note: QGraphicsEllipseItem expects width/height in axis-aligned orientation
+                                ellipse = QGraphicsEllipseItem(QRectF(
+                                    col - scaled_semi_major, row - scaled_semi_minor,
+                                    2 * scaled_semi_major, 2 * scaled_semi_minor
+                                ))
+
+                                # Set rotation around center
+                                ellipse.setTransformOriginPoint(col, row)
+                                ellipse.setRotation(rot)
+
+                                # Set pen style using track color and uncertainty settings
+                                pen = track.get_pen(width=uncertainty_width, style=uncertainty_style)
+                                ellipse.setPen(pen)
+
+                                # No fill brush (transparent interior)
+                                ellipse.setBrush(pg.mkBrush(None))
+
+                                # Add to plot
+                                self.plot_item.addItem(ellipse)
+                                self.track_uncertainty_items[track_id] = [ellipse]
+                        else:
+                            # No data at current frame, remove ellipse
+                            if track_id in self.track_uncertainty_items:
+                                for item in self.track_uncertainty_items[track_id]:
+                                    self.plot_item.removeItem(item)
+                                del self.track_uncertainty_items[track_id]
+                    else:
+                        # No track data at current frame, remove ellipse
+                        if track_id in self.track_uncertainty_items:
+                            for item in self.track_uncertainty_items[track_id]:
+                                self.plot_item.removeItem(item)
+                            del self.track_uncertainty_items[track_id]
+                else:
+                    # Remove ellipse if show_uncertainty is False
+                    if track_id in self.track_uncertainty_items:
+                        for item in self.track_uncertainty_items[track_id]:
+                            self.plot_item.removeItem(item)
+                        del self.track_uncertainty_items[track_id]
+
         # Update temporary displays if in creation/editing mode
         if self.track_creation_mode or self.track_editing_mode:
             self._update_temp_track_display()
@@ -1083,11 +1167,15 @@ class ImageryViewer(QWidget):
             self.plot_item.removeItem(path)
         for marker in self.track_marker_items.values():
             self.plot_item.removeItem(marker)
+        for ellipse_list in self.track_uncertainty_items.values():
+            for ellipse in ellipse_list:
+                self.plot_item.removeItem(ellipse)
 
         # Clear dictionaries
         self.detector_plot_items.clear()
         self.track_path_items.clear()
         self.track_marker_items.clear()
+        self.track_uncertainty_items.clear()
 
         # Clear data lists
         self.detectors = []

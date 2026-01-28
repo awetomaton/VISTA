@@ -51,7 +51,8 @@ class TracksPanel(QWidget):
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
         self.bulk_property_combo.addItems([
-            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels"
+            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels",
+            "Show Uncertainty"
         ])
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
@@ -111,6 +112,11 @@ class TracksPanel(QWidget):
         self.bulk_labels_btn.clicked.connect(self.choose_bulk_labels)
         self.bulk_labels = set()  # Store selected labels
         bulk_layout.addWidget(self.bulk_labels_btn)
+
+        # Show Uncertainty checkbox
+        self.bulk_show_uncertainty_checkbox = QCheckBox("Show Uncertainty")
+        self.bulk_show_uncertainty_checkbox.setChecked(True)
+        bulk_layout.addWidget(self.bulk_show_uncertainty_checkbox)
 
         # Apply button - applies to selected rows
         self.bulk_apply_btn = QPushButton("Apply to Selected")
@@ -231,7 +237,8 @@ class TracksPanel(QWidget):
             11: True,  # Show Line
             12: True,  # Line Style
             13: True,  # Extracted
-            14: True   # Avg SNR
+            14: True,  # Avg SNR
+            15: True   # Show Uncertainty
         }
 
         # Load saved column visibility settings
@@ -245,9 +252,10 @@ class TracksPanel(QWidget):
 
         # Tracks table with all trackers consolidated
         self.tracks_table = QTableWidget()
-        self.tracks_table.setColumnCount(15)  # Added Extracted and Avg SNR columns
+        self.tracks_table.setColumnCount(16)  # Added Extracted, Avg SNR, and Show Uncertainty columns
         self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"
+            "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length",
+            "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"
         ])
 
         # Enable row selection via vertical header
@@ -276,6 +284,7 @@ class TracksPanel(QWidget):
         self.tracks_table.setColumnWidth(12, 120)  # Set reasonably large width to accommodate delegate
         header.setSectionResizeMode(13, QHeaderView.ResizeMode.ResizeToContents)  # Extracted (checkbox)
         header.setSectionResizeMode(14, QHeaderView.ResizeMode.ResizeToContents)  # Avg SNR (numeric)
+        header.setSectionResizeMode(15, QHeaderView.ResizeMode.ResizeToContents)  # Show Uncertainty (checkbox)
 
         # Set minimum widths for Tracker and Name columns to ensure headers are never truncated
         # Calculate minimum width based on header text plus padding
@@ -470,6 +479,26 @@ class TracksPanel(QWidget):
                 avg_snr_item.setText("")
             self.tracks_table.setItem(row, 14, avg_snr_item)
 
+            # Show Uncertainty checkbox
+            show_uncertainty_item = QTableWidgetItem()
+
+            # Only make checkable if track has uncertainty data
+            if track.has_uncertainty():
+                show_uncertainty_item.setFlags(
+                    Qt.ItemFlag.ItemIsUserCheckable |
+                    Qt.ItemFlag.ItemIsEnabled |
+                    Qt.ItemFlag.ItemIsSelectable
+                )
+                show_uncertainty_item.setCheckState(
+                    Qt.CheckState.Checked if track.show_uncertainty else Qt.CheckState.Unchecked
+                )
+            else:
+                # Make read-only if no uncertainty data
+                show_uncertainty_item.setFlags(Qt.ItemFlag.ItemIsSelectable)
+                show_uncertainty_item.setText("-")
+
+            self.tracks_table.setItem(row, 15, show_uncertainty_item)
+
         # Apply column visibility
         self._apply_track_column_visibility()
 
@@ -483,7 +512,8 @@ class TracksPanel(QWidget):
     def _update_track_header_icons(self):
         """Update header labels to show filter and sort indicators"""
         # Base column names
-        base_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"]
+        base_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size",
+                      "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -1136,6 +1166,11 @@ class TracksPanel(QWidget):
         elif column == 12:  # Line Style
             item = self.tracks_table.item(row, column)
             track.line_style = item.text()
+        elif column == 15:  # Show Uncertainty
+            if track.has_uncertainty():
+                item = self.tracks_table.item(row, column)
+                track.show_uncertainty = item.checkState() == Qt.CheckState.Checked
+                self.viewer.update_overlays()  # Refresh viewer to show/hide uncertainty ellipses
 
         # Invalidate caches if styling properties were modified
         if column in [5, 6, 7, 8, 12]:  # Color, Marker, Line Width, Marker Size, Line Style
@@ -1202,6 +1237,7 @@ class TracksPanel(QWidget):
         self.bulk_line_style_combo.hide()
         self.bulk_marker_size_spinbox.hide()
         self.bulk_labels_btn.hide()
+        self.bulk_show_uncertainty_checkbox.hide()
 
         # Show the appropriate control
         property_name = self.bulk_property_combo.currentText()
@@ -1221,6 +1257,8 @@ class TracksPanel(QWidget):
             self.bulk_marker_size_spinbox.show()
         elif property_name == "Labels":
             self.bulk_labels_btn.show()
+        elif property_name == "Show Uncertainty":
+            self.bulk_show_uncertainty_checkbox.show()
 
     def choose_bulk_color(self):
         """Open color dialog for bulk color selection"""
@@ -1319,6 +1357,10 @@ class TracksPanel(QWidget):
                 track.invalidate_caches()  # Marker size affects rendering
             elif property_name == "Labels":
                 track.labels = self.bulk_labels.copy()
+            elif property_name == "Show Uncertainty":
+                # Only apply if track has uncertainty data
+                if track.has_uncertainty():
+                    track.show_uncertainty = self.bulk_show_uncertainty_checkbox.isChecked()
 
         self.refresh_tracks_table()
         self.viewer.update_overlays()  # Refresh viewer to show changes
