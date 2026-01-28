@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 
 
 ### Bug Fixes
+
 - Fixed issue where lasso could only be used when imagery is loaded.
 - Fixed issue where lasso could only select one track even though multiple could be highlighted.
 - Fixed issue where when tracks were deleted that have uncertainty ellipses plotted, the ellipses would remain in the imagery viewer.
 - Fixed issue where applying bulks actions removed tracks froms selection in the tracks table.
+- Fixed `user_guide_tracks_covariance.gif` so that it loops indefinitely.
 
 ## [1.8.0] - 2026-1-28
 
