@@ -1298,6 +1298,15 @@ class TracksPanel(QWidget):
             QMessageBox.warning(self, "No Selection", "Please select one or more tracks to apply bulk actions.")
             return
 
+        # Capture UUIDs of selected tracks before refresh
+        selected_track_uuids = set()
+        for row in selected_rows:
+            track_name_item = self.tracks_table.item(row, 2)
+            if track_name_item:
+                track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+                if track_uuid:
+                    selected_track_uuids.add(track_uuid)
+
         # Map marker names to symbols
         marker_map = {
             'Circle': 'o', 'Square': 's', 'Triangle': 't',
@@ -1368,6 +1377,11 @@ class TracksPanel(QWidget):
                     track.show_uncertainty = self.bulk_show_uncertainty_checkbox.isChecked()
 
         self.refresh_tracks_table()
+
+        # Restore selection after refresh
+        if selected_track_uuids:
+            self.select_tracks_by_uuid(selected_track_uuids)
+
         self.viewer.update_overlays()  # Refresh viewer to show changes
         self.data_changed.emit()
 
