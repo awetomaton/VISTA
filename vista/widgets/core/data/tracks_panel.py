@@ -1478,6 +1478,10 @@ class TracksPanel(QWidget):
             if track_id in self.viewer.track_marker_items:
                 self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
                 del self.viewer.track_marker_items[track_id]
+            if track_id in self.viewer.track_uncertainty_items:
+                for ellipse in self.viewer.track_uncertainty_items[track_id]:
+                    self.viewer.plot_item.removeItem(ellipse)
+                del self.viewer.track_uncertainty_items[track_id]
 
         # Remove empty trackers
         self.viewer.trackers = [t for t in self.viewer.trackers if len(t.tracks) > 0]
@@ -1591,6 +1595,10 @@ class TracksPanel(QWidget):
         if track_id in self.viewer.track_marker_items:
             self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
             del self.viewer.track_marker_items[track_id]
+        if track_id in self.viewer.track_uncertainty_items:
+            for ellipse in self.viewer.track_uncertainty_items[track_id]:
+                self.viewer.plot_item.removeItem(ellipse)
+            del self.viewer.track_uncertainty_items[track_id]
 
         # Remove from selected tracks if it was selected
         if track_id in self.viewer.selected_track_ids:
@@ -1651,6 +1659,10 @@ class TracksPanel(QWidget):
             if track_id in self.viewer.track_marker_items:
                 self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
                 del self.viewer.track_marker_items[track_id]
+            if track_id in self.viewer.track_uncertainty_items:
+                for ellipse in self.viewer.track_uncertainty_items[track_id]:
+                    self.viewer.plot_item.removeItem(ellipse)
+                del self.viewer.track_uncertainty_items[track_id]
 
         # Remove empty trackers
         self.viewer.trackers = [t for t in self.viewer.trackers if len(t.tracks) > 0]
