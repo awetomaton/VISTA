@@ -2,6 +2,7 @@
 import numpy as np
 import os
 import pyqtgraph as pg
+from shapely.geometry import Point, Polygon
 import time
 from PyQt6.QtCore import Qt, QRectF, QSettings, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QWidget, QVBoxLayout
@@ -889,7 +890,6 @@ class ImageryViewer(QWidget):
 
     def _complete_lasso_selection(self):
         """Complete the lasso selection and find contained items"""
-        from shapely.geometry import Point, Polygon
 
         # Create shapely Polygon from lasso points
         if len(self.lasso_points) < 3:

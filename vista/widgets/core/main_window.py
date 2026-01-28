@@ -609,17 +609,6 @@ class VistaMainWindow(QMainWindow):
             # Deactivate all other interactive modes
             self.deactivate_all_interactive_modes(except_action=self.lasso_select_action)
 
-            # Check if imagery is loaded
-            if self.viewer.imagery is None:
-                QMessageBox.warning(
-                    self,
-                    "No Imagery",
-                    "Please load imagery before using lasso selection.",
-                    QMessageBox.StandardButton.Ok
-                )
-                self.lasso_select_action.setChecked(False)
-                return
-
             # Enable lasso selection mode in viewer
             self.viewer.set_lasso_selection_mode(True)
             self.statusBar().showMessage(
