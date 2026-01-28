@@ -579,6 +579,8 @@ class TracksPanel(QWidget):
                     value = "True" if track.complete else "False"
                 elif col_idx == 11:
                     value = "True" if track.show_line else "False"
+                elif col_idx == 15:
+                    value = "True" if track.show_uncertainty else "False"
                 else:
                     continue
 
@@ -655,8 +657,9 @@ class TracksPanel(QWidget):
 
         menu = QMenu(self)
 
-        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Labels (3), Length (4), Complete (10), Show Line (11)
-        if column in [0, 1, 2, 3, 4, 10, 11]:
+        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Labels (3), Length (4),
+        # Complete (10), Show Line (11), Show Uncertainty (15)
+        if column in [0, 1, 2, 3, 4, 10, 11, 15]:
             # Sort options
             sort_asc_action = QAction("Sort Ascending", self)
             sort_asc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.AscendingOrder))
@@ -687,7 +690,7 @@ class TracksPanel(QWidget):
         menu.addSeparator()
 
         # Column visibility submenu (always available)
-        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR"]
+        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"]
         columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
 
         for col_idx in range(len(column_names)):
@@ -725,7 +728,7 @@ class TracksPanel(QWidget):
     def load_track_column_visibility(self):
         """Load track column visibility settings from QSettings"""
         # Load each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 15):
+        for col_idx in range(1, 16):
             key = f"track_column_{col_idx}_visible"
             saved_value = self.settings.value(key, True, type=bool)
             self.track_column_visibility[col_idx] = saved_value
@@ -733,7 +736,7 @@ class TracksPanel(QWidget):
     def apply_track_column_visibility(self):
         """Apply column visibility settings to the table and update indicator"""
         # Actually hide/show the columns in the table
-        for col_idx in range(1, 15):
+        for col_idx in range(1, 16):
             visible = self.track_column_visibility.get(col_idx, True)
             self.tracks_table.setColumnHidden(col_idx, not visible)
 
@@ -743,7 +746,7 @@ class TracksPanel(QWidget):
     def save_track_column_visibility(self):
         """Save track column visibility settings to QSettings"""
         # Save each column's visibility (skip column 0 which is always visible)
-        for col_idx in range(1, 15):
+        for col_idx in range(1, 16):
             key = f"track_column_{col_idx}_visible"
             self.settings.setValue(key, self.track_column_visibility.get(col_idx, True))
 
@@ -850,7 +853,7 @@ class TracksPanel(QWidget):
         # Column 4 (Length) uses numeric filter
         elif column == 4:
             self._show_numeric_filter_dialog(column, column_name)
-        # Columns 0 (Visible), 1 (Tracker), 3 (Labels), 10 (Complete), and 11 (Show Line) use set filter
+        # Columns 0 (Visible), 1 (Tracker), 3 (Labels), 10 (Complete), 11 (Show Line), and 15 (Show Uncertainty) use set filter
         else:
             self._show_set_filter_dialog(column, column_name)
 
@@ -1011,6 +1014,8 @@ class TracksPanel(QWidget):
                     unique_values.add("True" if track.complete else "False")
                 elif column == 11:
                     unique_values.add("True" if track.show_line else "False")
+                elif column == 15:
+                    unique_values.add("True" if track.show_uncertainty else "False")
 
         # Add special "(No Labels)" option for labels column if any tracks have no labels
         if column == 3 and has_blank_labels:

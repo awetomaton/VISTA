@@ -479,12 +479,19 @@ class Track:
                 kwargs["labels"] = set()
 
         # Handle uncertainty data (optional) - covariance matrix elements
-        if "Covariance 00" in df.columns:
-            kwargs["covariance_00"] = df["Covariance 00"].to_numpy(dtype=np.float64)
-        if "Covariance 01" in df.columns:
-            kwargs["covariance_01"] = df["Covariance 01"].to_numpy(dtype=np.float64)
-        if "Covariance 11" in df.columns:
-            kwargs["covariance_11"] = df["Covariance 11"].to_numpy(dtype=np.float64)
+        # Only populate if all three columns exist and all values are valid (not NaN)
+        if ("Covariance 00" in df.columns and "Covariance 01" in df.columns and
+                "Covariance 11" in df.columns):
+            cov_00 = df["Covariance 00"].to_numpy(dtype=np.float64)
+            cov_01 = df["Covariance 01"].to_numpy(dtype=np.float64)
+            cov_11 = df["Covariance 11"].to_numpy(dtype=np.float64)
+
+            # Only set covariance if all values are valid (no NaN or inf)
+            if (np.all(np.isfinite(cov_00)) and np.all(np.isfinite(cov_01)) and
+                    np.all(np.isfinite(cov_11))):
+                kwargs["covariance_00"] = cov_00
+                kwargs["covariance_01"] = cov_01
+                kwargs["covariance_11"] = cov_11
 
         # Handle times (optional)
         times = None
