@@ -609,6 +609,10 @@ Track uncertainty represents the estimated position error for each track point, 
 - Interpolation or extrapolation uncertainty
 - Sensor geolocation accuracy
 
+.. image:: /_static/images/user_guide_tracks_covariance.gif
+   :alt: Track covariance
+   :align: center
+
 **Covariance Matrix Representation**
 
 VISTA stores uncertainty as a 2D position covariance matrix with three elements:

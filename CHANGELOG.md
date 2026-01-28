@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 - Added the ability to define covariance matrices for track points.
+- Consolidated the static and animated track details plot into a single component
 
 ## [1.7.0] - 2026-1-25
 

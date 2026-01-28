@@ -4,7 +4,7 @@ import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QButtonGroup, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLabel, QMessageBox,
-    QPushButton, QRadioButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget
+    QPushButton, QRadioButton, QSpinBox, QVBoxLayout, QWidget
 )
 
 from vista.sensors.sampled_sensor import SampledSensor
@@ -52,8 +52,7 @@ class TrackPlotWindow(QWidget):
         self._cached_data = {}  # track.uuid -> dict of data arrays
 
         # Store plot data items for hover detection
-        self._static_plot_items = []  # List of (track, PlotDataItem)
-        self._animated_plot_items = []  # List of (track, PlotDataItem)
+        self._plot_items = []  # List of (track, PlotDataItem)
 
         self.setWindowTitle("Track Details Plot")
         self.setWindowFlags(Qt.WindowType.Window)
@@ -61,12 +60,8 @@ class TrackPlotWindow(QWidget):
 
         self.init_ui()
 
-        # Connect tab change to update only the visible plot
-        self.tab_widget.currentChanged.connect(self._on_tab_changed)
-
         # Connect to view range changed for dynamic symlog tick updates
-        self.static_plot.getViewBox().sigRangeChanged.connect(self._on_static_range_changed)
-        self.animated_plot.getViewBox().sigRangeChanged.connect(self._on_animated_range_changed)
+        self.plot.getViewBox().sigRangeChanged.connect(self._on_range_changed)
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -77,128 +72,62 @@ class TrackPlotWindow(QWidget):
         self.tracks_label.setWordWrap(True)
         layout.addWidget(self.tracks_label)
 
-        # Tab widget for static and animated plots
-        self.tab_widget = QTabWidget()
-
-        # === Static Plot Tab ===
-        static_widget = QWidget()
-        static_layout = QVBoxLayout()
-
         # Axis selection
-        static_axis_layout = QHBoxLayout()
-        static_axis_layout.addWidget(QLabel("X-Axis:"))
-        self.static_x_combo = QComboBox()
-        self.static_x_combo.setMinimumWidth(150)
-        self.static_x_combo.currentIndexChanged.connect(self._on_static_settings_changed)
-        static_axis_layout.addWidget(self.static_x_combo)
+        axis_layout = QHBoxLayout()
+        axis_layout.addWidget(QLabel("X-Axis:"))
+        self.x_combo = QComboBox()
+        self.x_combo.setMinimumWidth(150)
+        self.x_combo.currentIndexChanged.connect(self._on_settings_changed)
+        axis_layout.addWidget(self.x_combo)
 
-        static_axis_layout.addWidget(QLabel("Y-Axis:"))
-        self.static_y_combo = QComboBox()
-        self.static_y_combo.setMinimumWidth(150)
-        self.static_y_combo.currentIndexChanged.connect(self._on_static_settings_changed)
-        static_axis_layout.addWidget(self.static_y_combo)
+        axis_layout.addWidget(QLabel("Y-Axis:"))
+        self.y_combo = QComboBox()
+        self.y_combo.setMinimumWidth(150)
+        self.y_combo.currentIndexChanged.connect(self._on_settings_changed)
+        axis_layout.addWidget(self.y_combo)
 
-        static_axis_layout.addStretch()
-        static_layout.addLayout(static_axis_layout)
+        axis_layout.addStretch()
+        layout.addLayout(axis_layout)
 
         # Color mode and legend checkbox
-        static_color_layout = QHBoxLayout()
-        static_color_layout.addWidget(QLabel("Color By:"))
-        self.static_color_by_track = QRadioButton("Track")
-        self.static_color_by_track.setChecked(True)
-        self.static_color_by_tracker = QRadioButton("Tracker")
-        self.static_color_group = QButtonGroup()
-        self.static_color_group.addButton(self.static_color_by_track, 0)
-        self.static_color_group.addButton(self.static_color_by_tracker, 1)
-        self.static_color_group.buttonClicked.connect(self._on_static_settings_changed)
-        static_color_layout.addWidget(self.static_color_by_track)
-        static_color_layout.addWidget(self.static_color_by_tracker)
+        color_layout = QHBoxLayout()
+        color_layout.addWidget(QLabel("Color By:"))
+        self.color_by_track = QRadioButton("Track")
+        self.color_by_track.setChecked(True)
+        self.color_by_tracker = QRadioButton("Tracker")
+        self.color_group = QButtonGroup()
+        self.color_group.addButton(self.color_by_track, 0)
+        self.color_group.addButton(self.color_by_tracker, 1)
+        self.color_group.buttonClicked.connect(self._on_settings_changed)
+        color_layout.addWidget(self.color_by_track)
+        color_layout.addWidget(self.color_by_tracker)
 
         # Show legend checkbox
-        self.static_show_legend = QCheckBox("Show Legend")
-        self.static_show_legend.setChecked(False)
-        self.static_show_legend.stateChanged.connect(self._on_static_legend_toggled)
-        static_color_layout.addWidget(self.static_show_legend)
+        self.show_legend = QCheckBox("Show Legend")
+        self.show_legend.setChecked(False)
+        self.show_legend.stateChanged.connect(self._on_legend_toggled)
+        color_layout.addWidget(self.show_legend)
 
         # Symmetric log Y-axis checkbox
-        self.static_symlog_y = QCheckBox("Symlog Y")
-        self.static_symlog_y.setToolTip("Use symmetric logarithmic scale for Y-axis\n(handles both positive and negative values)")
-        self.static_symlog_y.setChecked(False)
-        self.static_symlog_y.stateChanged.connect(self._on_static_settings_changed)
-        static_color_layout.addWidget(self.static_symlog_y)
+        self.symlog_y = QCheckBox("Symlog Y")
+        self.symlog_y.setToolTip("Use symmetric logarithmic scale for Y-axis\n(handles both positive and negative values)")
+        self.symlog_y.setChecked(False)
+        self.symlog_y.stateChanged.connect(self._on_settings_changed)
+        color_layout.addWidget(self.symlog_y)
 
-        static_color_layout.addStretch()
-        static_layout.addLayout(static_color_layout)
-
-        # Static plot widget
-        self.static_plot = pg.PlotWidget()
-        self.static_plot.showGrid(x=True, y=True)
-        self._static_legend = None  # Will be created on demand
-        static_layout.addWidget(self.static_plot)
-
-        # Hover info label for static plot
-        self.static_hover_label = QLabel("")
-        self.static_hover_label.setStyleSheet("color: gray; font-style: italic;")
-        static_layout.addWidget(self.static_hover_label)
-
-        # Connect mouse move for hover detection
-        self.static_plot.scene().sigMouseMoved.connect(self._on_static_mouse_moved)
-
-        static_widget.setLayout(static_layout)
-        self.tab_widget.addTab(static_widget, "Static Plot")
-
-        # === Animated Plot Tab ===
-        animated_widget = QWidget()
-        animated_layout = QVBoxLayout()
-
-        # Axis selection
-        animated_axis_layout = QHBoxLayout()
-        animated_axis_layout.addWidget(QLabel("X-Axis:"))
-        self.animated_x_combo = QComboBox()
-        self.animated_x_combo.setMinimumWidth(150)
-        self.animated_x_combo.currentIndexChanged.connect(self._on_animated_settings_changed)
-        animated_axis_layout.addWidget(self.animated_x_combo)
-
-        animated_axis_layout.addWidget(QLabel("Y-Axis:"))
-        self.animated_y_combo = QComboBox()
-        self.animated_y_combo.setMinimumWidth(150)
-        self.animated_y_combo.currentIndexChanged.connect(self._on_animated_settings_changed)
-        animated_axis_layout.addWidget(self.animated_y_combo)
-
-        animated_axis_layout.addStretch()
-        animated_layout.addLayout(animated_axis_layout)
-
-        # Color mode and legend checkbox
-        animated_color_layout = QHBoxLayout()
-        animated_color_layout.addWidget(QLabel("Color By:"))
-        self.animated_color_by_track = QRadioButton("Track")
-        self.animated_color_by_track.setChecked(True)
-        self.animated_color_by_tracker = QRadioButton("Tracker")
-        self.animated_color_group = QButtonGroup()
-        self.animated_color_group.addButton(self.animated_color_by_track, 0)
-        self.animated_color_group.addButton(self.animated_color_by_tracker, 1)
-        self.animated_color_group.buttonClicked.connect(self._on_animated_settings_changed)
-        animated_color_layout.addWidget(self.animated_color_by_track)
-        animated_color_layout.addWidget(self.animated_color_by_tracker)
-
-        # Show legend checkbox
-        self.animated_show_legend = QCheckBox("Show Legend")
-        self.animated_show_legend.setChecked(False)
-        self.animated_show_legend.stateChanged.connect(self._on_animated_legend_toggled)
-        animated_color_layout.addWidget(self.animated_show_legend)
-
-        # Symmetric log Y-axis checkbox
-        self.animated_symlog_y = QCheckBox("Symlog Y")
-        self.animated_symlog_y.setToolTip("Use symmetric logarithmic scale for Y-axis\n(handles both positive and negative values)")
-        self.animated_symlog_y.setChecked(False)
-        self.animated_symlog_y.stateChanged.connect(self._on_animated_settings_changed)
-        animated_color_layout.addWidget(self.animated_symlog_y)
-
-        animated_color_layout.addStretch()
-        animated_layout.addLayout(animated_color_layout)
+        color_layout.addStretch()
+        layout.addLayout(color_layout)
 
         # Display mode selection
         display_mode_layout = QHBoxLayout()
+
+        # Show complete plot checkbox
+        self.show_complete_plot = QCheckBox("Show Complete Plot")
+        self.show_complete_plot.setToolTip("Display all data points across all frames")
+        self.show_complete_plot.setChecked(False)
+        self.show_complete_plot.stateChanged.connect(self._on_display_mode_changed)
+        display_mode_layout.addWidget(self.show_complete_plot)
+
         display_mode_layout.addWidget(QLabel("Display Mode:"))
         self.up_to_frame_radio = QRadioButton("Up to frame")
         self.up_to_frame_radio.setChecked(True)
@@ -216,29 +145,24 @@ class TrackPlotWindow(QWidget):
         self.tail_length_spin.setMaximum(1000)
         self.tail_length_spin.setValue(10)
         self.tail_length_spin.setEnabled(False)
-        self.tail_length_spin.valueChanged.connect(self._on_animated_settings_changed)
+        self.tail_length_spin.valueChanged.connect(self._on_settings_changed)
         display_mode_layout.addWidget(self.tail_length_spin)
         display_mode_layout.addStretch()
-        animated_layout.addLayout(display_mode_layout)
+        layout.addLayout(display_mode_layout)
 
-        # Animated plot widget
-        self.animated_plot = pg.PlotWidget()
-        self.animated_plot.showGrid(x=True, y=True)
-        self._animated_legend = None  # Will be created on demand
-        animated_layout.addWidget(self.animated_plot)
+        # Plot widget
+        self.plot = pg.PlotWidget()
+        self.plot.showGrid(x=True, y=True)
+        self._legend = None  # Will be created on demand
+        layout.addWidget(self.plot)
 
-        # Hover info label for animated plot
-        self.animated_hover_label = QLabel("")
-        self.animated_hover_label.setStyleSheet("color: gray; font-style: italic;")
-        animated_layout.addWidget(self.animated_hover_label)
+        # Hover info label
+        self.hover_label = QLabel("")
+        self.hover_label.setStyleSheet("color: gray; font-style: italic;")
+        layout.addWidget(self.hover_label)
 
         # Connect mouse move for hover detection
-        self.animated_plot.scene().sigMouseMoved.connect(self._on_animated_mouse_moved)
-
-        animated_widget.setLayout(animated_layout)
-        self.tab_widget.addTab(animated_widget, "Animated Plot")
-
-        layout.addWidget(self.tab_widget)
+        self.plot.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
         # Bottom buttons
         button_layout = QHBoxLayout()
@@ -260,41 +184,34 @@ class TrackPlotWindow(QWidget):
 
         self.setLayout(layout)
 
-    def _on_tab_changed(self, index):
-        """Handle tab change - update the newly visible plot"""
-        if index == 0:
-            self.update_static_plot()
-        else:
-            self.update_animated_plot()
-
-    def _on_static_settings_changed(self):
-        """Handle static plot settings change"""
-        if self.tab_widget.currentIndex() == 0:
-            self.update_static_plot()
-
-    def _on_animated_settings_changed(self):
-        """Handle animated plot settings change"""
-        if self.tab_widget.currentIndex() == 1:
-            self.update_animated_plot()
+    def _on_settings_changed(self):
+        """Handle plot settings change"""
+        self.update_plot()
 
     def _on_display_mode_changed(self):
-        """Handle display mode radio button change"""
-        self.tail_length_spin.setEnabled(self.tail_length_radio.isChecked())
-        self._on_animated_settings_changed()
+        """Handle display mode change"""
+        show_complete = self.show_complete_plot.isChecked()
 
-    def _on_static_legend_toggled(self, state):
-        """Toggle static plot legend visibility"""
+        # Disable animation controls when showing complete plot
+        self.up_to_frame_radio.setEnabled(not show_complete)
+        self.tail_length_radio.setEnabled(not show_complete)
+        self.tail_length_spin.setEnabled(not show_complete and self.tail_length_radio.isChecked())
+
+        self._on_settings_changed()
+
+    def _on_legend_toggled(self, state):
+        """Toggle plot legend visibility"""
         if state == Qt.CheckState.Checked.value:
-            if self._static_legend is None:
-                self._static_legend = self.static_plot.addLegend()
-            self.update_static_plot()  # Redraw to populate legend
+            if self._legend is None:
+                self._legend = self.plot.addLegend()
+            self.update_plot()  # Redraw to populate legend
         else:
-            if self._static_legend is not None:
+            if self._legend is not None:
                 # Remove legend from scene properly
-                self._static_legend.scene().removeItem(self._static_legend)
-                self.static_plot.plotItem.legend = None
-                self._static_legend = None
-                self.update_static_plot()  # Redraw without legend
+                self._legend.scene().removeItem(self._legend)
+                self.plot.plotItem.legend = None
+                self._legend = None
+                self.update_plot()  # Redraw without legend
 
     def _symlog(self, x):
         """
@@ -582,14 +499,12 @@ class TrackPlotWindow(QWidget):
         else:
             return f"{val:.1e}"
 
-    def _apply_symlog_ticks(self, plot_widget, view_range):
+    def _apply_symlog_ticks(self, view_range):
         """
-        Apply symlog tick marks to a plot's Y-axis.
+        Apply symlog tick marks to the plot's Y-axis.
 
         Parameters
         ----------
-        plot_widget : pg.PlotWidget
-            The plot widget to modify
         view_range : tuple
             (view_y_min, view_y_max) in symlog space
         """
@@ -597,64 +512,33 @@ class TrackPlotWindow(QWidget):
         ticks = self._get_symlog_ticks(view_y_min, view_y_max)
         # Format for pyqtgraph: list of lists, where each inner list is for a tick level
         # Level 0 = major ticks, level 1 = minor ticks (empty)
-        axis = plot_widget.getAxis('left')
+        axis = self.plot.getAxis('left')
         axis.setTicks([ticks, []])
 
-    def _clear_custom_ticks(self, plot_widget):
-        """Clear custom tick marks from a plot's Y-axis."""
-        axis = plot_widget.getAxis('left')
+    def _clear_custom_ticks(self):
+        """Clear custom tick marks from the plot's Y-axis."""
+        axis = self.plot.getAxis('left')
         axis.setTicks(None)
 
-    def _on_static_range_changed(self, viewbox, ranges):
-        """Handle static plot view range change for dynamic symlog ticks."""
-        if not self.static_symlog_y.isChecked():
+    def _on_range_changed(self, _viewbox, ranges):
+        """Handle plot view range change for dynamic symlog ticks."""
+        if not self.symlog_y.isChecked():
             return
         # ranges is [[x_min, x_max], [y_min, y_max]]
         if len(ranges) >= 2:
             y_range = ranges[1]
-            self._apply_symlog_ticks(self.static_plot, y_range)
+            self._apply_symlog_ticks(y_range)
 
-    def _on_animated_range_changed(self, viewbox, ranges):
-        """Handle animated plot view range change for dynamic symlog ticks."""
-        if not self.animated_symlog_y.isChecked():
-            return
-        # ranges is [[x_min, x_max], [y_min, y_max]]
-        if len(ranges) >= 2:
-            y_range = ranges[1]
-            self._apply_symlog_ticks(self.animated_plot, y_range)
-
-    def _on_animated_legend_toggled(self, state):
-        """Toggle animated plot legend visibility"""
-        if state == Qt.CheckState.Checked.value:
-            if self._animated_legend is None:
-                self._animated_legend = self.animated_plot.addLegend()
-            self.update_animated_plot()  # Redraw to populate legend
-        else:
-            if self._animated_legend is not None:
-                # Remove legend from scene properly
-                self._animated_legend.scene().removeItem(self._animated_legend)
-                self.animated_plot.plotItem.legend = None
-                self._animated_legend = None
-                self.update_animated_plot()  # Redraw without legend
-
-    def _on_static_mouse_moved(self, pos):
-        """Handle mouse move on static plot for hover detection"""
-        self._handle_mouse_hover(pos, self.static_plot, self._static_plot_items, self.static_hover_label)
-
-    def _on_animated_mouse_moved(self, pos):
-        """Handle mouse move on animated plot for hover detection"""
-        self._handle_mouse_hover(pos, self.animated_plot, self._animated_plot_items, self.animated_hover_label)
-
-    def _handle_mouse_hover(self, pos, plot_widget, plot_items, hover_label):
-        """Handle mouse hover to display track info"""
-        if len(plot_items) == 0:
-            hover_label.setText("")
+    def _on_mouse_moved(self, pos):
+        """Handle mouse move for hover detection"""
+        if len(self._plot_items) == 0:
+            self.hover_label.setText("")
             return
 
         # Map position to data coordinates
-        vb = plot_widget.plotItem.vb
-        if not plot_widget.sceneBoundingRect().contains(pos):
-            hover_label.setText("")
+        vb = self.plot.plotItem.vb
+        if not self.plot.sceneBoundingRect().contains(pos):
+            self.hover_label.setText("")
             return
 
         mouse_point = vb.mapSceneToView(pos)
@@ -670,7 +554,7 @@ class TrackPlotWindow(QWidget):
         closest_track = None
         closest_distance = float('inf')
 
-        for track, x_data, y_data in plot_items:
+        for track, x_data, y_data in self._plot_items:
             if len(x_data) == 0:
                 continue
 
@@ -684,9 +568,9 @@ class TrackPlotWindow(QWidget):
 
         if closest_track is not None:
             tracker_name = self.tracker_map.get(closest_track.uuid, 'Unknown')
-            hover_label.setText(f"Track: {closest_track.name}  |  Tracker: {tracker_name}")
+            self.hover_label.setText(f"Track: {closest_track.name}  |  Tracker: {tracker_name}")
         else:
-            hover_label.setText("")
+            self.hover_label.setText("")
 
     def set_tracks(self, tracks: list, tracker_map: dict):
         """
@@ -715,24 +599,18 @@ class TrackPlotWindow(QWidget):
         # Refresh available axis options based on data
         self._refresh_axis_options()
 
-        # Only update the currently visible plot
-        if self.tab_widget.currentIndex() == 0:
-            self.update_static_plot()
-        else:
-            self.update_animated_plot()
+        self.update_plot()
 
-    def on_frame_changed(self, frame: int):
+    def on_frame_changed(self, _frame: int):
         """
         Handle frame change from main viewer.
 
         Parameters
         ----------
-        frame : int
-            Current frame number
+        _frame : int
+            Current frame number (unused, frame is read from viewer)
         """
-        # Only update animated plot if it's the active tab
-        if self.tab_widget.currentIndex() == 1:
-            self.update_animated_plot()
+        self.update_plot()
 
     def _refresh_axis_options(self):
         """Refresh axis combo boxes based on available data"""
@@ -780,39 +658,33 @@ class TrackPlotWindow(QWidget):
             x_axis_options.extend(uncertainty_options)
             y_axis_options.extend(uncertainty_options)
 
-        # Update X-axis combo boxes
-        for combo in [self.static_x_combo, self.animated_x_combo]:
-            combo.blockSignals(True)
-            current = combo.currentText()
-            combo.clear()
-            combo.addItems(x_axis_options)
-            # Try to restore previous selection
-            idx = combo.findText(current)
-            if idx >= 0:
-                combo.setCurrentIndex(idx)
-            combo.blockSignals(False)
+        # Update X-axis combo box
+        self.x_combo.blockSignals(True)
+        current_x = self.x_combo.currentText()
+        self.x_combo.clear()
+        self.x_combo.addItems(x_axis_options)
+        # Try to restore previous selection
+        idx = self.x_combo.findText(current_x)
+        if idx >= 0:
+            self.x_combo.setCurrentIndex(idx)
+        self.x_combo.blockSignals(False)
 
-        # Update Y-axis combo boxes
-        for combo in [self.static_y_combo, self.animated_y_combo]:
-            combo.blockSignals(True)
-            current = combo.currentText()
-            combo.clear()
-            combo.addItems(y_axis_options)
-            # Try to restore previous selection
-            idx = combo.findText(current)
-            if idx >= 0:
-                combo.setCurrentIndex(idx)
-            combo.blockSignals(False)
+        # Update Y-axis combo box
+        self.y_combo.blockSignals(True)
+        current_y = self.y_combo.currentText()
+        self.y_combo.clear()
+        self.y_combo.addItems(y_axis_options)
+        # Try to restore previous selection
+        idx = self.y_combo.findText(current_y)
+        if idx >= 0:
+            self.y_combo.setCurrentIndex(idx)
+        self.y_combo.blockSignals(False)
 
         # Set default axes
-        if self.static_x_combo.currentText() == '':
-            self.static_x_combo.setCurrentText('Frame')
-        if self.static_y_combo.currentText() == '':
-            self.static_y_combo.setCurrentText('Row')
-        if self.animated_x_combo.currentText() == '':
-            self.animated_x_combo.setCurrentText('Column')
-        if self.animated_y_combo.currentText() == '':
-            self.animated_y_combo.setCurrentText('Row')
+        if self.x_combo.currentText() == '':
+            self.x_combo.setCurrentText('Column')
+        if self.y_combo.currentText() == '':
+            self.y_combo.setCurrentText('Row')
 
     def _get_plottable_data(self, track: Track) -> dict:
         """
@@ -965,96 +837,31 @@ class TrackPlotWindow(QWidget):
 
         return assignments
 
-    def update_static_plot(self):
-        """Update the static plot"""
-        self.static_plot.clear()
-        self._static_plot_items = []
+    def update_plot(self):
+        """Update the plot based on current settings and frame"""
+        self.plot.clear()
+        self._plot_items = []
 
         # Recreate legend if it was enabled
-        if self.static_show_legend.isChecked():
-            self._static_legend = self.static_plot.addLegend()
+        if self.show_legend.isChecked():
+            self._legend = self.plot.addLegend()
 
         if len(self.tracks) == 0:
             return
 
-        x_axis = self.static_x_combo.currentText()
-        y_axis = self.static_y_combo.currentText()
-
-        if not x_axis or not y_axis:
-            return
-
-        color_by = 'track' if self.static_color_by_track.isChecked() else 'tracker'
-        assignments = self._assign_colors_and_symbols(color_by)
-
-        use_symlog = self.static_symlog_y.isChecked()
-
-        for track in self.tracks:
-            data = self._get_plottable_data(track)
-
-            if x_axis not in data or y_axis not in data:
-                continue
-
-            x_data = data[x_axis]
-            y_data_original = data[y_axis]
-
-            # Apply symlog transform if enabled
-            y_data = self._symlog(y_data_original) if use_symlog else y_data_original
-
-            assignment = assignments.get(track.uuid, {'color': 'g', 'symbol': 'o', 'name': track.name})
-
-            # Plot scatter with lines
-            name = assignment['name'] if self.static_show_legend.isChecked() else None
-            self.static_plot.plot(
-                x_data, y_data,
-                pen=pg.mkPen(assignment['color'], width=2),
-                symbol=assignment['symbol'],
-                symbolPen=pg.mkPen(assignment['color']),
-                symbolBrush=pg.mkBrush(assignment['color']),
-                symbolSize=8,
-                name=name
-            )
-
-            # Store for hover detection
-            self._static_plot_items.append((track, x_data, y_data))
-
-        # Set axis labels
-        self.static_plot.setLabel('bottom', x_axis)
-        y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
-        self.static_plot.setLabel('left', y_label)
-
-        # Apply custom symlog ticks or clear them
-        if use_symlog:
-            # Get the current view range from the viewbox (in symlog space)
-            view_range = self.static_plot.getViewBox().viewRange()
-            y_range = view_range[1]  # [y_min, y_max] in symlog space
-            self._apply_symlog_ticks(self.static_plot, y_range)
-        else:
-            self._clear_custom_ticks(self.static_plot)
-
-    def update_animated_plot(self):
-        """Update the animated plot based on current frame"""
-        self.animated_plot.clear()
-        self._animated_plot_items = []
-
-        # Recreate legend if it was enabled
-        if self.animated_show_legend.isChecked():
-            self._animated_legend = self.animated_plot.addLegend()
-
-        if len(self.tracks) == 0:
-            return
-
-        x_axis = self.animated_x_combo.currentText()
-        y_axis = self.animated_y_combo.currentText()
+        x_axis = self.x_combo.currentText()
+        y_axis = self.y_combo.currentText()
 
         if not x_axis or not y_axis:
             return
 
         current_frame = self.viewer.current_frame_number if self.viewer else 0
+        show_complete = self.show_complete_plot.isChecked()
 
-        color_by = 'track' if self.animated_color_by_track.isChecked() else 'tracker'
+        color_by = 'track' if self.color_by_track.isChecked() else 'tracker'
         assignments = self._assign_colors_and_symbols(color_by)
 
-        use_symlog = self.animated_symlog_y.isChecked()
+        use_symlog = self.symlog_y.isChecked()
 
         for track in self.tracks:
             data = self._get_plottable_data(track)
@@ -1067,7 +874,10 @@ class TrackPlotWindow(QWidget):
             frames = track.frames
 
             # Filter data based on display mode
-            if self.up_to_frame_radio.isChecked():
+            if show_complete:
+                # Show all data points
+                mask = np.ones(len(frames), dtype=bool)
+            elif self.up_to_frame_radio.isChecked():
                 # Show all data up to current frame
                 mask = frames <= current_frame
             else:
@@ -1087,8 +897,8 @@ class TrackPlotWindow(QWidget):
             assignment = assignments.get(track.uuid, {'color': 'g', 'symbol': 'o', 'name': track.name})
 
             # Plot scatter with lines
-            name = assignment['name'] if self.animated_show_legend.isChecked() else None
-            self.animated_plot.plot(
+            name = assignment['name'] if self.show_legend.isChecked() else None
+            self.plot.plot(
                 x_filtered, y_filtered,
                 pen=pg.mkPen(assignment['color'], width=2),
                 symbol=assignment['symbol'],
@@ -1099,14 +909,14 @@ class TrackPlotWindow(QWidget):
             )
 
             # Store for hover detection (filtered data)
-            self._animated_plot_items.append((track, x_filtered, y_filtered))
+            self._plot_items.append((track, x_filtered, y_filtered))
 
             # Highlight current frame position with a larger marker
             current_idx = np.where(frames == current_frame)[0]
             if len(current_idx) > 0:
                 idx = current_idx[0]
                 y_current = self._symlog(np.array([y_data_original[idx]]))[0] if use_symlog else y_data_original[idx]
-                self.animated_plot.plot(
+                self.plot.plot(
                     [x_data[idx]], [y_current],
                     pen=None,
                     symbol=assignment['symbol'],
@@ -1116,18 +926,18 @@ class TrackPlotWindow(QWidget):
                 )
 
         # Set axis labels
-        self.animated_plot.setLabel('bottom', x_axis)
+        self.plot.setLabel('bottom', x_axis)
         y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
-        self.animated_plot.setLabel('left', y_label)
+        self.plot.setLabel('left', y_label)
 
         # Apply custom symlog ticks or clear them
         if use_symlog:
             # Get the current view range from the viewbox (in symlog space)
-            view_range = self.animated_plot.getViewBox().viewRange()
+            view_range = self.plot.getViewBox().viewRange()
             y_range = view_range[1]  # [y_min, y_max] in symlog space
-            self._apply_symlog_ticks(self.animated_plot, y_range)
+            self._apply_symlog_ticks(y_range)
         else:
-            self._clear_custom_ticks(self.animated_plot)
+            self._clear_custom_ticks()
 
     def export_data(self):
         """Export currently plotted data to CSV"""
@@ -1170,10 +980,6 @@ class TrackPlotWindow(QWidget):
 
     def export_plot(self):
         """Export current plot to image file"""
-        # Determine which plot is currently visible
-        current_tab = self.tab_widget.currentIndex()
-        plot_widget = self.static_plot if current_tab == 0 else self.animated_plot
-
         file_path, selected_filter = QFileDialog.getSaveFileName(
             self, "Export Plot", "",
             "PNG Files (*.png);;SVG Files (*.svg);;All Files (*)"
@@ -1184,10 +990,10 @@ class TrackPlotWindow(QWidget):
 
         try:
             # Use pyqtgraph's export functionality
-            exporter = pg.exporters.ImageExporter(plot_widget.plotItem)
+            exporter = pg.exporters.ImageExporter(self.plot.plotItem)
 
             if file_path.lower().endswith('.svg'):
-                exporter = pg.exporters.SVGExporter(plot_widget.plotItem)
+                exporter = pg.exporters.SVGExporter(self.plot.plotItem)
 
             exporter.export(file_path)
             QMessageBox.information(self, "Export Complete", f"Plot exported to {file_path}")
@@ -1201,6 +1007,5 @@ class TrackPlotWindow(QWidget):
         self.tracks = []
         self.tracker_map = {}
         self._cached_data = {}
-        self._static_plot_items = []
-        self._animated_plot_items = []
+        self._plot_items = []
         super().closeEvent(event)
