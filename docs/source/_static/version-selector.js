@@ -60,32 +60,30 @@
             container.id = 'version-selector-container';
             container.className = 'version-selector-banner';
 
-            // Try to find the best place to inject it
-            // Furo theme: look for the main content area or header
-            const mainContent = document.querySelector('.main') ||
-                               document.querySelector('main') ||
-                               document.querySelector('.content') ||
-                               document.querySelector('article');
+            // For Furo theme: inject at the very top of the page, before everything
+            // This creates a full-width banner at the top
+            document.body.insertBefore(container, document.body.firstChild);
 
-            if (mainContent) {
-                mainContent.insertBefore(container, mainContent.firstChild);
-            } else {
-                // Fallback: insert at the beginning of body
-                document.body.insertBefore(container, document.body.firstChild);
-            }
-
-            // Add inline styles for old versions that don't have the CSS
+            // Add inline styles - full width fixed banner at top
             container.style.cssText = `
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 0.5rem;
                 padding: 0.5rem 1rem;
-                background-color: #f8f9fa;
-                border-bottom: 1px solid #e9ecef;
+                background-color: #2b5b84;
+                color: white;
                 font-size: 0.875rem;
-                margin-bottom: 1rem;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             `;
+
+            // Add padding to body to account for fixed banner
+            document.body.style.paddingTop = '40px';
         }
 
         const currentVersion = getCurrentVersion();
@@ -95,9 +93,19 @@
         const label = document.createElement('label');
         label.setAttribute('for', 'version-selector');
         label.textContent = 'Version:';
+        label.style.cssText = 'font-weight: 600; color: white;';
 
         const select = document.createElement('select');
         select.id = 'version-selector';
+        select.style.cssText = `
+            padding: 0.25rem 0.5rem;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 0.25rem;
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.875rem;
+            cursor: pointer;
+        `;
 
         sortedVersions.forEach(version => {
             const option = document.createElement('option');
@@ -141,7 +149,6 @@
 
         container.appendChild(label);
         container.appendChild(select);
-        container.style.display = 'flex';
     }
 
     // Fetch versions.json and initialize

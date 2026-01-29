@@ -1,10 +1,10 @@
 {% extends "!base.html" %}
 
-{# Inject version selector container in the announcement area (top of page) #}
-{# The actual dropdown is populated by JavaScript from versions.json #}
-{% block announcement %}
-  {{ super() }}
-  <div id="version-selector-container" class="version-selector-banner" style="display: none;">
-    {# JavaScript will populate this with the version dropdown #}
-  </div>
+{# Version selector is injected by JavaScript from versions.json #}
+{# This provides a container for newer versions; older versions have it injected dynamically #}
+{% block body %}
+<div id="version-selector-container" class="version-selector-banner">
+  {# JavaScript will populate this with the version dropdown #}
+</div>
+{{ super() }}
 {% endblock %}

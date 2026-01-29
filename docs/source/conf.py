@@ -4,17 +4,24 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
+import re
 import sys
 
-# Add the project root directory to the Python path
-# This needs to work both for regular builds and sphinx-multiversion builds
-# where the source might be in a temporary directory
+# Add the project root directory to the Python path for autodoc
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Import the version from the package
-import vista
+# Read version directly from __init__.py file to avoid import caching issues
+# with sphinx-multiversion (which builds multiple versions in sequence)
+def get_version():
+    init_path = os.path.join(project_root, 'vista', '__init__.py')
+    with open(init_path, 'r') as f:
+        content = f.read()
+    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
+    if match:
+        return match.group(1)
+    raise RuntimeError("Unable to find version string in vista/__init__.py")
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -22,8 +29,8 @@ import vista
 project = 'VISTA'
 copyright = '2025, Stephen Hartzell'
 author = 'Stephen Hartzell'
-release = vista.__version__
-version = vista.__version__
+release = get_version()
+version = get_version()
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
