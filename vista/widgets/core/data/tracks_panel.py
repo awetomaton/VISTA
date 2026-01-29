@@ -1197,24 +1197,23 @@ class TracksPanel(QWidget):
     def on_tracks_cell_clicked(self, row, column):
         """Handle track cell clicks (for color picker)"""
         if column == 5:  # Color column
-            # Find the actual track for this row
-            tracker_item = self.tracks_table.item(row, 1)
+            # Get the track UUID from the name item
             track_name_item = self.tracks_table.item(row, 2)
-
-            if not tracker_item or not track_name_item:
+            if not track_name_item:
                 return
 
-            tracker_name = tracker_item.text()
-            track_name = track_name_item.text()
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+            if not track_uuid:
+                return
 
-            # Find the track
+            # Find the track by UUID
             track = None
             for tracker in self.viewer.trackers:
-                if tracker.name == tracker_name:
-                    for t in tracker.tracks:
-                        if t.name == track_name:
-                            track = t
-                            break
+                for t in tracker.tracks:
+                    if t.uuid == track_uuid:
+                        track = t
+                        break
+                if track:
                     break
 
             if not track:
@@ -1338,24 +1337,24 @@ class TracksPanel(QWidget):
 
         # Apply to all selected tracks
         for row in selected_rows:
-            # Get tracker and track names from the table
-            tracker_item = self.tracks_table.item(row, 1)
+            # Get the track UUID from the name item
             track_name_item = self.tracks_table.item(row, 2)
 
-            if not tracker_item or not track_name_item:
+            if not track_name_item:
                 continue
 
-            tracker_name = tracker_item.text()
-            track_name = track_name_item.text()
+            track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
+            if not track_uuid:
+                continue
 
-            # Find the track
+            # Find the track by UUID
             track = None
             for tracker in self.viewer.trackers:
-                if tracker.name == tracker_name:
-                    for t in tracker.tracks:
-                        if t.name == track_name:
-                            track = t
-                            break
+                for t in tracker.tracks:
+                    if t.uuid == track_uuid:
+                        track = t
+                        break
+                if track:
                     break
 
             if track is None:

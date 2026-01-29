@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 - Fixed bug where removing all points from a detector removes detector from table, but not from viewer.
+- When a user clicks the color cell or uses bulk color actions, the code searches for tracks by name. This fails or finds the wrong track when:
+  - Multiple tracks have the same name (which is allowed)
+  - Tracks have been renamed after the table was populated
+  - Tracks with the same color might have been created with the same default name
 
 ## [1.8.1] - 2026-1-28
 
