@@ -472,6 +472,14 @@ class ImageryViewer(QWidget):
         # Get current frame number
         frame_num = self.current_frame_number
 
+        # Clean up orphaned detector plot items (detectors that have been removed)
+        current_detector_ids = {id(detector) for detector in self.detectors}
+        orphaned_detector_ids = set(self.detector_plot_items.keys()) - current_detector_ids
+        for orphaned_id in orphaned_detector_ids:
+            scatter = self.detector_plot_items[orphaned_id]
+            self.plot_item.removeItem(scatter)
+            del self.detector_plot_items[orphaned_id]
+
         # Update detections for current frame
         for detector in self.detectors:
             # Get or create plot item for this detector
@@ -536,6 +544,21 @@ class ImageryViewer(QWidget):
                 )
             else:
                 scatter.setData(x=[], y=[])  # No data at this frame or filtered out
+
+        # Clean up orphaned track plot items (tracks that have been removed)
+        current_track_ids = {track.uuid for tracker in self.trackers for track in tracker.tracks}
+        orphaned_track_ids = set(self.track_path_items.keys()) - current_track_ids
+        for orphaned_id in orphaned_track_ids:
+            if orphaned_id in self.track_path_items:
+                self.plot_item.removeItem(self.track_path_items[orphaned_id])
+                del self.track_path_items[orphaned_id]
+            if orphaned_id in self.track_marker_items:
+                self.plot_item.removeItem(self.track_marker_items[orphaned_id])
+                del self.track_marker_items[orphaned_id]
+            if orphaned_id in self.track_uncertainty_items:
+                for ellipse in self.track_uncertainty_items[orphaned_id]:
+                    self.plot_item.removeItem(ellipse)
+                del self.track_uncertainty_items[orphaned_id]
 
         # Update tracks for current frame
         for tracker in self.trackers:

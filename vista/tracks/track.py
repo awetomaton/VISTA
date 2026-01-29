@@ -131,6 +131,11 @@ class Track:
     
     def __post_init__(self):
         self.uuid = uuid.uuid4()
+
+    def __eq__(self, other):
+        if not isinstance(other, Track):
+            return False
+        return self.uuid == other.uuid
     
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):

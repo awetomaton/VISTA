@@ -5,6 +5,7 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 import pyqtgraph as pg
+import uuid
 from vista.sensors.sensor import Sensor
 
 
@@ -89,6 +90,15 @@ class Detector:
     _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
     _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
+    uuid: str = field(init=None, default=None)
+
+    def __post_init__(self):
+        self.uuid = uuid.uuid4()
+    
+    def __eq__(self, other):
+        if not isinstance(other, Detector):
+            return False
+        return self.uuid == other.uuid
 
     def _build_frame_index(self):
         """Build index mapping frame numbers to detection indices for O(1) lookup."""
