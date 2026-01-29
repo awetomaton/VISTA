@@ -7,8 +7,8 @@ import pathlib
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QBrush, QColor, QAction
 from PyQt6.QtWidgets import (
-    QCheckBox, QColorDialog, QFileDialog, QHBoxLayout, QHeaderView, QMenu,
-    QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QCheckBox, QColorDialog, QComboBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QMenu,
+    QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QScrollArea, QApplication
 from vista.widgets.core.data.delegates import LabelsSelectionDialog
@@ -36,18 +36,84 @@ class DetectionsPanel(QWidget):
         """Initialize the user interface"""
         layout = QVBoxLayout()
 
-        # Visibility and management buttons
+        # Bulk Actions section
+        bulk_layout = QHBoxLayout()
+        bulk_layout.addWidget(QLabel("Bulk Actions:"))
+
+        # Property selector dropdown
+        bulk_layout.addWidget(QLabel("Property:"))
+        self.bulk_property_combo = QComboBox()
+        self.bulk_property_combo.addItems([
+            "Visibility", "Complete", "Color", "Marker", "Marker Size", "Line Thickness", "Labels"
+        ])
+        self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
+        bulk_layout.addWidget(self.bulk_property_combo)
+
+        # Value label and control container
+        bulk_layout.addWidget(QLabel("Value:"))
+
+        # Create all possible controls (we'll show/hide based on selection)
+        # Visibility checkbox
+        self.bulk_visibility_checkbox = QCheckBox("Visible")
+        self.bulk_visibility_checkbox.setChecked(True)
+        bulk_layout.addWidget(self.bulk_visibility_checkbox)
+
+        # Complete checkbox
+        self.bulk_complete_checkbox = QCheckBox("Complete")
+        self.bulk_complete_checkbox.setChecked(False)
+        bulk_layout.addWidget(self.bulk_complete_checkbox)
+
+        # Color button
+        self.bulk_color_btn = QPushButton("Choose Color")
+        self.bulk_color_btn.clicked.connect(self.choose_bulk_color)
+        self.bulk_color = QColor('green')  # Default color
+        bulk_layout.addWidget(self.bulk_color_btn)
+
+        # Marker dropdown
+        self.bulk_marker_combo = QComboBox()
+        self.bulk_marker_combo.addItems(['o', 's', 't', 'd', '+', 'x', 'star'])
+        bulk_layout.addWidget(self.bulk_marker_combo)
+
+        # Marker Size spinbox
+        self.bulk_marker_size_spinbox = QSpinBox()
+        self.bulk_marker_size_spinbox.setMinimum(1)
+        self.bulk_marker_size_spinbox.setMaximum(100)
+        self.bulk_marker_size_spinbox.setValue(12)
+        self.bulk_marker_size_spinbox.setMaximumWidth(60)
+        bulk_layout.addWidget(self.bulk_marker_size_spinbox)
+
+        # Line Thickness spinbox
+        self.bulk_line_thickness_spinbox = QSpinBox()
+        self.bulk_line_thickness_spinbox.setMinimum(1)
+        self.bulk_line_thickness_spinbox.setMaximum(20)
+        self.bulk_line_thickness_spinbox.setValue(2)
+        self.bulk_line_thickness_spinbox.setMaximumWidth(60)
+        bulk_layout.addWidget(self.bulk_line_thickness_spinbox)
+
+        # Labels button
+        self.bulk_labels_btn = QPushButton("Select Labels")
+        self.bulk_labels_btn.clicked.connect(self.choose_bulk_labels)
+        self.bulk_labels = set()  # Store selected labels
+        bulk_layout.addWidget(self.bulk_labels_btn)
+
+        # Connect signals for immediate bulk action application
+        self.bulk_visibility_checkbox.toggled.connect(self.apply_bulk_action)
+        self.bulk_complete_checkbox.toggled.connect(self.apply_bulk_action)
+        self.bulk_marker_combo.currentIndexChanged.connect(self.apply_bulk_action)
+        self.bulk_marker_size_spinbox.valueChanged.connect(self.apply_bulk_action)
+        self.bulk_line_thickness_spinbox.valueChanged.connect(self.apply_bulk_action)
+
+        bulk_layout.addStretch()
+        layout.addLayout(bulk_layout)
+
+        # Detector management buttons
         button_layout = QHBoxLayout()
-        self.toggle_visibility_btn = QPushButton("Toggle Visibility")
-        self.toggle_visibility_btn.setEnabled(False)  # Disabled until detectors selected
-        self.toggle_visibility_btn.clicked.connect(self.toggle_selected_detections_visibility)
         self.export_detections_btn = QPushButton("Export Detections")
         self.export_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.export_detections_btn.clicked.connect(self.export_detections)
         self.delete_selected_detections_btn = QPushButton("Delete Selected")
         self.delete_selected_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.delete_selected_detections_btn.clicked.connect(self.delete_selected_detections)
-        button_layout.addWidget(self.toggle_visibility_btn)
         button_layout.addWidget(self.export_detections_btn)
         button_layout.addWidget(self.delete_selected_detections_btn)
 
@@ -193,6 +259,9 @@ class DetectionsPanel(QWidget):
 
         # Apply column visibility after table is created
         self.apply_detection_column_visibility()
+
+        # Initialize bulk action controls visibility
+        self.on_bulk_property_changed(0)
 
         self.setLayout(layout)
 
@@ -733,6 +802,136 @@ class DetectionsPanel(QWidget):
                 # Emit change signal
                 self.data_changed.emit()
 
+    def on_bulk_property_changed(self, _index):
+        """Show/hide bulk action controls based on selected property"""
+        # Hide all controls first
+        self.bulk_visibility_checkbox.hide()
+        self.bulk_complete_checkbox.hide()
+        self.bulk_color_btn.hide()
+        self.bulk_marker_combo.hide()
+        self.bulk_marker_size_spinbox.hide()
+        self.bulk_line_thickness_spinbox.hide()
+        self.bulk_labels_btn.hide()
+
+        # Show the appropriate control
+        property_name = self.bulk_property_combo.currentText()
+        if property_name == "Visibility":
+            self.bulk_visibility_checkbox.show()
+        elif property_name == "Complete":
+            self.bulk_complete_checkbox.show()
+        elif property_name == "Color":
+            self.bulk_color_btn.show()
+        elif property_name == "Marker":
+            self.bulk_marker_combo.show()
+        elif property_name == "Marker Size":
+            self.bulk_marker_size_spinbox.show()
+        elif property_name == "Line Thickness":
+            self.bulk_line_thickness_spinbox.show()
+        elif property_name == "Labels":
+            self.bulk_labels_btn.show()
+
+    def choose_bulk_color(self):
+        """Open color dialog for bulk color selection"""
+        color = QColorDialog.getColor(self.bulk_color, self, "Select Detector Color")
+        if color.isValid():
+            self.bulk_color = color
+            # Update button to show selected color
+            self.bulk_color_btn.setStyleSheet(f"background-color: {color.name()};")
+            self.apply_bulk_action()
+
+    def choose_bulk_labels(self):
+        """Open labels selection dialog for bulk label assignment"""
+        # Get all available labels
+        available_labels = LabelsManagerDialog.get_available_labels()
+
+        # Show dialog with currently selected bulk labels
+        dialog = LabelsSelectionDialog(available_labels, self.bulk_labels, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.bulk_labels = dialog.get_selected_labels()
+            # Update button text to show count
+            count = len(self.bulk_labels)
+            self.bulk_labels_btn.setText(f"Select Labels ({count} selected)")
+            self.apply_bulk_action()
+
+    def apply_bulk_action(self):
+        """Apply the selected bulk action to all selected detectors"""
+        property_name = self.bulk_property_combo.currentText()
+
+        # Get selected rows
+        selected_rows = sorted(set(index.row() for index in self.detections_table.selectedIndexes()))
+
+        if not selected_rows:
+            return  # Silently return - bulk actions only apply when detectors are selected
+
+        # Capture IDs of selected detectors before refresh
+        selected_detector_ids = set()
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)  # Name column
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id:
+                    selected_detector_ids.add(detector_id)
+
+        # Apply to all selected detectors
+        for row in selected_rows:
+            # Get detector ID from the name item
+            name_item = self.detections_table.item(row, 1)
+
+            if not name_item:
+                continue
+
+            detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+
+            # Find the detector by ID
+            detector = None
+            for d in self.viewer.detectors:
+                if id(d) == detector_id:
+                    detector = d
+                    break
+
+            if detector is None:
+                continue
+
+            # Apply the property change
+            if property_name == "Visibility":
+                detector.visible = self.bulk_visibility_checkbox.isChecked()
+            elif property_name == "Complete":
+                detector.complete = self.bulk_complete_checkbox.isChecked()
+            elif property_name == "Color":
+                detector.color = qcolor_to_pg_color(self.bulk_color)
+                detector.invalidate_caches()
+            elif property_name == "Marker":
+                detector.marker = self.bulk_marker_combo.currentText()
+                detector.invalidate_caches()
+            elif property_name == "Marker Size":
+                detector.marker_size = self.bulk_marker_size_spinbox.value()
+                detector.invalidate_caches()
+            elif property_name == "Line Thickness":
+                detector.line_thickness = self.bulk_line_thickness_spinbox.value()
+                detector.invalidate_caches()
+            elif property_name == "Labels":
+                # Set labels on all detection points in the detector
+                detector.labels = [self.bulk_labels.copy() for _ in range(len(detector.frames))]
+
+        self.refresh_detections_table()
+
+        # Restore selection after refresh
+        if selected_detector_ids:
+            self._select_detectors_by_id(selected_detector_ids)
+
+        self.viewer.update_overlays()  # Refresh viewer to show changes
+        self.data_changed.emit()
+
+    def _select_detectors_by_id(self, detector_ids):
+        """Restore detector selection by their IDs"""
+        self.detections_table.clearSelection()
+        for row in range(self.detections_table.rowCount()):
+            name_item = self.detections_table.item(row, 1)
+            if name_item:
+                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_id in detector_ids:
+                    self.detections_table.selectRow(row)
+
     def toggle_selected_detections_visibility(self):
         """Toggle visibility of selected detections - if any are visible, hide all; otherwise show all"""
         # Get selected rows from the table
@@ -811,7 +1010,6 @@ class DetectionsPanel(QWidget):
         num_selected = len(selected_rows)
 
         # Enable buttons based on selection count
-        self.toggle_visibility_btn.setEnabled(num_selected >= 1)
         self.export_detections_btn.setEnabled(num_selected >= 1)
         self.delete_selected_detections_btn.setEnabled(num_selected >= 1)
         self.merge_detections_btn.setEnabled(num_selected >= 2)

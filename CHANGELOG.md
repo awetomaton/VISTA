@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated tracks panel bulk actions so that they take effect immediately without having to press the apply button.
 - Added the ability to specify whether to show all detections through "complete" column.
 - Added more details on detections CSV format to documentation.
+- Added the ability to perform bulk actions on detections.
 
 ### Bug Fixes
 
