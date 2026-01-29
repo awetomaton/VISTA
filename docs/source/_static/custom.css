@@ -1,53 +1,34 @@
-/* Custom styles for version selector banner - fixed at top of page */
-.version-selector-banner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+/* Custom styles for version selector in sidebar */
+.version-selector-sidebar {
     padding: 0.5rem 1rem;
-    background-color: #2b5b84;
-    color: white;
-    font-size: 0.875rem;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.version-selector-banner label {
-    font-weight: 600;
-    color: white;
+    margin-bottom: 0.5rem;
 }
 
 #version-selector {
-    padding: 0.25rem 0.5rem;
-    border: 1px solid rgba(255,255,255,0.3);
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--color-sidebar-search-border);
     border-radius: 0.25rem;
-    background-color: rgba(255,255,255,0.1);
-    color: white;
+    background-color: var(--color-sidebar-search-background);
+    color: var(--color-sidebar-search-foreground);
     font-size: 0.875rem;
     cursor: pointer;
+    appearance: auto;
 }
 
 #version-selector:hover {
-    background-color: rgba(255,255,255,0.2);
+    border-color: var(--color-sidebar-search-border-focus);
 }
 
 #version-selector:focus {
-    outline: 2px solid white;
+    outline: 2px solid var(--color-brand-primary);
     outline-offset: 2px;
+    border-color: var(--color-brand-primary);
 }
 
 #version-selector option {
-    background-color: #2b5b84;
-    color: white;
-}
-
-/* Add padding to body to account for fixed banner */
-body {
-    padding-top: 40px !important;
+    background-color: var(--color-sidebar-background);
+    color: var(--color-sidebar-search-foreground);
 }
 
 /* Version warning banner for non-stable versions */

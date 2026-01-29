@@ -57,58 +57,28 @@
 
     // Create and populate the version selector
     function createVersionSelector(versions, urlInfo) {
-        let container = document.getElementById('version-selector-container');
+        // Check if selector already exists
+        if (document.getElementById('version-selector')) {
+            return;
+        }
 
-        // If container doesn't exist (old versions), create and inject it
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'version-selector-container';
-            container.className = 'version-selector-banner';
-
-            // For Furo theme: inject at the very top of the page, before everything
-            document.body.insertBefore(container, document.body.firstChild);
-
-            // Add inline styles - full width fixed banner at top
-            container.style.cssText = `
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.5rem;
-                padding: 0.5rem 1rem;
-                background-color: #2b5b84;
-                color: white;
-                font-size: 0.875rem;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 1000;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            `;
-
-            // Add padding to body to account for fixed banner
-            document.body.style.paddingTop = '40px';
+        // Find the sidebar brand element (Furo theme)
+        const sidebarBrand = document.querySelector('.sidebar-brand');
+        if (!sidebarBrand) {
+            console.log('Version selector: Could not find sidebar-brand element');
+            return;
         }
 
         const sortedVersions = sortVersions(versions);
 
-        // Create the selector HTML
-        const label = document.createElement('label');
-        label.setAttribute('for', 'version-selector');
-        label.textContent = 'Version:';
-        label.style.cssText = 'font-weight: 600; color: white;';
+        // Create the container
+        const container = document.createElement('div');
+        container.id = 'version-selector-container';
+        container.className = 'version-selector-sidebar';
 
+        // Create the selector HTML
         const select = document.createElement('select');
         select.id = 'version-selector';
-        select.style.cssText = `
-            padding: 0.25rem 0.5rem;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 0.25rem;
-            background-color: rgba(255,255,255,0.1);
-            color: white;
-            font-size: 0.875rem;
-            cursor: pointer;
-        `;
 
         sortedVersions.forEach(version => {
             const option = document.createElement('option');
@@ -146,8 +116,10 @@
                 });
         });
 
-        container.appendChild(label);
         container.appendChild(select);
+
+        // Insert after the sidebar brand
+        sidebarBrand.parentNode.insertBefore(container, sidebarBrand.nextSibling);
     }
 
     // Fix the navbar title to show the correct version from URL

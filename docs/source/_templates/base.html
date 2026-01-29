@@ -1,10 +1,4 @@
 {% extends "!base.html" %}
 
-{# Version selector is injected by JavaScript from versions.json #}
-{# This provides a container for newer versions; older versions have it injected dynamically #}
-{% block body %}
-<div id="version-selector-container" class="version-selector-banner">
-  {# JavaScript will populate this with the version dropdown #}
-</div>
-{{ super() }}
-{% endblock %}
+{# Version selector is now injected into the sidebar by JavaScript #}
+{# No custom body block needed - JavaScript handles placement dynamically #}

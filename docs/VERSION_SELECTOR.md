@@ -116,6 +116,20 @@ To test the version selector locally, you need to build with sphinx-multiversion
 ```bash
 cd docs
 sphinx-multiversion source build/html
+cd build/html
+
+echo '[' > versions.json                                     
+first=true
+for dir in */; do
+  dir_name="${dir%/}"
+  if [[ "$dir_name" != _* ]]; then
+    if [ "$first" = true ]; then first=false; else echo ',' >> versions.json; fi
+    echo "  {\"name\": \"$dir_name\", \"url\": \"./$dir_name/\"}" >> versions.json
+  fi
+done
+echo ']' >> versions.json
+
+python -m http.server 8000
 ```
 
 This builds all versions. Open any version's index.html:
