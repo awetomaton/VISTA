@@ -51,7 +51,7 @@ class TracksPanel(QWidget):
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
         self.bulk_property_combo.addItems([
-            "Visibility", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels",
+            "Visibility", "Complete", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels",
             "Show Uncertainty"
         ])
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
@@ -65,6 +65,11 @@ class TracksPanel(QWidget):
         self.bulk_visibility_checkbox = QCheckBox("Visible")
         self.bulk_visibility_checkbox.setChecked(True)
         bulk_layout.addWidget(self.bulk_visibility_checkbox)
+
+        # Complete checkbox
+        self.bulk_complete_checkbox = QCheckBox("Complete")
+        self.bulk_complete_checkbox.setChecked(False)
+        bulk_layout.addWidget(self.bulk_complete_checkbox)
 
         # Tail Length spinbox
         self.bulk_tail_spinbox = QSpinBox()
@@ -120,6 +125,7 @@ class TracksPanel(QWidget):
 
         # Connect signals for immediate bulk action application
         self.bulk_visibility_checkbox.toggled.connect(self.apply_bulk_action)
+        self.bulk_complete_checkbox.toggled.connect(self.apply_bulk_action)
         self.bulk_tail_spinbox.valueChanged.connect(self.apply_bulk_action)
         self.bulk_marker_combo.currentIndexChanged.connect(self.apply_bulk_action)
         self.bulk_line_width_spinbox.valueChanged.connect(self.apply_bulk_action)
@@ -1239,6 +1245,7 @@ class TracksPanel(QWidget):
         """Show/hide bulk action controls based on selected property"""
         # Hide all controls first
         self.bulk_visibility_checkbox.hide()
+        self.bulk_complete_checkbox.hide()
         self.bulk_tail_spinbox.hide()
         self.bulk_color_btn.hide()
         self.bulk_marker_combo.hide()
@@ -1252,6 +1259,8 @@ class TracksPanel(QWidget):
         property_name = self.bulk_property_combo.currentText()
         if property_name == "Visibility":
             self.bulk_visibility_checkbox.show()
+        elif property_name == "Complete":
+            self.bulk_complete_checkbox.show()
         elif property_name == "Tail Length":
             self.bulk_tail_spinbox.show()
         elif property_name == "Color":
@@ -1355,6 +1364,8 @@ class TracksPanel(QWidget):
             # Apply the property change
             if property_name == "Visibility":
                 track.visible = self.bulk_visibility_checkbox.isChecked()
+            elif property_name == "Complete":
+                track.complete = self.bulk_complete_checkbox.isChecked()
             elif property_name == "Tail Length":
                 track.tail_length = self.bulk_tail_spinbox.value()
             elif property_name == "Color":

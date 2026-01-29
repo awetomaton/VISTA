@@ -220,6 +220,8 @@ class Detector:
             kwargs["line_thickness"] = df["Line Thickness"].iloc[0]
         if "Visible" in df.columns:
             kwargs["visible"] = df["Visible"].iloc[0]
+        if "Complete" in df.columns:
+            kwargs["complete"] = df["Complete"].iloc[0]
         if "Labels" in df.columns:
             # Parse labels from comma-separated string for each detection
             labels_list = []
@@ -283,6 +285,7 @@ class Detector:
             "Marker Size": self.marker_size,
             "Line Thickness": self.line_thickness,
             "Visible": self.visible,
+            "Complete": self.complete,
             "Labels": labels_column,
         })
 

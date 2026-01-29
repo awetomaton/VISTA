@@ -438,6 +438,11 @@ CSV format is ideal for spreadsheet analysis or external processing.
 :Frame: Frame number (integer)
 :Row: Row pixel coordinate (float)
 :Column: Column pixel coordinate (float)
+:Color: Detector marker color. PyQtGraph color string (e.g., 'r', 'g', 'b', '#FF0000') (string, optional)
+:Marker: Marker style ('o', 's', 't', 'd', '+', 'x', 'star') (string, optional)
+:Line Thickness: Detector marker line thickness (integer, optional)
+:Visible: Determines if detector should be visible by default or not (bool, optional)
+:Complete: Show detections regardless of current frame (bool, optional)
 :Labels: Comma-separated labels (string, optional)
 
 Import from CSV
