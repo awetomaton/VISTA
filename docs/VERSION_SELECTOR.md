@@ -51,7 +51,7 @@ Version filtering is controlled in `conf.py`:
 
 ```python
 # Only tags matching this pattern are built (e.g., 1.7.0, 1.8.0)
-smv_tag_whitelist = r'^v\d+\.\d+\.\d+$'
+smv_tag_whitelist = r'^\d+\.\d+\.\d+$'
 
 # Only these branches are built
 smv_branch_whitelist = r'^(main|develop)$'

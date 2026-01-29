@@ -1,9 +1,11 @@
+{# Version selector component for sphinx-multiversion #}
+{# Include this template where you want a version dropdown #}
 {% if versions %}
 <div class="version-selector">
-  <select onchange="window.location.href = this.value">
-    {% for version in versions %}
-    <option value="{{ version.url }}" {% if version.is_current %}selected{% endif %}>
-      {{ version.name }}
+  <select id="version-selector-inline" onchange="window.location.href = this.value">
+    {% for item in versions %}
+    <option value="{{ item.url }}" {% if current_version and item.name == current_version.name %}selected{% endif %}>
+      {{ item.name }}{% if item.name == 'main' %} (latest){% endif %}
     </option>
     {% endfor %}
   </select>

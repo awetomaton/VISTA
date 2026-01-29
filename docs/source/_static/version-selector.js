@@ -1,4 +1,6 @@
 // Version selector functionality for sphinx-multiversion
+// This script enhances the version selector to navigate to the same page
+// in the new version (if it exists), rather than just the version root.
 (function() {
     'use strict';
 
@@ -10,20 +12,43 @@
         }
 
         versionSelector.addEventListener('change', function() {
-            const selectedUrl = this.value;
+            const selectedVersionUrl = this.value;
+            if (!selectedVersionUrl) return;
 
-            // Get the current path without the version prefix
-            const pathParts = window.location.pathname.split('/').filter(part => part);
+            // Parse the current URL to extract the path after the version
+            // URL structure: /VISTA/{version}/{path}
+            const currentPath = window.location.pathname;
+            const pathParts = currentPath.split('/').filter(part => part);
 
-            // Remove the first part (version) and reconstruct the path
-            if (pathParts.length > 0) {
-                pathParts.shift(); // Remove version
+            // Find the version part (assuming structure: /VISTA/version/page.html)
+            // pathParts might be: ['VISTA', '1.8.0', 'api', 'index.html']
+            let pagePath = '';
+            if (pathParts.length >= 2) {
+                // Skip the repo name and version, keep the rest
+                pagePath = pathParts.slice(2).join('/');
             }
 
-            const newPath = pathParts.length > 0 ? pathParts.join('/') : 'index.html';
+            // Build the new URL
+            let newUrl = selectedVersionUrl;
+            if (pagePath) {
+                // Remove trailing slash from version URL if present
+                newUrl = selectedVersionUrl.replace(/\/$/, '') + '/' + pagePath;
+            }
 
-            // Navigate to the same page in the selected version
-            window.location.href = selectedUrl + '/' + newPath;
+            // Try to navigate to the same page; if it fails, fall back to index
+            fetch(newUrl, { method: 'HEAD' })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = newUrl;
+                    } else {
+                        // Page doesn't exist in new version, go to index
+                        window.location.href = selectedVersionUrl;
+                    }
+                })
+                .catch(() => {
+                    // On error (e.g., CORS), just navigate directly
+                    window.location.href = newUrl;
+                });
         });
     });
 })();

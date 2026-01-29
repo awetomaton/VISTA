@@ -1,35 +1,36 @@
-/* Custom styles for version selector */
-.sidebar-version-selector {
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--color-sidebar-item-background--hover);
+/* Custom styles for version selector banner (in announcement area) */
+.version-selector-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-background-secondary, #f8f9fa);
+    border-bottom: 1px solid var(--color-background-border, #e9ecef);
+    font-size: 0.875rem;
 }
 
-.sidebar-version-label {
-    display: block;
+.version-selector-banner label {
     font-weight: 600;
-    font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-    color: var(--color-sidebar-link-text);
+    color: var(--color-foreground-primary, #333);
 }
 
 #version-selector {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--color-sidebar-item-background--hover);
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--color-background-border, #ccc);
     border-radius: 0.25rem;
-    background-color: var(--color-sidebar-item-background);
-    color: var(--color-sidebar-link-text);
+    background-color: var(--color-background-primary, #fff);
+    color: var(--color-foreground-primary, #333);
     font-size: 0.875rem;
     cursor: pointer;
 }
 
 #version-selector:hover {
-    background-color: var(--color-sidebar-item-background--hover);
+    border-color: var(--color-brand-primary, #2b5b84);
 }
 
 #version-selector:focus {
-    outline: 2px solid var(--color-brand-primary);
+    outline: 2px solid var(--color-brand-primary, #2b5b84);
     outline-offset: 2px;
 }
 

@@ -135,9 +135,10 @@ html_js_files = [
 ]
 
 # Context for templates (including version information for sphinx-multiversion)
+# Note: sphinx-multiversion automatically provides 'versions' and 'current_version'
+# template variables - do NOT override them here or the version selector won't work
 html_context = {
-    'current_version': version,
-    'versions': [],  # This will be populated by sphinx-multiversion
+    'display_version': version,
 }
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
