@@ -3,6 +3,10 @@ Working with Imagery
 
 This guide covers loading, managing, and processing imagery in VISTA.
 
+.. note::
+   While working with imagery is a key VISTA use-case, users should be aware that VISTA can be used to analyze 
+   detections and tracks.
+
 Loading Imagery
 ---------------
 
