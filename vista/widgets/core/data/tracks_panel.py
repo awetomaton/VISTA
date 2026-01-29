@@ -118,11 +118,15 @@ class TracksPanel(QWidget):
         self.bulk_show_uncertainty_checkbox.setChecked(True)
         bulk_layout.addWidget(self.bulk_show_uncertainty_checkbox)
 
-        # Apply button - applies to selected rows
-        self.bulk_apply_btn = QPushButton("Apply to Selected")
-        self.bulk_apply_btn.setEnabled(False)  # Disabled until tracks selected
-        self.bulk_apply_btn.clicked.connect(self.apply_bulk_action)
-        bulk_layout.addWidget(self.bulk_apply_btn)
+        # Connect signals for immediate bulk action application
+        self.bulk_visibility_checkbox.toggled.connect(self.apply_bulk_action)
+        self.bulk_tail_spinbox.valueChanged.connect(self.apply_bulk_action)
+        self.bulk_marker_combo.currentIndexChanged.connect(self.apply_bulk_action)
+        self.bulk_line_width_spinbox.valueChanged.connect(self.apply_bulk_action)
+        self.bulk_line_style_combo.currentIndexChanged.connect(self.apply_bulk_action)
+        self.bulk_marker_size_spinbox.valueChanged.connect(self.apply_bulk_action)
+        self.bulk_show_uncertainty_checkbox.toggled.connect(self.apply_bulk_action)
+
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
 
@@ -1272,6 +1276,7 @@ class TracksPanel(QWidget):
             self.bulk_color = color
             # Update button to show selected color
             self.bulk_color_btn.setStyleSheet(f"background-color: {color.name()};")
+            self.apply_bulk_action()
 
     def choose_bulk_labels(self):
         """Open labels selection dialog for bulk label assignment"""
@@ -1286,6 +1291,7 @@ class TracksPanel(QWidget):
             # Update button text to show count
             count = len(self.bulk_labels)
             self.bulk_labels_btn.setText(f"Select Labels ({count} selected)")
+            self.apply_bulk_action()
 
     def apply_bulk_action(self):
         """Apply the selected bulk action to all selected tracks"""
@@ -1295,8 +1301,7 @@ class TracksPanel(QWidget):
         selected_rows = sorted(set(index.row() for index in self.tracks_table.selectedIndexes()))
 
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select one or more tracks to apply bulk actions.")
-            return
+            return  # Silently return - bulk actions only apply when tracks are selected
 
         # Capture UUIDs of selected tracks before refresh
         selected_track_uuids = set()
@@ -1702,7 +1707,6 @@ class TracksPanel(QWidget):
         self.label_selected_btn.setEnabled(num_selected >= 1)
         self.extract_track_btn.setEnabled(num_selected == 1)
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
-        self.bulk_apply_btn.setEnabled(num_selected >= 1)
         self.break_into_detections_btn.setEnabled(num_selected >= 1)
         self.plot_details_btn.setEnabled(num_selected >= 1)
 

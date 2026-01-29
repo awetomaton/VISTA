@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.1] - 2026-1-28
 
 ### Improvements
-- 
+- Updated tracks panel bulk actions so that they take effect immediately without having to press the apply button.
 
 ### Bug Fixes
 
