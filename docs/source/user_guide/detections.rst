@@ -38,7 +38,7 @@ points using one of several methods:
  - Peak: Uses the peak pixel within a radius of your clicked location.
  - CFAR: Selects the weighted centroid of the pixel group closest to the clicked location that exceeds the local noise.
 
-.. image:: /_static/images/user_guide_detectors_create.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_create.gif
    :alt: Create detections
    :align: center
 
@@ -49,7 +49,7 @@ Convert Tracks into Detections
 Users can also create detections by converting a track into detections by selecting tracks in the Tracks Panel and 
 pressing the Break Into Detections button.
 
-.. image:: /_static/images/user_guide_detectors_from_tracks.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_from_tracks.gif
    :alt: Create detections from tracks
    :align: center
 
@@ -173,7 +173,7 @@ Running Detection Algorithms
 4. Click **Run** to execute on current imagery
 5. Detections appear in the Detections Panel
 
-.. image:: /_static/images/user_guide_detectors_running.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_running.gif
    :alt: Shapefiles
    :align: center
 
@@ -230,7 +230,7 @@ The Detections Panel displays:
 - **Color/Marker**: Styling controls
 - **Statistics**: Detection counts per frame, spatial distribution
 
-.. image:: /_static/images/user_guide_detectors_controls.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_controls.gif
    :alt: Detector controls
    :align: center
 
@@ -242,7 +242,7 @@ Merge Detections
 ~~~~~~~~~~~~~~~~
 Users may merge detectors by selecting multiple detector rows and pressing Merge Detections.
 
-.. image:: /_static/images/user_guide_detectors_merge.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_merge.gif
    :alt: Merge detections
    :align: center
 
@@ -251,7 +251,7 @@ Copy Detections
 Users may copy detectors between sensors or on the same sensor by selecting detector rows and pressing the Copy to 
 Sensor button. Users may copy only detections that are filtered by label by checking the Copy only filtered detections.
 
-.. image:: /_static/images/user_guide_detectors_copy.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_copy.gif
    :alt: Merge detections
    :align: center
 
@@ -269,7 +269,7 @@ Create Track
 ^^^^^^^^^^^^
 Users can create a track from detections by pressing the Create Track button.
 
-.. image:: /_static/images/user_guide_detectors_create_track.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_create_track.gif
    :alt: Merge detections
    :align: center
 
@@ -277,7 +277,7 @@ Add to Track
 ^^^^^^^^^^^^
 Users can create a track from detections by pressing the Add to Track button.
 
-.. image:: /_static/images/user_guide_detectors_add_to_track.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_add_to_track.gif
    :alt: Merge detections
    :align: center
 
@@ -287,7 +287,7 @@ Users can add or remove detections by selecting a single detector row and pressi
 add new detection points using any of the options described in the :ref:`Manually Create Detections section <manual-detection_creation>`.
 Users may also remove existing detections by clicking on them.
 
-.. image:: /_static/images/user_guide_detectors_edit.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_edit.gif
    :alt: Edit detections
    :align: center
 
@@ -296,7 +296,7 @@ Labeling Detections
 Users can label detections by pressing the Label Detections button. Users may filter detections for a specific set of 
 labels by right clicking on the Labels column in the detections table and setting a filter.
 
-.. image:: /_static/images/user_guide_detectors_label.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_label.gif
    :alt: Label detections
    :align: center
 

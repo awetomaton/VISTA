@@ -34,7 +34,7 @@ are frame-independent, meaning the same AOI applies to all frames in the imagery
 Creating AOIs
 ~~~~~~~~~~~~~
 
-.. image:: /_static/images/user_guide_features_create_aoi.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_create_aoi.gif
    :alt: Create AOI
    :align: center
 
@@ -76,7 +76,7 @@ AOI Controls
    their row in the AOIs table.
  * Change AOI size by clicking and dragging on the lower-right corner
 
-.. image:: /_static/images/user_guide_features_control_aoi.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_control_aoi.gif
    :alt: Control AOI
    :align: center
 
@@ -273,7 +273,7 @@ Placemarks
 Placemarks are point features that mark specific locations on imagery with both pixel
 and optional geodetic coordinates.
 
-.. image:: /_static/images/user_guide_features_placemarks.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_placemarks.gif
    :alt: Shapefiles
    :align: center
 
@@ -492,7 +492,7 @@ VISTA can import and visualize vector geospatial data from standard ESRI shapefi
 Shapefiles provide a way to overlay geospatial features (roads, boundaries, facilities, etc.)
 on imagery.
 
-.. image:: /_static/images/user_guide_features_shapefiles.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_shapefiles.gif
    :alt: Shapefiles
    :align: center
 

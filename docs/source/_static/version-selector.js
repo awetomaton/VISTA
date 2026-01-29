@@ -3,39 +3,44 @@
 (function() {
     'use strict';
 
-    // Get the base URL for the documentation (e.g., /VISTA/)
-    function getBaseUrl() {
-        const path = window.location.pathname;
-        // Path structure: /VISTA/{version}/page.html
-        // We need to get back to /VISTA/
-        const parts = path.split('/').filter(part => part);
-        if (parts.length >= 2) {
-            // Return /VISTA/ (repo name)
-            return '/' + parts[0] + '/';
-        }
-        return '/';
+    // Known version patterns to detect in URL
+    const VERSION_PATTERNS = ['main', 'develop', /^\d+\.\d+\.\d+$/];
+
+    // Detect if a path segment is a version
+    function isVersion(segment) {
+        return VERSION_PATTERNS.some(pattern => {
+            if (typeof pattern === 'string') {
+                return segment === pattern;
+            }
+            return pattern.test(segment);
+        });
     }
 
-    // Get current version from URL
-    function getCurrentVersion() {
+    // Parse the URL to find base URL, current version, and page path
+    // Works for both /VISTA/{version}/page.html and /{version}/page.html
+    function parseUrl() {
         const path = window.location.pathname;
         const parts = path.split('/').filter(part => part);
-        // parts[0] = 'VISTA', parts[1] = version
-        if (parts.length >= 2) {
-            return parts[1];
-        }
-        return null;
-    }
 
-    // Get current page path (after version)
-    function getCurrentPagePath() {
-        const path = window.location.pathname;
-        const parts = path.split('/').filter(part => part);
-        // Skip repo name and version, keep the rest
-        if (parts.length > 2) {
-            return parts.slice(2).join('/');
+        let baseIndex = -1;
+        for (let i = 0; i < parts.length; i++) {
+            if (isVersion(parts[i])) {
+                baseIndex = i;
+                break;
+            }
         }
-        return 'index.html';
+
+        if (baseIndex === -1) {
+            // No version found in URL
+            return { baseUrl: '/', currentVersion: null, pagePath: '' };
+        }
+
+        // Base URL is everything before the version
+        const baseUrl = '/' + (baseIndex > 0 ? parts.slice(0, baseIndex).join('/') + '/' : '');
+        const currentVersion = parts[baseIndex];
+        const pagePath = parts.slice(baseIndex + 1).join('/') || 'index.html';
+
+        return { baseUrl, currentVersion, pagePath };
     }
 
     // Sort versions: 'main' first, then 'develop', then semantic versions descending
@@ -51,7 +56,7 @@
     }
 
     // Create and populate the version selector
-    function createVersionSelector(versions) {
+    function createVersionSelector(versions, urlInfo) {
         let container = document.getElementById('version-selector-container');
 
         // If container doesn't exist (old versions), create and inject it
@@ -61,7 +66,6 @@
             container.className = 'version-selector-banner';
 
             // For Furo theme: inject at the very top of the page, before everything
-            // This creates a full-width banner at the top
             document.body.insertBefore(container, document.body.firstChild);
 
             // Add inline styles - full width fixed banner at top
@@ -86,7 +90,6 @@
             document.body.style.paddingTop = '40px';
         }
 
-        const currentVersion = getCurrentVersion();
         const sortedVersions = sortVersions(versions);
 
         // Create the selector HTML
@@ -109,12 +112,12 @@
 
         sortedVersions.forEach(version => {
             const option = document.createElement('option');
-            option.value = version.url;
+            option.value = version.name;
             option.textContent = version.name;
             if (version.name === 'main') {
                 option.textContent += ' (latest)';
             }
-            if (version.name === currentVersion) {
+            if (version.name === urlInfo.currentVersion) {
                 option.selected = true;
             }
             select.appendChild(option);
@@ -122,15 +125,11 @@
 
         // Add change handler
         select.addEventListener('change', function() {
-            const selectedUrl = this.value;
-            if (!selectedUrl) return;
+            const selectedVersion = this.value;
+            if (!selectedVersion) return;
 
-            const baseUrl = getBaseUrl();
-            const pagePath = getCurrentPagePath();
-
-            // Build new URL - selectedUrl is like "./1.8.1/"
-            // We need to construct the full path
-            let newUrl = baseUrl + selectedUrl.replace('./', '') + pagePath;
+            // Build new URL
+            let newUrl = urlInfo.baseUrl + selectedVersion + '/' + urlInfo.pagePath;
 
             // Try to navigate to the same page; if it doesn't exist, fall back to index
             fetch(newUrl, { method: 'HEAD' })
@@ -138,11 +137,11 @@
                     if (response.ok) {
                         window.location.href = newUrl;
                     } else {
-                        window.location.href = baseUrl + selectedUrl.replace('./', '');
+                        window.location.href = urlInfo.baseUrl + selectedVersion + '/';
                     }
                 })
                 .catch(() => {
-                    // On error, just navigate directly
+                    // On error (e.g., CORS), just navigate directly
                     window.location.href = newUrl;
                 });
         });
@@ -151,21 +150,64 @@
         container.appendChild(select);
     }
 
+    // Fix the navbar title to show the correct version from URL
+    // This is needed because old tags have cached Python imports that show wrong version
+    function fixNavbarTitle(currentVersion) {
+        // Pattern to match "VISTA X.Y.Z" or "VISTA main" or "VISTA develop"
+        const versionPattern = /VISTA\s+(\d+\.\d+\.\d+|main|develop)/g;
+        const replacement = 'VISTA ' + currentVersion;
+
+        // Fix the page title
+        if (document.title.match(versionPattern)) {
+            document.title = document.title.replace(versionPattern, replacement);
+        }
+
+        // Fix the sidebar brand text (Furo theme)
+        const brandElements = document.querySelectorAll('.sidebar-brand-text, .brand');
+        brandElements.forEach(el => {
+            if (el.textContent.match(versionPattern)) {
+                el.textContent = el.textContent.replace(versionPattern, replacement);
+            }
+        });
+
+        // Fix any other elements that might contain the version
+        const headerTitle = document.querySelector('.sidebar-brand');
+        if (headerTitle) {
+            const textNodes = [];
+            const walk = document.createTreeWalker(headerTitle, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while (node = walk.nextNode()) {
+                if (node.textContent.match(versionPattern)) {
+                    node.textContent = node.textContent.replace(versionPattern, replacement);
+                }
+            }
+        }
+    }
+
     // Fetch versions.json and initialize
     function init() {
-        const baseUrl = getBaseUrl();
-        const versionsUrl = baseUrl + 'versions.json';
+        const urlInfo = parseUrl();
+
+        if (!urlInfo.currentVersion) {
+            console.log('Version selector: Could not detect current version from URL');
+            return;
+        }
+
+        // Always fix the navbar title based on URL version
+        fixNavbarTitle(urlInfo.currentVersion);
+
+        const versionsUrl = urlInfo.baseUrl + 'versions.json';
 
         fetch(versionsUrl)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('versions.json not found');
+                    throw new Error('versions.json not found at ' + versionsUrl);
                 }
                 return response.json();
             })
             .then(versions => {
                 if (versions && versions.length > 1) {
-                    createVersionSelector(versions);
+                    createVersionSelector(versions, urlInfo);
                 }
             })
             .catch(error => {

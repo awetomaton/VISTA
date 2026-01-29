@@ -22,7 +22,7 @@ To load imagery in the VISTA GUI:
 2. Select an HDF5 file (``.h5`` or ``.hdf5``)
 3. VISTA will automatically detect the format and load all sensors and imagery
 
-.. image:: /_static/images/user_guide_imagery_loading.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_loading.gif
    :alt: Loading imagery
    :align: center
 
@@ -620,7 +620,7 @@ Pan and Zoom
 * Left-click and drag on the imagery viewer to pan.
 * Use scroll-wheel to zoom. Reset view using the context menu (right-click) and press "View All" or click the "A" in the lower-left of the imagery viewer.
 
-.. image:: /_static/images/user_guide_imagery_zoom_pan.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_zoom_pan.gif
    :alt: imagery zoom / pan
    :align: center
 
@@ -636,7 +636,7 @@ Histogram
 * Right click on the histogram and press "View All" to reset histogram view
 * Click and drag empty area of histogram to pan left and right
 
-.. image:: /_static/images/user_guide_imagery_histogram.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_histogram.gif
    :alt: Imagery histogram
    :align: center
 
@@ -650,7 +650,7 @@ Playback
 * Check the "Bounce" checkbox to enable setting frames to bounce between. 
 * Adjust the player's objective Frames-Per-Second (FPS) using the FPS input or dial.
 
-.. image:: /_static/images/user_guide_imagery_playback.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_playback.gif
    :alt: Imagery playback
    :align: center
 
@@ -665,7 +665,7 @@ Tooltips
 * Select the pixel details tooltip to view the row, column, counts for the hovered location in the imagery. The tooltip 
   gives counts for the nearest hovered pixel.
 
-.. image:: /_static/images/user_guide_imagery_tooltips.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_tooltips.gif
    :alt: Imagery tooltips
    :align: center
 
@@ -704,7 +704,7 @@ Background Removal
    Separates low-rank background from sparse foreground using robust PCA.
    Access via **Algorithms → Background Removal → Robust PCA**
 
-.. image:: /_static/images/user_guide_imagery_background_removal.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_background_removal.gif
    :alt: Background removal
    :align: center
 
@@ -715,7 +715,7 @@ Enhancement
    Improves SNR by averaging multiple frames.
    Access via **Algorithms → Enhancement → Coadd Frames**
 
-.. image:: /_static/images/user_guide_imagery_enhancement.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_enhancement.gif
    :alt: Enhancement
    :align: center
 
@@ -732,7 +732,7 @@ To save imagery with all metadata and calibration:
 3. Choose output filename
 4. File is saved in 1.7 HDF5 format with all associated data
 
-.. image:: /_static/images/user_guide_imagery_export.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_export.gif
    :alt: Imagery export
    :align: center
 

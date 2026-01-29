@@ -60,7 +60,7 @@ To create a track manually by clicking points across frames:
    - Re-click a point to remove it
 6. Uncheck the **Manual Track** tool to complete the track.
 
-.. image:: /_static/images/user_guide_tracks_create.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_create.gif
    :alt: Create track
    :align: center
 
@@ -92,7 +92,7 @@ Tracking Algorithms
 VISTA provides four tracking algorithms for automatically linking detections into tracks. Access these through 
 **Algorithms > Tracking** in the main menu.
 
-.. image:: /_static/images/user_guide_tracks_trackers.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_trackers.gif
    :alt: Run trackers
    :align: center
 
@@ -379,7 +379,7 @@ Apply property changes to multiple selected tracks:
 3. Set the **Value** using the appropriate control
 4. Click **Apply to Selected**
 
-.. image:: /_static/images/user_guide_tracks_bulk.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_bulk.gif
    :alt: Bulk track actions
    :align: center
 
@@ -419,7 +419,7 @@ To combine multiple tracks into one:
 4. Points are automatically sorted by frame number
 5. Original tracks are preserved
 
-.. image:: /_static/images/user_guide_tracks_merge.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_merge.gif
    :alt: Bulk track actions
    :align: center
 
@@ -444,7 +444,7 @@ Plot Track Details
 ~~~~~~~~~~~~~~~~~~
 Open plotting windows showing track details as a static plot or animated over time.
 
-.. .. image:: /_static/images/user_guide_tracks_detail_plots.gif
+.. .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_detail_plots.gif
 ..    :alt: Track detail plots
 ..    :align: center
 
@@ -463,7 +463,7 @@ To split a track at a specific frame:
 2. Navigate to the frame number where the split should occur
 3. Click **Split Track**
 
-.. image:: /_static/images/user_guide_tracks_split.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_split.gif
    :alt: Split track
    :align: center
 
@@ -488,7 +488,7 @@ Interactive track editing allows manual refinement:
 
 4. Uncheck **Edit Track** to complete edited track
 
-.. image:: /_static/images/user_guide_tracks_edit.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_edit.gif
    :alt: Split track
    :align: center
 
@@ -515,7 +515,7 @@ For each track point, extraction:
 3. Computes local noise statistics from background annulus
 4. Optionally updates track coordinates to signal blob centroid
 
-.. image:: /_static/images/user_guide_tracks_extraction.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_extraction.gif
    :alt: Extract tracks
    :align: center
 
@@ -582,7 +582,7 @@ To manually refine signal masks:
 4. Press **Save Changes** to update extraction metadata
 5. Press **Cancel** or press Escape to discard changes
 
-.. image:: /_static/images/user_guide_tracks_edit_extraction.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_edit_extraction.gif
    :alt: Edit extracted tracks
    :align: center
 
@@ -609,7 +609,7 @@ Track uncertainty represents the estimated position error for each track point, 
 - Interpolation or extrapolation uncertainty
 - Sensor geolocation accuracy
 
-.. image:: /_static/images/user_guide_tracks_covariance.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_covariance.gif
    :alt: Track covariance
    :align: center
 
@@ -676,7 +676,7 @@ Track Analysis and Refinement
 VISTA provides several algorithms for analyzing and refining track trajectories, accessible through
 **Algorithms > Track Analysis** in the main menu.
 
-.. image:: /_static/images/user_guide_tracks_interpolate.gif
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_interpolate.gif
    :alt: Interpolate tracks
    :align: center
 
