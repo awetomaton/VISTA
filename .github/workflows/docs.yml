@@ -57,8 +57,41 @@ jobs:
           # The {git_root} placeholder is replaced with the temp checkout path
           SPH_MV_PRE_BUILD_COMMAND: "pip install -q -e {git_root}"
 
-      - name: Create version selector redirect
+      - name: Copy version selector to all versions
         run: |
+          # Copy the latest version-selector.js to all version directories
+          # This ensures old versions get the dynamic version selector
+          LATEST_JS="docs/build/html/main/_static/version-selector.js"
+          if [ -f "$LATEST_JS" ]; then
+            for dir in docs/build/html/*/; do
+              if [ -d "${dir}_static" ]; then
+                cp "$LATEST_JS" "${dir}_static/version-selector.js"
+                echo "Copied version-selector.js to ${dir}_static/"
+              fi
+            done
+          fi
+
+      - name: Generate versions.json and redirect
+        run: |
+          # Generate versions.json from the built directories
+          cd docs/build/html
+          echo '[' > versions.json
+          first=true
+          for dir in */; do
+            dir_name="${dir%/}"
+            # Skip if not a version directory (e.g., _static, _sources)
+            if [[ "$dir_name" != _* ]]; then
+              if [ "$first" = true ]; then
+                first=false
+              else
+                echo ',' >> versions.json
+              fi
+              echo "  {\"name\": \"$dir_name\", \"url\": \"./$dir_name/\"}" >> versions.json
+            fi
+          done
+          echo ']' >> versions.json
+          cd -
+
           # Create index.html that redirects to latest stable version
           cat > docs/build/html/index.html << 'EOF'
           <!DOCTYPE html>
