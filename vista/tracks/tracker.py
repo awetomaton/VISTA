@@ -1,6 +1,7 @@
+import uuid
 import pandas as pd
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Union
 from vista.tracks.track import Track
 
@@ -9,6 +10,16 @@ from vista.tracks.track import Track
 class Tracker:
     name: str
     tracks: List[Track]
+    uuid: str = field(init=False, default=None)
+
+    def __post_init__(self):
+        """Initialize UUID if not already set"""
+        if self.uuid is None:
+            self.uuid = uuid.uuid4()
+
+    def __eq__(self, other):
+        """Compare Trackers based on UUID"""
+        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
 
     def __str__(self):
         return self.__repr__()

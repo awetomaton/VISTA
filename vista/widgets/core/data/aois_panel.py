@@ -72,7 +72,7 @@ class AOIsPanel(QWidget):
 
             # Name (editable)
             name_item = QTableWidgetItem(aoi.name)
-            name_item.setData(Qt.ItemDataRole.UserRole, id(aoi))  # Store AOI ID
+            name_item.setData(Qt.ItemDataRole.UserRole, aoi.uuid)  # Store AOI UUID
             self.aois_table.setItem(row, 0, name_item)
 
             # Bounds (read-only)
@@ -103,12 +103,12 @@ class AOIsPanel(QWidget):
         if column == 0:  # Name column
             item = self.aois_table.item(row, column)
             if item:
-                aoi_id = item.data(Qt.ItemDataRole.UserRole)
+                aoi_uuid = item.data(Qt.ItemDataRole.UserRole)
                 new_name = item.text()
 
                 # Find the AOI and update its name
                 for aoi in self.viewer.aois:
-                    if id(aoi) == aoi_id:
+                    if aoi.uuid == aoi_uuid:
                         aoi.name = new_name
                         self.viewer.update_aoi_display(aoi)
                         break
@@ -124,10 +124,10 @@ class AOIsPanel(QWidget):
         for row in selected_rows:
             name_item = self.aois_table.item(row, 0)  # Name column
             if name_item:
-                aoi_id = name_item.data(Qt.ItemDataRole.UserRole)
-                # Find the AOI by ID
+                aoi_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the AOI by UUID
                 for aoi in self.viewer.aois:
-                    if id(aoi) == aoi_id:
+                    if aoi.uuid == aoi_uuid:
                         aois_to_delete.append(aoi)
                         break
 
@@ -152,10 +152,10 @@ class AOIsPanel(QWidget):
         for row in selected_rows:
             name_item = self.aois_table.item(row, 0)  # Name column
             if name_item:
-                aoi_id = name_item.data(Qt.ItemDataRole.UserRole)
-                # Find the AOI by ID
+                aoi_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the AOI by UUID
                 for aoi in self.viewer.aois:
-                    if id(aoi) == aoi_id:
+                    if aoi.uuid == aoi_uuid:
                         aois_to_export.append(aoi)
                         break
 

@@ -71,7 +71,7 @@ class ImageryPanel(QWidget):
             # Name (editable)
             name_item = QTableWidgetItem(imagery.name)
             name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
-            name_item.setData(Qt.ItemDataRole.UserRole, id(imagery))  # Store imagery ID
+            name_item.setData(Qt.ItemDataRole.UserRole, imagery.uuid)  # Store imagery UUID
             self.imagery_table.setItem(row, 0, name_item)
 
             # Frames (not editable)
@@ -94,13 +94,13 @@ class ImageryPanel(QWidget):
 
         if selected_rows:
             row = selected_rows[0]
-            # Get the imagery ID from the name item
+            # Get the imagery UUID from the name item
             name_item = self.imagery_table.item(row, 0)
             if name_item:
-                imagery_id = name_item.data(Qt.ItemDataRole.UserRole)
-                # Find the imagery by ID
+                imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the imagery by UUID
                 for imagery in self.viewer.imageries:
-                    if id(imagery) == imagery_id:
+                    if imagery.uuid == imagery_uuid:
                         self.viewer.select_imagery(imagery)
                         # Update frame range in main window
                         self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
@@ -112,12 +112,12 @@ class ImageryPanel(QWidget):
         if column == 0:  # Name column
             item = self.imagery_table.item(row, column)
             if item:
-                imagery_id = item.data(Qt.ItemDataRole.UserRole)
+                imagery_uuid = item.data(Qt.ItemDataRole.UserRole)
                 new_name = item.text()
 
                 # Find the imagery and update its name
                 for imagery in self.viewer.imageries:
-                    if id(imagery) == imagery_id:
+                    if imagery.uuid == imagery_uuid:
                         imagery.name = new_name
                         self.data_changed.emit()
                         break

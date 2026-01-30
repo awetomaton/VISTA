@@ -88,8 +88,8 @@ class ImageryViewer(QWidget):
         self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
-        # Use id(object) as key since dataclass objects are not hashable
-        self.detector_plot_items = {}  # id(detector) -> ScatterPlotItem
+        # Use UUID as key for reliable object identification
+        self.detector_plot_items = {}  # detector.uuid -> ScatterPlotItem
         self.track_path_items = {}  # track.uuid -> PlotCurveItem (for track path)
         self.track_marker_items = {}  # track.uuid -> ScatterPlotItem (for current position)
         self.track_uncertainty_items = {}  # track.uuid -> list of QGraphicsEllipseItem (for uncertainty ellipses)
@@ -473,23 +473,23 @@ class ImageryViewer(QWidget):
         frame_num = self.current_frame_number
 
         # Clean up orphaned detector plot items (detectors that have been removed)
-        current_detector_ids = {id(detector) for detector in self.detectors}
-        orphaned_detector_ids = set(self.detector_plot_items.keys()) - current_detector_ids
-        for orphaned_id in orphaned_detector_ids:
-            scatter = self.detector_plot_items[orphaned_id]
+        current_detector_uuids = {detector.uuid for detector in self.detectors}
+        orphaned_detector_uuids = set(self.detector_plot_items.keys()) - current_detector_uuids
+        for orphaned_uuid in orphaned_detector_uuids:
+            scatter = self.detector_plot_items[orphaned_uuid]
             self.plot_item.removeItem(scatter)
-            del self.detector_plot_items[orphaned_id]
+            del self.detector_plot_items[orphaned_uuid]
 
         # Update detections for current frame
         for detector in self.detectors:
             # Get or create plot item for this detector
-            detector_id = id(detector)
-            if detector_id not in self.detector_plot_items:
+            detector_uuid = detector.uuid
+            if detector_uuid not in self.detector_plot_items:
                 scatter = pg.ScatterPlotItem()
                 self.plot_item.addItem(scatter)
-                self.detector_plot_items[detector_id] = scatter
+                self.detector_plot_items[detector_uuid] = scatter
 
-            scatter = self.detector_plot_items[detector_id]
+            scatter = self.detector_plot_items[detector_uuid]
 
             # Filter by sensor if one is selected
             if self.selected_sensor is not None and detector.sensor != self.selected_sensor:

@@ -90,10 +90,14 @@ class Sensor:
             self.uuid = uuid.uuid4()
         self._added_imagery_uuids = []
         self._imagery_frames_dataframe = pd.DataFrame({
-            "frames": pd.Series([], dtype=int), 
+            "frames": pd.Series([], dtype=int),
             "times": pd.Series([], dtype='datetime64[ns]')
         })
-    
+
+    def __eq__(self, other):
+        """Compare Sensors based on UUID"""
+        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
+
     def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
         """
         Get all unique imagery frames and corresponding times in increasing order.

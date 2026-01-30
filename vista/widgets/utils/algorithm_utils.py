@@ -117,17 +117,22 @@ def populate_detector_list_by_sensor(list_widget, viewer):
     Parameters
     ----------
     list_widget : QListWidget
-        QListWidget to populate with detector names
+        QListWidget to populate with detector names (with UUID stored in UserRole)
     viewer : VISTA
         VISTA viewer object containing detectors and selected_sensor
     """
+    from PyQt6.QtWidgets import QListWidgetItem
+    from PyQt6.QtCore import Qt
+
     list_widget.clear()
 
     selected_sensor = viewer.selected_sensor
     for detector in viewer.detectors:
         # Only add detectors from the selected sensor (or all if no sensor selected)
         if selected_sensor is None or detector.sensor == selected_sensor:
-            list_widget.addItem(detector.name)
+            item = QListWidgetItem(detector.name)
+            item.setData(Qt.ItemDataRole.UserRole, detector.uuid)  # Store detector UUID
+            list_widget.addItem(item)
 
 
 def format_exception_with_traceback(exception, prefix="Error"):

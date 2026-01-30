@@ -62,7 +62,7 @@ class SensorsPanel(QWidget):
             # Name (not editable)
             name_item = QTableWidgetItem(sensor.name)
             name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            name_item.setData(Qt.ItemDataRole.UserRole, id(sensor))  # Store sensor ID
+            name_item.setData(Qt.ItemDataRole.UserRole, sensor.uuid)  # Store sensor UUID
             self.sensors_table.setItem(row, 0, name_item)
 
             # Geolocation capability (checkmark or empty)
@@ -163,10 +163,10 @@ class SensorsPanel(QWidget):
             # Delete all detectors for this sensor
             detectors_to_delete = [detector for detector in self.viewer.detectors if detector.sensor == sensor]
             for detector in detectors_to_delete:
-                detector_id = id(detector)
-                if detector_id in self.viewer.detector_plot_items:
-                    self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_id])
-                    del self.viewer.detector_plot_items[detector_id]
+                detector_uuid = detector.uuid
+                if detector_uuid in self.viewer.detector_plot_items:
+                    self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_uuid])
+                    del self.viewer.detector_plot_items[detector_uuid]
             self.viewer.detectors = [detector for detector in self.viewer.detectors if detector.sensor != sensor]
 
             # Delete sensor

@@ -1,4 +1,5 @@
 """AOI (Area of Interest) / ROI (Region of Interest) data model"""
+import uuid
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -21,6 +22,7 @@ class AOI:
     height: float  # Height of rectangle
     visible: bool = True
     color: str = 'y'  # Yellow by default
+    uuid: str = field(init=False, default=None)
 
     # PyQtGraph ROI item (not serialized)
     _roi_item: Optional[pg.RectROI] = field(default=None, init=False, repr=False)
@@ -30,6 +32,12 @@ class AOI:
         """Ensure name is unique by adding a counter if needed"""
         if not self.name:
             self.name = "AOI"
+        if self.uuid is None:
+            self.uuid = uuid.uuid4()
+
+    def __eq__(self, other):
+        """Compare AOIs based on UUID"""
+        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
 
     def update_from_roi(self, roi_item: pg.RectROI):
         """
@@ -98,7 +106,7 @@ class AOI:
         -------
         dict
             Dictionary containing all AOI attributes:
-            name, x, y, width, height, visible, and color.
+            name, x, y, width, height, visible, color, and uuid.
         """
         return {
             'name': self.name,
@@ -107,7 +115,8 @@ class AOI:
             'width': self.width,
             'height': self.height,
             'visible': self.visible,
-            'color': self.color
+            'color': self.color,
+            'uuid': str(self.uuid)
         }
 
     @classmethod
@@ -119,14 +128,14 @@ class AOI:
         ----------
         data : dict
             Dictionary containing AOI attributes. Must include: name, x, y,
-            width, height. Optional: visible, color.
+            width, height. Optional: visible, color, uuid.
 
         Returns
         -------
         AOI
             New AOI instance created from the dictionary data.
         """
-        return cls(
+        aoi = cls(
             name=data['name'],
             x=data['x'],
             y=data['y'],
@@ -135,6 +144,10 @@ class AOI:
             visible=data.get('visible', True),
             color=data.get('color', 'y')
         )
+        # Restore UUID if present, otherwise a new one will be generated
+        if 'uuid' in data:
+            aoi.uuid = data['uuid']
+        return aoi
 
     def to_dataframe(self) -> pd.DataFrame:
         """

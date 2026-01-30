@@ -228,9 +228,9 @@ class BaseTrackingDialog(QDialog):
         # Get selected detectors
         selected_detectors = []
         for item in selected_items:
-            detector_name = item.text()
+            detector_uuid = item.data(Qt.ItemDataRole.UserRole)
             for detector in self.viewer.detectors:
-                if detector.name == detector_name:
+                if detector.uuid == detector_uuid:
                     selected_detectors.append(detector)
                     break
 
@@ -269,9 +269,9 @@ class BaseTrackingDialog(QDialog):
         selected_items = self.detector_list.selectedItems()
         sensor = None
         for item in selected_items:
-            detector_name = item.text()
+            detector_uuid = item.data(Qt.ItemDataRole.UserRole)
             for detector in self.viewer.detectors:
-                if detector.name == detector_name:
+                if detector.uuid == detector_uuid:
                     sensor = detector.sensor
                     break
             if sensor is not None:

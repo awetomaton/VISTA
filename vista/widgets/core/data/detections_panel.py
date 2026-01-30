@@ -299,7 +299,7 @@ class DetectionsPanel(QWidget):
 
                     # Name
                     name_item = QTableWidgetItem(str(detector.name))
-                    name_item.setData(Qt.ItemDataRole.UserRole, id(detector))  # Store detector ID
+                    name_item.setData(Qt.ItemDataRole.UserRole, detector.uuid)  # Store detector UUID
                     self.detections_table.setItem(row, 1, name_item)
 
                     # Labels - show unique labels for this detector (across all detections)
@@ -722,14 +722,14 @@ class DetectionsPanel(QWidget):
         if not name_item:
             return
 
-        detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-        if not detector_id:
+        detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+        if not detector_uuid:
             return
 
-        # Find the detector by ID
+        # Find the detector by UUID
         detector = None
         for d in self.viewer.detectors:
-            if id(d) == detector_id:
+            if d.uuid == detector_uuid:
                 detector = d
                 break
 
@@ -863,14 +863,14 @@ class DetectionsPanel(QWidget):
         if not selected_rows:
             return  # Silently return - bulk actions only apply when detectors are selected
 
-        # Capture IDs of selected detectors before refresh
-        selected_detector_ids = set()
+        # Capture UUIDs of selected detectors before refresh
+        selected_detector_uuids = set()
         for row in selected_rows:
             name_item = self.detections_table.item(row, 1)  # Name column
             if name_item:
-                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-                if detector_id:
-                    selected_detector_ids.add(detector_id)
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_uuid:
+                    selected_detector_uuids.add(detector_uuid)
 
         # Apply to all selected detectors
         for row in selected_rows:
@@ -880,12 +880,12 @@ class DetectionsPanel(QWidget):
             if not name_item:
                 continue
 
-            detector_id = name_item.data(Qt.ItemDataRole.UserRole)
+            detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
 
-            # Find the detector by ID
+            # Find the detector by UUID
             detector = None
             for d in self.viewer.detectors:
-                if id(d) == detector_id:
+                if d.uuid == detector_uuid:
                     detector = d
                     break
 
@@ -916,20 +916,20 @@ class DetectionsPanel(QWidget):
         self.refresh_detections_table()
 
         # Restore selection after refresh
-        if selected_detector_ids:
-            self._select_detectors_by_id(selected_detector_ids)
+        if selected_detector_uuids:
+            self._select_detectors_by_uuid(selected_detector_uuids)
 
         self.viewer.update_overlays()  # Refresh viewer to show changes
         self.data_changed.emit()
 
-    def _select_detectors_by_id(self, detector_ids):
-        """Restore detector selection by their IDs"""
+    def _select_detectors_by_uuid(self, detector_uuids):
+        """Restore detector selection by their UUIDs"""
         self.detections_table.clearSelection()
         for row in range(self.detections_table.rowCount()):
             name_item = self.detections_table.item(row, 1)
             if name_item:
-                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-                if detector_id in detector_ids:
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_uuid in detector_uuids:
                     self.detections_table.selectRow(row)
 
     def toggle_selected_detections_visibility(self):
@@ -945,10 +945,10 @@ class DetectionsPanel(QWidget):
         for row in selected_rows:
             name_item = self.detections_table.item(row, 1)  # Name column
             if name_item:
-                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-                if detector_id:
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_uuid:
                     for detector in self.viewer.detectors:
-                        if id(detector) == detector_id:
+                        if detector.uuid == detector_uuid:
                             selected_detectors.append(detector)
                             break
 
@@ -976,29 +976,29 @@ class DetectionsPanel(QWidget):
 
         # Collect detectors from selected rows using ID-based lookup
         for row in selected_rows:
-            # Get the detector ID from the name item
+            # Get the detector UUID from the name item
             name_item = self.detections_table.item(row, 1)  # Name column
             if name_item:
-                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-                if detector_id:
-                    # Find the detector by ID
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_uuid:
+                    # Find the detector by UUID
                     for detector in self.viewer.detectors:
-                        if id(detector) == detector_id:
+                        if detector.uuid == detector_uuid:
                             detectors_to_delete.append(detector)
                             break
 
         # Delete the detectors
-        detectors_to_delete_ids = set(id(d) for d in detectors_to_delete)
+        detectors_to_delete_uuids = set(d.uuid for d in detectors_to_delete)
 
-        # Remove from viewer list (use id comparison to avoid numpy array comparison)
-        self.viewer.detectors = [d for d in self.viewer.detectors if id(d) not in detectors_to_delete_ids]
+        # Remove from viewer list (use uuid comparison to avoid numpy array comparison)
+        self.viewer.detectors = [d for d in self.viewer.detectors if d.uuid not in detectors_to_delete_uuids]
 
         # Remove plot items from viewer
         for detector in detectors_to_delete:
-            detector_id = id(detector)
-            if detector_id in self.viewer.detector_plot_items:
-                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_id])
-                del self.viewer.detector_plot_items[detector_id]
+            detector_uuid = detector.uuid
+            if detector_uuid in self.viewer.detector_plot_items:
+                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_uuid])
+                del self.viewer.detector_plot_items[detector_uuid]
 
         # Refresh table
         self.refresh_detections_table()
@@ -1043,11 +1043,11 @@ class DetectionsPanel(QWidget):
                 return
 
             # Find the detector
-            detector_id = detector_name_item.data(Qt.ItemDataRole.UserRole)
+            detector_uuid = detector_name_item.data(Qt.ItemDataRole.UserRole)
 
             detector = None
             for d in self.viewer.detectors:
-                if id(d) == detector_id:
+                if d.uuid == detector_uuid:
                     detector = d
                     break
 
@@ -1104,10 +1104,10 @@ class DetectionsPanel(QWidget):
         for row in selected_rows:
             name_item = self.detections_table.item(row, 1)  # Name column
             if name_item:
-                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-                if detector_id:
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_uuid:
                     for detector in self.viewer.detectors:
-                        if id(detector) == detector_id:
+                        if detector.uuid == detector_uuid:
                             selected_detectors.append(detector)
                             break
 
@@ -1220,11 +1220,11 @@ class DetectionsPanel(QWidget):
             for row in selected_rows:
                 detector_name_item = self.detections_table.item(row, 1)
                 if detector_name_item:
-                    detector_id = detector_name_item.data(Qt.ItemDataRole.UserRole)
+                    detector_uuid = detector_name_item.data(Qt.ItemDataRole.UserRole)
 
                     # Find the detector
                     for detector in self.viewer.detectors:
-                        if id(detector) == detector_id:
+                        if detector.uuid == detector_uuid:
                             detectors_to_copy.append(detector)
                             break
 
@@ -1333,15 +1333,15 @@ class DetectionsPanel(QWidget):
         # Group indices by detector
         detector_indices = {}
         for detector, frame, index in self.selected_detections:
-            if id(detector) not in detector_indices:
-                detector_indices[id(detector)] = {'detector': detector, 'indices': []}
-            detector_indices[id(detector)]['indices'].append(index)
+            if detector.uuid not in detector_indices:
+                detector_indices[detector.uuid] = {'detector': detector, 'indices': []}
+            detector_indices[detector.uuid]['indices'].append(index)
 
         # Delete points from each detector (in reverse order to preserve indices)
         total_deleted = 0
         detectors_to_remove = []
 
-        for detector_id, data in detector_indices.items():
+        for detector_uuid, data in detector_indices.items():
             detector = data['detector']
             indices_to_delete = sorted(data['indices'], reverse=True)
 
@@ -1443,14 +1443,24 @@ class DetectionsPanel(QWidget):
         # Create or find a tracker for manually created tracks
         tracker_name = "Manual Tracks from Detections"
         manual_tracker = None
-        for tracker in self.viewer.trackers:
-            if tracker.name == tracker_name:
-                manual_tracker = tracker
-                break
 
+        # Try to find existing manual tracker by checking if it has the expected name
+        # and was created by this feature (stores UUID in viewer for persistence)
+        if not hasattr(self.viewer, '_manual_tracker_uuid'):
+            self.viewer._manual_tracker_uuid = None
+
+        # First try to find by UUID if we have one stored
+        if self.viewer._manual_tracker_uuid:
+            for tracker in self.viewer.trackers:
+                if tracker.uuid == self.viewer._manual_tracker_uuid:
+                    manual_tracker = tracker
+                    break
+
+        # If not found by UUID, create a new one
         if manual_tracker is None:
             manual_tracker = Tracker(name=tracker_name, tracks=[])
             self.viewer.add_tracker(manual_tracker)
+            self.viewer._manual_tracker_uuid = manual_tracker.uuid
 
         manual_tracker.tracks.append(track)
 
@@ -1636,10 +1646,10 @@ class DetectionsPanel(QWidget):
         for row in selected_rows:
             name_item = self.detections_table.item(row, 1)  # Name column
             if name_item:
-                detector_id = name_item.data(Qt.ItemDataRole.UserRole)
-                if detector_id:
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                if detector_uuid:
                     for detector in self.viewer.detectors:
-                        if id(detector) == detector_id:
+                        if detector.uuid == detector_uuid:
                             detectors_to_merge.append(detector)
                             break
 
@@ -1651,10 +1661,10 @@ class DetectionsPanel(QWidget):
             )
             return
 
-        # Check that all detectors are from the same sensor (compare by identity)
+        # Check that all detectors are from the same sensor (compare by UUID)
         first_detector = detectors_to_merge[0]
         sensor = first_detector.sensor
-        if not all(d.sensor is sensor for d in detectors_to_merge):
+        if not all(d.sensor == sensor for d in detectors_to_merge):
             QMessageBox.warning(
                 self,
                 "Cannot Merge",
@@ -1709,15 +1719,15 @@ class DetectionsPanel(QWidget):
         self.viewer.add_detector(merged_detector)
 
         # Delete the original detectors
-        detectors_to_delete_ids = set(id(d) for d in detectors_to_merge)
-        self.viewer.detectors = [d for d in self.viewer.detectors if id(d) not in detectors_to_delete_ids]
+        detectors_to_delete_uuids = set(d.uuid for d in detectors_to_merge)
+        self.viewer.detectors = [d for d in self.viewer.detectors if d.uuid not in detectors_to_delete_uuids]
 
         # Remove plot items from viewer
         for detector in detectors_to_merge:
-            detector_id = id(detector)
-            if detector_id in self.viewer.detector_plot_items:
-                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_id])
-                del self.viewer.detector_plot_items[detector_id]
+            detector_uuid = detector.uuid
+            if detector_uuid in self.viewer.detector_plot_items:
+                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_uuid])
+                del self.viewer.detector_plot_items[detector_uuid]
 
         # Refresh table
         self.refresh_detections_table()

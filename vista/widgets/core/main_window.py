@@ -692,7 +692,7 @@ class VistaMainWindow(QMainWindow):
     def on_imagery_loaded(self, imagery, sensor):
         """Handle imagery loaded in background thread"""
         # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries if img.sensor is sensor]
+        existing_names = [img.name for img in self.viewer.imageries if img.sensor == sensor]
         if imagery.name in existing_names:
             QMessageBox.critical(
                 self,
@@ -704,10 +704,10 @@ class VistaMainWindow(QMainWindow):
             self.statusBar().showMessage(f"Failed to load imagery: duplicate name '{imagery.name}'", 5000)
             return
 
-        # Handle sensor - check if sensor with same name already exists
+        # Handle sensor - check if sensor with same UUID already exists
         existing_sensor = None
         for s in self.viewer.sensors:
-            if s.name == sensor.name:
+            if s == sensor:  # Use UUID-based equality
                 existing_sensor = s
                 break
 
@@ -1599,7 +1599,7 @@ class VistaMainWindow(QMainWindow):
     def on_multiple_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that produce multiple imagery"""
         # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
+        existing_names = [img.name for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
         processed_imagery = [imagery for imagery in processed_imagery if imagery.images.size != 0]
         if len(processed_imagery) == 0:
             return
@@ -1634,7 +1634,7 @@ class VistaMainWindow(QMainWindow):
         # Check for duplicate imagery name
         if processed_imagery.images.size == 0:
             return
-        existing_names = [img.name for img in self.viewer.imageries if img.sensor is self.viewer.selected_sensor]
+        existing_names = [img.name for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
         if processed_imagery.name in existing_names:
             QMessageBox.critical(
                 self,
@@ -1973,12 +1973,12 @@ class VistaMainWindow(QMainWindow):
             if not tracker_item or not track_name_item:
                 continue
 
-            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            tracker_uuid = tracker_item.data(Qt.ItemDataRole.UserRole)
             track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
             for tracker in self.viewer.trackers:
-                if id(tracker) == tracker_id:
+                if tracker.uuid == tracker_uuid:
                     for t in tracker.tracks:
                         if t.uuid == track_uuid:
                             selected_tracks.append(t)
@@ -2066,12 +2066,12 @@ class VistaMainWindow(QMainWindow):
             if not tracker_item or not track_name_item:
                 continue
 
-            tracker_id = tracker_item.data(Qt.ItemDataRole.UserRole)
+            tracker_uuid = tracker_item.data(Qt.ItemDataRole.UserRole)
             track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
             for tracker in self.viewer.trackers:
-                if id(tracker) == tracker_id:
+                if tracker.uuid == tracker_uuid:
                     for t in tracker.tracks:
                         if t.uuid == track_uuid:
                             selected_tracks.append(t)
@@ -2157,10 +2157,10 @@ class VistaMainWindow(QMainWindow):
             sensors_list = [sensors] if isinstance(sensors, Sensor) else sensors
 
             for sensor in sensors_list:
-                # Check if sensor with same name already exists
+                # Check if sensor with same UUID already exists
                 existing_sensor = None
                 for s in self.viewer.sensors:
-                    if s.name == sensor.name:
+                    if s == sensor:  # Use UUID-based equality
                         existing_sensor = s
                         break
 
@@ -2178,7 +2178,7 @@ class VistaMainWindow(QMainWindow):
                 if img.sensor is not None:
                     sensor_exists = False
                     for s in self.viewer.sensors:
-                        if s.name == img.sensor.name:
+                        if s == img.sensor:  # Use UUID-based equality
                             sensor_exists = True
                             # Reuse existing sensor instead of the one from imagery
                             img.sensor = s
