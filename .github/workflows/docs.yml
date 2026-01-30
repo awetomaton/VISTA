@@ -54,17 +54,21 @@ jobs:
         run: |
           # Copy the latest version-selector.js to all version directories
           # This ensures old versions get the dynamic version selector
-          LATEST_JS="docs/build/html/main/_static/version-selector.js"
-          if [ -f "$LATEST_JS" ]; then
-            for dir in docs/build/html/*/; do
-              dir_name=$(basename "$dir")
-              # Skip the main directory (source of the file) to avoid copying to itself
-              if [ "$dir_name" != "main" ] && [ -d "${dir}_static" ]; then
+          # Find the latest version (semantically) by sorting
+          cd docs/build/html
+          LATEST_VERSION=$(ls -d */ 2>/dev/null | sed 's#/##' | grep -E '^\d+\.\d+\.\d+$' | sort -V | tail -1)
+          if [ -n "$LATEST_VERSION" ] && [ -f "${LATEST_VERSION}/_static/version-selector.js" ]; then
+            LATEST_JS="${LATEST_VERSION}/_static/version-selector.js"
+            for dir in */; do
+              dir_name="${dir%/}"
+              # Skip if not a version directory (e.g., _static, _sources) and skip the source directory
+              if [[ "$dir_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [ "$dir_name" != "$LATEST_VERSION" ] && [ -d "${dir}_static" ]; then
                 cp "$LATEST_JS" "${dir}_static/version-selector.js"
-                echo "Copied version-selector.js to ${dir}_static/"
+                echo "Copied version-selector.js from $LATEST_VERSION to ${dir}_static/"
               fi
             done
           fi
+          cd -
 
       - name: Generate versions.json and redirect
         run: |
@@ -75,7 +79,7 @@ jobs:
           for dir in */; do
             dir_name="${dir%/}"
             # Skip if not a version directory (e.g., _static, _sources)
-            if [[ "$dir_name" != _* ]]; then
+            if [[ "$dir_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               if [ "$first" = true ]; then
                 first=false
               else
@@ -85,23 +89,27 @@ jobs:
             fi
           done
           echo ']' >> versions.json
-          cd -
+
+          # Find the latest version (semantically) by sorting
+          LATEST_VERSION=$(ls -d */ 2>/dev/null | sed 's#/##' | grep -E '^\d+\.\d+\.\d+$' | sort -V | tail -1)
 
           # Create index.html that redirects to latest stable version
-          cat > docs/build/html/index.html << 'EOF'
+          cat > index.html << EOF
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="utf-8">
             <title>Redirecting to latest version</title>
-            <meta http-equiv="refresh" content="0; url=./main/index.html">
-            <link rel="canonical" href="./main/index.html">
+            <meta http-equiv="refresh" content="0; url=./$LATEST_VERSION/index.html">
+            <link rel="canonical" href="./$LATEST_VERSION/index.html">
           </head>
           <body>
-            <p>Redirecting to <a href="./main/index.html">latest version</a>...</p>
+            <p>Redirecting to <a href="./$LATEST_VERSION/index.html">latest version ($LATEST_VERSION)</a>...</p>
           </body>
           </html>
           EOF
+
+          cd -
 
       - name: Create .nojekyll file
         run: |

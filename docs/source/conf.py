@@ -178,10 +178,11 @@ todo_include_todos = True
 
 # Whitelist pattern for tags (only tags that match this pattern will be built)
 # Matches tags like: 1.0.0, 1.7.0, 2.0.0 (without 'v' prefix)
-smv_tag_whitelist = r'^\d+\.\d+\.\d+$'
+# Uses negative lookahead to exclude versions 1.7.0 and 1.8.0
+smv_tag_whitelist = r'^(?!1\.[78]\.0$)\d+\.\d+\.\d+$'
 
-# Whitelist pattern for branches
-smv_branch_whitelist = r'^(main|develop)$'
+# Whitelist pattern for branches (empty pattern to exclude all branches)
+smv_branch_whitelist = r'$^'
 
 # Whitelist pattern for remotes
 smv_remote_whitelist = r'^origin$'
