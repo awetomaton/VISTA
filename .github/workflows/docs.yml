@@ -56,7 +56,7 @@ jobs:
           # This ensures old versions get the dynamic version selector
           # Find the latest version (semantically) by sorting
           cd docs/build/html
-          LATEST_VERSION=$(ls -d */ 2>/dev/null | sed 's#/##' | grep -E '^\d+\.\d+\.\d+$' | sort -V | tail -1)
+          LATEST_VERSION=$(ls -d */ 2>/dev/null | sed 's#/##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
           if [ -n "$LATEST_VERSION" ] && [ -f "${LATEST_VERSION}/_static/version-selector.js" ]; then
             LATEST_JS="${LATEST_VERSION}/_static/version-selector.js"
             for dir in */; do
@@ -91,7 +91,7 @@ jobs:
           echo ']' >> versions.json
 
           # Find the latest version (semantically) by sorting
-          LATEST_VERSION=$(ls -d */ 2>/dev/null | sed 's#/##' | grep -E '^\d+\.\d+\.\d+$' | sort -V | tail -1)
+          LATEST_VERSION=$(ls -d */ 2>/dev/null | sed 's#/##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
 
           # Create index.html that redirects to latest stable version
           cat > index.html << EOF
