@@ -19,7 +19,7 @@ from vista.icons import VistaIcons
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.simulate.simulation import Simulation
-from vista.tracks.tracker import Tracker
+from vista.tracks.track import Track
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.settings_dialog import SettingsDialog
 from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
@@ -53,8 +53,8 @@ class VistaMainWindow(QMainWindow):
         ----------
         imagery : Imagery or list of Imagery, optional
             Imagery object(s) to load at startup
-        tracks : Tracker or list of Tracker, optional
-            Tracker object(s) to load at startup
+        tracks : Track or list of Track, optional
+            Track object(s) to load at startup
         detections : Detector or list of Detector, optional
             Detector object(s) to load at startup
         sensors : Sensor or list of Sensor, optional
@@ -527,11 +527,9 @@ class VistaMainWindow(QMainWindow):
             # Finish track creation and add to viewer
             track = self.viewer.finish_track_creation()
             if track is not None:
-                # Add track to a new tracker or existing tracker
-                # For now, create a new tracker for each track
-                tracker_name = f"Manual Track {len(self.viewer.trackers) + 1}"
-                tracker = Tracker(name=tracker_name, tracks=[track])
-                self.viewer.add_tracker(tracker)
+                # Set tracker name and add to viewer
+                track.tracker = "Manual"
+                self.viewer.add_track(track)
                 self.data_manager.refresh()
                 self.statusBar().showMessage(f"Track created: {track.name} with {len(track.frames)} points", 3000)
             else:
@@ -1017,7 +1015,7 @@ class VistaMainWindow(QMainWindow):
             sensor=self.tracks_selected_sensor,
             imagery=self.tracks_selected_imagery
         )
-        self.loader_thread.trackers_loaded.connect(self.on_trackers_loaded)
+        self.loader_thread.tracks_loaded.connect(self.on_tracks_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
@@ -1101,7 +1099,7 @@ class VistaMainWindow(QMainWindow):
                     # Load the simulation data
                     self.load_data_programmatically(
                         imagery=simulation.imagery,
-                        tracks=simulation.trackers,
+                        tracks=simulation.tracks,
                         detections=simulation.detectors,
                         sensors=simulation.imagery.sensor if simulation.imagery else None
                     )
@@ -1121,11 +1119,11 @@ class VistaMainWindow(QMainWindow):
                 )
                 self.statusBar().showMessage("Simulation failed", 3000)
 
-    def on_trackers_loaded(self, trackers):
-        """Handle trackers loaded in background thread"""
-        # Add each tracker to the viewer
-        for tracker in trackers:
-            self.viewer.add_tracker(tracker)
+    def on_tracks_loaded(self, tracks):
+        """Handle tracks loaded in background thread"""
+        # Add tracks to the viewer
+        for track in tracks:
+            self.viewer.add_track(track)
 
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
@@ -1135,8 +1133,9 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager
         self.data_manager.refresh()
 
-        total_tracks = sum(len(tracker.tracks) for tracker in trackers)
-        self.statusBar().showMessage(f"Loaded {len(trackers)} tracker(s) with {total_tracks} track(s)", 3000)
+        # Count unique tracker names
+        tracker_names = set(t.tracker for t in tracks if t.tracker)
+        self.statusBar().showMessage(f"Loaded {len(tracks)} track(s) from {len(tracker_names)} tracker(s)", 3000)
 
     def load_aois_file(self):
         """Load AOIs from CSV file(s) using background thread"""
@@ -1967,22 +1966,17 @@ class VistaMainWindow(QMainWindow):
         # Find the selected tracks
         selected_tracks = []
         for row in selected_rows:
-            tracker_item = self.data_manager.tracks_panel.tracks_table.item(row, 1)  # Tracker column
             track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)  # Track name column
 
-            if not tracker_item or not track_name_item:
+            if not track_name_item:
                 continue
 
-            tracker_uuid = tracker_item.data(Qt.ItemDataRole.UserRole)
             track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
-            for tracker in self.viewer.trackers:
-                if tracker.uuid == tracker_uuid:
-                    for t in tracker.tracks:
-                        if t.uuid == track_uuid:
-                            selected_tracks.append(t)
-                            break
+            for t in self.viewer.tracks:
+                if t.uuid == track_uuid:
+                    selected_tracks.append(t)
                     break
 
         if not selected_tracks:
@@ -2060,22 +2054,17 @@ class VistaMainWindow(QMainWindow):
         # Find the selected tracks
         selected_tracks = []
         for row in selected_rows:
-            tracker_item = self.data_manager.tracks_panel.tracks_table.item(row, 1)  # Tracker column
             track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)  # Track name column
 
-            if not tracker_item or not track_name_item:
+            if not track_name_item:
                 continue
 
-            tracker_uuid = tracker_item.data(Qt.ItemDataRole.UserRole)
             track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
 
             # Find the track
-            for tracker in self.viewer.trackers:
-                if tracker.uuid == tracker_uuid:
-                    for t in tracker.tracks:
-                        if t.uuid == track_uuid:
-                            selected_tracks.append(t)
-                            break
+            for t in self.viewer.tracks:
+                if t.uuid == track_uuid:
+                    selected_tracks.append(t)
                     break
 
         if not selected_tracks:
@@ -2143,8 +2132,8 @@ class VistaMainWindow(QMainWindow):
         ----------
         imagery : Imagery or list of Imagery, optional
             Imagery object(s) to load
-        tracks : Tracker or list of Tracker, optional
-            Tracker object(s) to load
+        tracks : Track or list of Track, optional
+            Track object(s) to load
         detections : Detector or list of Detector, optional
             Detector object(s) to load
         sensors : Sensor or list of Sensor, optional
@@ -2204,10 +2193,10 @@ class VistaMainWindow(QMainWindow):
         # Load tracks
         if tracks is not None:
             # Convert single item to list
-            tracks_list = [tracks] if isinstance(tracks, Tracker) else tracks
+            tracks_list = [tracks] if isinstance(tracks, Track) else tracks
 
-            for tracker in tracks_list:
-                self.viewer.add_tracker(tracker)
+            for track in tracks_list:
+                self.viewer.add_track(track)
 
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
@@ -2230,7 +2219,7 @@ class VistaMainWindow(QMainWindow):
             status_parts.append(f"{count} detector(s)")
         if tracks is not None:
             count = len(tracks_list) if isinstance(tracks_list, list) else 1
-            status_parts.append(f"{count} tracker(s)")
+            status_parts.append(f"{count} track(s)")
 
         if status_parts:
             self.statusBar().showMessage(f"Loaded: {', '.join(status_parts)}", 5000)

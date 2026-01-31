@@ -13,7 +13,6 @@ from vista.features import PlacemarkFeature
 from vista.features import ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
@@ -82,8 +81,7 @@ class ImageryViewer(QWidget):
         self.imageries = []  # List of Imagery objects
         self.imagery = None  # Currently selected imagery for display
         self.detectors = []  # List of Detector objects
-        self.trackers = []  # List of Tracker objects
-        self.tracks = []  # List of Track objects (for compatibility with sensor deletion)
+        self.tracks = []  # List of Track objects
         self.aois = []  # List of AOI objects
         self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
 
@@ -408,11 +406,10 @@ class ImageryViewer(QWidget):
             if len(detector.frames) > 0:
                 all_frames.extend(detector.frames)
 
-        # Collect frames from trackers
-        for tracker in self.trackers:
-            for track in tracker.tracks:
-                if len(track.frames) > 0:
-                    all_frames.extend(track.frames)
+        # Collect frames from tracks
+        for track in self.tracks:
+            if len(track.frames) > 0:
+                all_frames.extend(track.frames)
 
         if len(all_frames) > 0:
             return int(np.min(all_frames)), int(np.max(all_frames))
@@ -546,7 +543,7 @@ class ImageryViewer(QWidget):
                 scatter.setData(x=[], y=[])  # No data at this frame or filtered out
 
         # Clean up orphaned track plot items (tracks that have been removed)
-        current_track_ids = {track.uuid for tracker in self.trackers for track in tracker.tracks}
+        current_track_ids = {track.uuid for track in self.tracks}
         orphaned_track_ids = set(self.track_path_items.keys()) - current_track_ids
         for orphaned_id in orphaned_track_ids:
             if orphaned_id in self.track_path_items:
@@ -561,44 +558,73 @@ class ImageryViewer(QWidget):
                 del self.track_uncertainty_items[orphaned_id]
 
         # Update tracks for current frame
-        for tracker in self.trackers:
-            for track in tracker.tracks:
-                # Get or create plot items for this track
-                track_id = track.uuid
-                if track_id not in self.track_path_items:
-                    path = pg.PlotCurveItem()
-                    marker = pg.ScatterPlotItem()
-                    self.plot_item.addItem(path)
-                    self.plot_item.addItem(marker)
-                    self.track_path_items[track_id] = path
-                    self.track_marker_items[track_id] = marker
+        for track in self.tracks:
+            # Get or create plot items for this track
+            track_id = track.uuid
+            if track_id not in self.track_path_items:
+                path = pg.PlotCurveItem()
+                marker = pg.ScatterPlotItem()
+                self.plot_item.addItem(path)
+                self.plot_item.addItem(marker)
+                self.track_path_items[track_id] = path
+                self.track_marker_items[track_id] = marker
 
-                path = self.track_path_items[track_id]
-                marker = self.track_marker_items[track_id]
+            path = self.track_path_items[track_id]
+            marker = self.track_marker_items[track_id]
 
-                # Filter by sensor if one is selected
-                if self.selected_sensor is not None and track.sensor != self.selected_sensor:
-                    path.setData(x=[], y=[])  # Hide track from different sensor
-                    marker.setData(x=[], y=[])
-                    continue
+            # Filter by sensor if one is selected
+            if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                path.setData(x=[], y=[])  # Hide track from different sensor
+                marker.setData(x=[], y=[])
+                continue
 
-                # Update visibility
-                if not track.visible:
-                    path.setData(x=[], y=[])
-                    marker.setData(x=[], y=[])
-                    continue
+            # Update visibility
+            if not track.visible:
+                path.setData(x=[], y=[])
+                marker.setData(x=[], y=[])
+                continue
 
-                # Check if track is selected for highlighting
-                is_selected = track_id in self.selected_track_ids
-                line_width = track.line_width + 5 if is_selected else track.line_width
-                marker_size = track.marker_size + 5 if is_selected else track.marker_size
+            # Check if track is selected for highlighting
+            is_selected = track_id in self.selected_track_ids
+            line_width = track.line_width + 5 if is_selected else track.line_width
+            marker_size = track.marker_size + 5 if is_selected else track.marker_size
 
-                # If track is marked as complete, show entire track regardless of current frame
-                if track.complete:
-                    rows = track.rows
-                    cols = track.columns
+            # If track is marked as complete, show entire track regardless of current frame
+            if track.complete:
+                rows = track.rows
+                cols = track.columns
 
-                    # Update track path with entire track (only if show_line is True)
+                # Update track path with entire track (only if show_line is True)
+                if track.show_line:
+                    path.setData(
+                        x=cols, y=rows,
+                        pen=track.get_pen(width=line_width)  # Use cached pen
+                    )
+                else:
+                    path.setData(x=[], y=[])  # Hide line
+
+                # Update current position marker (show marker at current frame if it exists)
+                track_data = track.get_track_data_at_frame(frame_num)
+                if track_data is not None:
+                    row, col = track_data
+                    marker.setData(
+                        x=[col], y=[row],
+                        pen=track.get_pen(width=2),  # Use cached pen
+                        brush=track.get_brush(),  # Use cached brush
+                        size=marker_size,
+                        symbol=track.marker
+                    )
+                else:
+                    marker.setData(x=[], y=[])  # No current position
+            else:
+                # Show track history up to current frame using optimized method
+                visible_indices = track.get_visible_indices(frame_num)
+
+                if visible_indices is not None and len(visible_indices) > 0:
+                    rows = track.rows[visible_indices]
+                    cols = track.columns[visible_indices]
+
+                    # Update track path (only if show_line is True)
                     if track.show_line:
                         path.setData(
                             x=cols, y=rows,
@@ -607,7 +633,7 @@ class ImageryViewer(QWidget):
                     else:
                         path.setData(x=[], y=[])  # Hide line
 
-                    # Update current position marker (show marker at current frame if it exists)
+                    # Update current position marker
                     track_data = track.get_track_data_at_frame(frame_num)
                     if track_data is not None:
                         row, col = track_data
@@ -621,122 +647,92 @@ class ImageryViewer(QWidget):
                     else:
                         marker.setData(x=[], y=[])  # No current position
                 else:
-                    # Show track history up to current frame using optimized method
-                    visible_indices = track.get_visible_indices(frame_num)
+                    # Track hasn't started yet
+                    path.setData(x=[], y=[])
+                    marker.setData(x=[], y=[])
 
-                    if visible_indices is not None and len(visible_indices) > 0:
-                        rows = track.rows[visible_indices]
-                        cols = track.columns[visible_indices]
+            # Render uncertainty ellipse for current frame only
+            if track.show_uncertainty and track.has_uncertainty() and track.visible:
+                # Filter by sensor
+                if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                    # Remove ellipse if switching sensors
+                    if track_id in self.track_uncertainty_items:
+                        for item in self.track_uncertainty_items[track_id]:
+                            self.plot_item.removeItem(item)
+                        del self.track_uncertainty_items[track_id]
+                    continue
 
-                        # Update track path (only if show_line is True)
-                        if track.show_line:
-                            path.setData(
-                                x=cols, y=rows,
-                                pen=track.get_pen(width=line_width)  # Use cached pen
-                            )
-                        else:
-                            path.setData(x=[], y=[])  # Hide line
+                # Get track data at current frame
+                track_data = track.get_track_data_at_frame(frame_num)
+                if track_data is not None:
+                    # Get settings
+                    settings = QSettings("Vista", "VistaApp")
+                    uncertainty_style = settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
+                    uncertainty_width = settings.value("tracks/uncertainty_line_width", 1, type=int)
+                    uncertainty_scale = settings.value("tracks/uncertainty_scale", 1.0, type=float)
 
-                        # Update current position marker
-                        track_data = track.get_track_data_at_frame(frame_num)
-                        if track_data is not None:
-                            row, col = track_data
-                            marker.setData(
-                                x=[col], y=[row],
-                                pen=track.get_pen(width=2),  # Use cached pen
-                                brush=track.get_brush(),  # Use cached brush
-                                size=marker_size,
-                                symbol=track.marker
-                            )
-                        else:
-                            marker.setData(x=[], y=[])  # No current position
-                    else:
-                        # Track hasn't started yet
-                        path.setData(x=[], y=[])
-                        marker.setData(x=[], y=[])
+                    # Find index for current frame
+                    track._build_frame_index()
+                    idx = track._frame_index.get(frame_num)
+                    if idx is not None:
+                        row = track.rows[idx]
+                        col = track.columns[idx]
 
-                # Render uncertainty ellipse for current frame only
-                if track.show_uncertainty and track.has_uncertainty() and track.visible:
-                    # Filter by sensor
-                    if self.selected_sensor is not None and track.sensor != self.selected_sensor:
-                        # Remove ellipse if switching sensors
-                        if track_id in self.track_uncertainty_items:
-                            for item in self.track_uncertainty_items[track_id]:
-                                self.plot_item.removeItem(item)
-                            del self.track_uncertainty_items[track_id]
-                        continue
+                        # Get ellipse parameters from covariance matrix
+                        ellipse_params = track.get_uncertainty_ellipse_parameters()
+                        if ellipse_params is not None:
+                            semi_major, semi_minor, rotation_deg = ellipse_params
 
-                    # Get track data at current frame
-                    track_data = track.get_track_data_at_frame(frame_num)
-                    if track_data is not None:
-                        # Get settings
-                        settings = QSettings("Vista", "VistaApp")
-                        uncertainty_style = settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
-                        uncertainty_width = settings.value("tracks/uncertainty_line_width", 1, type=int)
-                        uncertainty_scale = settings.value("tracks/uncertainty_scale", 1.0, type=float)
+                            # Apply uncertainty scale to semi-axes
+                            scaled_semi_major = semi_major[idx] * uncertainty_scale
+                            scaled_semi_minor = semi_minor[idx] * uncertainty_scale
+                            rot = rotation_deg[idx]
 
-                        # Find index for current frame
-                        track._build_frame_index()
-                        idx = track._frame_index.get(frame_num)
-                        if idx is not None:
-                            row = track.rows[idx]
-                            col = track.columns[idx]
-
-                            # Get ellipse parameters from covariance matrix
-                            ellipse_params = track.get_uncertainty_ellipse_parameters()
-                            if ellipse_params is not None:
-                                semi_major, semi_minor, rotation_deg = ellipse_params
-
-                                # Apply uncertainty scale to semi-axes
-                                scaled_semi_major = semi_major[idx] * uncertainty_scale
-                                scaled_semi_minor = semi_minor[idx] * uncertainty_scale
-                                rot = rotation_deg[idx]
-
-                                # Remove old ellipse
-                                if track_id in self.track_uncertainty_items:
-                                    for item in self.track_uncertainty_items[track_id]:
-                                        self.plot_item.removeItem(item)
-
-                                # Create ellipse bounding rectangle
-                                # Center at (col, row), size (2*semi_major, 2*semi_minor)
-                                # Note: QGraphicsEllipseItem expects width/height in axis-aligned orientation
-                                ellipse = QGraphicsEllipseItem(QRectF(
-                                    col - scaled_semi_major, row - scaled_semi_minor,
-                                    2 * scaled_semi_major, 2 * scaled_semi_minor
-                                ))
-
-                                # Set rotation around center
-                                ellipse.setTransformOriginPoint(col, row)
-                                ellipse.setRotation(rot)
-
-                                # Set pen style using track color and uncertainty settings
-                                pen = track.get_pen(width=uncertainty_width, style=uncertainty_style)
-                                ellipse.setPen(pen)
-
-                                # No fill brush (transparent interior)
-                                ellipse.setBrush(pg.mkBrush(None))
-
-                                # Add to plot
-                                self.plot_item.addItem(ellipse)
-                                self.track_uncertainty_items[track_id] = [ellipse]
-                        else:
-                            # No data at current frame, remove ellipse
+                            # Remove old ellipse
                             if track_id in self.track_uncertainty_items:
                                 for item in self.track_uncertainty_items[track_id]:
                                     self.plot_item.removeItem(item)
-                                del self.track_uncertainty_items[track_id]
+
+                            # Create ellipse bounding rectangle
+                            # Center at (col, row), size (2*semi_major, 2*semi_minor)
+                            # Note: QGraphicsEllipseItem expects width/height in axis-aligned orientation
+                            ellipse = QGraphicsEllipseItem(QRectF(
+                                col - scaled_semi_major, row - scaled_semi_minor,
+                                2 * scaled_semi_major, 2 * scaled_semi_minor
+                            ))
+
+                            # Set rotation around center
+                            ellipse.setTransformOriginPoint(col, row)
+                            ellipse.setRotation(rot)
+
+                            # Set pen style using track color and uncertainty settings
+                            pen = track.get_pen(width=uncertainty_width, style=uncertainty_style)
+                            ellipse.setPen(pen)
+
+                            # No fill brush (transparent interior)
+                            ellipse.setBrush(pg.mkBrush(None))
+
+                            # Add to plot
+                            self.plot_item.addItem(ellipse)
+                            self.track_uncertainty_items[track_id] = [ellipse]
                     else:
-                        # No track data at current frame, remove ellipse
+                        # No data at current frame, remove ellipse
                         if track_id in self.track_uncertainty_items:
                             for item in self.track_uncertainty_items[track_id]:
                                 self.plot_item.removeItem(item)
                             del self.track_uncertainty_items[track_id]
                 else:
-                    # Remove ellipse if show_uncertainty is False
+                    # No track data at current frame, remove ellipse
                     if track_id in self.track_uncertainty_items:
                         for item in self.track_uncertainty_items[track_id]:
                             self.plot_item.removeItem(item)
                         del self.track_uncertainty_items[track_id]
+            else:
+                # Remove ellipse if show_uncertainty is False
+                if track_id in self.track_uncertainty_items:
+                    for item in self.track_uncertainty_items[track_id]:
+                        self.plot_item.removeItem(item)
+                    del self.track_uncertainty_items[track_id]
 
         # Update temporary displays if in creation/editing mode
         if self.track_creation_mode or self.track_editing_mode:
@@ -754,11 +750,54 @@ class ImageryViewer(QWidget):
         self.update_overlays()
         return self.get_frame_range()  # Return updated frame range
 
-    def add_tracker(self, tracker: Tracker):
-        """Add a tracker (with its tracks) to display"""
-        self.trackers.append(tracker)
+    def add_track(self, track: Track):
+        """Add a single track to display"""
+        if track not in self.tracks:
+            self.tracks.append(track)
         self.update_overlays()
-        return self.get_frame_range()  # Return updated frame range
+        return self.get_frame_range()
+
+    def add_tracks(self, tracks, tracker_name: str = None):
+        """
+        Add multiple tracks to display, optionally setting tracker name.
+
+        Parameters
+        ----------
+        tracks : list of Track
+            Track objects to add
+        tracker_name : str, optional
+            If provided, sets the tracker attribute on tracks that don't have one
+        """
+        for track in tracks:
+            if tracker_name and not track.tracker:
+                track.tracker = tracker_name
+            if track not in self.tracks:
+                self.tracks.append(track)
+        self.update_overlays()
+        return self.get_frame_range()
+
+    def add_tracker(self, tracker):
+        """Add a tracker (with its tracks) to display - DEPRECATED
+
+        This method is deprecated. Use add_tracks() instead.
+        """
+        import warnings
+        warnings.warn("add_tracker() is deprecated. Use add_tracks() instead.", DeprecationWarning, stacklevel=2)
+        for track in tracker.tracks:
+            track.tracker = tracker.name
+            if track not in self.tracks:
+                self.tracks.append(track)
+        self.update_overlays()
+        return self.get_frame_range()
+
+    def get_tracks_by_tracker(self, tracker_name: str):
+        """Get all tracks belonging to a specific tracker"""
+        return [t for t in self.tracks if t.tracker == tracker_name]
+
+    def get_tracker_names(self):
+        """Get list of unique tracker names"""
+        names = set(t.tracker for t in self.tracks if t.tracker)
+        return sorted(names)
 
     def set_selected_tracks(self, track_ids):
         """
@@ -930,30 +969,29 @@ class ImageryViewer(QWidget):
         }
 
         # Check tracks (wholly contained = ALL visible points inside)
-        for tracker in self.trackers:
-            for track in tracker.tracks:
-                if not track.visible:
-                    continue
-                if self.selected_sensor is not None and track.sensor != self.selected_sensor:
-                    continue
+        for track in self.tracks:
+            if not track.visible:
+                continue
+            if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                continue
 
-                # Get visible indices for current frame
-                visible_indices = track.get_visible_indices(self.current_frame_number)
-                if visible_indices is None or len(visible_indices) == 0:
-                    continue
+            # Get visible indices for current frame
+            visible_indices = track.get_visible_indices(self.current_frame_number)
+            if visible_indices is None or len(visible_indices) == 0:
+                continue
 
-                # Check if ALL visible points are contained
-                visible_rows = track.rows[visible_indices]
-                visible_cols = track.columns[visible_indices]
+            # Check if ALL visible points are contained
+            visible_rows = track.rows[visible_indices]
+            visible_cols = track.columns[visible_indices]
 
-                all_contained = True
-                for col, row in zip(visible_cols, visible_rows):
-                    if not lasso_polygon.contains(Point(col, row)):
-                        all_contained = False
-                        break
+            all_contained = True
+            for col, row in zip(visible_cols, visible_rows):
+                if not lasso_polygon.contains(Point(col, row)):
+                    all_contained = False
+                    break
 
-                if all_contained:
-                    selected_items['tracks'].append(track)
+            if all_contained:
+                selected_items['tracks'].append(track)
 
         # Check detections (visible detections based on complete mode)
         for detector in self.detectors:
@@ -1202,7 +1240,7 @@ class ImageryViewer(QWidget):
 
         # Clear data lists
         self.detectors = []
-        self.trackers = []
+        self.tracks = []
 
         return self.get_frame_range()  # Return updated frame range
 
@@ -1670,7 +1708,7 @@ class ImageryViewer(QWidget):
             columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
 
             track = Track(
-                name=f"Track {len([t for tracker in self.trackers for t in tracker.tracks]) + 1}",
+                name=f"Track {len(self.tracks) + 1}",
                 frames=frames,
                 rows=rows,
                 columns=columns,
@@ -2262,38 +2300,37 @@ class ImageryViewer(QWidget):
                 closest_track = None
                 closest_distance = float('inf')
 
-                for tracker in self.trackers:
-                    for track in tracker.tracks:
-                        if not track.visible:
-                            continue
+                for track in self.tracks:
+                    if not track.visible:
+                        continue
 
-                        # Determine which points to check based on track settings
-                        if track.complete:
-                            # Show all points regardless of current frame
-                            frame_mask = np.ones(len(track.frames), dtype=bool)
-                        elif track.tail_length > 0:
-                            # Show only last N frames
-                            frame_mask = track.frames >= (self.current_frame_number - track.tail_length)
-                            frame_mask &= track.frames <= self.current_frame_number
-                        else:
-                            # Show all history up to current frame
-                            frame_mask = track.frames <= self.current_frame_number
+                    # Determine which points to check based on track settings
+                    if track.complete:
+                        # Show all points regardless of current frame
+                        frame_mask = np.ones(len(track.frames), dtype=bool)
+                    elif track.tail_length > 0:
+                        # Show only last N frames
+                        frame_mask = track.frames >= (self.current_frame_number - track.tail_length)
+                        frame_mask &= track.frames <= self.current_frame_number
+                    else:
+                        # Show all history up to current frame
+                        frame_mask = track.frames <= self.current_frame_number
 
-                        # Get visible points
-                        visible_rows = track.rows[frame_mask]
-                        visible_cols = track.columns[frame_mask]
+                    # Get visible points
+                    visible_rows = track.rows[frame_mask]
+                    visible_cols = track.columns[frame_mask]
 
-                        if len(visible_rows) == 0:
-                            continue
+                    if len(visible_rows) == 0:
+                        continue
 
-                        # Calculate distances to all visible points
-                        distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
-                        min_distance = np.min(distances)
+                    # Calculate distances to all visible points
+                    distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
+                    min_distance = np.min(distances)
 
-                        # Check if this is the closest track so far
-                        if min_distance < tolerance and min_distance < closest_distance:
-                            closest_distance = min_distance
-                            closest_track = track
+                    # Check if this is the closest track so far
+                    if min_distance < tolerance and min_distance < closest_distance:
+                        closest_distance = min_distance
+                        closest_track = track
 
                 # If we found a track, emit signal
                 if closest_track:

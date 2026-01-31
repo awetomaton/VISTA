@@ -111,6 +111,7 @@ class Track:
     show_line: bool = True  # If True, show line connecting track points
     line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
+    tracker: Optional[str] = None  # Name of tracker this track belongs to
     # Extraction metadata
     extraction_metadata: Optional[dict] = None  # Dict containing 'chip_size', 'chips', 'signal_masks', 'noise_stds'
     # Uncertainty visualization (2D covariance matrix: [[C00, C01], [C01, C11]])
@@ -451,12 +452,18 @@ class Track:
 
         Optional styling columns:
             - "Color", "Marker", "Line Width", "Marker Size", "Visible",
-              "Complete", "Show Line", "Line Style", "Tail Length", "Labels"
+              "Complete", "Show Line", "Line Style", "Tail Length", "Labels", "Tracker"
         """
 
         if name is None:
             name = df["Track"][0]
         kwargs = {}
+        # Parse tracker from dataframe if not provided
+        if "Tracker" in df.columns:
+            tracker_val = df["Tracker"].iloc[0]
+            if pd.notna(tracker_val) and tracker_val:
+                tracker = str(tracker_val)
+                kwargs["tracker"] = tracker
         if "Color" in df.columns:
             kwargs["color"] = df["Color"].iloc[0]
         if "Marker" in df.columns:
@@ -622,6 +629,7 @@ class Track:
             show_line = self.show_line,
             line_style = self.line_style,
             labels = self.labels.copy(),
+            tracker = self.tracker,
             extraction_metadata = extraction_metadata_copy,
             covariance_00 = self.covariance_00.copy() if self.covariance_00 is not None else None,
             covariance_01 = self.covariance_01.copy() if self.covariance_01 is not None else None,
@@ -636,6 +644,7 @@ class Track:
             ValueError: If geolocation/time requested but imagery is missing required data
         """
         data = {
+            "Tracker": len(self)*[self.tracker or ""],
             "Track": len(self)*[self.name],
             "Frames": self.frames,
             "Rows": self.rows,

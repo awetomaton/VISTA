@@ -11,7 +11,6 @@ from vista.imagery.imagery import Imagery
 from vista.detections.detector import Detector
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 
 
 def create_example_sensor():
@@ -126,8 +125,8 @@ def create_example_tracks(sensor):
 
     Returns
     -------
-    Tracker
-        Tracker object containing an example track following the bright spot
+    Track
+        Track object following the bright spot
     """
     frames = 50
     track_frames = []
@@ -148,15 +147,14 @@ def create_example_tracks(sensor):
         rows=np.array(track_rows),
         columns=np.array(track_columns),
         sensor=sensor,
+        tracker="Example Tracker",
         color='g',
         marker='s',
         line_width=2,
         marker_size=10
     )
 
-    tracker = Tracker(name="Example Tracker", tracks=[track])
-
-    return tracker
+    return track
 
 
 def main():

@@ -145,20 +145,17 @@ class SensorsPanel(QWidget):
             self.viewer.imageries = [img for img in self.viewer.imageries if img.sensor != sensor]
 
             # Delete all tracks for this sensor
-            for tracker in self.viewer.trackers:
-                tracks_to_delete = [track for track in tracker.tracks if track.sensor == sensor]
-                for track in tracks_to_delete:
-                    track_id = track.uuid
-                    if track_id in self.viewer.track_path_items:
-                        self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
-                        del self.viewer.track_path_items[track_id]
-                    if track_id in self.viewer.track_marker_items:
-                        self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
-                        del self.viewer.track_marker_items[track_id]
-                # Remove tracks from tracker
-                tracker.tracks = [track for track in tracker.tracks if track.sensor != sensor]
-            # Clean up empty trackers
-            self.viewer.trackers = [t for t in self.viewer.trackers if len(t.tracks) > 0]
+            tracks_to_delete = [track for track in self.viewer.tracks if track.sensor == sensor]
+            for track in tracks_to_delete:
+                track_id = track.uuid
+                if track_id in self.viewer.track_path_items:
+                    self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
+                    del self.viewer.track_path_items[track_id]
+                if track_id in self.viewer.track_marker_items:
+                    self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
+                    del self.viewer.track_marker_items[track_id]
+            # Remove tracks from viewer
+            self.viewer.tracks = [track for track in self.viewer.tracks if track.sensor != sensor]
 
             # Delete all detectors for this sensor
             detectors_to_delete = [detector for detector in self.viewer.detectors if detector.sensor == sensor]

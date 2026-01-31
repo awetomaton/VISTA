@@ -152,10 +152,9 @@ class LabelsManagerDialog(QDialog):
             if self.viewer is not None:
                 deleted_labels_set = set(label_names)
                 # Remove from tracks
-                for tracker in self.viewer.trackers:
-                    for track in tracker.tracks:
-                        # Remove any deleted labels from this track's label set
-                        track.labels = track.labels - deleted_labels_set
+                for track in self.viewer.tracks:
+                    # Remove any deleted labels from this track's label set
+                    track.labels = track.labels - deleted_labels_set
                 # Remove from detections (per-detection labels)
                 for detector in self.viewer.detectors:
                     # Remove deleted labels from each detection point in this detector

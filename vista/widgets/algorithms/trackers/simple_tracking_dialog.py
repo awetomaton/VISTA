@@ -28,8 +28,8 @@ class SimpleTrackingDialog(BaseTrackingDialog):
             settings_name="SimpleTracker",
             window_title="Simple Tracker",
             description=description,
-            default_track_color='b',
-            default_track_marker='s',
+            default_track_color='g',
+            default_track_marker='o',
             default_track_line_width=2,
             default_track_marker_size=10
         )

@@ -580,7 +580,6 @@ app.exec()
 from vista.app import VistaApp
 from vista.imagery.imagery import Imagery
 from vista.detections.detector import Detector
-from vista.tracks.tracker import Tracker
 from vista.tracks.track import Track
 import numpy as np
 
@@ -599,19 +598,19 @@ detector = Detector(
     visible=True
 )
 
-# Create tracks
+# Create tracks (use tracker attribute to group tracks by tracker name)
 track = Track(
     name="Track 1",
     frames=np.array([0, 1, 2, 3, 4]),
     rows=np.array([128.5, 130.0, 131.5, 133.0, 134.5]),
     columns=np.array([100.5, 101.5, 102.5, 103.5, 104.5]),
+    tracker="My Tracker",
     color='g',
     marker='s'
 )
-tracker = Tracker(name="My Tracker", tracks=[track])
 
 # Launch VISTA with all data
-app = VistaApp(imagery=imagery, detections=detector, tracks=tracker)
+app = VistaApp(imagery=imagery, detections=detector, tracks=track)
 app.exec()
 ```
 

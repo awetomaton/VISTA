@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 from vista.widgets.utils.algorithm_utils import populate_detector_list_by_sensor
 
 
@@ -285,7 +284,7 @@ class BaseTrackingDialog(QDialog):
             )
             return
 
-        # Create Track objects from raw track data
+        # Create Track objects from raw track data and add to viewer
         vista_tracks = []
         for i, track_data in enumerate(track_data_list):
             vista_track = Track(
@@ -294,6 +293,7 @@ class BaseTrackingDialog(QDialog):
                 rows=track_data['rows'],
                 columns=track_data['columns'],
                 sensor=sensor,
+                tracker=tracker_name,
                 color=self.default_track_color,
                 marker=self.default_track_marker,
                 line_width=self.default_track_line_width,
@@ -301,15 +301,7 @@ class BaseTrackingDialog(QDialog):
                 visible=True
             )
             vista_tracks.append(vista_track)
-
-        # Create Tracker object
-        tracker = Tracker(
-            name=tracker_name,
-            tracks=vista_tracks
-        )
-
-        # Add tracker to viewer
-        self.viewer.trackers.append(tracker)
+            self.viewer.tracks.append(vista_track)
 
         # Show success message
         QMessageBox.information(

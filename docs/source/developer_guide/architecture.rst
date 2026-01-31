@@ -32,6 +32,5 @@ Key Classes
 -----------
 
 * :class:`~vista.imagery.imagery.Imagery` - Multi-frame imagery container
-* :class:`~vista.tracks.track.Track` - Object trajectory representation
-* :class:`~vista.tracks.tracker.Tracker` - Base class for tracking algorithms
+* :class:`~vista.tracks.track.Track` - Object trajectory representation (use ``tracker`` attribute to group tracks)
 * :class:`~vista.detections.detector.Detector` - Base class for detection algorithms

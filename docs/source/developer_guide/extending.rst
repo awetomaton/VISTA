@@ -30,20 +30,42 @@ Inherit from the base detector class and implement the detection logic:
 Creating Custom Trackers
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Inherit from the base tracker class:
+Create custom tracking algorithms by inheriting from the base tracking dialog:
 
 .. code-block:: python
 
-   from vista.tracks import Tracker
+   from vista.widgets.algorithms.trackers.base_tracker_dialog import BaseTrackingDialog
+   from vista.tracks.track import Track
 
-   class MyTracker(Tracker):
-       def __init__(self, max_distance=5.0):
-           super().__init__(name="MyTracker")
-           self.max_distance = max_distance
+   def my_tracking_algorithm(detectors, config):
+       """Custom tracking algorithm that returns track data."""
+       # Implement tracking logic
+       track_data_list = []
+       # ... process detectors and create tracks ...
+       return track_data_list
 
-       def track(self, detections):
-           # Implement tracking logic
-           pass
+   class MyTrackerDialog(BaseTrackingDialog):
+       def __init__(self, viewer, parent=None):
+           super().__init__(
+               viewer=viewer,
+               parent=parent,
+               algorithm_function=my_tracking_algorithm,
+               settings_name="MyTracker",
+               window_title="My Custom Tracker"
+           )
+
+Track objects can be grouped by setting the ``tracker`` attribute:
+
+.. code-block:: python
+
+   track = Track(
+       name="Track 1",
+       frames=frames,
+       rows=rows,
+       columns=columns,
+       sensor=sensor,
+       tracker="My Tracker Name"  # Groups tracks by tracker name
+   )
 
 Custom GUI Widgets
 ------------------

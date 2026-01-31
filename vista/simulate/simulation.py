@@ -13,7 +13,6 @@ from vista.imagery.imagery import Imagery, save_imagery_hdf5
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.simulate.data import EARTH_IMAGE
 from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 from vista.transforms import fit_2d_polynomial
 from vista.utils.random_walk import RandomWalk
 
@@ -71,7 +70,7 @@ class Simulation:
     start: Optional[any] = None
     imagery: Optional[Imagery] = None
     detectors: Optional[List[Detector]] = None
-    trackers: Optional[List[Tracker]] = None 
+    tracks: Optional[List[Track]] = None
 
     def _generate_times(self) -> np.ndarray:
         """Generate times for imagery frames based on frame rate"""
@@ -342,15 +341,15 @@ class Simulation:
         dir = pathlib.Path(dir)
         dir.mkdir(parents=True, exist_ok=True)
 
-        trackers_df = pd.DataFrame()
-        for tracker in self.trackers:
-            trackers_df = pd.concat((trackers_df, tracker.to_dataframe()))
+        tracks_df = pd.DataFrame()
+        for track in self.tracks:
+            tracks_df = pd.concat((tracks_df, track.to_dataframe()))
 
         # Add times to tracks if enabled
         if self.enable_times and self.imagery is not None and self.imagery.times is not None:
             # Map frame numbers to times
             times = []
-            for idx, row in trackers_df.iterrows():
+            for idx, row in tracks_df.iterrows():
                 frame = int(row['Frames'])
                 # Find the time for this frame
                 frame_idx = np.where(self.imagery.frames == frame)[0]
@@ -358,11 +357,11 @@ class Simulation:
                     times.append(self.imagery.times[frame_idx[0]])
                 else:
                     times.append(np.datetime64('NaT'))  # Not a time
-            trackers_df['Times'] = pd.to_datetime(times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+            tracks_df['Times'] = pd.to_datetime(times).strftime('%Y-%m-%dT%H:%M:%S.%f')
 
             # If save_times_only, remove Frames column
             if save_times_only:
-                trackers_df = trackers_df.drop(columns=['Frames'])
+                tracks_df = tracks_df.drop(columns=['Frames'])
 
         # If requested, convert pixel coordinates to geodetic
         if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None:
@@ -371,9 +370,9 @@ class Simulation:
             longitudes = []
             altitudes = []
 
-            for idx, row in trackers_df.iterrows():
+            for idx, row in tracks_df.iterrows():
                 # Get frame (might be in Times column if save_times_only)
-                if 'Frames' in trackers_df.columns:
+                if 'Frames' in tracks_df.columns:
                     frame = int(row['Frames'])
                 else:
                     # Need to map time back to frame
@@ -398,14 +397,14 @@ class Simulation:
                 longitudes.append(location.lon.deg[0])
                 altitudes.append(location.height.to('m').value[0])
 
-            trackers_df['Latitude'] = latitudes
-            trackers_df['Longitude'] = longitudes
-            trackers_df['Altitude'] = altitudes
+            tracks_df['Latitude'] = latitudes
+            tracks_df['Longitude'] = longitudes
+            tracks_df['Altitude'] = altitudes
 
             # Remove pixel coordinates to test geodetic-only loading
-            trackers_df = trackers_df.drop(columns=['Rows', 'Columns'])
+            tracks_df = tracks_df.drop(columns=['Rows', 'Columns'])
 
-        trackers_df.to_csv(dir / "trackers.csv", index=False)
+        tracks_df.to_csv(dir / "tracks.csv", index=False)
 
         detectors_df = pd.DataFrame()
         for detector in self.detectors:
@@ -557,14 +556,14 @@ class Simulation:
                 )
             )
         
-        # Create the trackers with spurious detections
+        # Create the tracks with spurious detections
         column_grid, row_grid = np.meshgrid(np.arange(self.columns), np.arange(self.rows))
-        self.trackers = []
+        self.tracks = []
         Δintensity_range = self.track_intensity_range[1] - self.track_intensity_range[0]
         Δtrack_speed = self.track_speed_range[1] - self.track_speed_range[0]
         Δtrack_intensity_sigma = self.track_intensity_sigma_range[1] - self.track_intensity_sigma_range[0]
         for tracker_index in range(self.num_trackers):
-            tracker_tracks = []
+            tracker_name = f"Tracker {tracker_index}"
             for track_index in range(int(np.random.randint(*self.num_tracks_range))):
                 intensity_walk = RandomWalk(self.track_intensity_range[0] + Δintensity_range*np.random.rand())
                 intensity_walk.std_Δt_ratio = 0.1
@@ -649,16 +648,18 @@ class Simulation:
                     covariance_11 = var_row * sin_theta**2 + var_col * cos_theta**2
                     covariance_01 = (var_row - var_col) * cos_theta * sin_theta
 
-                tracker_tracks.append(Track(
+                track = Track(
                     name=f"Tracker {tracker_index} - Track {track_index}",
-                    frames = frames,
-                    rows = rows,
-                    columns = columns,
-                    sensor = sensor,
-                    covariance_00 = covariance_00,
-                    covariance_01 = covariance_01,
-                    covariance_11 = covariance_11,
-                ))
+                    frames=frames,
+                    rows=rows,
+                    columns=columns,
+                    sensor=sensor,
+                    tracker=tracker_name,
+                    covariance_00=covariance_00,
+                    covariance_01=covariance_01,
+                    covariance_11=covariance_11,
+                )
+                self.tracks.append(track)
 
                 # Simulate detections of this tracker's tracks
                 for detector in self.detectors:
@@ -666,13 +667,6 @@ class Simulation:
                     detector.frames = np.concatenate((detector.frames, frames[detected_frames]))
                     detector.rows = np.concatenate((detector.rows, rows[detected_frames]))
                     detector.columns = np.concatenate((detector.columns, columns[detected_frames]))
-
-            self.trackers.append(
-                Tracker(
-                    f"Tracker {tracker_index}",
-                    tracks = tracker_tracks
-                )
-            )
 
         # Create imagery with sensor reference (sensor was created at the beginning)
         self.imagery = Imagery(

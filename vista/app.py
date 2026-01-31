@@ -46,7 +46,7 @@ class VistaApp:
     Loading multiple data types:
 
     >>> from vista.detections.detector import Detector
-    >>> from vista.tracks.tracker import Tracker, Track
+    >>> from vista.tracks.track import Track
     >>>
     >>> # Create detections
     >>> detector = Detector(
@@ -63,16 +63,16 @@ class VistaApp:
     ...     frames=np.array([0, 1, 2]),
     ...     rows=np.array([10.0, 20.0, 30.0]),
     ...     columns=np.array([15.0, 25.0, 35.0]),
-    ...     sensor=sensor
+    ...     sensor=sensor,
+    ...     tracker="My Tracker"
     ... )
-    >>> tracker = Tracker(name="My Tracker", tracks=[track])
     >>>
     >>> # Launch VISTA with all data types
     >>> app = VistaApp(
     ...     sensors=sensor,
     ...     imagery=imagery,
     ...     detections=detector,
-    ...     tracks=tracker
+    ...     tracks=track  # Can be a Track or list of Track objects
     ... )
     >>> app.exec()
     """
@@ -85,8 +85,9 @@ class VistaApp:
         ----------
         imagery : Imagery or list of Imagery, optional
             Imagery object(s) to load at startup
-        tracks : Tracker or list of Tracker, optional
-            Tracker object(s) to load at startup
+        tracks : Track or list of Track, optional
+            Track object(s) to load at startup. Set track.tracker attribute
+            to group tracks by tracker name.
         detections : Detector or list of Detector, optional
             Detector object(s) to load at startup
         sensors : Sensor or list of Sensor, optional

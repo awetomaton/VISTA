@@ -28,8 +28,8 @@ class TrackletTrackingDialog(BaseTrackingDialog):
             settings_name="TrackletTracker",
             window_title="Tracklet Tracker",
             description=description,
-            default_track_color='c',
-            default_track_marker='x',
+            default_track_color='g',
+            default_track_marker='o',
             default_track_line_width=2,
             default_track_marker_size=10
         )

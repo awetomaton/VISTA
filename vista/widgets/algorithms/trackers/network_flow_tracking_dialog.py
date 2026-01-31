@@ -28,8 +28,8 @@ class NetworkFlowTrackingDialog(BaseTrackingDialog):
             settings_name="NetworkFlowTracker",
             window_title="Network Flow Tracker",
             description=description,
-            default_track_color='m',
-            default_track_marker='d',
+            default_track_color='g',
+            default_track_marker='o',
             default_track_line_width=2,
             default_track_marker_size=10
         )

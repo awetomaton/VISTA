@@ -13,7 +13,6 @@ from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 
 
 class DataLoaderThread(QThread):
@@ -23,8 +22,7 @@ class DataLoaderThread(QThread):
     imagery_loaded = pyqtSignal(object, object)  # Emits (Imagery object, Sensor object)
     detector_loaded = pyqtSignal(object)  # Emits Detector object
     detectors_loaded = pyqtSignal(list)  # Emits list of Detector objects
-    tracker_loaded = pyqtSignal(object)  # Emits Tracker object
-    trackers_loaded = pyqtSignal(list)  # Emits list of Tracker objects
+    tracks_loaded = pyqtSignal(list)  # Emits list of Track objects with tracker attribute set
     aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
@@ -466,30 +464,9 @@ class DataLoaderThread(QThread):
         if self._cancelled:
             return  # Exit early if cancelled
 
-        trackers = []
+        tracks = []
 
-        # Check if there's a Tracker column
-        if 'Tracker' in df.columns:
-            # Group by tracker first
-            tracker_groups = df.groupby('Tracker')
-            self.progress_updated.emit("Loading tracks...", 0, len(tracker_groups))
-
-            for idx, (tracker_name, tracker_df) in enumerate(tracker_groups):
-                if self._cancelled:
-                    return  # Exit early if cancelled
-                tracks = []
-                # Then group by track within each tracker
-                for track_name, track_df in tracker_df.groupby('Track'):
-                    if self._cancelled:
-                        return  # Exit early if cancelled
-                    track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name)
-                    tracks.append(track)
-                tracker = Tracker(name=tracker_name, tracks=tracks)
-                trackers.append(tracker)
-                self.progress_updated.emit("Loading tracks...", idx + 1, len(tracker_groups))
-        elif 'Track' in df.columns:
-            # No tracker column, create a default tracker
-            tracks = []
+        if 'Track' in df.columns:
             track_groups = df.groupby('Track')
             self.progress_updated.emit("Loading tracks...", 0, len(track_groups))
 
@@ -499,20 +476,16 @@ class DataLoaderThread(QThread):
                 track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name)
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
-
-            tracker = Tracker(name=Path(self.file_path).stem, tracks=tracks)
-            trackers.append(tracker)
         else:
-            # Single track, single tracker
+            # Single track
             track = Track.from_dataframe(df, sensor=self.sensor, name="Track 1")
-            tracker = Tracker(name=Path(self.file_path).stem, tracks=[track])
-            trackers.append(tracker)
+            tracks.append(track)
 
         if self._cancelled:
             return  # Exit early if cancelled
 
-        # Emit the loaded trackers
-        self.trackers_loaded.emit(trackers)
+        # Emit the loaded tracks
+        self.tracks_loaded.emit(tracks)
 
     def _load_aois_csv(self):
         """Load AOIs from CSV file"""

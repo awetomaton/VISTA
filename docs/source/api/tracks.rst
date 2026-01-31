@@ -106,11 +106,8 @@ Track Class
    :show-inheritance:
    :special-members: __init__, __getitem__, __len__
 
-Tracker Class
-~~~~~~~~~~~~~
+.. note::
 
-.. automodule:: vista.tracks.tracker
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :special-members: __init__
+   Tracks can be grouped by tracker name using the ``tracker`` attribute.
+   When loading from CSV, the "Tracker" column is automatically parsed
+   and stored in this attribute.

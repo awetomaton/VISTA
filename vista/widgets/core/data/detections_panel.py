@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QScr
 from vista.widgets.core.data.delegates import LabelsSelectionDialog
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.tracks.track import Track
-from vista.tracks.tracker import Tracker
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineThicknessDelegate, MarkerDelegate
 
@@ -1430,39 +1429,19 @@ class DetectionsPanel(QWidget):
         rows = np.array(rows_list)[sorted_indices]
         columns = np.array(columns_list)[sorted_indices]
 
-        # Create track
-        track_name = f"Track from Detections {len([t for tracker in self.viewer.trackers for t in tracker.tracks]) + 1}"
+        # Create track with tracker attribute set
+        track_name = f"Track from Detections {len(self.viewer.tracks) + 1}"
         track = Track(
             name=track_name,
             frames=frames,
             rows=rows,
             columns=columns,
-            sensor=sensor
+            sensor=sensor,
+            tracker="Manual Tracks from Detections"
         )
 
-        # Create or find a tracker for manually created tracks
-        tracker_name = "Manual Tracks from Detections"
-        manual_tracker = None
-
-        # Try to find existing manual tracker by checking if it has the expected name
-        # and was created by this feature (stores UUID in viewer for persistence)
-        if not hasattr(self.viewer, '_manual_tracker_uuid'):
-            self.viewer._manual_tracker_uuid = None
-
-        # First try to find by UUID if we have one stored
-        if self.viewer._manual_tracker_uuid:
-            for tracker in self.viewer.trackers:
-                if tracker.uuid == self.viewer._manual_tracker_uuid:
-                    manual_tracker = tracker
-                    break
-
-        # If not found by UUID, create a new one
-        if manual_tracker is None:
-            manual_tracker = Tracker(name=tracker_name, tracks=[])
-            self.viewer.add_tracker(manual_tracker)
-            self.viewer._manual_tracker_uuid = manual_tracker.uuid
-
-        manual_tracker.tracks.append(track)
+        # Add track to viewer
+        self.viewer.tracks.append(track)
 
         # Clear selection
         self.clear_detection_selection()
