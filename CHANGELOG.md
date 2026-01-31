@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ Updated all tracker to produce green tracks with circle by default.
 - 👷 Eliminated the `Tracker` object in favor of a flat list of `Track` objects with a `tracker` attribute.
 - ✨ Made `Tracker` column editable in the Tracks Panel.
+- 🥳 Addded undo with `ctrl` + `z` shortcut to tracks and detections panels.
 
 ### Bug Fixes
 

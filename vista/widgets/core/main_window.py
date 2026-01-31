@@ -1551,7 +1551,11 @@ class VistaMainWindow(QMainWindow):
     def open_settings(self):
         """Open the settings dialog"""
         dialog = SettingsDialog(self)
-        dialog.exec()
+        if dialog.exec():
+            # Apply undo depth changes to existing undo stacks
+            undo_depth = dialog.data_manager_tab.undo_depth_spinbox.value()
+            self.data_manager.tracks_panel.undo_stack.max_depth = undo_depth
+            self.data_manager.detections_panel.undo_stack.max_depth = undo_depth
 
     def manage_labels(self):
         """Open the labels manager dialog"""
@@ -2253,6 +2257,12 @@ class VistaMainWindow(QMainWindow):
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""
         key = event.key()
+        modifiers = event.modifiers()
+
+        # Ctrl+Z for undo
+        if key == Qt.Key.Key_Z and modifiers == Qt.KeyboardModifier.ControlModifier:
+            self._handle_undo_shortcut()
+            return
 
         if (key == Qt.Key.Key_Left) or (key == Qt.Key.Key_A):
             # Left arrow - previous frame
@@ -2266,3 +2276,13 @@ class VistaMainWindow(QMainWindow):
         else:
             # Pass other keys to parent class
             super().keyPressEvent(event)
+
+    def _handle_undo_shortcut(self):
+        """Handle Ctrl+Z by triggering undo on the appropriate panel."""
+        current_tab_index = self.data_manager.tabs.currentIndex()
+        if current_tab_index == 2:  # Tracks tab
+            if self.data_manager.tracks_panel.undo_stack.can_undo():
+                self.data_manager.tracks_panel.undo()
+        elif current_tab_index == 3:  # Detections tab
+            if self.data_manager.detections_panel.undo_stack.can_undo():
+                self.data_manager.detections_panel.undo()

@@ -222,6 +222,56 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         self.settings.setValue("tracks/uncertainty_scale", self.ellipse_scale_spinbox.value())
 
 
+class DataManagerSettingsTab(QVBoxLayout):
+    """Tab for configuring data manager settings (tracks, detections, undo)"""
+
+    def __init__(self, settings):
+        """
+        Initialize the Data Manager settings tab
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings
+        """
+        super().__init__()
+        self.settings = settings
+
+        # Create undo settings group
+        undo_group = QGroupBox("Undo Settings")
+        undo_layout = QFormLayout()
+
+        # Undo depth spinbox
+        self.undo_depth_spinbox = QSpinBox()
+        self.undo_depth_spinbox.setRange(1, 100)
+        self.undo_depth_spinbox.setValue(10)
+        self.undo_depth_spinbox.setToolTip(
+            "Maximum number of undo operations to keep in history.\n"
+            "Higher values use more memory but allow undoing more operations.\n"
+            "Changes take effect immediately.\n"
+            "Default: 10"
+        )
+        undo_layout.addRow("Undo Depth:", self.undo_depth_spinbox)
+
+        undo_group.setLayout(undo_layout)
+        self.addWidget(undo_group)
+
+        self.addStretch()
+
+        # Load saved settings
+        self.load_settings()
+
+    def load_settings(self):
+        """Load settings from QSettings"""
+        self.undo_depth_spinbox.setValue(
+            self.settings.value("undo_depth", 10, type=int)
+        )
+
+    def save_settings(self):
+        """Save settings to QSettings"""
+        self.settings.setValue("undo_depth", self.undo_depth_spinbox.value())
+
+
 class SettingsDialog(QDialog):
     """Main settings dialog for VISTA application"""
 
@@ -236,6 +286,7 @@ class SettingsDialog(QDialog):
         """
         super().__init__(parent)
         self.settings = QSettings("Vista", "VistaApp")
+        self.data_manager_settings = QSettings("VISTA", "DataManager")
 
         self.setWindowTitle("VISTA Settings")
         self.setModal(True)
@@ -273,6 +324,17 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(track_viz_container, "Track Visualization")
 
+        # Create Data Manager settings tab
+        self.data_manager_tab = DataManagerSettingsTab(self.data_manager_settings)
+        data_manager_widget = QVBoxLayout()
+        data_manager_widget.addLayout(self.data_manager_tab)
+
+        # Create a container widget for the tab
+        data_manager_container = QWidget()
+        data_manager_container.setLayout(data_manager_widget)
+
+        self.tabs.addTab(data_manager_container, "Data Manager")
+
         layout.addWidget(self.tabs)
 
         # Add standard dialog buttons
@@ -291,6 +353,7 @@ class SettingsDialog(QDialog):
         """Apply settings without closing dialog"""
         self.imagery_tab.save_settings()
         self.track_viz_tab.save_settings()
+        self.data_manager_tab.save_settings()
 
     def accept_settings(self):
         """Accept and save settings, then close dialog"""

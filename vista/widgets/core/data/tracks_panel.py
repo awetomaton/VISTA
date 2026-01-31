@@ -19,6 +19,7 @@ from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDia
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.track_plot_window import TrackPlotWindow
+from vista.widgets.core.data.undo_manager import UndoStack
 
 
 class TracksPanel(QWidget):
@@ -38,6 +39,12 @@ class TracksPanel(QWidget):
         self.viewer.extraction_editing_ended.connect(self.on_extraction_editing_ended)
 
         self.init_ui()
+
+        # Initialize undo stack with configurable depth from settings
+        undo_depth = self.settings.value("undo_depth", 10, type=int)
+        self.undo_stack = UndoStack(max_depth=undo_depth, parent=self)
+        self.undo_stack.can_undo_changed.connect(self._on_undo_availability_changed)
+        self.undo_stack.undo_description_changed.connect(self._on_undo_description_changed)
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -163,6 +170,13 @@ class TracksPanel(QWidget):
         self.delete_selected_tracks_btn.setEnabled(False)  # Disabled until tracks selected
         self.delete_selected_tracks_btn.clicked.connect(self.delete_selected_tracks)
         tracks_actions_layout.addWidget(self.delete_selected_tracks_btn)
+
+        # Add undo button
+        self.undo_btn = QPushButton("Undo")
+        self.undo_btn.setEnabled(False)
+        self.undo_btn.setToolTip("Undo last track operation")
+        self.undo_btn.clicked.connect(self.undo)
+        tracks_actions_layout.addWidget(self.undo_btn)
 
         # Add label selected button
         self.label_selected_btn = QPushButton("Label Selected")
@@ -1126,6 +1140,9 @@ class TracksPanel(QWidget):
         if not track:
             return
 
+        # Save state before modification
+        self.save_undo_state(f"Change property for '{track.name}'")
+
         if column == 0:  # Visible
             item = self.tracks_table.item(row, column)
             track.visible = item.checkState() == Qt.CheckState.Checked
@@ -1316,6 +1333,9 @@ class TracksPanel(QWidget):
                 if track_uuid:
                     selected_track_uuids.add(track_uuid)
 
+        # Save state before bulk action
+        self.save_undo_state(f"Bulk change {property_name} on {len(selected_rows)} tracks")
+
         # Map marker names to symbols
         marker_map = {
             'Circle': 'o', 'Square': 's', 'Triangle': 't',
@@ -1428,6 +1448,9 @@ class TracksPanel(QWidget):
                 "Could not find enough valid tracks to merge."
             )
             return
+
+        # Save state before merge
+        self.save_undo_state(f"Merge {len(tracks_to_merge)} tracks")
 
         # Convert each track to DataFrame
         track_dfs = []
@@ -1577,6 +1600,9 @@ class TracksPanel(QWidget):
             )
             return
 
+        # Save state before split
+        self.save_undo_state(f"Split track '{track_to_split.name}'")
+
         # Create first track (before and at current frame)
         first_name = f"{track_to_split.name}_1"
         first_track = track_to_split[mask_first]
@@ -1647,6 +1673,12 @@ class TracksPanel(QWidget):
                     if track.uuid == track_uuid:
                         tracks_to_delete.append(track)
                         break
+
+        if not tracks_to_delete:
+            return
+
+        # Save state before delete
+        self.save_undo_state(f"Delete {len(tracks_to_delete)} tracks")
 
         # Delete the tracks
         for track in tracks_to_delete:
@@ -2481,3 +2513,60 @@ class TracksPanel(QWidget):
                         break
 
         return selected_tracks, tracker_map
+
+    # -------------------------------------------------------------------------
+    # Undo functionality
+    # -------------------------------------------------------------------------
+
+    def save_undo_state(self, description: str) -> None:
+        """
+        Save current tracks state before a modifying operation.
+
+        Parameters
+        ----------
+        description : str
+            Human-readable description of the operation (e.g., "Delete 3 tracks")
+        """
+        self.undo_stack.save_state(
+            data_list=self.viewer.tracks,
+            description=description,
+            copy_func=lambda t: t.copy()
+        )
+
+    def undo(self) -> None:
+        """Undo the last track operation."""
+        snapshot = self.undo_stack.undo()
+        if snapshot is None:
+            return
+
+        # Remove all current plot items
+        for track in self.viewer.tracks:
+            track_id = track.uuid
+            if track_id in self.viewer.track_path_items:
+                self.viewer.plot_item.removeItem(self.viewer.track_path_items[track_id])
+                del self.viewer.track_path_items[track_id]
+            if track_id in self.viewer.track_marker_items:
+                self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
+                del self.viewer.track_marker_items[track_id]
+            if track_id in self.viewer.track_uncertainty_items:
+                for ellipse in self.viewer.track_uncertainty_items[track_id]:
+                    self.viewer.plot_item.removeItem(ellipse)
+                del self.viewer.track_uncertainty_items[track_id]
+
+        # Restore tracks from snapshot
+        self.viewer.tracks = snapshot.data
+        self.viewer.selected_track_ids.clear()
+
+        self.viewer.update_overlays()
+        self.refresh_tracks_table()
+        self.data_changed.emit()
+
+    def _on_undo_availability_changed(self, can_undo: bool) -> None:
+        """Update undo button enabled state."""
+        if not can_undo:
+            self.undo_btn.setDown(False)  # Reset pressed visual state before disabling
+        self.undo_btn.setEnabled(can_undo)
+
+    def _on_undo_description_changed(self, description: str) -> None:
+        """Update undo button tooltip."""
+        self.undo_btn.setToolTip(description if description else "Undo last track operation")

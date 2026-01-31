@@ -16,6 +16,7 @@ from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineThicknessDelegate, MarkerDelegate
+from vista.widgets.core.data.undo_manager import UndoStack
 
 
 class DetectionsPanel(QWidget):
@@ -30,6 +31,12 @@ class DetectionsPanel(QWidget):
         self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
         self.waiting_for_track_selection = False  # Flag when waiting for user to select track
         self.init_ui()
+
+        # Initialize undo stack with configurable depth from settings
+        undo_depth = self.settings.value("undo_depth", 10, type=int)
+        self.undo_stack = UndoStack(max_depth=undo_depth, parent=self)
+        self.undo_stack.can_undo_changed.connect(self._on_undo_availability_changed)
+        self.undo_stack.undo_description_changed.connect(self._on_undo_description_changed)
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -129,6 +136,13 @@ class DetectionsPanel(QWidget):
         self.copy_to_sensor_btn.clicked.connect(self.copy_to_sensor)
         self.copy_to_sensor_btn.setToolTip("Copy selected detections to a different sensor")
         button_layout.addWidget(self.copy_to_sensor_btn)
+
+        # Add undo button
+        self.undo_btn = QPushButton("Undo")
+        self.undo_btn.setEnabled(False)
+        self.undo_btn.setToolTip("Undo last detection operation")
+        self.undo_btn.clicked.connect(self.undo)
+        button_layout.addWidget(self.undo_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -735,6 +749,9 @@ class DetectionsPanel(QWidget):
         if not detector:
             return
 
+        # Save state before modification
+        self.save_undo_state(f"Change property for '{detector.name}'")
+
         if column == 0:  # Visible
             item = self.detections_table.item(row, column)
             detector.visible = item.checkState() == Qt.CheckState.Checked
@@ -871,6 +888,9 @@ class DetectionsPanel(QWidget):
                 if detector_uuid:
                     selected_detector_uuids.add(detector_uuid)
 
+        # Save state before bulk action
+        self.save_undo_state(f"Bulk change {property_name} on {len(selected_rows)} detectors")
+
         # Apply to all selected detectors
         for row in selected_rows:
             # Get detector ID from the name item
@@ -985,6 +1005,12 @@ class DetectionsPanel(QWidget):
                         if detector.uuid == detector_uuid:
                             detectors_to_delete.append(detector)
                             break
+
+        if not detectors_to_delete:
+            return
+
+        # Save state before delete
+        self.save_undo_state(f"Delete {len(detectors_to_delete)} detectors")
 
         # Delete the detectors
         detectors_to_delete_uuids = set(d.uuid for d in detectors_to_delete)
@@ -1283,6 +1309,9 @@ class DetectionsPanel(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_labels = dialog.get_selected_labels()
 
+            # Save state before labeling
+            self.save_undo_state(f"Label {len(self.selected_detections)} detections")
+
             # Set selected labels to each selected detection point (empty set clears labels)
             for detector, _frame, index in self.selected_detections:
                 # Ensure labels list is initialized and has enough entries
@@ -1328,6 +1357,9 @@ class DetectionsPanel(QWidget):
         """Delete the selected detection points from their detectors"""
         if len(self.selected_detections) == 0:
             return
+
+        # Save state before delete
+        self.save_undo_state(f"Delete {len(self.selected_detections)} detection points")
 
         # Group indices by detector
         detector_indices = {}
@@ -1663,6 +1695,9 @@ class DetectionsPanel(QWidget):
             )
             return
 
+        # Save state before merge
+        self.save_undo_state(f"Merge {len(detectors_to_merge)} detectors")
+
         # Combine all frames, rows, columns, and labels
         all_frames = []
         all_rows = []
@@ -1730,3 +1765,53 @@ class DetectionsPanel(QWidget):
             f"Successfully merged {len(detectors_to_merge)} detectors into '{merged_name}'.\n"
             f"The merged detector has {len(all_frames)} detection points."
         )
+
+    # -------------------------------------------------------------------------
+    # Undo functionality
+    # -------------------------------------------------------------------------
+
+    def save_undo_state(self, description: str) -> None:
+        """
+        Save current detectors state before a modifying operation.
+
+        Parameters
+        ----------
+        description : str
+            Human-readable description of the operation (e.g., "Delete 3 detectors")
+        """
+        self.undo_stack.save_state(
+            data_list=self.viewer.detectors,
+            description=description,
+            copy_func=lambda d: d.copy()
+        )
+
+    def undo(self) -> None:
+        """Undo the last detection operation."""
+        snapshot = self.undo_stack.undo()
+        if snapshot is None:
+            return
+
+        # Remove all current plot items
+        for detector in self.viewer.detectors:
+            detector_uuid = detector.uuid
+            if detector_uuid in self.viewer.detector_plot_items:
+                self.viewer.plot_item.removeItem(self.viewer.detector_plot_items[detector_uuid])
+                del self.viewer.detector_plot_items[detector_uuid]
+
+        # Restore detectors from snapshot
+        self.viewer.detectors = snapshot.data
+        self.clear_detection_selection()
+
+        self.viewer.update_overlays()
+        self.refresh_detections_table()
+        self.data_changed.emit()
+
+    def _on_undo_availability_changed(self, can_undo: bool) -> None:
+        """Update undo button enabled state."""
+        if not can_undo:
+            self.undo_btn.setDown(False)  # Reset pressed visual state before disabling
+        self.undo_btn.setEnabled(can_undo)
+
+    def _on_undo_description_changed(self, description: str) -> None:
+        """Update undo button tooltip."""
+        self.undo_btn.setToolTip(description if description else "Undo last detection operation")
