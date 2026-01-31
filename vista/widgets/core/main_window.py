@@ -616,6 +616,10 @@ class VistaMainWindow(QMainWindow):
             # Disable lasso selection mode
             self.viewer.set_lasso_selection_mode(False)
 
+            # Cancel "add to track" mode if it's active
+            if self.data_manager.detections_panel.waiting_for_track_selection:
+                self.data_manager.detections_panel.cancel_add_to_existing_track()
+
             # Clear all selections made by lasso
             self.viewer.set_selected_tracks(set())  # Clear track selection in viewer
             self.viewer.selected_detections = []  # Clear detection selection in viewer

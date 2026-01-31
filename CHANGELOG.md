@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 - 🔧 Fixed bug tracks with labels that are parsed as numeric would not load such as `1`.
+- 🔧 Fixed bug where adding detections to track could get stuck as on and disabled when user selects detections, presses add to track, makes a new detection selection, and then cancels that selection.
 
 ## [1.8.2] - 2026-1-29
 

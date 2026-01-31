@@ -1474,6 +1474,15 @@ class DetectionsPanel(QWidget):
             QMessageBox.warning(self, "No Detections", "Select at least 1 detection to add to a track.")
             return
 
+        # Deactivate lasso mode if active - it interferes with track selection clicks
+        # We don't deactivate all modes because detection selection mode should remain active
+        main_window = self.window()
+        if hasattr(main_window, 'lasso_select_action') and main_window.lasso_select_action.isChecked():
+            main_window.lasso_select_action.blockSignals(True)
+            main_window.lasso_select_action.setChecked(False)
+            main_window.lasso_select_action.blockSignals(False)
+            self.viewer.set_lasso_selection_mode(False)
+
         # Keep detection selection mode active but pause new selections
         # Enable track selection mode
         self.waiting_for_track_selection = True
@@ -1495,8 +1504,8 @@ class DetectionsPanel(QWidget):
         self.viewer.set_track_selection_mode(False)
         self.waiting_for_track_selection = False
 
-        # Restore detection selection cursor (since we're still in detection selection mode)
-        self.viewer.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
+        # Update cursor based on current interactive mode state
+        self.viewer.update_cursor()
 
         # Restore UI
         self.add_to_existing_track_btn.setText("Add to Track")
@@ -1527,11 +1536,14 @@ class DetectionsPanel(QWidget):
                 return
 
         if track.sensor != sensor:
-            QMessageBox.warning(
-                self, "Sensor Mismatch",
-                f"Selected detections are from sensor '{sensor.name}' but track is from sensor '{track.sensor.name}'."
-            )
-            self.cancel_add_to_existing_track()
+            if sensor is None:
+                self.cancel_add_to_existing_track()
+            else:
+                QMessageBox.warning(
+                    self, "Sensor Mismatch",
+                    f"Selected detections are from sensor '{sensor.name}' but track is from sensor '{track.sensor.name}'."
+                )
+                self.cancel_add_to_existing_track()
             return
 
         # Show confirmation dialog
