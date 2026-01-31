@@ -479,6 +479,7 @@ class Track:
             # Parse labels from comma-separated string
             labels_str = df["Labels"].iloc[0]
             if pd.notna(labels_str) and labels_str:
+                labels_str = str(labels_str)  # Make sure labels are parsed as a string even if they're something like `1`
                 kwargs["labels"] = set(label.strip() for label in labels_str.split(','))
             else:
                 kwargs["labels"] = set()
