@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton, QScrollArea,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QListWidgetItem
 
 from vista.detections.detector import Detector
 from vista.tracks.track import Track
@@ -20,6 +20,222 @@ from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, Lab
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.track_plot_window import TrackPlotWindow
 from vista.widgets.core.data.undo_manager import UndoStack
+
+
+# Sortable columns: Visible (0), Tracker (1), Name (2), Labels (3), Length (4),
+# Complete (10), Show Line (11), Avg SNR (14), Show Uncertainty (15)
+SORTABLE_COLUMNS = [0, 1, 2, 3, 4, 10, 11, 14, 15]
+COLUMN_NAMES = [
+    "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width",
+    "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"
+]
+
+
+class OrderByDialog(QDialog):
+    """Dialog for configuring multi-column sort order for tracks table."""
+
+    def __init__(self, parent=None, current_order=None):
+        """
+        Initialize the Order By dialog.
+
+        Parameters
+        ----------
+        parent : QWidget, optional
+            Parent widget, by default None
+        current_order : list of tuple, optional
+            Current sort order as list of (column_index, ascending) tuples, by default None
+        """
+        super().__init__(parent)
+        self.setWindowTitle("Order Tracks By")
+        self.setModal(True)
+        self.current_order = current_order or []
+        self.init_ui()
+        self.populate_lists()
+
+    def init_ui(self):
+        """Initialize the user interface."""
+        layout = QVBoxLayout()
+
+        # Instructions
+        instructions = QLabel("Select columns to sort by and their order. Tracks will be sorted by the first column, "
+                              "then by subsequent columns for rows with equal values.")
+        instructions.setWordWrap(True)
+        layout.addWidget(instructions)
+
+        # Main content area with two lists and buttons
+        content_layout = QHBoxLayout()
+
+        # Left side: Available columns
+        left_layout = QVBoxLayout()
+        left_layout.addWidget(QLabel("Available Columns:"))
+        self.available_list = QListWidget()
+        self.available_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        self.available_list.itemDoubleClicked.connect(self.add_selected)
+        left_layout.addWidget(self.available_list)
+        content_layout.addLayout(left_layout)
+
+        # Middle: Add/Remove buttons
+        middle_layout = QVBoxLayout()
+        middle_layout.addStretch()
+
+        self.add_btn = QPushButton("→")
+        self.add_btn.setToolTip("Add selected column(s) to sort order")
+        self.add_btn.setFixedWidth(40)
+        self.add_btn.clicked.connect(self.add_selected)
+        middle_layout.addWidget(self.add_btn)
+
+        self.remove_btn = QPushButton("←")
+        self.remove_btn.setToolTip("Remove selected column(s) from sort order")
+        self.remove_btn.setFixedWidth(40)
+        self.remove_btn.clicked.connect(self.remove_selected)
+        middle_layout.addWidget(self.remove_btn)
+
+        middle_layout.addStretch()
+        content_layout.addLayout(middle_layout)
+
+        # Right side: Selected columns (order by)
+        right_layout = QVBoxLayout()
+        right_layout.addWidget(QLabel("Order By:"))
+        self.selected_list = QListWidget()
+        self.selected_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.selected_list.itemDoubleClicked.connect(self.toggle_sort_order)
+        right_layout.addWidget(self.selected_list)
+
+        # Move up/down and toggle buttons
+        order_buttons_layout = QHBoxLayout()
+
+        self.move_up_btn = QPushButton("↑")
+        self.move_up_btn.setToolTip("Move selected column up in sort priority")
+        self.move_up_btn.setFixedWidth(40)
+        self.move_up_btn.clicked.connect(self.move_up)
+        order_buttons_layout.addWidget(self.move_up_btn)
+
+        self.move_down_btn = QPushButton("↓")
+        self.move_down_btn.setToolTip("Move selected column down in sort priority")
+        self.move_down_btn.setFixedWidth(40)
+        self.move_down_btn.clicked.connect(self.move_down)
+        order_buttons_layout.addWidget(self.move_down_btn)
+
+        self.toggle_order_btn = QPushButton("Asc/Desc")
+        self.toggle_order_btn.setToolTip("Toggle between ascending and descending order (or double-click item)")
+        self.toggle_order_btn.clicked.connect(self.toggle_sort_order)
+        order_buttons_layout.addWidget(self.toggle_order_btn)
+
+        right_layout.addLayout(order_buttons_layout)
+        content_layout.addLayout(right_layout)
+
+        layout.addLayout(content_layout)
+
+        # Clear all button
+        clear_btn = QPushButton("Clear All")
+        clear_btn.setToolTip("Remove all columns from sort order")
+        clear_btn.clicked.connect(self.clear_all)
+        layout.addWidget(clear_btn)
+
+        # Dialog buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+        self.resize(500, 400)
+
+    def populate_lists(self):
+        """Populate the available and selected lists based on current_order."""
+        # Get columns that are already in the sort order
+        selected_columns = {col_idx for col_idx, _ in self.current_order}
+
+        # Populate available list with sortable columns not in current order
+        self.available_list.clear()
+        for col_idx in SORTABLE_COLUMNS:
+            if col_idx not in selected_columns:
+                item = QListWidgetItem(COLUMN_NAMES[col_idx])
+                item.setData(Qt.ItemDataRole.UserRole, col_idx)
+                self.available_list.addItem(item)
+
+        # Populate selected list with current order
+        self.selected_list.clear()
+        for col_idx, ascending in self.current_order:
+            order_suffix = " (Asc)" if ascending else " (Desc)"
+            item = QListWidgetItem(COLUMN_NAMES[col_idx] + order_suffix)
+            item.setData(Qt.ItemDataRole.UserRole, (col_idx, ascending))
+            self.selected_list.addItem(item)
+
+    def add_selected(self):
+        """Add selected columns from available list to order by list."""
+        selected_items = self.available_list.selectedItems()
+        for item in selected_items:
+            col_idx = item.data(Qt.ItemDataRole.UserRole)
+            # Add to selected list with ascending order by default
+            new_item = QListWidgetItem(COLUMN_NAMES[col_idx] + " (Asc)")
+            new_item.setData(Qt.ItemDataRole.UserRole, (col_idx, True))
+            self.selected_list.addItem(new_item)
+            # Remove from available list
+            self.available_list.takeItem(self.available_list.row(item))
+
+    def remove_selected(self):
+        """Remove selected columns from order by list back to available list."""
+        selected_items = self.selected_list.selectedItems()
+        for item in selected_items:
+            col_idx, _ = item.data(Qt.ItemDataRole.UserRole)
+            # Add back to available list
+            new_item = QListWidgetItem(COLUMN_NAMES[col_idx])
+            new_item.setData(Qt.ItemDataRole.UserRole, col_idx)
+            self.available_list.addItem(new_item)
+            # Remove from selected list
+            self.selected_list.takeItem(self.selected_list.row(item))
+
+    def move_up(self):
+        """Move the selected item up in the order by list."""
+        current_row = self.selected_list.currentRow()
+        if current_row > 0:
+            item = self.selected_list.takeItem(current_row)
+            self.selected_list.insertItem(current_row - 1, item)
+            self.selected_list.setCurrentRow(current_row - 1)
+
+    def move_down(self):
+        """Move the selected item down in the order by list."""
+        current_row = self.selected_list.currentRow()
+        if current_row >= 0 and current_row < self.selected_list.count() - 1:
+            item = self.selected_list.takeItem(current_row)
+            self.selected_list.insertItem(current_row + 1, item)
+            self.selected_list.setCurrentRow(current_row + 1)
+
+    def toggle_sort_order(self):
+        """Toggle the sort order (ascending/descending) of the selected item."""
+        current_item = self.selected_list.currentItem()
+        if current_item:
+            col_idx, ascending = current_item.data(Qt.ItemDataRole.UserRole)
+            new_ascending = not ascending
+            order_suffix = " (Asc)" if new_ascending else " (Desc)"
+            current_item.setText(COLUMN_NAMES[col_idx] + order_suffix)
+            current_item.setData(Qt.ItemDataRole.UserRole, (col_idx, new_ascending))
+
+    def clear_all(self):
+        """Clear all columns from the order by list."""
+        while self.selected_list.count() > 0:
+            item = self.selected_list.takeItem(0)
+            col_idx, _ = item.data(Qt.ItemDataRole.UserRole)
+            new_item = QListWidgetItem(COLUMN_NAMES[col_idx])
+            new_item.setData(Qt.ItemDataRole.UserRole, col_idx)
+            self.available_list.addItem(new_item)
+
+    def get_sort_order(self):
+        """
+        Get the configured sort order.
+
+        Returns
+        -------
+        list of tuple
+            List of (column_index, ascending) tuples representing the sort order.
+        """
+        result = []
+        for i in range(self.selected_list.count()):
+            item = self.selected_list.item(i)
+            col_idx, ascending = item.data(Qt.ItemDataRole.UserRole)
+            result.append((col_idx, ascending))
+        return result
 
 
 class TracksPanel(QWidget):
@@ -139,6 +355,12 @@ class TracksPanel(QWidget):
         self.bulk_line_style_combo.currentIndexChanged.connect(self.apply_bulk_action)
         self.bulk_marker_size_spinbox.valueChanged.connect(self.apply_bulk_action)
         self.bulk_show_uncertainty_checkbox.toggled.connect(self.apply_bulk_action)
+
+        # Order By button for multi-column sorting
+        self.order_by_btn = QPushButton("Order By...")
+        self.order_by_btn.setToolTip("Configure multi-column sort order for tracks")
+        self.order_by_btn.clicked.connect(self.on_order_by_clicked)
+        bulk_layout.addWidget(self.order_by_btn)
 
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
@@ -342,6 +564,7 @@ class TracksPanel(QWidget):
         self.track_column_filters = {}
         self.track_sort_column = None
         self.track_sort_order = Qt.SortOrder.AscendingOrder
+        self.track_multi_sort_order = []  # List of (column_index, ascending) tuples for multi-column sort
 
         # Set delegates for special columns (keep references to prevent garbage collection)
         self.tracks_labels_delegate = LabelsDelegate(self.tracks_table)
@@ -390,8 +613,10 @@ class TracksPanel(QWidget):
         # Apply filters
         filtered_tracks = self._apply_track_filters(all_tracks)
 
-        # Apply sorting
-        if self.track_sort_column is not None:
+        # Apply sorting (multi-column takes precedence over single-column)
+        if self.track_multi_sort_order:
+            filtered_tracks = self._sort_tracks_multi(filtered_tracks, self.track_multi_sort_order)
+        elif self.track_sort_column is not None:
             filtered_tracks = self._sort_tracks(filtered_tracks, self.track_sort_column, self.track_sort_order)
 
         # Populate table
@@ -666,10 +891,121 @@ class TracksPanel(QWidget):
                 return track.complete
             elif column == 11:
                 return track.show_line
+            elif column == 14:
+                return self._get_track_avg_snr(track)
+            elif column == 15:
+                return track.show_uncertainty
             return ""
 
         reverse = (order == Qt.SortOrder.DescendingOrder)
         return sorted(tracks_list, key=get_sort_key, reverse=reverse)
+
+    def _get_track_avg_snr(self, track):
+        """Calculate average SNR for a track from its extraction metadata.
+
+        Parameters
+        ----------
+        track : Track
+            The track to calculate average SNR for.
+
+        Returns
+        -------
+        float
+            The average SNR value, or -inf if not available (sorts to bottom).
+        """
+        if not hasattr(track, 'extraction_metadata') or track.extraction_metadata is None:
+            return float('-inf')
+
+        noise_stds = track.extraction_metadata.get('noise_stds')
+        signal_pixels = track.extraction_metadata.get('signal_pixels')
+
+        if noise_stds is None or signal_pixels is None:
+            return float('-inf')
+
+        snrs = []
+        for i, pixels in enumerate(signal_pixels):
+            if pixels is not None and len(pixels) > 0 and noise_stds[i] is not None and noise_stds[i] > 0:
+                mean_signal = np.mean(pixels)
+                if mean_signal > 0:
+                    snr = mean_signal / noise_stds[i]
+                    snrs.append(snr)
+
+        if snrs:
+            return np.mean(snrs)
+        return float('-inf')
+
+    def _get_track_sort_value(self, track, column):
+        """
+        Get the sort value for a track for a given column.
+
+        Parameters
+        ----------
+        track : Track
+            The track to get the sort value for.
+        column : int
+            The column index.
+
+        Returns
+        -------
+        any
+            The value to use for sorting.
+        """
+        if column == 0:
+            return track.visible
+        elif column == 1:
+            return track.tracker or ""
+        elif column == 2:
+            return track.name
+        elif column == 3:
+            return ', '.join(sorted(track.labels)) if track.labels else ''
+        elif column == 4:
+            return track.length
+        elif column == 10:
+            return track.complete
+        elif column == 11:
+            return track.show_line
+        elif column == 14:
+            return self._get_track_avg_snr(track)
+        elif column == 15:
+            return track.show_uncertainty
+        return ""
+
+    def _sort_tracks_multi(self, tracks_list, sort_order):
+        """
+        Sort tracks by multiple columns.
+
+        Parameters
+        ----------
+        tracks_list : list of Track
+            The list of tracks to sort.
+        sort_order : list of tuple
+            List of (column_index, ascending) tuples specifying the sort order.
+
+        Returns
+        -------
+        list of Track
+            The sorted list of tracks.
+        """
+        if not sort_order:
+            return tracks_list
+
+        # Create a DataFrame-like sorting approach: sort by columns in reverse order
+        # so that the first column in the list has the highest priority
+        result = list(tracks_list)
+        for column, ascending in reversed(sort_order):
+            result = sorted(result, key=lambda t: self._get_track_sort_value(t, column), reverse=not ascending)
+
+        return result
+
+    def on_order_by_clicked(self):
+        """Open the Order By dialog for configuring multi-column sort."""
+        dialog = OrderByDialog(self, self.track_multi_sort_order)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.track_multi_sort_order = dialog.get_sort_order()
+            # Clear single-column sort when multi-column sort is set
+            if self.track_multi_sort_order:
+                self.track_sort_column = None
+            self.refresh_tracks_table()
 
     def on_track_header_context_menu(self, pos):
         """Show context menu on track table header"""
@@ -678,9 +1014,8 @@ class TracksPanel(QWidget):
 
         menu = QMenu(self)
 
-        # Only allow sort/filter on specific columns: Visible (0), Tracker (1), Name (2), Labels (3), Length (4),
-        # Complete (10), Show Line (11), Show Uncertainty (15)
-        if column in [0, 1, 2, 3, 4, 10, 11, 15]:
+        # Only allow sort/filter on sortable columns
+        if column in SORTABLE_COLUMNS:
             # Sort options
             sort_asc_action = QAction("Sort Ascending", self)
             sort_asc_action.triggered.connect(lambda: self.sort_tracks_column(column, Qt.SortOrder.AscendingOrder))
@@ -862,6 +1197,8 @@ class TracksPanel(QWidget):
         """Sort tracks by column"""
         self.track_sort_column = column
         self.track_sort_order = order
+        # Clear multi-column sort when single-column sort is applied
+        self.track_multi_sort_order = []
         self.refresh_tracks_table()
 
     def show_track_filter_dialog(self, column):

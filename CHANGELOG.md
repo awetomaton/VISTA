@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👷 Eliminated the `Tracker` object in favor of a flat list of `Track` objects with a `tracker` attribute.
 - ✨ Made `Tracker` column editable in the Tracks Panel.
 - 🥳 Addded undo with `ctrl` + `z` shortcut to tracks and detections panels.
+- ✨ Added a button on the tracks panel to re-order track rows by multiple ordered columns.
 
 ### Bug Fixes
 
