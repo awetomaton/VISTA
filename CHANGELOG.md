@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-- 🛠️ Updated all tracker to produce green tracks with circle by default.
-- 👷 Eliminated the `Tracker` object in favor of a flat list of `Track` objects with a `tracker` attribute.
-- ✨ Made `Tracker` column editable in the Tracks Panel.
 - 🥳 Addded undo with `ctrl` + `z` shortcut to tracks and detections panels.
+- ✨ Made `Tracker` column editable in the Tracks Panel.
 - ✨ Added a button on the tracks panel to re-order track rows by multiple ordered columns.
+- 👷 Eliminated the `Tracker` object in favor of a flat list of `Track` objects with a `tracker` attribute.
+- 🛠️ Updated all tracker to produce green tracks with circle by default.
+- 🛠️ Updated track merging behavior so that new merged track tracker name is combines the unique tracker names in all the merged tracks.
 
 ### Bug Fixes
 

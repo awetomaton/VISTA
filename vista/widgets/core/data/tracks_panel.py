@@ -1819,14 +1819,17 @@ class TracksPanel(QWidget):
         # Update the Track column in the DataFrame to the merged name
         combined_df['Track'] = merged_name
 
+        # Merge tracker names
+        merged_tracker = " ".join(list(set([track.tracker for track in tracks_to_merge if track.tracker])))
+
         # Create the merged track from the combined DataFrame
         merged_track = Track(
             name=merged_name,
+            tracker=merged_tracker,
             frames=combined_df['Frames'].to_numpy().astype(np.int_),
             rows=combined_df['Rows'].to_numpy(),
             columns=combined_df['Columns'].to_numpy(),
             sensor=first_track.sensor,
-            tracker=first_track.tracker,  # Preserve tracker name
             color=first_track.color,
             marker=first_track.marker,
             line_width=first_track.line_width,
