@@ -576,6 +576,11 @@ class ImageryViewer(QWidget):
             if self.selected_sensor is not None and track.sensor != self.selected_sensor:
                 path.setData(x=[], y=[])  # Hide track from different sensor
                 marker.setData(x=[], y=[])
+                # Clear uncertainty ellipses for this track
+                if track_id in self.track_uncertainty_items:
+                    for item in self.track_uncertainty_items[track_id]:
+                        self.plot_item.removeItem(item)
+                    del self.track_uncertainty_items[track_id]
                 continue
 
             # Update visibility

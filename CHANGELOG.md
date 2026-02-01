@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.9.0] - 2026-1-31
+## [1.9.0] - 2026-2-1
 
 ### Improvements
 
@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🔧 Fixed bug tracks with labels that are parsed as numeric would not load such as `1`.
 - 🔧 Fixed bug where adding detections to track could get stuck as on and disabled when user selects detections, presses add to track, makes a new detection selection, and then cancels that selection.
+- 🔧 Fixed bug where changing sensor did not clear track uncertainty ellipses from the previously selected sensor.
 
 ## [1.8.2] - 2026-1-29
 
