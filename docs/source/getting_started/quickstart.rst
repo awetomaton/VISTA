@@ -115,7 +115,7 @@ Common keyboard shortcuts:
 Example: Using the API - Detection Workflow
 -------------------------------------------
 
-Here's a simple example workflow using the VISTA API:
+VISTA is also usable outside of the context of the GUI. Here's a simple example workflow using the VISTA API:
 
 .. code-block:: python
 

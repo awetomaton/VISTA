@@ -4,7 +4,7 @@ Installation
 Requirements
 ------------
 
-VISTA requires Python 3.9 or higher. It is compatible with Python 3.9, 3.10, 3.11, 3.12, and 3.13.
+VISTA requires Python 3.13 or higher.
 
 Installing from PyPI
 --------------------

@@ -355,19 +355,30 @@ The **Tracks Panel** in the Data Manager provides tools for viewing, modifying, 
 displays all tracks for the selected Sensor in a table with columns:
 
 - **Visible**: Checkbox to show/hide track
-- **Name**: Track identifier
-- **Tracker**: Parent tracker name
-- **Frames**: Number of frames in track
+- **Tracker**: Tracker name (resizable)
+- **Name**: Track identifier (resizable)
+- **Labels**: Text labels for categorization (resizable)
 - **Length**: Total trajectory length in pixels
 - **Color**: Track color (click to change)
 - **Marker**: Marker style for current position
 - **Line Width**: Width of trajectory line
 - **Marker Size**: Size of position marker
+- **Tail Length**: Number of previous frames to show (0 = all)
 - **Complete**: Show entire track regardless of current frame
 - **Show Line**: Whether to draw connecting line
 - **Line Style**: Line style (solid, dashed, etc.)
-- **Tail Length**: Number of previous frames to show (0 = all)
-- **Labels**: Text labels for categorization
+- **Extracted**: Indicates what track has been extracted
+- **Avg SNR**: Average target signal-to-noise ratio (resizable)
+- **Show Uncertainty**: Toggle track uncertainty ellipse on/off
+
+Reorder / Hide Columns
+~~~~~~~~~~~~~~~~~~~~~~
+Users can reorder columns by clicking and dragging. Users can hide columns by right clicking on the table header and 
+navigating to the "Show/Hide Columns" menu.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_reorder_columns.gif
+   :alt: Bulk track actions
+   :align: center
 
 Bulk Actions
 ~~~~~~~~~~~~
@@ -390,17 +401,31 @@ This is useful for:
 - Batch labeling tracks
 - Setting tail length for multiple tracks
 
+Order By Multiple Columns
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Press the 
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_orderby.gif
+   :alt: Order by multiple columns
+   :align: center
+
+Undo
+^^^^
+Users can also undo previous actions in the Track Panel by pressing the Undo button or pressing ``ctrl`` + ``z``. The 
+undo depth is configurable through the global VISTA settings on the Data Manager tab.
+
 Track Selection Actions
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 These actions work on one or more selected tracks:
 
 Export Tracks
-~~~~~~~~~~~~~
+^^^^^^^^^^^^^
 Export selected tracks to CSV file with all coordinates and styling.
 
 Copy to Sensor
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 Copy selected tracks to a different sensor or the same sensor (useful for comparing across sensors).
 
 .. note::
@@ -409,7 +434,7 @@ Copy selected tracks to a different sensor or the same sensor (useful for compar
    rows, columns. It is left to users to add any transforms needed for their real-world applications.
 
 Merge Selected
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 To combine multiple tracks into one:
 
@@ -433,15 +458,15 @@ Use cases:
    Merging tracks does not remove duplicate frames. If tracks overlap in time, you may need to manually edit the merged result.
 
 Delete Selected
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 Remove selected tracks from the tracker
 
 Label Selected
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 Apply labels to selected tracks for categorization
 
 Plot Track Details
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 Open plotting windows showing track details as a static plot or animated over time.
 
 .. .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_detail_plots.gif
@@ -450,12 +475,21 @@ Open plotting windows showing track details as a static plot or animated over ti
 
 .. _track-operations:
 
+Manually Reorder Columns
+^^^^^^^^^^^^^^^^^^^^^^^^
+Users can manually re-order columns by selecting rows in the table content and dragging them. Rows cannot be dragged
+from the row header.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_reorder.gif
+   :alt: Track reordering
+   :align: center
+
 Track Operations
-----------------
+~~~~~~~~~~~~~~~~
 These actions require selecting exactly one track.
 
 Split Track
-~~~~~~~~~~~
+^^^^^^^^^^^
 
 To split a track at a specific frame:
 
@@ -474,7 +508,7 @@ Use cases:
 - Removing problematic sections while preserving good data
 
 Edit Track
-~~~~~~~~~~
+^^^^^^^^^^
 
 Interactive track editing allows manual refinement:
 

@@ -3,7 +3,10 @@ VISTA Documentation
 
 **Viewing, Imagery, Spatial Tracking and Analysis**
 
-VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
+VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with 
+associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image 
+sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric 
+processing.
 
 .. image:: https://img.shields.io/badge/python-3.13+-blue.svg
    :target: https://www.python.org/downloads/
@@ -16,11 +19,13 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 Key Features
 ------------
 
+* **Multi-semspr viewing** to quickly switch between different sensor's perspective on the same event
 * **Multi-frame imagery viewing** with temporal navigation and playback controls
 * **Detection and tracking overlays** with support for multiple tracking algorithms
-* **Geodetic coordinate system support** for geospatial data visualization
+* **Geodetic coordinate system support** for projecting to and from the image space
 * **Sensor calibration** and radiometric processing capabilities
 * **Background removal algorithms** including temporal median and robust PCA
+* **Unresolved object detection** including a Constant False-Alarm Rate (CFAR) detector
 * **Interactive analysis tools** for feature extraction and track refinement
 * **Export capabilities** for processed imagery and analysis results
 

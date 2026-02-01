@@ -223,16 +223,41 @@ Detections Panel Overview
 
 The Detections Panel displays:
 
-- **Detector Name**: Identifier for the detection set
-- **Description**: Algorithm and parameters used
-- **Count**: Total number of detections
-- **Visibility**: Toggle detection display on/off
-- **Color/Marker**: Styling controls
-- **Statistics**: Detection counts per frame, spatial distribution
+- **Visible**: Toggle detection display on/off
+- **Name**: Name of detector or detections group (resizable)
+- **Labels**: Text labels for categorization (resizable)
+- **Color**: Track color (click to change)
+- **Marker**: Marker style for current position
+- **Marker Size**: Size of marker
+- **Line Thickness**: Thickness of the marker border
+- **Complete**: Show detections regardless of current frame
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_controls.gif
    :alt: Detector controls
    :align: center
+
+Reorder / Hide Columns
+^^^^^^^^^^^^^^^^^^^^^^
+Users can reorder columns by clicking and dragging. Users can hide columns by right clicking on the table header and 
+navigating to the "Show/Hide Columns" menu.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detections_reorder_columns.gif
+   :alt: Reorder detection columns
+   :align: center
+
+Manually Reorder Columns
+^^^^^^^^^^^^^^^^^^^^^^^^
+Users can manually re-order columns by selecting rows in the table content and dragging them. Rows cannot be dragged
+from the row header.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detections_reorder.gif
+   :alt: Detector reordering
+   :align: center
+
+Undo
+^^^^
+Users can also undo previous actions in the Detections Panel by pressing the Undo button or pressing ``ctrl`` + ``z``. 
+The undo depth is configurable through the global VISTA settings on the Data Manager tab.
 
 Export Detections
 ~~~~~~~~~~~~~~~~~
