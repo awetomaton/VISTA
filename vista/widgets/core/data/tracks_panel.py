@@ -16,7 +16,7 @@ from vista.detections.detector import Detector
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
-from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
+from vista.widgets.core.data.delegates import ColorDelegate, DraggableRowTableWidget, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.track_plot_window import TrackPlotWindow
 from vista.widgets.core.data.undo_manager import UndoStack
@@ -496,8 +496,8 @@ class TracksPanel(QWidget):
         self.hidden_columns_label.setVisible(False)
         layout.addWidget(self.hidden_columns_label)
 
-        # Tracks table with all trackers consolidated
-        self.tracks_table = QTableWidget()
+        # Tracks table with all trackers consolidated (using DraggableRowTableWidget for row reordering)
+        self.tracks_table = DraggableRowTableWidget()
         self.tracks_table.setColumnCount(16)  # Added Extracted, Avg SNR, and Show Uncertainty columns
         self.tracks_table.setHorizontalHeaderLabels([
             "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length",
@@ -591,6 +591,9 @@ class TracksPanel(QWidget):
 
         # Handle color cell clicks manually
         self.tracks_table.cellClicked.connect(self.on_tracks_cell_clicked)
+
+        # Handle row drag-and-drop reordering
+        self.tracks_table.rows_moved.connect(self.on_tracks_rows_moved)
 
         layout.addWidget(self.tracks_table)
 
@@ -2022,6 +2025,99 @@ class TracksPanel(QWidget):
         # Clear selection in both table and viewer to prevent stale indices from being highlighted
         self.tracks_table.clearSelection()
         self.viewer.set_selected_tracks(set())
+
+        self.data_changed.emit()
+
+    def on_tracks_rows_moved(self, source_rows, target_row):
+        """
+        Handle row drag-and-drop reordering.
+
+        Parameters
+        ----------
+        source_rows : list of int
+            List of source row indices that were dragged
+        target_row : int
+            The target row index where rows were dropped
+        """
+        if not source_rows:
+            return
+
+        # Get the track UUIDs for all currently displayed rows (in display order)
+        displayed_track_uuids = []
+        for row in range(self.tracks_table.rowCount()):
+            name_item = self.tracks_table.item(row, 2)  # Name column stores UUID
+            if name_item:
+                track_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                displayed_track_uuids.append(track_uuid)
+
+        if not displayed_track_uuids:
+            return
+
+        # Get the UUIDs of tracks being moved
+        moved_uuids = []
+        for row in sorted(source_rows):
+            if 0 <= row < len(displayed_track_uuids):
+                moved_uuids.append(displayed_track_uuids[row])
+
+        if not moved_uuids:
+            return
+
+        # Calculate the new order of displayed track UUIDs
+        # Remove the moved tracks from their original positions
+        new_order = [uuid for uuid in displayed_track_uuids if uuid not in moved_uuids]
+
+        # Adjust target position to account for removed rows that were before it
+        adjusted_target = target_row
+        for row in sorted(source_rows):
+            if row < target_row:
+                adjusted_target -= 1
+
+        # Insert the moved tracks at the target position
+        for i, uuid in enumerate(moved_uuids):
+            insert_pos = min(adjusted_target + i, len(new_order))
+            new_order.insert(insert_pos, uuid)
+
+        # Create a mapping from UUID to track object
+        uuid_to_track = {track.uuid: track for track in self.viewer.tracks}
+
+        # Get the set of displayed UUIDs (for filtering non-displayed tracks)
+        displayed_uuid_set = set(displayed_track_uuids)
+
+        # Build the new tracks list:
+        # - Tracks that were displayed get reordered according to new_order
+        # - Tracks that were not displayed (filtered out) maintain their relative order at the end
+        non_displayed_tracks = [t for t in self.viewer.tracks if t.uuid not in displayed_uuid_set]
+        reordered_displayed_tracks = [uuid_to_track[uuid] for uuid in new_order if uuid in uuid_to_track]
+
+        # Update viewer.tracks with the new order
+        self.viewer.tracks = reordered_displayed_tracks + non_displayed_tracks
+
+        # Clear any active sort since manual reordering overrides it
+        self.track_sort_column = None
+        self.track_sort_order = Qt.SortOrder.AscendingOrder
+        self.track_multi_sort_order = []
+
+        # Refresh the table to reflect the new order
+        self.refresh_tracks_table()
+
+        # Re-select the moved rows at their new positions
+        self.tracks_table.blockSignals(True)
+        self.tracks_table.clearSelection()
+        rows_to_select = []
+        for uuid in moved_uuids:
+            for row in range(self.tracks_table.rowCount()):
+                name_item = self.tracks_table.item(row, 2)
+                if name_item and name_item.data(Qt.ItemDataRole.UserRole) == uuid:
+                    rows_to_select.append(row)
+                    break
+
+        # Select all moved rows
+        for row in rows_to_select:
+            for col in range(self.tracks_table.columnCount()):
+                item = self.tracks_table.item(row, col)
+                if item:
+                    item.setSelected(True)
+        self.tracks_table.blockSignals(False)
 
         self.data_changed.emit()
 
