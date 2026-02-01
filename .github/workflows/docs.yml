@@ -47,8 +47,8 @@ jobs:
           sphinx-multiversion source build/html
         env:
           # Install the package for each version that sphinx-multiversion builds
-          # The {git_root} placeholder is replaced with the temp checkout path
-          SPH_MV_PRE_BUILD_COMMAND: "pip install -q -e {git_root}"
+          # Uninstall first to avoid editable install conflicts between versions
+          SPH_MV_PRE_BUILD_COMMAND: "pip uninstall -y vista && pip install -q {git_root}"
 
       - name: Copy version selector to all versions
         run: |
