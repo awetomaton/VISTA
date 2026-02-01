@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QScrollArea, QApplication
 from vista.widgets.core.data.delegates import LabelsSelectionDialog
+from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
@@ -208,8 +209,8 @@ class DetectionsPanel(QWidget):
         self.hidden_columns_label.setVisible(False)
         layout.addWidget(self.hidden_columns_label)
 
-        # Detections table
-        self.detections_table = QTableWidget()
+        # Detections table (using DraggableRowTableWidget for row reordering)
+        self.detections_table = DraggableRowTableWidget()
         self.detections_table.setColumnCount(8)
         self.detections_table.setHorizontalHeaderLabels([
             "Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"
@@ -251,6 +252,9 @@ class DetectionsPanel(QWidget):
 
         # Handle color cell clicks manually
         self.detections_table.cellClicked.connect(self.on_detections_cell_clicked)
+
+        # Handle row drag-and-drop reordering
+        self.detections_table.rows_moved.connect(self.on_detections_rows_moved)
 
         # Enable context menu on header
         self.detections_table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1027,6 +1031,94 @@ class DetectionsPanel(QWidget):
 
         # Refresh table
         self.refresh_detections_table()
+        self.data_changed.emit()
+
+    def on_detections_rows_moved(self, source_rows, target_row):
+        """
+        Handle row drag-and-drop reordering.
+
+        Parameters
+        ----------
+        source_rows : list of int
+            List of source row indices that were dragged
+        target_row : int
+            The target row index where rows were dropped
+        """
+        if not source_rows:
+            return
+
+        # Get the detector UUIDs for all currently displayed rows (in display order)
+        displayed_detector_uuids = []
+        for row in range(self.detections_table.rowCount()):
+            name_item = self.detections_table.item(row, 1)  # Name column stores UUID
+            if name_item:
+                detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                displayed_detector_uuids.append(detector_uuid)
+
+        if not displayed_detector_uuids:
+            return
+
+        # Get the UUIDs of detectors being moved
+        moved_uuids = []
+        for row in sorted(source_rows):
+            if 0 <= row < len(displayed_detector_uuids):
+                moved_uuids.append(displayed_detector_uuids[row])
+
+        if not moved_uuids:
+            return
+
+        # Calculate the new order of displayed detector UUIDs
+        # Remove the moved detectors from their original positions
+        new_order = [uuid for uuid in displayed_detector_uuids if uuid not in moved_uuids]
+
+        # Adjust target position to account for removed rows that were before it
+        adjusted_target = target_row
+        for row in sorted(source_rows):
+            if row < target_row:
+                adjusted_target -= 1
+
+        # Insert the moved detectors at the target position
+        for i, uuid in enumerate(moved_uuids):
+            insert_pos = min(adjusted_target + i, len(new_order))
+            new_order.insert(insert_pos, uuid)
+
+        # Create a mapping from UUID to detector object
+        uuid_to_detector = {detector.uuid: detector for detector in self.viewer.detectors}
+
+        # Get the set of displayed UUIDs (for filtering non-displayed detectors)
+        displayed_uuid_set = set(displayed_detector_uuids)
+
+        # Build the new detectors list:
+        # - Detectors that were displayed get reordered according to new_order
+        # - Detectors that were not displayed (filtered out) maintain their relative order at the end
+        non_displayed_detectors = [d for d in self.viewer.detectors if d.uuid not in displayed_uuid_set]
+        reordered_displayed_detectors = [uuid_to_detector[uuid] for uuid in new_order if uuid in uuid_to_detector]
+
+        # Update viewer.detectors with the new order
+        self.viewer.detectors = reordered_displayed_detectors + non_displayed_detectors
+
+        # Refresh the table to reflect the new order
+        self.refresh_detections_table()
+
+        # Re-select the moved rows at their new positions
+        self.detections_table.blockSignals(True)
+        self.detections_table.clearSelection()
+        rows_to_select = []
+        for uuid in moved_uuids:
+            for row in range(self.detections_table.rowCount()):
+                name_item = self.detections_table.item(row, 1)
+                if name_item and name_item.data(Qt.ItemDataRole.UserRole) == uuid:
+                    rows_to_select.append(row)
+                    break
+
+        # Select all moved rows
+        for row in rows_to_select:
+            for col in range(self.detections_table.columnCount()):
+                item = self.detections_table.item(row, col)
+                if item:
+                    item.setSelected(True)
+        self.detections_table.blockSignals(False)
+
         self.data_changed.emit()
 
     def on_detector_selection_changed(self):

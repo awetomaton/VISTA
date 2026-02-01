@@ -16,7 +16,8 @@ from vista.detections.detector import Detector
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
-from vista.widgets.core.data.delegates import ColorDelegate, DraggableRowTableWidget, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
+from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
+from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.track_plot_window import TrackPlotWindow
 from vista.widgets.core.data.undo_manager import UndoStack
