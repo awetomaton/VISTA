@@ -13,9 +13,8 @@ Core Classes
    :nosignatures:
 
    track.Track
-   tracker.Tracker
 
-The :class:`~track.Track` class represents a temporal sequence of detections, while :class:`~tracker.Tracker` provides the base class for tracking algorithms.
+The :class:`~track.Track` class represents a temporal sequence of detections.
 
 Tracking Algorithms
 -------------------
