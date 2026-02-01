@@ -511,35 +511,45 @@ class TracksPanel(QWidget):
         # Connect selection changed signal to update Edit Track button state
         self.tracks_table.itemSelectionChanged.connect(self.on_track_selection_changed)
 
-        # Set column resize modes - only Tracker, Name, and Labels should stretch
+        # Set column resize modes - use Interactive mode to allow manual resizing by users
+        # ResizeToContents is kept for small checkbox columns that don't need resizing
         header = self.tracks_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Tracker (can be long)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)  # Labels (can have multiple labels)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Length (numeric)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)  # Tracker (can be long, user resizable)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)  # Name (can be long, user resizable)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)  # Labels (can have multiple labels, user resizable)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)  # Length (numeric, user resizable)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
-        #header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
-        self.tracks_table.setColumnWidth(6, 80)  # Set reasonably large width to accommodate delegate
+        #header.setSectionResizeMode(6, QHeaderView.ResizeMode.Interactive)  # Marker (dropdown)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
         header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
         header.setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
         header.setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
         header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
-        #header.setSectionResizeMode(12, QHeaderView.ResizeMode.ResizeToContents)  # Line Style (dropdown)
-        self.tracks_table.setColumnWidth(12, 120)  # Set reasonably large width to accommodate delegate
+        #header.setSectionResizeMode(12, QHeaderView.ResizeMode.Interactive)  # Line Style (dropdown)
         header.setSectionResizeMode(13, QHeaderView.ResizeMode.ResizeToContents)  # Extracted (checkbox)
-        header.setSectionResizeMode(14, QHeaderView.ResizeMode.ResizeToContents)  # Avg SNR (numeric)
+        header.setSectionResizeMode(14, QHeaderView.ResizeMode.Interactive)  # Avg SNR (numeric, user resizable)
         header.setSectionResizeMode(15, QHeaderView.ResizeMode.ResizeToContents)  # Show Uncertainty (checkbox)
 
-        # Set minimum widths for Tracker and Name columns to ensure headers are never truncated
+        # Set the last section to stretch so table fills available width
+        header.setStretchLastSection(True)
+
+        # Set minimum widths for columns to ensure headers are never truncated
         # Calculate minimum width based on header text plus padding
         font_metrics = header.fontMetrics()
-        tracker_header_width = font_metrics.horizontalAdvance("Tracker") + 20  # Add padding
-        name_header_width = font_metrics.horizontalAdvance("Name") + 20  # Add padding
-        header.setMinimumSectionSize(max(tracker_header_width, name_header_width, 80))  # Set global minimum
-        self.tracks_table.setColumnWidth(1, max(tracker_header_width, 100))  # Ensure Tracker starts at reasonable width
-        self.tracks_table.setColumnWidth(2, max(name_header_width, 100))  # Ensure Name starts at reasonable width
+        header.setMinimumSectionSize(50)  # Set global minimum for all columns
+
+        # Set initial widths for Interactive columns
+        self.tracks_table.setColumnWidth(1, max(font_metrics.horizontalAdvance("Tracker") + 20, 100))  # Tracker
+        self.tracks_table.setColumnWidth(2, max(font_metrics.horizontalAdvance("Name") + 20, 100))  # Name
+        self.tracks_table.setColumnWidth(3, max(font_metrics.horizontalAdvance("Labels") + 20, 100))  # Labels
+        self.tracks_table.setColumnWidth(4, max(font_metrics.horizontalAdvance("Length") + 20, 60))  # Length
+        self.tracks_table.setColumnWidth(6, 80)  # Marker (dropdown)
+        self.tracks_table.setColumnWidth(7, max(font_metrics.horizontalAdvance("Line Width") + 20, 70))  # Line Width
+        self.tracks_table.setColumnWidth(8, max(font_metrics.horizontalAdvance("Marker Size") + 20, 80))  # Marker Size
+        self.tracks_table.setColumnWidth(9, max(font_metrics.horizontalAdvance("Tail Length") + 20, 80))  # Tail Length
+        self.tracks_table.setColumnWidth(12, 100)  # Line Style (dropdown)
+        self.tracks_table.setColumnWidth(14, max(font_metrics.horizontalAdvance("Avg SNR") + 20, 70))  # Avg SNR
 
         self.tracks_table.cellChanged.connect(self.on_track_cell_changed)
 
@@ -1113,37 +1123,6 @@ class TracksPanel(QWidget):
 
         # Save the updated visibility settings
         self.save_track_column_visibility()
-
-        # If showing the column, resize it appropriately
-        if visible:
-            self._resize_track_column(column_idx)
-
-        # Update hidden columns indicator
-        self.update_hidden_columns_indicator()
-
-    def _resize_track_column(self, column_idx):
-        """Resize a track column based on its index"""
-        header = self.tracks_table.horizontalHeader()
-
-        # Apply the appropriate resize mode based on column type
-        if column_idx == 1:  # Tracker
-            header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.Stretch)
-            # Ensure minimum width based on header text
-            font_metrics = header.fontMetrics()
-            min_width = font_metrics.horizontalAdvance("Tracker") + 20
-            self.tracks_table.setColumnWidth(column_idx, max(min_width, 100))
-        elif column_idx == 2:  # Name
-            header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.Stretch)
-            # Ensure minimum width based on header text
-            font_metrics = header.fontMetrics()
-            min_width = font_metrics.horizontalAdvance("Name") + 20
-            self.tracks_table.setColumnWidth(column_idx, max(min_width, 100))
-        elif column_idx == 5:  # Marker (dropdown)
-            self.tracks_table.setColumnWidth(column_idx, 80)
-        elif column_idx == 11:  # Line Style (dropdown)
-            self.tracks_table.setColumnWidth(column_idx, 120)
-        else:  # All other columns
-            header.setSectionResizeMode(column_idx, QHeaderView.ResizeMode.ResizeToContents)
 
         # Update hidden columns indicator
         self.update_hidden_columns_indicator()

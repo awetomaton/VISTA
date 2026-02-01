@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👷 Eliminated the `Tracker` object in favor of a flat list of `Track` objects with a `tracker` attribute.
 - 🛠️ Updated all tracker to produce green tracks with circle by default.
 - 🛠️ Updated track merging behavior so that new merged track tracker name is combines the unique tracker names in all the merged tracks.
+- 🛠️ Updated tracks and detections tables so that some columns are resizable.
+- 🛠️ Removed unnecessary `_resize_track_column` function.
 
 ### Bug Fixes
 
