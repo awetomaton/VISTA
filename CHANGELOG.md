@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
 - 🛠️ Tracks loaded from time data are trimmed to the times that overlap with the selected imagery to prevent loading unncessary data.
+- 🛠️ Updated the track plot window to not reset cached track data each time the selection is changed.
  
 ### Bug Fixes
 

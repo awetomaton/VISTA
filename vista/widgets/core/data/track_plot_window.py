@@ -586,9 +586,6 @@ class TrackPlotWindow(QWidget):
         self.tracks = tracks
         self.tracker_map = tracker_map
 
-        # Clear cached data
-        self._cached_data = {}
-
         # Update tracks label
         if len(tracks) == 0:
             self.tracks_label.setText("Selected Tracks: None")
