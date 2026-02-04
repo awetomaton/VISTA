@@ -276,7 +276,7 @@ class TracksPanel(QWidget):
         self.bulk_property_combo = QComboBox()
         self.bulk_property_combo.addItems([
             "Visibility", "Complete", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels",
-            "Show Uncertainty"
+            "Show Uncertainty", "Tracker"
         ])
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
@@ -347,11 +347,18 @@ class TracksPanel(QWidget):
         self.bulk_show_uncertainty_checkbox.setChecked(True)
         bulk_layout.addWidget(self.bulk_show_uncertainty_checkbox)
 
+        # Tracker name line edit
+        self.bulk_tracker_edit = QLineEdit()
+        self.bulk_tracker_edit.setPlaceholderText("Enter tracker name")
+        self.bulk_tracker_edit.setMaximumWidth(150)
+        bulk_layout.addWidget(self.bulk_tracker_edit)
+
         # Connect signals for immediate bulk action application
         self.bulk_visibility_checkbox.toggled.connect(self.apply_bulk_action)
         self.bulk_complete_checkbox.toggled.connect(self.apply_bulk_action)
         self.bulk_tail_spinbox.valueChanged.connect(self.apply_bulk_action)
         self.bulk_marker_combo.currentIndexChanged.connect(self.apply_bulk_action)
+        self.bulk_tracker_edit.editingFinished.connect(self.apply_bulk_action)
         self.bulk_line_width_spinbox.valueChanged.connect(self.apply_bulk_action)
         self.bulk_line_style_combo.currentIndexChanged.connect(self.apply_bulk_action)
         self.bulk_marker_size_spinbox.valueChanged.connect(self.apply_bulk_action)
@@ -1586,6 +1593,7 @@ class TracksPanel(QWidget):
         self.bulk_marker_size_spinbox.hide()
         self.bulk_labels_btn.hide()
         self.bulk_show_uncertainty_checkbox.hide()
+        self.bulk_tracker_edit.hide()
 
         # Show the appropriate control
         property_name = self.bulk_property_combo.currentText()
@@ -1609,6 +1617,8 @@ class TracksPanel(QWidget):
             self.bulk_labels_btn.show()
         elif property_name == "Show Uncertainty":
             self.bulk_show_uncertainty_checkbox.show()
+        elif property_name == "Tracker":
+            self.bulk_tracker_edit.show()
 
     def choose_bulk_color(self):
         """Open color dialog for bulk color selection"""
@@ -1723,6 +1733,8 @@ class TracksPanel(QWidget):
                 # Only apply if track has uncertainty data
                 if track.has_uncertainty():
                     track.show_uncertainty = self.bulk_show_uncertainty_checkbox.isChecked()
+            elif property_name == "Tracker":
+                track.tracker = self.bulk_tracker_edit.text()
 
         self.refresh_tracks_table()
 
