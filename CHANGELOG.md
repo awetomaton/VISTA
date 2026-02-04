@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.9.1] - 2026-2-4
 
+### Improvements
+
+- 🛠️ Tracks loaded from time data are trimmed to the times that overlap with the selected imagery to prevent loading unncessary data.
+ 
 ### Bug Fixes
 
 - 🔧 Fixed bug where track extraction did not if applied in an AOI.

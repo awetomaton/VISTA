@@ -491,21 +491,6 @@ class Track:
             else:
                 kwargs["labels"] = set()
 
-        # Handle uncertainty data (optional) - covariance matrix elements
-        # Only populate if all three columns exist and all values are valid (not NaN)
-        if ("Covariance 00" in df.columns and "Covariance 01" in df.columns and
-                "Covariance 11" in df.columns):
-            cov_00 = df["Covariance 00"].to_numpy(dtype=np.float64)
-            cov_01 = df["Covariance 01"].to_numpy(dtype=np.float64)
-            cov_11 = df["Covariance 11"].to_numpy(dtype=np.float64)
-
-            # Only set covariance if all values are valid (no NaN or inf)
-            if (np.all(np.isfinite(cov_00)) and np.all(np.isfinite(cov_01)) and
-                    np.all(np.isfinite(cov_11))):
-                kwargs["covariance_00"] = cov_00
-                kwargs["covariance_01"] = cov_01
-                kwargs["covariance_11"] = cov_11
-
         # Handle times (optional)
         times = None
         if "Times" in df.columns:
@@ -522,10 +507,29 @@ class Track:
                 # Times present but no cannot map to frames using sensor - raise error
                 raise ValueError(f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping.")
             
+            # Eliminate track points before and after the time bounds of the selected sensor
+            df = df[(times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])]
+            if len(df) == 0:
+                raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
+            times = pd.to_datetime(df["Times"]).to_numpy()
+
             # Map times to frames using the sensor imagery
             frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
         else:
             raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
+        
+        # Handle uncertainty data (optional) - covariance matrix elements
+        # Only populate if all three columns exist and all values are valid (not NaN)
+        if ("Covariance 00" in df.columns and "Covariance 01" in df.columns and "Covariance 11" in df.columns):
+            cov_00 = df["Covariance 00"].to_numpy(dtype=np.float64)
+            cov_01 = df["Covariance 01"].to_numpy(dtype=np.float64)
+            cov_11 = df["Covariance 11"].to_numpy(dtype=np.float64)
+
+            # Only set covariance if all values are valid (no NaN or inf)
+            if (np.all(np.isfinite(cov_00)) and np.all(np.isfinite(cov_01)) and np.all(np.isfinite(cov_11))):
+                kwargs["covariance_00"] = cov_00
+                kwargs["covariance_01"] = cov_01
+                kwargs["covariance_11"] = cov_11
 
         # Determine rows/columns - priority: Rows/Columns > geodetic-to-pixel mapping
         if "Rows" in df.columns and "Columns" in df.columns:
