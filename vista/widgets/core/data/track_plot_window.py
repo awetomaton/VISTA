@@ -77,13 +77,13 @@ class TrackPlotWindow(QWidget):
         axis_layout.addWidget(QLabel("X-Axis:"))
         self.x_combo = QComboBox()
         self.x_combo.setMinimumWidth(150)
-        self.x_combo.currentIndexChanged.connect(self._on_settings_changed)
+        self.x_combo.currentIndexChanged.connect(self._on_axis_changed)
         axis_layout.addWidget(self.x_combo)
 
         axis_layout.addWidget(QLabel("Y-Axis:"))
         self.y_combo = QComboBox()
         self.y_combo.setMinimumWidth(150)
-        self.y_combo.currentIndexChanged.connect(self._on_settings_changed)
+        self.y_combo.currentIndexChanged.connect(self._on_axis_changed)
         axis_layout.addWidget(self.y_combo)
 
         axis_layout.addStretch()
@@ -187,6 +187,11 @@ class TrackPlotWindow(QWidget):
     def _on_settings_changed(self):
         """Handle plot settings change"""
         self.update_plot()
+
+    def _on_axis_changed(self):
+        """Handle axis combo box change - reset zoom and update plot"""
+        self.update_plot()
+        self.plot.getViewBox().autoRange()
 
     def _on_display_mode_changed(self):
         """Handle display mode change"""
