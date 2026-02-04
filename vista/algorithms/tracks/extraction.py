@@ -245,7 +245,7 @@ class TrackExtraction:
             image = self.imagery.images[image_idx]
 
             # Extract chip
-            chip = self._extract_chip(image, row, col)
+            chip = self._extract_chip(image, row - self.imagery.row_offset, col - self.imagery.column_offset)
             chips[i, :, :] = chip
 
             # Use CFAR to detect signal pixels and compute noise std
