@@ -123,3 +123,7 @@ class DataManagerPanel(QWidget):
     def refresh_aois_table(self):
         """Refresh AOIs table - wrapper for compatibility"""
         self.aois_panel.refresh_aois_table()
+
+    def clear_aoi_selection(self):
+        """Clear all AOI selections, allowing panning in the viewer"""
+        self.aois_panel.clear_selection()

@@ -4,7 +4,7 @@ import pathlib
 import pandas as pd
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtWidgets import (
-    QFileDialog, QHeaderView, QHBoxLayout, QMessageBox,
+    QFileDialog, QHeaderView, QHBoxLayout, QLabel, QMessageBox,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 
@@ -40,6 +40,11 @@ class AOIsPanel(QWidget):
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
+        # Help text
+        help_label = QLabel("Select row(s) to move and resize AOIs in the viewer. De-select (ctrl/cmd + click) to disable manipulation.")
+        help_label.setWordWrap(True)
+        layout.addWidget(help_label)
+
         # AOIs table
         self.aois_table = QTableWidget()
         self.aois_table.setColumnCount(2)
@@ -61,6 +66,10 @@ class AOIsPanel(QWidget):
 
         layout.addWidget(self.aois_table)
         self.setLayout(layout)
+
+    def clear_selection(self):
+        """Clear all AOI selections in the table, which deselects AOIs in the viewer"""
+        self.aois_table.clearSelection()
 
     def refresh_aois_table(self):
         """Refresh the AOIs table"""

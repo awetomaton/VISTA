@@ -1634,6 +1634,9 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager
         self.data_manager.refresh()
 
+        # Deselect AOIs to allow panning
+        self.data_manager.clear_aoi_selection()
+
         self.statusBar().showMessage(f"Added {len(processed_imagery)} processed imagery", 3000)
 
     def on_single_imagery_created(self, processed_imagery):
@@ -1663,6 +1666,9 @@ class VistaMainWindow(QMainWindow):
 
         # Refresh data manager
         self.data_manager.refresh()
+
+        # Deselect AOIs to allow panning
+        self.data_manager.clear_aoi_selection()
 
         self.statusBar().showMessage(f"Added processed imagery: {processed_imagery.name}", 3000)
 
@@ -1837,6 +1843,9 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager
         self.data_manager.refresh()
 
+        # Deselect AOIs to allow panning
+        self.data_manager.clear_aoi_selection()
+
         self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
 
     def open_cfar_widget(self):
@@ -1879,6 +1888,9 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager
         self.data_manager.refresh()
 
+        # Deselect AOIs to allow panning
+        self.data_manager.clear_aoi_selection()
+
         self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
 
     def open_simple_tracking_dialog(self):
@@ -1899,6 +1911,8 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
+            # Deselect AOIs to allow panning
+            self.data_manager.clear_aoi_selection()
 
     def open_kalman_tracking_dialog(self):
         """Open the Kalman Filter tracker configuration dialog"""
@@ -1918,6 +1932,8 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
+            # Deselect AOIs to allow panning
+            self.data_manager.clear_aoi_selection()
 
     def open_network_flow_tracking_dialog(self):
         """Open the Network Flow tracker configuration dialog"""
@@ -1937,6 +1953,8 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
+            # Deselect AOIs to allow panning
+            self.data_manager.clear_aoi_selection()
 
     def open_tracklet_tracking_dialog(self):
         """Open the Tracklet tracker configuration dialog"""
@@ -1956,6 +1974,8 @@ class VistaMainWindow(QMainWindow):
             # Refresh the data manager to show the new tracks
             self.data_manager.tracks_panel.refresh_tracks_table()
             self.viewer.update_overlays()
+            # Deselect AOIs to allow panning
+            self.data_manager.clear_aoi_selection()
 
     def open_track_interpolation_dialog(self):
         """Open the Track Interpolation dialog for selected tracks"""

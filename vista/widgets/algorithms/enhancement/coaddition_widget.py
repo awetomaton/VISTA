@@ -424,14 +424,6 @@ class CoadditionWidget(QDialog):
         # Emit signal with processed imagery
         self.imagery_processed.emit(processed_imagery)
 
-        # Show success message
-        QMessageBox.information(
-            self,
-            "Processing Complete",
-            f"Successfully processed imagery.\n\nNew imagery: {processed_imagery.name}",
-            QMessageBox.StandardButton.Ok
-        )
-
         # Close the dialog
         self.accept()
 

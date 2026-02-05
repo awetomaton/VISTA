@@ -351,16 +351,6 @@ class BaseTreatmentWidget(QDialog):
         # Emit signal with processed imagery
         self.imagery_processed.emit(processed_imagery)
 
-        # Show success message
-        QMessageBox.information(
-            self,
-            "Processing Complete",
-            f"Successfully processed imagery.\n\n"
-            f"Name: {processed_imagery.name}\n"
-            f"Frames: {len(processed_imagery.frames)}",
-            QMessageBox.StandardButton.Ok
-        )
-
         # Close the dialog
         self.accept()
 
