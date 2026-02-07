@@ -12,14 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✨ Updated to automatically de-select AOI after processing.
 - ✨ Updated the track plot window so that the zoom resets each time the x/y axis is changed.
 - ✨ Added the ability to set the tracker name of a group of selected tracks as a bulk action.
-- 🛠️ Added text to explain how manipulating AOIs works using the table
-- 🛠️ Removed success dialogs after running image processing algorithms
+- ✨ Updated the frame subset method so that copies histograms from the original imagery rather than recomputing, when possible.
+- 🛠️ Added text to explain how manipulating AOIs works using the table.
+- 🛠️ Removed success dialogs after running image processing algorithms.
 - 🛠️ Tracks loaded from time data are trimmed to the times that overlap with the selected imagery to prevent loading unncessary data.
 - 🛠️ Updated the track plot window to not reset cached track data each time the selection is changed.
  
 ### Bug Fixes
 
-- 🔧 Fixed bug where track extraction did not if applied in an AOI.
+- 🔧 Fixed bug where track extraction did not work if applied in an AOI.
  
 ## [1.9.0] - 2026-2-1
 

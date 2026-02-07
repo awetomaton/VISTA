@@ -67,12 +67,28 @@ class SubsetFramesProcessingThread(QThread):
             sliced_imagery.description = f"Subset of frames {self.start_frame} to {self.end_frame}"
 
             # Pre-compute histograms for performance
-            for i in range(len(sliced_imagery.images)):
-                if self._cancelled:
-                    return  # Exit early if cancelled
-                sliced_imagery.get_histogram(i)  # Lazy computation and caching
-                # Update progress: histogram computation
-                self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Computing histograms...")
+            # If processing entire imagery (no AOI), copy cached histograms from original
+            if not self.aoi and self.imagery._histograms is not None:
+                # Copy histograms from original imagery, adjusting frame indices
+                sliced_imagery._histograms = {}
+                sliced_imagery.default_histogram_bounds = {}
+                for i in range(len(sliced_imagery.images)):
+                    if self._cancelled:
+                        return  # Exit early if cancelled
+                    original_frame_idx = self.start_frame + i
+                    if original_frame_idx in self.imagery._histograms:
+                        sliced_imagery._histograms[i] = self.imagery._histograms[original_frame_idx]
+                    if original_frame_idx in self.imagery.default_histogram_bounds:
+                        sliced_imagery.default_histogram_bounds[i] = self.imagery.default_histogram_bounds[original_frame_idx]
+                    self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Copying histograms...")
+            else:
+                # Compute histograms (for AOI or if original doesn't have cached histograms)
+                for i in range(len(sliced_imagery.images)):
+                    if self._cancelled:
+                        return  # Exit early if cancelled
+                    sliced_imagery.get_histogram(i)  # Lazy computation and caching
+                    # Update progress: histogram computation
+                    self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
