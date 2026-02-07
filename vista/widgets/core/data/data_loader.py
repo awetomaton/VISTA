@@ -473,7 +473,7 @@ class DataLoaderThread(QThread):
             for idx, (track_name, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                track = Track.from_dataframe(track_df, sensor=self.sensor, name=track_name)
+                track = Track.from_dataframe(track_df, sensor=self.sensor, name=str(track_name))
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
         else:

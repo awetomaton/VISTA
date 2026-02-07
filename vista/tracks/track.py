@@ -456,7 +456,7 @@ class Track:
         """
 
         if name is None:
-            name = df["Track"][0]
+            name = str(df["Track"][0])
         kwargs = {}
         # Parse tracker from dataframe if not provided
         if "Tracker" in df.columns:

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 - 🔧 Fixed bug where track extraction did not work if applied in an AOI.
+- 🔧 Fixed bugs resulting from parsing track names as numbers instead of strings when all track names in a CSV were numbers.
  
 ## [1.9.0] - 2026-2-1
 
