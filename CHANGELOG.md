@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-2-7
+
+### Improvements
+
+- ✨ Updated to use `numba` to fuse multiple numpy imagery operations into a single memory pass.
+ 
+### Bug Fixes
+
 ## [1.9.1] - 2026-2-7
 
 ### Improvements
@@ -260,6 +268,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[1.9.2]: https://github.com/awetomaton/VISTA/releases/tag/1.10.0
 [1.9.1]: https://github.com/awetomaton/VISTA/releases/tag/1.9.1
 [1.9.0]: https://github.com/awetomaton/VISTA/releases/tag/1.9.0
 [1.8.2]: https://github.com/awetomaton/VISTA/releases/tag/1.8.2
