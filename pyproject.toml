@@ -39,6 +39,7 @@ dependencies = [
     "scikit-image",
     "scipy",
     "shapely",
+    "numba",
 ]
 
 [project.optional-dependencies]
