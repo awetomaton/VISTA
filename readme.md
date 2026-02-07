@@ -35,7 +35,7 @@ cd VISTA
 pip install -e .
 ```
 
-For detailed installation instructions, see the [Installation Guide](https://awetomaton.github.io/VISTA/1.9.0/getting_started/installation.html).
+For detailed installation instructions, see the [Installation Guide](https://awetomaton.github.io/VISTA/1.9.1/getting_started/installation.html).
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ For detailed installation instructions, see the [Installation Guide](https://awe
 4. **Track Objects**: `Algorithms > Tracking` to link detections into tracks
 5. **Export Results**: Export tracks/detections to CSV from the Data Manager
 
-For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.github.io/VISTA/1.9.0/getting_started/quickstart.html).
+For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.github.io/VISTA/1.9.1/getting_started/quickstart.html).
 
 ## Key Features
 
@@ -58,7 +58,7 @@ For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.githu
 - **Manual annotation**: Create/edit tracks and detections interactively
 - **Feature overlays**: AOIs, placemarks, and shapefile import
 
-See the [User Guide](https://awetomaton.github.io/VISTA/1.9.0/user_guide/imagery.html) for detailed feature documentation.
+See the [User Guide](https://awetomaton.github.io/VISTA/1.9.1/user_guide/imagery.html) for detailed feature documentation.
 
 ## Keyboard Shortcuts
 
@@ -72,9 +72,9 @@ See the [User Guide](https://awetomaton.github.io/VISTA/1.9.0/user_guide/imagery
 ## Input Data Formats
 
 VISTA uses **HDF5** for imagery and **CSV** for tracks/detections. For format specifications, see:
-- [Imagery HDF5 Format](https://awetomaton.github.io/VISTA/1.9.0/user_guide/imagery.html#hdf5-file-format)
-- [Track CSV Format](https://awetomaton.github.io/VISTA/1.9.0/user_guide/tracks.html#csv-format)
-- [Detection CSV Format](https://awetomaton.github.io/VISTA/1.9.0/user_guide/detections.html#export-to-csv)
+- [Imagery HDF5 Format](https://awetomaton.github.io/VISTA/1.9.1/user_guide/imagery.html#hdf5-file-format)
+- [Track CSV Format](https://awetomaton.github.io/VISTA/1.9.1/user_guide/tracks.html#csv-format)
+- [Detection CSV Format](https://awetomaton.github.io/VISTA/1.9.1/user_guide/detections.html#export-to-csv)
 
 ## Programmatic Usage
 
@@ -92,7 +92,7 @@ app = VistaApp(imagery=imagery)
 app.exec()
 ```
 
-See the [API Reference](https://awetomaton.github.io/VISTA/1.9.0/api/imagery.html) for complete programmatic documentation.
+See the [API Reference](https://awetomaton.github.io/VISTA/1.9.1/api/imagery.html) for complete programmatic documentation.
 
 ## Generating Test Data
 
@@ -120,7 +120,7 @@ pyinstaller vista/app.py --onefile --windowed -n vista --icon=vista/icons/logo.i
 
 ## Contributing
 
-Contributions are welcome! See the [Contributing Guide](https://awetomaton.github.io/VISTA/1.9.0/developer_guide/contributing.html) for details.
+Contributions are welcome! See the [Contributing Guide](https://awetomaton.github.io/VISTA/1.9.1/developer_guide/contributing.html) for details.
 
 ## License
 
