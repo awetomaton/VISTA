@@ -122,6 +122,11 @@ class Imagery:
     default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
     uuid: str = field(init=None, default=None)
 
+    # Incremental loading support: tracks how many frames have valid image data.
+    # None = fully loaded (default for programmatically created imagery).
+    # Integer = only images[0:loaded_frame_count] contain valid data.
+    loaded_frame_count: Optional[int] = field(default=None, init=False, repr=False)
+
     # Performance optimization: cached data structures
     _frame_index: Optional[dict] = field(default=None, init=False, repr=False)  # Frame number -> index
     _frames_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether frames are sorted
@@ -157,6 +162,18 @@ class Imagery:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name}, {self.images.shape})"
+
+    @property
+    def is_fully_loaded(self):
+        """Return True if all frames have been loaded (or if imagery was created programmatically)."""
+        return self.loaded_frame_count is None or self.loaded_frame_count >= len(self.frames)
+
+    @property
+    def loaded_frames(self):
+        """Return the subset of frame numbers that have been loaded so far."""
+        if self.loaded_frame_count is None:
+            return self.frames
+        return self.frames[:self.loaded_frame_count]
 
     def _check_frames_sorted(self):
         """Check if frames array is sorted for binary search optimization."""
@@ -297,8 +314,11 @@ class Imagery:
         return self._histograms[frame_index]
 
     def has_cached_histograms(self):
-        """Check if histograms have been pre-computed"""
-        return self._histograms is not None and len(self._histograms) == len(self.images)
+        """Check if histograms have been pre-computed for all loaded frames"""
+        if self._histograms is None:
+            return False
+        target = self.loaded_frame_count if self.loaded_frame_count is not None else len(self.images)
+        return len(self._histograms) >= target
 
     def get_aoi(self, aoi: AOI) -> "Imagery":
         # Extract AOI bounds

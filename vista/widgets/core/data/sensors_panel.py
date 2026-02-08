@@ -11,6 +11,7 @@ class SensorsPanel(QWidget):
 
     data_changed = pyqtSignal()  # Signal when data is modified
     sensor_selected = pyqtSignal(object)  # Signal when sensor selection changes
+    cancel_sensor_loading_requested = pyqtSignal(object)  # Emits sensor being deleted (to cancel loading imagery)
 
     def __init__(self, viewer):
         super().__init__()
@@ -141,6 +142,9 @@ class SensorsPanel(QWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
+            # Cancel loading for any imagery belonging to this sensor before removing
+            self.cancel_sensor_loading_requested.emit(sensor)
+
             # Delete all imagery for this sensor
             self.viewer.imageries = [img for img in self.viewer.imageries if img.sensor != sensor]
 

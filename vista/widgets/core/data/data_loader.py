@@ -16,17 +16,27 @@ from vista.tracks.track import Track
 
 
 class DataLoaderThread(QThread):
-    """Worker thread for loading data in the background"""
+    """Worker thread for loading data in the background.
 
-    # Signals for different data types
-    imagery_loaded = pyqtSignal(object, object)  # Emits (Imagery object, Sensor object)
+    For imagery loading, data is emitted incrementally so the UI can display frames as they become available:
+    1. imagery_available is emitted after the first block of images is loaded (imagery is viewable)
+    2. imagery_block_loaded is emitted after each subsequent block (more frames available)
+    3. imagery_load_complete is emitted when all frames are loaded or loading is cancelled
+    """
+
+    # Incremental imagery loading signals
+    imagery_available = pyqtSignal(object, object, int)  # (Imagery, Sensor, total_frames)
+    imagery_block_loaded = pyqtSignal(object, int)  # (imagery_uuid, loaded_count)
+    imagery_load_complete = pyqtSignal(object)  # (imagery_uuid)
+
+    # Signals for other data types
     detector_loaded = pyqtSignal(object)  # Emits Detector object
     detectors_loaded = pyqtSignal(list)  # Emits list of Detector objects
     tracks_loaded = pyqtSignal(list)  # Emits list of Track objects with tracker attribute set
     aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
-    progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total)
+    progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
 
     def __init__(self, file_path, data_type, file_format='hdf5', sensor=None, imagery=None):
         """
@@ -118,9 +128,6 @@ class DataLoaderThread(QThread):
         # Note: version 1.5 format used lat/lon polynomials which are no longer supported.
         # Geolocation will not be available for version 1.5 files.
 
-        # Load images with progress
-        images = self._load_images_dataset(images_dataset)
-
         if self._cancelled:
             return
 
@@ -147,7 +154,10 @@ class DataLoaderThread(QThread):
 
         # Create SampledSensor with dummy position data (no geolocation for 1.5 files)
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
-        sensor_times = np.array([times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
+        sensor_times = np.array(
+            [times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')],
+            dtype='datetime64[ns]'
+        )
 
         sensor = SampledSensor(
             name=f"Unknown {SampledSensor._instance_count+1}",
@@ -163,6 +173,9 @@ class DataLoaderThread(QThread):
             bad_pixel_mask_frames=bad_pixel_mask_frames,
         )
 
+        # Pre-allocate images array with zeros (safe if cancelled mid-load)
+        images = np.zeros(images_dataset.shape, dtype=np.float32)
+
         imagery = Imagery(
             name=Path(self.file_path).stem,
             images=images,
@@ -172,8 +185,10 @@ class DataLoaderThread(QThread):
             column_offset=column_offset,
             times=times,
         )
+        imagery.loaded_frame_count = 0
 
-        self._compute_histograms_and_emit(imagery, sensor)
+        # Load images incrementally, emitting signals as blocks become available
+        self._load_images_incrementally(imagery, images_dataset, sensor)
 
     def _load_imagery_v16(self, f: h5py.File):
         """Load imagery from 1.6+ hierarchical HDF5 format"""
@@ -196,13 +211,11 @@ class DataLoaderThread(QThread):
                 for imagery_name in imagery_group.keys():
                     img_group = imagery_group[imagery_name]
 
-                    # Load imagery data
-                    imagery = self._load_imagery_from_group(img_group, sensor)
+                    # Load imagery metadata and start incremental image loading
+                    self._load_imagery_from_group(img_group, sensor)
 
                     if self._cancelled:
                         return
-
-                    self._compute_histograms_and_emit(imagery, sensor)
 
     def _load_sensor_from_group(self, sensor_group: h5py.Group):
         """Load a Sensor or SampledSensor from an HDF5 group"""
@@ -323,7 +336,7 @@ class DataLoaderThread(QThread):
         return sensor
 
     def _load_imagery_from_group(self, img_group: h5py.Group, sensor):
-        """Load an Imagery object from an HDF5 group"""
+        """Load an Imagery object from an HDF5 group with incremental image loading"""
         # Load attributes
         name = img_group.attrs.get('name', 'Unknown')
         description = img_group.attrs.get('description', '')
@@ -331,8 +344,7 @@ class DataLoaderThread(QThread):
         row_offset = img_group.attrs.get('row_offset', 0)
         column_offset = img_group.attrs.get('column_offset', 0)
 
-        # Load datasets
-        images = self._load_images_dataset(img_group['images'])
+        # Load metadata first (fast)
         frames = img_group['frames'][:]
 
         # Load times if present
@@ -355,6 +367,10 @@ class DataLoaderThread(QThread):
             total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
             times = total_nanoseconds.astype('datetime64[ns]')
 
+        # Pre-allocate images array with zeros (safe if cancelled mid-load)
+        images_dataset = img_group['images']
+        images = np.zeros(images_dataset.shape, dtype=np.float32)
+
         imagery = Imagery(
             name=name,
             images=images,
@@ -365,66 +381,61 @@ class DataLoaderThread(QThread):
             times=times,
             description=description,
         )
+        imagery.loaded_frame_count = 0
 
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if imagery_uuid is not None:
             imagery.uuid = uuid.UUID(imagery_uuid)
-        return imagery
 
-    def _load_images_dataset(self, images_dataset: h5py.Dataset) -> np.ndarray:
-        """Load images dataset using direct read with block reading for optimal performance"""
+        # Load images incrementally, emitting signals as blocks become available
+        self._load_images_incrementally(imagery, images_dataset, sensor)
+
+    def _load_images_incrementally(self, imagery: Imagery, images_dataset: h5py.Dataset, sensor):
+        """Load images block-by-block, emitting signals so the UI can display frames as they arrive.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object with pre-allocated (zeroed) images array and loaded_frame_count = 0
+        images_dataset : h5py.Dataset
+            HDF5 dataset to read images from
+        sensor : Sensor
+            Associated sensor (passed to imagery_available signal)
+        """
         num_images = images_dataset.shape[0]
+        images = imagery.images
 
-        # Pre-allocate the output array
-        images = np.empty(images_dataset.shape, dtype=np.float32)
-
-        # For small datasets, read all at once
+        # Determine block size
         if num_images < 10:
-            self.progress_updated.emit("Loading imagery...", 0, 1)
+            block_size = num_images
+        else:
+            block_size = max(10, num_images // 100)
+
+        # Load first block
+        first_end = min(block_size, num_images)
+        if self._cancelled:
+            self.imagery_load_complete.emit(imagery.uuid)
+            return
+
+        images_dataset.read_direct(images, source_sel=np.s_[0:first_end], dest_sel=np.s_[0:first_end])
+        imagery.loaded_frame_count = first_end
+
+        # Emit imagery_available - the main thread can now add this imagery to the viewer
+        self.imagery_available.emit(imagery, sensor, num_images)
+
+        # Load remaining blocks
+        for start_idx in range(first_end, num_images, block_size):
             if self._cancelled:
-                return None
-            images_dataset.read_direct(images)
-            self.progress_updated.emit("Loading imagery...", 1, 1)
-            return images
-
-        # For larger datasets, read in blocks
-        block_size = max(10, num_images // 100)
-        
-        #total_blocks = (num_images + block_size - 1) // block_size
-        progress_interval = 1 # max(1, total_blocks // 20)  # Update every ~5%
-
-        self.progress_updated.emit("Loading imagery...", 0, num_images)
-
-        for block_idx, start_idx in enumerate(range(0, num_images, block_size)):
-            if self._cancelled:
-                return None
+                self.imagery_load_complete.emit(imagery.uuid)
+                return
 
             end_idx = min(start_idx + block_size, num_images)
+            images_dataset.read_direct(images, source_sel=np.s_[start_idx:end_idx], dest_sel=np.s_[start_idx:end_idx])
+            imagery.loaded_frame_count = end_idx
+            self.imagery_block_loaded.emit(imagery.uuid, end_idx)
 
-            # Direct read into pre-allocated array slice
-            images_dataset.read_direct(
-                images,
-                source_sel=np.s_[start_idx:end_idx],  # What to read from HDF5
-                dest_sel=np.s_[start_idx:end_idx]     # Where to write in output
-            )
-
-            # Update progress every ~5% or at completion
-            if block_idx % progress_interval == 0 or end_idx == num_images:
-                self.progress_updated.emit("Loading imagery...", end_idx, num_images)
-
-        return images
-
-    def _compute_histograms_and_emit(self, imagery: Imagery, sensor):
-        """Compute histograms and emit loaded signal"""
-        self.progress_updated.emit("Computing histograms...", 0, len(imagery.images))
-
-        for i in range(len(imagery.images)):
-            if self._cancelled:
-                return
-            imagery.get_histogram(i)
-            self.progress_updated.emit("Computing histograms...", i + 1, len(imagery.images))
-
-        self.imagery_loaded.emit(imagery, sensor)
+        # All blocks loaded
+        self.imagery_load_complete.emit(imagery.uuid)
 
     def _load_detections_csv(self):
         """Load detections from CSV file"""

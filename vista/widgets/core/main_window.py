@@ -76,6 +76,10 @@ class VistaMainWindow(QMainWindow):
         self.loader_thread = None
         self.progress_dialog = None
 
+        # Incremental imagery loading state
+        self._loading_imageries = {}  # imagery.uuid -> DataLoaderThread
+        self._algorithm_actions = []  # Populated in create_menu_bar(); disabled during loading
+
         self.init_ui()
 
         # Load any provided data programmatically
@@ -109,6 +113,12 @@ class VistaMainWindow(QMainWindow):
         self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
         self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
+
+        # Connect imagery panel cancel signal for incremental loading
+        self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
+        self.data_manager.sensors_panel.cancel_sensor_loading_requested.connect(
+            self.on_cancel_sensor_loading
+        )
 
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
@@ -153,21 +163,21 @@ class VistaMainWindow(QMainWindow):
         # File menu
         file_menu = menubar.addMenu("File")
 
-        load_imagery_action = QAction("Load Imagery (HDF5)", self)
-        load_imagery_action.triggered.connect(self.load_imagery_file)
-        file_menu.addAction(load_imagery_action)
+        self.load_imagery_action = QAction("Load Imagery (HDF5)", self)
+        self.load_imagery_action.triggered.connect(self.load_imagery_file)
+        file_menu.addAction(self.load_imagery_action)
 
-        load_detections_action = QAction("Load Detections (CSV)", self)
-        load_detections_action.triggered.connect(self.load_detections_file)
-        file_menu.addAction(load_detections_action)
+        self.load_detections_action = QAction("Load Detections (CSV)", self)
+        self.load_detections_action.triggered.connect(self.load_detections_file)
+        file_menu.addAction(self.load_detections_action)
 
-        load_tracks_action = QAction("Load Tracks (CSV)", self)
-        load_tracks_action.triggered.connect(self.load_tracks_file)
-        file_menu.addAction(load_tracks_action)
+        self.load_tracks_action = QAction("Load Tracks (CSV)", self)
+        self.load_tracks_action.triggered.connect(self.load_tracks_file)
+        file_menu.addAction(self.load_tracks_action)
 
-        load_aois_action = QAction("Load AOIs (CSV)", self)
-        load_aois_action.triggered.connect(self.load_aois_file)
-        file_menu.addAction(load_aois_action)
+        self.load_aois_action = QAction("Load AOIs (CSV)", self)
+        self.load_aois_action.triggered.connect(self.load_aois_file)
+        file_menu.addAction(self.load_aois_action)
 
         load_shapefile_action = QAction("Load Shapefile", self)
         load_shapefile_action.triggered.connect(self.load_shapefile)
@@ -309,6 +319,14 @@ class VistaMainWindow(QMainWindow):
         savitzky_golay_action = QAction("Savitzky-Golay Filter", self)
         savitzky_golay_action.triggered.connect(self.open_savitzky_golay_dialog)
         track_filters_menu.addAction(savitzky_golay_action)
+
+        # Collect algorithm actions for enabling/disabling during imagery loading
+        self._algorithm_actions = [
+            subset_frames_action, temporal_median_action, robust_pca_action, coaddition_action,
+            simple_threshold_action, cfar_action, simple_tracker_action, kalman_tracker_action,
+            network_flow_tracker_action, tracklet_tracker_action, bias_removal_action,
+            non_uniformity_correction_action, track_interpolator_action, savitzky_golay_action,
+        ]
 
     def create_toolbar(self):
         """Create toolbar with tools"""
@@ -658,7 +676,7 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh_aois_table()
 
     def load_imagery_file(self):
-        """Load imagery from HDF5 file(s) using background thread"""
+        """Load imagery from HDF5 file(s) using background thread with incremental loading"""
         # Get last used directory from settings
         last_dir = self.settings.value("last_imagery_dir", "")
 
@@ -671,28 +689,19 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_imagery_dir", str(Path(file_path).parent))
 
-            # Create progress dialog
-            self.progress_dialog = QProgressDialog("Loading imagery...", "Cancel", 0, 100, self)
-            self.progress_dialog.setAutoClose(False)
-            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
-            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-            self.progress_dialog.show()
-
-            # Create and start loader thread
+            # Create and start loader thread (no modal dialog - progress shown in imagery panel)
             self.loader_thread = DataLoaderThread(file_path, 'imagery')
-            self.loader_thread.imagery_loaded.connect(self.on_imagery_loaded)
+            self.loader_thread.imagery_available.connect(self.on_imagery_available)
+            self.loader_thread.imagery_block_loaded.connect(self.on_imagery_block_loaded)
+            self.loader_thread.imagery_load_complete.connect(self.on_imagery_load_complete)
             self.loader_thread.error_occurred.connect(self.on_loading_error)
             self.loader_thread.warning_occurred.connect(self.on_loading_warning)
-            self.loader_thread.progress_updated.connect(self.on_loading_progress)
             self.loader_thread.finished.connect(self.on_loading_finished)
-
-            # Connect cancel button to thread cancellation
-            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
 
             self.loader_thread.start()
 
-    def on_imagery_loaded(self, imagery, sensor):
-        """Handle imagery loaded in background thread"""
+    def on_imagery_available(self, imagery, sensor, total_frames):
+        """Handle imagery becoming available for viewing (first block loaded, loading continues in background)"""
         # Check for duplicate imagery name
         existing_names = [img.name for img in self.viewer.imageries if img.sensor == sensor]
         if imagery.name in existing_names:
@@ -722,25 +731,24 @@ class VistaMainWindow(QMainWindow):
             self.viewer.sensors.append(sensor)
             imagery.sensor = sensor
 
+        # Track this imagery as loading
+        self._loading_imageries[imagery.uuid] = self.loader_thread
+
         # Add imagery to viewer (will be selected if it's the first one)
         self.viewer.add_imagery(imagery)
 
-        # Refresh data manager to show the new imagery (this also handles sensor selection)
+        # Refresh data manager to show the new imagery with progress bar
         self.data_manager.refresh()
 
         # If this is a new sensor, automatically select it in the sensors table
         if is_new_sensor:
-            # Find the sensor's row in the sensors table and select it
-            # This will trigger the sensor_selected signal and update everything properly
             for row, s in enumerate(self.viewer.sensors):
                 if s == sensor:
                     self.data_manager.sensors_panel.sensors_table.selectRow(row)
                     break
         elif self.viewer.selected_sensor is not None:
-            # Filter will handle selecting appropriate imagery for the selected sensor
             self.viewer.filter_by_sensor(self.viewer.selected_sensor)
         else:
-            # No sensor filter, select this imagery for viewing
             self.viewer.select_imagery(imagery)
 
         # Update playback controls with frame range
@@ -748,7 +756,107 @@ class VistaMainWindow(QMainWindow):
         self.controls.set_frame_range(min_frame, max_frame)
         self.controls.set_frame(min_frame)
 
-        self.statusBar().showMessage(f"Loaded imagery: {imagery.name}", 3000)
+        # Disable algorithm actions while loading
+        self._update_algorithm_actions_state()
+
+        self.statusBar().showMessage(
+            f"Loading imagery: {imagery.name} ({imagery.loaded_frame_count}/{total_frames} frames)...", 0
+        )
+
+    def on_imagery_block_loaded(self, imagery_uuid, loaded_count):
+        """Handle more frames becoming available for a loading imagery"""
+        # Update progress bar in imagery panel
+        self.data_manager.imagery_panel.update_loading_progress(imagery_uuid, loaded_count)
+
+        # If the currently displayed imagery just got more frames, update frame range and status bar
+        if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
+            min_frame, max_frame = self.viewer.get_frame_range()
+            self.controls.set_frame_range(min_frame, max_frame)
+            total = len(self.viewer.imagery.frames)
+            self.statusBar().showMessage(
+                f"Loading imagery: {self.viewer.imagery.name} ({loaded_count}/{total} frames)...", 0
+            )
+
+    def on_imagery_load_complete(self, imagery_uuid):
+        """Handle imagery loading completion (all frames loaded or cancelled)"""
+        # Find the imagery
+        imagery = None
+        for img in self.viewer.imageries:
+            if img.uuid == imagery_uuid:
+                imagery = img
+                break
+
+        if imagery is not None:
+            if imagery.loaded_frame_count is not None and imagery.loaded_frame_count < len(imagery.frames):
+                # Loading was cancelled - truncate arrays to loaded portion
+                loaded = imagery.loaded_frame_count
+                if loaded > 0:
+                    imagery.images = imagery.images[:loaded]
+                    imagery.frames = imagery.frames[:loaded]
+                    if imagery.times is not None:
+                        imagery.times = imagery.times[:loaded]
+                    imagery.invalidate_caches()
+                else:
+                    # No frames were loaded - remove the imagery entirely
+                    if imagery == self.viewer.imagery:
+                        self.viewer.imagery = None
+                        self.viewer.image_item.clear()
+                    self.viewer.imageries.remove(imagery)
+
+            # Mark as fully loaded
+            imagery.loaded_frame_count = None
+
+        # Update imagery panel to show final frame count
+        self.data_manager.imagery_panel.on_loading_complete(imagery_uuid)
+
+        # Remove from loading tracking
+        self._loading_imageries.pop(imagery_uuid, None)
+
+        # Re-enable algorithm actions if no more imagery is loading
+        self._update_algorithm_actions_state()
+
+        # Update frame range
+        if self.viewer.imagery is not None:
+            min_frame, max_frame = self.viewer.get_frame_range()
+            self.controls.set_frame_range(min_frame, max_frame)
+
+        if imagery is not None and imagery in self.viewer.imageries:
+            self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery.frames)} frames)", 3000)
+        else:
+            self.statusBar().showMessage("Imagery loading cancelled", 3000)
+
+    def on_cancel_imagery_loading(self, imagery_uuid):
+        """Cancel loading for a specific imagery (triggered from imagery panel cancel button or delete)"""
+        if imagery_uuid in self._loading_imageries:
+            thread = self._loading_imageries.pop(imagery_uuid)
+            thread.cancel()
+            self._update_algorithm_actions_state()
+
+    def on_cancel_sensor_loading(self, sensor):
+        """Cancel loading for all imagery belonging to a sensor (triggered before sensor deletion)"""
+        uuids_to_cancel = [
+            uid for uid in self._loading_imageries
+            if any(img.uuid == uid and img.sensor == sensor for img in self.viewer.imageries)
+        ]
+        for uid in uuids_to_cancel:
+            thread = self._loading_imageries.pop(uid)
+            thread.cancel()
+        if uuids_to_cancel:
+            self._update_algorithm_actions_state()
+
+    def _update_algorithm_actions_state(self):
+        """Enable/disable algorithm and load actions based on whether any imagery is still loading"""
+        any_loading = len(self._loading_imageries) > 0
+        for action in self._algorithm_actions:
+            action.setEnabled(not any_loading)
+        self.load_imagery_action.setEnabled(not any_loading)
+        self.load_detections_action.setEnabled(not any_loading)
+        self.load_tracks_action.setEnabled(not any_loading)
+        self.load_aois_action.setEnabled(not any_loading)
+
+    def _is_any_imagery_loading(self):
+        """Check if any imagery is currently loading"""
+        return len(self._loading_imageries) > 0
 
     def update_frame_range_from_imagery(self):
         """Update frame range controls when imagery selection changes"""
@@ -1450,6 +1558,24 @@ class VistaMainWindow(QMainWindow):
             self.progress_dialog.close()
             self.progress_dialog = None
 
+        # Clean up any partially loaded imagery from this thread
+        uuids_to_remove = [
+            uid for uid, thread in self._loading_imageries.items() if thread == self.loader_thread
+        ]
+        for uid in uuids_to_remove:
+            self._loading_imageries.pop(uid, None)
+            # Remove partially loaded imagery from viewer
+            for img in list(self.viewer.imageries):
+                if img.uuid == uid:
+                    if img == self.viewer.imagery:
+                        self.viewer.imagery = None
+                        self.viewer.image_item.clear()
+                    self.viewer.imageries.remove(img)
+                    break
+        if uuids_to_remove:
+            self.data_manager.refresh()
+            self._update_algorithm_actions_state()
+
         QMessageBox.critical(
             self,
             "Error Loading Data",
@@ -1485,6 +1611,16 @@ class VistaMainWindow(QMainWindow):
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""
+        # Check if any imagery is still loading
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(
+                self,
+                "Loading In Progress",
+                "Please wait for all imagery to finish loading before saving.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
         # Check if any imagery is loaded
         if not self.viewer.imageries:
             QMessageBox.warning(
@@ -1591,6 +1727,11 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
 
         # Get the currently selected imagery
         current_imagery = self.viewer.imagery
@@ -1683,6 +1824,11 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
 
         # Get the currently selected imagery
         current_imagery = self.viewer.imagery
@@ -1706,7 +1852,12 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.bias_images is None:
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+        if self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.bias_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with bias images",
@@ -1737,7 +1888,12 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
-        elif self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.uniformity_gain_images is None:
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+        if self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.uniformity_gain_images is None:
             QMessageBox.warning(
                 self,
                 "No Imagery with uniformity gain images",
@@ -1768,6 +1924,11 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
 
         # Get the currently selected imagery
         current_imagery = self.viewer.imagery
@@ -1791,6 +1952,11 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
 
         # Get the currently selected imagery
         current_imagery = self.viewer.imagery
@@ -1813,6 +1979,11 @@ class VistaMainWindow(QMainWindow):
                 "Please load imagery before running detector algorithms.",
                 QMessageBox.StandardButton.Ok
             )
+            return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
             return
 
         # Get the list of AOIs from the viewer
@@ -1859,6 +2030,11 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok
             )
             return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
 
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
@@ -1895,6 +2071,11 @@ class VistaMainWindow(QMainWindow):
 
     def open_simple_tracking_dialog(self):
         """Open the Simple tracker configuration dialog"""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
         # Check if detectors are loaded
         if not self.viewer.detectors:
             QMessageBox.warning(
@@ -1916,6 +2097,11 @@ class VistaMainWindow(QMainWindow):
 
     def open_kalman_tracking_dialog(self):
         """Open the Kalman Filter tracker configuration dialog"""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
         # Check if detectors are loaded
         if not self.viewer.detectors:
             QMessageBox.warning(
@@ -1937,6 +2123,11 @@ class VistaMainWindow(QMainWindow):
 
     def open_network_flow_tracking_dialog(self):
         """Open the Network Flow tracker configuration dialog"""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
         # Check if detectors are loaded
         if not self.viewer.detectors:
             QMessageBox.warning(
@@ -1958,6 +2149,11 @@ class VistaMainWindow(QMainWindow):
 
     def open_tracklet_tracking_dialog(self):
         """Open the Tracklet tracker configuration dialog"""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
         # Check if detectors are loaded
         if not self.viewer.detectors:
             QMessageBox.warning(
@@ -1979,6 +2175,11 @@ class VistaMainWindow(QMainWindow):
 
     def open_track_interpolation_dialog(self):
         """Open the Track Interpolation dialog for selected tracks"""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
         # Get selected tracks from tracks panel
         selected_rows = list(set(index.row() for index in self.data_manager.tracks_panel.tracks_table.selectedIndexes()))
 
@@ -2067,6 +2268,11 @@ class VistaMainWindow(QMainWindow):
 
     def open_savitzky_golay_dialog(self):
         """Open the Savitzky-Golay Filter dialog for selected tracks"""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
         # Get selected tracks from tracks panel
         selected_rows = list(set(index.row() for index in self.data_manager.tracks_panel.tracks_table.selectedIndexes()))
 
@@ -2264,6 +2470,13 @@ class VistaMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Handle window close event - save window geometry and histogram state"""
+        # Cancel any active imagery loading threads
+        for uid, thread in list(self._loading_imageries.items()):
+            thread.cancel()
+        for uid, thread in list(self._loading_imageries.items()):
+            thread.wait(5000)  # Wait up to 5 seconds per thread
+        self._loading_imageries.clear()
+
         # Save window geometry (position and size)
         self.settings.setValue("window_geometry", self.saveGeometry())
 

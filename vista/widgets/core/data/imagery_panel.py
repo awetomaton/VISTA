@@ -1,7 +1,7 @@
 """Imagery panel for data manager"""
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView
+    QHBoxLayout, QHeaderView, QProgressBar, QPushButton,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -10,6 +10,7 @@ class ImageryPanel(QWidget):
     """Panel for managing imagery"""
 
     data_changed = pyqtSignal()  # Signal when data is modified
+    cancel_loading_requested = pyqtSignal(object)  # Emits imagery UUID to cancel loading
 
     def __init__(self, viewer):
         super().__init__()
@@ -74,10 +75,14 @@ class ImageryPanel(QWidget):
             name_item.setData(Qt.ItemDataRole.UserRole, imagery.uuid)  # Store imagery UUID
             self.imagery_table.setItem(row, 0, name_item)
 
-            # Frames (not editable)
-            frames_item = QTableWidgetItem(str(len(imagery.frames)))
-            frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.imagery_table.setItem(row, 1, frames_item)
+            if imagery.is_fully_loaded:
+                # Frames column: static text showing total frame count
+                frames_item = QTableWidgetItem(str(len(imagery.frames)))
+                frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                self.imagery_table.setItem(row, 1, frames_item)
+            else:
+                # Frames column: progress bar with cancel button for loading imagery
+                self._set_loading_widget(row, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery.frames))
 
         self.imagery_table.blockSignals(False)
 
@@ -85,6 +90,82 @@ class ImageryPanel(QWidget):
         for row, imagery in enumerate(filtered_imageries):
             if imagery == self.viewer.imagery:
                 self.imagery_table.selectRow(row)
+                break
+
+    def _set_loading_widget(self, row, imagery_uuid, loaded_count, total_frames):
+        """Set a progress bar + cancel button widget in the Frames column for a loading row.
+
+        Parameters
+        ----------
+        row : int
+            Table row index
+        imagery_uuid : object
+            UUID of the loading imagery (used for cancel signal)
+        loaded_count : int
+            Number of frames loaded so far
+        total_frames : int
+            Total number of frames to load
+        """
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(2)
+
+        progress_bar = QProgressBar()
+        progress_bar.setMinimum(0)
+        progress_bar.setMaximum(total_frames)
+        progress_bar.setValue(loaded_count)
+        progress_bar.setFormat("%v / %m")
+        progress_bar.setTextVisible(True)
+        layout.addWidget(progress_bar)
+
+        cancel_btn = QPushButton("X")
+        cancel_btn.setFixedWidth(24)
+        cancel_btn.setToolTip("Cancel loading")
+        cancel_btn.clicked.connect(lambda checked, uid=imagery_uuid: self.cancel_loading_requested.emit(uid))
+        layout.addWidget(cancel_btn)
+
+        self.imagery_table.setCellWidget(row, 1, widget)
+
+    def update_loading_progress(self, imagery_uuid, loaded_count):
+        """Update the progress bar for a loading imagery row.
+
+        Parameters
+        ----------
+        imagery_uuid : object
+            UUID of the imagery to update
+        loaded_count : int
+            Number of frames loaded so far
+        """
+        for row in range(self.imagery_table.rowCount()):
+            name_item = self.imagery_table.item(row, 0)
+            if name_item and name_item.data(Qt.ItemDataRole.UserRole) == imagery_uuid:
+                widget = self.imagery_table.cellWidget(row, 1)
+                if widget:
+                    progress_bar = widget.findChild(QProgressBar)
+                    if progress_bar:
+                        progress_bar.setValue(loaded_count)
+                break
+
+    def on_loading_complete(self, imagery_uuid):
+        """Replace progress bar with static frame count when loading finishes.
+
+        Parameters
+        ----------
+        imagery_uuid : object
+            UUID of the imagery that finished loading
+        """
+        for row in range(self.imagery_table.rowCount()):
+            name_item = self.imagery_table.item(row, 0)
+            if name_item and name_item.data(Qt.ItemDataRole.UserRole) == imagery_uuid:
+                # Find the imagery to get total frame count
+                for imagery in self.viewer.imageries:
+                    if imagery.uuid == imagery_uuid:
+                        self.imagery_table.removeCellWidget(row, 1)
+                        frames_item = QTableWidgetItem(str(len(imagery.frames)))
+                        frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                        self.imagery_table.setItem(row, 1, frames_item)
+                        break
                 break
 
     def on_imagery_selection_changed(self):
@@ -131,23 +212,39 @@ class ImageryPanel(QWidget):
             return
 
         row = selected_rows[0]
-        if row < len(self.viewer.imageries):
-            imagery_to_delete = self.viewer.imageries[row]
+        # Look up imagery by UUID stored in the name item (table may be filtered by sensor)
+        name_item = self.imagery_table.item(row, 0)
+        if name_item is None:
+            return
+        imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
 
-            # Check if this is the currently displayed imagery
-            if imagery_to_delete == self.viewer.imagery:
-                # Clear the current imagery
-                self.viewer.imagery = None
-                self.viewer.image_item.clear()
+        imagery_to_delete = None
+        for img in self.viewer.imageries:
+            if img.uuid == imagery_uuid:
+                imagery_to_delete = img
+                break
 
-            # Remove from list
-            self.viewer.imageries.remove(imagery_to_delete)
+        if imagery_to_delete is None:
+            return
 
-            # If there are still imageries and none is selected, select the first one
-            if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
-                self.viewer.select_imagery(self.viewer.imageries[0])
-                self.parent().parent().parent().parent().parent().update_frame_range_from_imagery
+        # If imagery is still loading, cancel the load first
+        if not imagery_to_delete.is_fully_loaded:
+            self.cancel_loading_requested.emit(imagery_to_delete.uuid)
 
-            # Refresh table
-            self.refresh_imagery_table()
-            self.data_changed.emit()
+        # Check if this is the currently displayed imagery
+        if imagery_to_delete == self.viewer.imagery:
+            # Clear the current imagery
+            self.viewer.imagery = None
+            self.viewer.image_item.clear()
+
+        # Remove from list
+        self.viewer.imageries.remove(imagery_to_delete)
+
+        # If there are still imageries and none is selected, select the first one
+        if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
+            self.viewer.select_imagery(self.viewer.imageries[0])
+            self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+
+        # Refresh table
+        self.refresh_imagery_table()
+        self.data_changed.emit()

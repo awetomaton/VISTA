@@ -268,6 +268,11 @@ class ImageryViewer(QWidget):
             frame_index = imagery.get_frame_index(frame_to_display)
             if frame_index is None:
                 frame_index = 0
+
+            # Clamp to loaded frames if imagery is still loading incrementally
+            if imagery.loaded_frame_count is not None and frame_index >= imagery.loaded_frame_count:
+                frame_index = max(0, imagery.loaded_frame_count - 1)
+
             self.setting_imagery = True
             self.image_item.setImage(imagery.images[frame_index])
             self.setting_imagery = False
@@ -301,6 +306,11 @@ class ImageryViewer(QWidget):
                     image_index = valid_indices[-1]
                 else:
                     image_index = None
+
+            # Clamp to loaded frames if imagery is still loading incrementally
+            if image_index is not None and self.imagery.loaded_frame_count is not None:
+                if image_index >= self.imagery.loaded_frame_count:
+                    image_index = max(0, self.imagery.loaded_frame_count - 1)
 
             if image_index is not None:
 
