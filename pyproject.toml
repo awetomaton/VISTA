@@ -43,6 +43,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+gpu = [
+    "torch",
+]
 dev = [
     "pytest>=7.0",
     "pytest-qt",

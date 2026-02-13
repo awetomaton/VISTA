@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
 - 🥳 Imagery now loads and displays in the viewer incrementally.
+- 🥳 Updated app to support GPU PyTorch tensors.
+- 🥳 Added sliding window subspace background removal algorithm.
+- 🥳 Added GoDec background removal with GPU support
 - ✨ Updated to use `numba` to fuse multiple numpy imagery operations into a single memory pass.
  
 ### Bug Fixes

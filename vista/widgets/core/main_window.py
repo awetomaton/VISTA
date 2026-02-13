@@ -22,7 +22,9 @@ from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.settings_dialog import SettingsDialog
+from vista.widgets.algorithms.background_removal.godec_dialog import GoDecDialog
 from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
+from vista.widgets.algorithms.background_removal.subspace_background_removal_dialog import SubspaceBackgroundRemovalDialog
 from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
 from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
 from vista.widgets.algorithms.detectors.simple_threshold_widget import SimpleThresholdWidget
@@ -258,6 +260,14 @@ class VistaMainWindow(QMainWindow):
         robust_pca_action.triggered.connect(self.open_robust_pca_dialog)
         background_removal_menu.addAction(robust_pca_action)
 
+        subspace_bg_action = QAction("Sliding Subspace", self)
+        subspace_bg_action.triggered.connect(self.open_subspace_background_removal_dialog)
+        background_removal_menu.addAction(subspace_bg_action)
+
+        godec_action = QAction("GoDec", self)
+        godec_action.triggered.connect(self.open_godec_dialog)
+        background_removal_menu.addAction(godec_action)
+
         # Enhancement submenu
         enhancement_menu = image_processing_menu.addMenu("Enhancement")
 
@@ -322,7 +332,8 @@ class VistaMainWindow(QMainWindow):
 
         # Collect algorithm actions for enabling/disabling during imagery loading
         self._algorithm_actions = [
-            subset_frames_action, temporal_median_action, robust_pca_action, coaddition_action,
+            subset_frames_action, temporal_median_action, robust_pca_action, subspace_bg_action, godec_action,
+            coaddition_action,
             simple_threshold_action, cfar_action, simple_tracker_action, kalman_tracker_action,
             network_flow_tracker_action, tracklet_tracker_action, bias_removal_action,
             non_uniformity_correction_action, track_interpolator_action, savitzky_golay_action,
@@ -1838,6 +1849,46 @@ class VistaMainWindow(QMainWindow):
 
         # Create and show the dialog
         dialog = RobustPCADialog(self, current_imagery, aois)
+        dialog.imagery_processed.connect(self.on_multiple_imagery_created)
+        dialog.exec()
+
+    def open_subspace_background_removal_dialog(self):
+        """Open the sliding subspace background removal dialog"""
+        if not self.viewer.imagery:
+            QMessageBox.warning(self, "No Imagery",
+                "Please load imagery before running Sliding Subspace background removal.",
+                QMessageBox.StandardButton.Ok)
+            return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+
+        current_imagery = self.viewer.imagery
+        aois = self.viewer.aois
+
+        dialog = SubspaceBackgroundRemovalDialog(self, current_imagery, aois)
+        dialog.imagery_processed.connect(self.on_multiple_imagery_created)
+        dialog.exec()
+
+    def open_godec_dialog(self):
+        """Open the GoDec background removal dialog"""
+        if not self.viewer.imagery:
+            QMessageBox.warning(self, "No Imagery",
+                "Please load imagery before running GoDec background removal.",
+                QMessageBox.StandardButton.Ok)
+            return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+
+        current_imagery = self.viewer.imagery
+        aois = self.viewer.aois
+
+        dialog = GoDecDialog(self, current_imagery, aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 

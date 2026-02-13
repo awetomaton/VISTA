@@ -1,9 +1,11 @@
 """Imagery panel for data manager"""
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QProgressBar, QPushButton,
+    QHBoxLayout, QHeaderView, QMessageBox, QProgressBar, QPushButton,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
+
+from vista.imagery.imagery import HAS_TORCH
 
 
 class ImageryPanel(QWidget):
@@ -26,14 +28,21 @@ class ImageryPanel(QWidget):
         self.delete_imagery_btn = QPushButton("Delete Selected")
         self.delete_imagery_btn.clicked.connect(self.delete_selected_imagery)
         button_layout.addWidget(self.delete_imagery_btn)
+
+        if HAS_TORCH:
+            self.gpu_btn = QPushButton("Upload to GPU")
+            self.gpu_btn.setEnabled(False)
+            self.gpu_btn.clicked.connect(self._on_gpu_button_clicked)
+            button_layout.addWidget(self.gpu_btn)
+
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
         # Imagery table
         self.imagery_table = QTableWidget()
-        self.imagery_table.setColumnCount(2)
+        self.imagery_table.setColumnCount(3)
         self.imagery_table.setHorizontalHeaderLabels([
-            "Name", "Frames"
+            "Name", "Frames", "GPU"
         ])
 
         # Enable row selection via vertical header (single selection only)
@@ -44,6 +53,7 @@ class ImageryPanel(QWidget):
         header = self.imagery_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
 
         self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
         self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
@@ -83,6 +93,12 @@ class ImageryPanel(QWidget):
             else:
                 # Frames column: progress bar with cancel button for loading imagery
                 self._set_loading_widget(row, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery.frames))
+
+            # GPU column: show device name if imagery has a GPU tensor copy
+            gpu_text = imagery.gpu_device_name or ""
+            gpu_item = QTableWidgetItem(gpu_text)
+            gpu_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.imagery_table.setItem(row, 2, gpu_item)
 
         self.imagery_table.blockSignals(False)
 
@@ -170,6 +186,8 @@ class ImageryPanel(QWidget):
 
     def on_imagery_selection_changed(self):
         """Handle imagery selection changes from table"""
+        self._update_gpu_button_state()
+
         # Get selected rows (should only be one due to SingleSelection mode)
         selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
 
@@ -203,6 +221,94 @@ class ImageryPanel(QWidget):
                         self.data_changed.emit()
                         break
 
+    def _get_imagery_at_row(self, row):
+        """Get the Imagery object for a given table row.
+
+        Parameters
+        ----------
+        row : int
+            Table row index
+
+        Returns
+        -------
+        Imagery or None
+            The imagery object, or None if not found
+        """
+        name_item = self.imagery_table.item(row, 0)
+        if name_item is None:
+            return None
+        imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+        for imagery in self.viewer.imageries:
+            if imagery.uuid == imagery_uuid:
+                return imagery
+        return None
+
+    def _get_selected_imagery(self):
+        """Get the currently selected Imagery object.
+
+        Returns
+        -------
+        Imagery or None
+            The selected imagery, or None if nothing is selected
+        """
+        selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
+        if not selected_rows:
+            return None
+        return self._get_imagery_at_row(selected_rows[0])
+
+    def _update_gpu_button_state(self):
+        """Update the GPU button text and enabled state based on the selected imagery."""
+        if not HAS_TORCH:
+            return
+
+        imagery = self._get_selected_imagery()
+        if imagery is None or not imagery.is_fully_loaded:
+            self.gpu_btn.setEnabled(False)
+            self.gpu_btn.setText("Upload to GPU")
+        elif imagery.has_gpu_images:
+            self.gpu_btn.setEnabled(True)
+            self.gpu_btn.setText("Release from GPU")
+        else:
+            self.gpu_btn.setEnabled(True)
+            self.gpu_btn.setText("Upload to GPU")
+
+    def _on_gpu_button_clicked(self):
+        """Handle GPU button click - upload or release based on current state."""
+        imagery = self._get_selected_imagery()
+        if imagery is None:
+            return
+        if imagery.has_gpu_images:
+            self._release_imagery_from_gpu(imagery)
+        else:
+            self._upload_imagery_to_gpu(imagery)
+
+    def _upload_imagery_to_gpu(self, imagery):
+        """Upload imagery to GPU and refresh the table.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to upload
+        """
+        try:
+            imagery.to_gpu()
+            self.refresh_imagery_table()
+            self._update_gpu_button_state()
+        except Exception as e:
+            QMessageBox.warning(self, "GPU Upload Failed", f"Failed to upload imagery to GPU:\n{e}")
+
+    def _release_imagery_from_gpu(self, imagery):
+        """Release imagery from GPU and refresh the table.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery object to release
+        """
+        imagery.release_gpu()
+        self.refresh_imagery_table()
+        self._update_gpu_button_state()
+
     def delete_selected_imagery(self):
         """Delete imagery that is selected in the table"""
         # Get selected rows (should only be one due to SingleSelection mode)
@@ -230,6 +336,9 @@ class ImageryPanel(QWidget):
         # If imagery is still loading, cancel the load first
         if not imagery_to_delete.is_fully_loaded:
             self.cancel_loading_requested.emit(imagery_to_delete.uuid)
+
+        # Release GPU memory before removing the imagery
+        imagery_to_delete.release_gpu()
 
         # Check if this is the currently displayed imagery
         if imagery_to_delete == self.viewer.imagery:

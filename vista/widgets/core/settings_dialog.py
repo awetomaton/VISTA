@@ -2,8 +2,14 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QSpinBox, QTabWidget, QVBoxLayout, QWidget
+    QGroupBox, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 )
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 
 class ImagerySettingsTab(QVBoxLayout):
@@ -272,6 +278,78 @@ class DataManagerSettingsTab(QVBoxLayout):
         self.settings.setValue("undo_depth", self.undo_depth_spinbox.value())
 
 
+class GPUSettingsTab(QVBoxLayout):
+    """Tab for configuring GPU device settings for PyTorch-accelerated algorithms"""
+
+    def __init__(self, settings):
+        """
+        Initialize the GPU settings tab
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings
+        """
+        super().__init__()
+        self.settings = settings
+
+        if not HAS_TORCH:
+            no_torch_label = QLabel(
+                "PyTorch is not installed.\n\n"
+                "GPU-accelerated algorithms require PyTorch.\n"
+                "Install with: pip install vista-imagery[gpu]"
+            )
+            no_torch_label.setWordWrap(True)
+            self.addWidget(no_torch_label)
+            self.addStretch()
+            return
+
+        if not torch.cuda.is_available():
+            no_gpu_label = QLabel(
+                "No CUDA-capable GPU detected.\n\n"
+                "PyTorch is installed but no compatible GPU is available.\n"
+                "GPU-accelerated algorithms will not be available."
+            )
+            no_gpu_label.setWordWrap(True)
+            self.addWidget(no_gpu_label)
+            self.addStretch()
+            return
+
+        # GPU device selection
+        device_group = QGroupBox("GPU Device")
+        device_layout = QFormLayout()
+
+        self.device_combo = QComboBox()
+        for i in range(torch.cuda.device_count()):
+            device_name = torch.cuda.get_device_name(i)
+            self.device_combo.addItem(f"{device_name} (cuda:{i})", f"cuda:{i}")
+        self.device_combo.setToolTip("Select which GPU device to use for accelerated algorithms")
+        device_layout.addRow("Device:", self.device_combo)
+
+        device_group.setLayout(device_layout)
+        self.addWidget(device_group)
+
+        self.addStretch()
+
+        # Load saved settings
+        self.load_settings()
+
+    def load_settings(self):
+        """Load settings from QSettings"""
+        if not HAS_TORCH or not torch.cuda.is_available():
+            return
+        saved_device = self.settings.value("gpu/device", "cuda:0", type=str)
+        index = self.device_combo.findData(saved_device)
+        if index >= 0:
+            self.device_combo.setCurrentIndex(index)
+
+    def save_settings(self):
+        """Save settings to QSettings"""
+        if not HAS_TORCH or not torch.cuda.is_available():
+            return
+        self.settings.setValue("gpu/device", self.device_combo.currentData())
+
+
 class SettingsDialog(QDialog):
     """Main settings dialog for VISTA application"""
 
@@ -335,6 +413,16 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(data_manager_container, "Data Manager")
 
+        # Create GPU settings tab
+        self.gpu_tab = GPUSettingsTab(self.settings)
+        gpu_widget = QVBoxLayout()
+        gpu_widget.addLayout(self.gpu_tab)
+
+        gpu_container = QWidget()
+        gpu_container.setLayout(gpu_widget)
+
+        self.tabs.addTab(gpu_container, "GPU")
+
         layout.addWidget(self.tabs)
 
         # Add standard dialog buttons
@@ -354,6 +442,7 @@ class SettingsDialog(QDialog):
         self.imagery_tab.save_settings()
         self.track_viz_tab.save_settings()
         self.data_manager_tab.save_settings()
+        self.gpu_tab.save_settings()
 
     def accept_settings(self):
         """Accept and save settings, then close dialog"""

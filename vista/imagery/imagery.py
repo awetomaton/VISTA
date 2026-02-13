@@ -13,6 +13,12 @@ import uuid
 from vista.aoi import AOI
 from vista.sensors.sensor import Sensor
 
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
 
 @dataclass
 class Imagery:
@@ -127,6 +133,11 @@ class Imagery:
     # Integer = only images[0:loaded_frame_count] contain valid data.
     loaded_frame_count: Optional[int] = field(default=None, init=False, repr=False)
 
+    # GPU tensor support: lazily created PyTorch tensor copy of images for GPU-accelerated algorithms.
+    # None = no GPU copy exists. Created on first access via gpu_images property.
+    _gpu_images: Optional[object] = field(default=None, init=False, repr=False)
+    _gpu_device: Optional[str] = field(default=None, init=False, repr=False)
+
     # Performance optimization: cached data structures
     _frame_index: Optional[dict] = field(default=None, init=False, repr=False)  # Frame number -> index
     _frames_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether frames are sorted
@@ -147,6 +158,9 @@ class Imagery:
             imagery_slice.images = imagery_slice.images[s]
             imagery_slice.frames = imagery_slice.frames[s]
             imagery_slice.times = imagery_slice.times[s] if imagery_slice.times is not None else None
+            # Invalidate GPU tensor since the numpy data is now a different subset
+            imagery_slice._gpu_images = None
+            imagery_slice._gpu_device = None
             return imagery_slice
         else:
             raise TypeError("Invalid index or slice type. Use slice, list, or numpy array.")
@@ -174,6 +188,125 @@ class Imagery:
         if self.loaded_frame_count is None:
             return self.frames
         return self.frames[:self.loaded_frame_count]
+
+    @property
+    def has_gpu_images(self):
+        """Return True if a GPU tensor copy of the images exists."""
+        return self._gpu_images is not None
+
+    @property
+    def gpu_device(self):
+        """Return the GPU device string (e.g. 'cuda:0') if a GPU copy exists, or None."""
+        return self._gpu_device
+
+    @property
+    def gpu_device_name(self):
+        """Return the human-readable GPU device name (e.g. 'NVIDIA RTX 4090') if a GPU copy exists, or None."""
+        if not self.has_gpu_images or not HAS_TORCH:
+            return None
+        try:
+            device = torch.device(self._gpu_device)
+            if device.type == "cuda":
+                return torch.cuda.get_device_name(device)
+            return self._gpu_device
+        except Exception:
+            return self._gpu_device
+
+    @property
+    def gpu_images(self):
+        """Return the GPU tensor copy of images, creating it lazily if needed.
+
+        Uses the GPU device configured in application settings, or 'cuda:0' as default.
+        Requires imagery to be fully loaded.
+
+        Returns
+        -------
+        torch.Tensor
+            GPU tensor with shape (num_frames, height, width) and dtype float32
+
+        Raises
+        ------
+        RuntimeError
+            If PyTorch is not installed, no CUDA device is available, or imagery is not fully loaded
+        """
+        if not HAS_TORCH:
+            raise RuntimeError("PyTorch is not installed. Install with: pip install vista-imagery[gpu]")
+        if not torch.cuda.is_available():
+            raise RuntimeError("No CUDA-capable GPU device is available")
+        if not self.is_fully_loaded:
+            raise RuntimeError("Cannot create GPU copy of imagery that is still loading")
+
+        if self._gpu_images is None:
+            device = self._get_gpu_device_from_settings()
+            self._gpu_images = torch.from_numpy(self.images).to(device)
+            self._gpu_device = str(device)
+
+        return self._gpu_images
+
+    def to_gpu(self, device=None):
+        """Explicitly upload images to a specific GPU device.
+
+        Parameters
+        ----------
+        device : str, optional
+            PyTorch device string (e.g. 'cuda:0', 'cuda:1'). If None, uses the device
+            configured in application settings, or 'cuda:0' as default.
+
+        Returns
+        -------
+        torch.Tensor
+            GPU tensor with shape (num_frames, height, width) and dtype float32
+
+        Raises
+        ------
+        RuntimeError
+            If PyTorch is not installed, no CUDA device is available, or imagery is not fully loaded
+        """
+        if not HAS_TORCH:
+            raise RuntimeError("PyTorch is not installed. Install with: pip install vista-imagery[gpu]")
+        if not torch.cuda.is_available():
+            raise RuntimeError("No CUDA-capable GPU device is available")
+        if not self.is_fully_loaded:
+            raise RuntimeError("Cannot create GPU copy of imagery that is still loading")
+
+        if device is None:
+            device = self._get_gpu_device_from_settings()
+
+        # If already on the requested device, return existing tensor
+        if self._gpu_images is not None and self._gpu_device == str(device):
+            return self._gpu_images
+
+        # Release existing GPU memory if switching devices
+        self.release_gpu()
+
+        self._gpu_images = torch.from_numpy(self.images).to(device)
+        self._gpu_device = str(device)
+        return self._gpu_images
+
+    def release_gpu(self):
+        """Release the GPU tensor copy to free VRAM."""
+        if self._gpu_images is not None:
+            del self._gpu_images
+            self._gpu_images = None
+            self._gpu_device = None
+
+    @staticmethod
+    def _get_gpu_device_from_settings():
+        """Read the configured GPU device from application settings.
+
+        Returns
+        -------
+        str
+            PyTorch device string (e.g. 'cuda:0')
+        """
+        device = "cuda:0"
+        try:
+            from PyQt6.QtCore import QSettings
+            settings = QSettings("Vista", "VistaApp")
+            device = settings.value("gpu/device", "cuda:0", type=str)
+        except (ImportError, RuntimeError):
+            pass
+        return device
 
     def _check_frames_sorted(self):
         """Check if frames array is sorted for binary search optimization."""
@@ -223,10 +356,14 @@ class Imagery:
         self._histograms = None
         self._histogram_bins = None
         self.default_histogram_bounds = {}
+        self.release_gpu()
 
     def copy(self):
-        """Create a (soft) copy of this imagery"""
-        return self.__class__(
+        """Create a (soft) copy of this imagery.
+
+        The numpy images array and GPU tensor (if present) are shared by reference, not copied.
+        """
+        imagery_copy = self.__class__(
             name = self.name + f" (copy)",
             images = self.images,
             frames = self.frames,
@@ -236,6 +373,9 @@ class Imagery:
             times = self.times,
             description = self.description,
         )
+        imagery_copy._gpu_images = self._gpu_images
+        imagery_copy._gpu_device = self._gpu_device
+        return imagery_copy
 
     def get_histogram(self, frame_index, bins=256, max_rowcol=512):
         """
@@ -329,13 +469,16 @@ class Imagery:
 
         # Crop imagery to AOI
         cropped_images = self.images[:, row_start:row_end, col_start:col_end]
-        
+
         # Create imagery AOI from a copy of this imagery
         imagery_aoi = self.copy()
         imagery_aoi.name = self.name + f" (AOI: {aoi.name})"
         imagery_aoi.images = cropped_images
         imagery_aoi.row_offset = self.row_offset + row_start
         imagery_aoi.column_offset = self.column_offset + col_start
+        # Invalidate GPU tensor since the numpy data is now a different spatial subset
+        imagery_aoi._gpu_images = None
+        imagery_aoi._gpu_device = None
 
         return imagery_aoi
     

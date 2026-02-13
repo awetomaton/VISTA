@@ -112,11 +112,11 @@ def create_all_features_simulation(output_dir="sim_all_features"):
     print("Creating comprehensive simulation with ALL features...")
     sim = Simulation(
         name="Full Featured Simulation",
-        frames=100,
-        rows=256,
-        columns=256,
-        num_trackers=1,
-        num_tracks_range=(3, 5),
+        frames=1000,
+        rows=1024,
+        columns=1024,
+        num_trackers=2,
+        num_tracks_range=(8, 20),
         # Temporal and geodetic metadata
         enable_times=True,
         frame_rate=10.0,
