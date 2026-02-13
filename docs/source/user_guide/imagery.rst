@@ -704,6 +704,18 @@ Background Removal
    Separates low-rank background from sparse foreground using robust PCA.
    Access via **Algorithms → Background Removal → Robust PCA**
 
+**Sliding Subspace**
+   Estimates background using a sliding-window low-rank SVD approach. For each frame, reference
+   frames from a temporal window (with a gap to exclude target signal) are used to build a low-rank
+   background subspace. Supports optional spatial tiling for large images.
+   Access via **Algorithms → Background Removal → Sliding Subspace**
+
+**GoDec**
+   Decomposes imagery into low-rank background + sparse foreground + noise using the GoDec (Go
+   Decomposition) algorithm. Operates on the entire data matrix at once via randomized SVD and
+   hard thresholding. Highly efficient on GPU due to large matrix multiplications. Requires PyTorch.
+   Access via **Algorithms → Background Removal → GoDec**
+
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_background_removal.gif
    :alt: Background removal
    :align: center

@@ -86,6 +86,19 @@ Tracker Dialogs
    :undoc-members:
    :show-inheritance:
 
+Background Removal Dialogs
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: vista.widgets.algorithms.background_removal.subspace_background_removal_dialog
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: vista.widgets.algorithms.background_removal.godec_dialog
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Treatment Dialogs
 ^^^^^^^^^^^^^^^^^
 

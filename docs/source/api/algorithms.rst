@@ -76,10 +76,12 @@ Background Removal
 
    background_removal.temporal_median.TemporalMedian
    background_removal.robust_pca.run_robust_pca
+   background_removal.subspace_background_removal.subspace_background_removal
+   background_removal.godec.godec
 
 Background removal algorithms separate moving objects from static background.
 
-Example:
+Temporal Median Example:
 
 .. code-block:: python
 
@@ -87,6 +89,40 @@ Example:
 
    temporal_median = TemporalMedian(imagery, background=5, offset=2)
    frame_idx, foreground = temporal_median()
+
+Sliding Subspace Background Removal Example:
+
+.. code-block:: python
+
+   import numpy as np
+   from vista.algorithms.background_removal.subspace_background_removal import subspace_background_removal
+
+   # images is a numpy array of shape (num_frames, height, width)
+   images = imagery.images.astype(np.float32)
+
+   # Auto-rank with default sliding window parameters
+   background, foreground = subspace_background_removal(images, rank=None)
+
+   # Manual rank with tiling for large images
+   background, foreground = subspace_background_removal(
+       images, rank=5, window_size=25, gap_size=3, tile_size=64
+   )
+
+GoDec Background Removal Example:
+
+.. code-block:: python
+
+   import torch
+   from vista.algorithms.background_removal.godec import godec
+
+   # Create a float32 tensor on GPU
+   images = torch.from_numpy(imagery.images).float().cuda()
+
+   # Run GoDec with default parameters
+   background, foreground = godec(images, rank=5, sparsity=0.01, max_iter=10)
+
+   # Auto-rank selection
+   background, foreground = godec(images, rank=None, sparsity=0.01)
 
 Enhancement
 -----------
@@ -186,6 +222,16 @@ Background Removal
    :show-inheritance:
 
 .. automodule:: vista.algorithms.background_removal.robust_pca
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: vista.algorithms.background_removal.subspace_background_removal
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: vista.algorithms.background_removal.godec
    :members:
    :undoc-members:
    :show-inheritance:
