@@ -162,13 +162,80 @@ making it robust to spatially-varying backgrounds and noise levels.
    - Requires tuning kernel size and threshold
    - May miss detections near bright features
 
+PSTNN Detector
+~~~~~~~~~~~~~~
+
+The Partial Sum of Tensor Nuclear Norm (PSTNN) detector uses tensor decomposition to separate
+low-rank background from sparse targets across the temporal image sequence. It exploits both
+spatial and temporal structure for robust small target detection in complex scenes.
+
+**When to Use:**
+   - Small targets in complex, slowly-varying backgrounds
+   - Multi-frame imagery where temporal correlation can aid detection
+   - Scenes where single-frame detectors produce excessive false alarms
+   - Infrared or electro-optical imagery with low signal-to-noise ratio
+
+**Algorithm Parameters:**
+
+:patch_size: Size of spatial patches for tensor construction (int, default 40)
+:stride: Stride between patches; equal to patch_size for non-overlapping (int, default 40)
+:lambda_param: Sparsity weight; None for automatic selection (float or None)
+:max_iterations: Maximum ADMM iterations (int, default 50)
+:n_skipped_singular_values: Top singular values to preserve as background (int, default 1)
+:threshold_multiplier: Standard deviations above mean for adaptive thresholding (float, default 5.0)
+:min_area: Minimum connected component size in pixels (int, default 1)
+:max_area: Maximum connected component size in pixels (int, default 1000)
+
+**Example Usage:**
+
+.. code-block:: python
+
+   from vista.algorithms.detectors.pstnn import PSTNN
+
+   # Create PSTNN detector
+   detector = PSTNN(
+       patch_size=40,
+       stride=40,
+       max_iterations=50,
+       n_skipped_singular_values=1,
+       threshold_multiplier=5.0,
+       min_area=1,
+       max_area=500,
+       use_gpu=True
+   )
+
+   # Decompose multi-frame imagery into sparse target component
+   sparse_targets = detector.decompose(imagery.images)
+
+   # Detect blobs in a single frame's sparse target image
+   rows, columns = detector.detect(sparse_targets[0])
+
+**How It Works:**
+
+1. Construct a 3D patch-tensor from the image sequence
+2. Decompose the tensor into low-rank background + sparse targets via ADMM
+3. Threshold the sparse component to identify target pixels
+4. Group connected pixels into blobs and compute weighted centroids
+
+**Advantages:**
+   - Exploits temporal correlation across frames for robust background separation
+   - Adapts to complex, non-uniform backgrounds without manual tuning
+   - GPU acceleration available for SVD operations via PyTorch
+   - Effective for small, dim targets that single-frame detectors may miss
+
+**Limitations:**
+   - Requires multiple frames (at least 2, more is better)
+   - Computationally intensive; GPU recommended for large datasets
+   - Patch size must be larger than expected targets
+   - Memory usage scales with image size, patch count, and frame count
+
 Running Detection Algorithms
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Via GUI:**
 
-1. Open **Algorithms → Detectors** menu
-2. Select detection algorithm (Threshold or CFAR)
+1. Open **Image Processing → Detectors** menu
+2. Select detection algorithm (Simple Threshold, CFAR, or PSTNN)
 3. Configure parameters in dialog
 4. Click **Run** to execute on current imagery
 5. Detections appear in the Detections Panel
@@ -628,7 +695,8 @@ Tips and Best Practices
 
 - Start with Simple Threshold for high-contrast imagery
 - Use CFAR for variable backgrounds or unknown noise levels
-- Run both algorithms and compare results
+- Use PSTNN for small targets in complex scenes with multi-frame data
+- Run multiple algorithms and compare results
 - Tune parameters on representative sample frames first
 
 **Parameter Tuning**
@@ -706,3 +774,4 @@ See Also
 - :class:`vista.detections.detector.Detector` - Detection data model
 - :class:`vista.algorithms.detectors.threshold.SimpleThreshold` - Threshold detector
 - :class:`vista.algorithms.detectors.cfar.CFAR` - CFAR detector
+- :class:`vista.algorithms.detectors.pstnn.PSTNN` - PSTNN tensor decomposition detector

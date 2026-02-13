@@ -27,6 +27,7 @@ from vista.widgets.algorithms.background_removal.robust_pca_dialog import Robust
 from vista.widgets.algorithms.background_removal.subspace_background_removal_dialog import SubspaceBackgroundRemovalDialog
 from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
 from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
+from vista.widgets.algorithms.detectors.pstnn_widget import PSTNNWidget
 from vista.widgets.algorithms.detectors.simple_threshold_widget import SimpleThresholdWidget
 from vista.widgets.algorithms.enhancement.coaddition_widget import CoadditionWidget
 from vista.widgets.algorithms.subset_frames_widget import SubsetFramesWidget
@@ -286,6 +287,10 @@ class VistaMainWindow(QMainWindow):
         cfar_action.triggered.connect(self.open_cfar_widget)
         detectors_menu.addAction(cfar_action)
 
+        pstnn_action = QAction("PSTNN", self)
+        pstnn_action.triggered.connect(self.open_pstnn_widget)
+        detectors_menu.addAction(pstnn_action)
+
         # Tracking menu
         tracking_menu = image_processing_menu.addMenu("Tracking")
 
@@ -334,7 +339,7 @@ class VistaMainWindow(QMainWindow):
         self._algorithm_actions = [
             subset_frames_action, temporal_median_action, robust_pca_action, subspace_bg_action, godec_action,
             coaddition_action,
-            simple_threshold_action, cfar_action, simple_tracker_action, kalman_tracker_action,
+            simple_threshold_action, cfar_action, pstnn_action, simple_tracker_action, kalman_tracker_action,
             network_flow_tracker_action, tracklet_tracker_action, bias_removal_action,
             non_uniformity_correction_action, track_interpolator_action, savitzky_golay_action,
         ]
@@ -2097,6 +2102,56 @@ class VistaMainWindow(QMainWindow):
 
     def on_cfar_complete(self, detector):
         """Handle completion of CFAR detector processing"""
+        # Check for duplicate detector name
+        existing_names = [det.name for det in self.viewer.detectors]
+        if detector.name in existing_names:
+            QMessageBox.critical(
+                self,
+                "Duplicate Detector Name",
+                f"A detector with the name '{detector.name}' already exists.\n\n"
+                f"Please rename or remove the existing detector before processing.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        # Add the detector to the viewer
+        self.viewer.add_detector(detector)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        # Deselect AOIs to allow panning
+        self.data_manager.clear_aoi_selection()
+
+        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
+
+    def open_pstnn_widget(self):
+        """Open the PSTNN detector configuration widget"""
+        # Check if imagery is loaded
+        if not self.viewer.imagery:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "Please load imagery before running detector algorithms.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+
+        # Get the list of AOIs from the viewer
+        aois = self.viewer.aois
+
+        # Create and show the widget
+        widget = PSTNNWidget(self, imagery=self.viewer.imagery, aois=aois)
+        widget.detector_processed.connect(self.on_pstnn_complete)
+        widget.exec()
+
+    def on_pstnn_complete(self, detector):
+        """Handle completion of PSTNN detector processing"""
         # Check for duplicate detector name
         existing_names = [det.name for det in self.viewer.detectors]
         if detector.name in existing_names:

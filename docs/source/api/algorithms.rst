@@ -25,6 +25,7 @@ Detectors
 
    detectors.threshold.SimpleThreshold
    detectors.cfar.CFAR
+   detectors.pstnn.PSTNN
 
 Detection algorithms identify objects of interest in imagery based on intensity, contrast, or other features.
 
@@ -186,6 +187,11 @@ Detectors
    :show-inheritance:
 
 .. automodule:: vista.algorithms.detectors.cfar
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: vista.algorithms.detectors.pstnn
    :members:
    :undoc-members:
    :show-inheritance:
