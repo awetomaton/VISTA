@@ -12,7 +12,11 @@ Unlike sliding-window approaches, GoDec operates on the entire data matrix
 at once, making it naturally suited for GPU acceleration where large matrix
 multiplications dominate the computation.
 """
-import torch
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 from vista.algorithms.background_removal.subspace_background_removal import find_knee
 
@@ -143,6 +147,9 @@ def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=No
     InterruptedError
         If the callback returns False (user cancellation).
     """
+    if not HAS_TORCH:
+        raise ImportError("PyTorch is required for GoDec background removal. Install with: pip install torch")
+
     num_frames, height, width = images.shape
     num_pixels = height * width
 

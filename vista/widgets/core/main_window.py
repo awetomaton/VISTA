@@ -16,7 +16,7 @@ import vista
 from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.icons import VistaIcons
-from vista.imagery.imagery import Imagery
+from vista.imagery.imagery import HAS_TORCH, Imagery
 from vista.sensors.sensor import Sensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
@@ -267,6 +267,9 @@ class VistaMainWindow(QMainWindow):
 
         godec_action = QAction("GoDec", self)
         godec_action.triggered.connect(self.open_godec_dialog)
+        if not HAS_TORCH:
+            godec_action.setEnabled(False)
+            godec_action.setToolTip("PyTorch is required for GoDec. Install with: pip install torch")
         background_removal_menu.addAction(godec_action)
 
         # Enhancement submenu

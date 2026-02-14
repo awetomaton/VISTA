@@ -1,5 +1,4 @@
 """Dialog for configuring and running GoDec background removal"""
-import torch
 import traceback
 
 from PyQt6.QtCore import Qt, QSettings, QThread, pyqtSignal
@@ -10,6 +9,9 @@ from PyQt6.QtWidgets import (
 
 from vista.algorithms.background_removal.godec import godec
 from vista.imagery.imagery import HAS_TORCH
+
+if HAS_TORCH:
+    import torch
 
 
 class GoDecThread(QThread):
@@ -340,8 +342,8 @@ class GoDecDialog(QDialog):
         params_layout.addRow("Power Iterations:", self.power_iters_spinbox)
 
         self.use_gpu_checkbox = QCheckBox("Use GPU for processing")
-        self.use_gpu_checkbox.setChecked(torch.cuda.is_available())
-        self.use_gpu_checkbox.setEnabled(torch.cuda.is_available())
+        self.use_gpu_checkbox.setChecked(HAS_TORCH and torch.cuda.is_available())
+        self.use_gpu_checkbox.setEnabled(HAS_TORCH and torch.cuda.is_available())
         self.use_gpu_checkbox.setToolTip(
             "When checked, processing runs on the GPU for faster computation.\n"
             "When unchecked, processing runs on the CPU via PyTorch.\n"
@@ -428,7 +430,7 @@ class GoDecDialog(QDialog):
         self.sparsity_spinbox.setValue(self.settings.value("sparsity", 1.0, type=float))
         self.max_iter_spinbox.setValue(self.settings.value("max_iter", 10, type=int))
         self.power_iters_spinbox.setValue(self.settings.value("power_iters", 2, type=int))
-        if torch.cuda.is_available():
+        if HAS_TORCH and torch.cuda.is_available():
             self.use_gpu_checkbox.setChecked(self.settings.value("use_gpu", True, type=bool))
         self.start_frame.setValue(self.settings.value("start_frame", 0, type=int))
         self.end_frame.setValue(self.settings.value("end_frame", 999999, type=int))
@@ -583,7 +585,7 @@ class GoDecDialog(QDialog):
         self.sparsity_spinbox.setEnabled(True)
         self.max_iter_spinbox.setEnabled(True)
         self.power_iters_spinbox.setEnabled(True)
-        self.use_gpu_checkbox.setEnabled(torch.cuda.is_available())
+        self.use_gpu_checkbox.setEnabled(HAS_TORCH and torch.cuda.is_available())
         self.aoi_combo.setEnabled(True)
         self.start_frame.setEnabled(True)
         self.end_frame.setEnabled(True)

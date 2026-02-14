@@ -12,7 +12,12 @@ When tiling is enabled, each frame is divided into non-overlapping square tiles 
 are processed independently, reducing the per-SVD matrix size.
 """
 import numpy as np
-import torch
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 
 def find_knee(singular_values):
@@ -32,7 +37,15 @@ def find_knee(singular_values):
     -------
     int
         Rank at the knee point (1-indexed, minimum 1).
+
+    Raises
+    ------
+    ImportError
+        If PyTorch is not installed.
     """
+    if not HAS_TORCH:
+        raise ImportError("PyTorch is required for find_knee(). Use _find_knee_numpy() instead.")
+
     n = len(singular_values)
     if n <= 2:
         return 1
