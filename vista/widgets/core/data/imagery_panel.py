@@ -103,10 +103,17 @@ class ImageryPanel(QWidget):
         self.imagery_table.blockSignals(False)
 
         # Select the row for the currently active imagery
+        found = False
         for row, imagery in enumerate(filtered_imageries):
             if imagery == self.viewer.imagery:
                 self.imagery_table.selectRow(row)
+                found = True
                 break
+
+        # If the active imagery is not in the filtered list, clear the viewer
+        if not found and self.viewer.imagery is not None:
+            self.viewer.imagery = None
+            self.viewer.image_item.clear()
 
     def _set_loading_widget(self, row, imagery_uuid, loaded_count, total_frames):
         """Set a progress bar + cancel button widget in the Frames column for a loading row.
@@ -205,6 +212,11 @@ class ImageryPanel(QWidget):
                         self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
                         # Note: Don't emit data_changed here - selection doesn't change data
                         break
+        else:
+            # No imagery selected - clear the viewer display
+            self.viewer.imagery = None
+            self.viewer.image_item.clear()
+            self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
 
     def on_imagery_cell_changed(self, row, column):
         """Handle imagery cell changes"""
