@@ -11,9 +11,9 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def simulate_scenario():
     simulation = Simulation(name="Made Up")
-    simulation.frames = 1400
-    simulation.rows = 2048
-    simulation.columns = 2048
+    simulation.frames = 400
+    simulation.rows = 4096
+    simulation.columns = 4096
     simulation.simulate()
     basic_scenario_dir = DATA_DIR / "large"
     basic_scenario_dir.mkdir(exist_ok=True)

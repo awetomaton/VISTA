@@ -831,11 +831,14 @@ class VistaMainWindow(QMainWindow):
         # Re-enable algorithm actions if no more imagery is loading
         self._update_algorithm_actions_state()
 
+        # Enable if the GPU button if suitable
+        self.data_manager.imagery_panel._update_gpu_button_state()
+        
         # Update frame range
         if self.viewer.imagery is not None:
             min_frame, max_frame = self.viewer.get_frame_range()
             self.controls.set_frame_range(min_frame, max_frame)
-
+        
         if imagery is not None and imagery in self.viewer.imageries:
             self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery.frames)} frames)", 3000)
         else:
