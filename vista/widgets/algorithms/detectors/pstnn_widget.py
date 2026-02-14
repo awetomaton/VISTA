@@ -364,6 +364,19 @@ class PSTNNWidget(QDialog):
         filters_group = QGroupBox("Detection Filters")
         filters_layout = QFormLayout()
 
+        self.detection_mode_combo = QComboBox()
+        self.detection_mode_combo.addItem("Bright Targets", "bright")
+        self.detection_mode_combo.addItem("Dark Targets", "dark")
+        self.detection_mode_combo.addItem("Both (Bright & Dark)", "both")
+        self.detection_mode_combo.setCurrentIndex(2)  # Default to 'both'
+        self.detection_mode_combo.setToolTip(
+            "Type of targets to detect in the sparse component.\n"
+            "Bright: Detect only bright targets (positive sparse values)\n"
+            "Dark: Detect only dark targets (negative sparse values)\n"
+            "Both: Detect targets deviating in either direction"
+        )
+        filters_layout.addRow("Detection Mode:", self.detection_mode_combo)
+
         self.min_area_spinbox = QSpinBox()
         self.min_area_spinbox.setRange(1, 10000)
         self.min_area_spinbox.setValue(1)
@@ -443,6 +456,11 @@ class PSTNNWidget(QDialog):
         self.threshold_spinbox.setValue(self.settings.value("threshold_multiplier", 5.0, type=float))
         self.min_area_spinbox.setValue(self.settings.value("min_area", 1, type=int))
         self.max_area_spinbox.setValue(self.settings.value("max_area", 1000, type=int))
+        detection_mode = self.settings.value("detection_mode", "both")
+        for i in range(self.detection_mode_combo.count()):
+            if self.detection_mode_combo.itemData(i) == detection_mode:
+                self.detection_mode_combo.setCurrentIndex(i)
+                break
         if HAS_TORCH and torch.cuda.is_available():
             self.use_gpu_checkbox.setChecked(self.settings.value("use_gpu", True, type=bool))
         self.start_frame_spinbox.setValue(self.settings.value("start_frame", 0, type=int))
@@ -460,6 +478,7 @@ class PSTNNWidget(QDialog):
         self.settings.setValue("threshold_multiplier", self.threshold_spinbox.value())
         self.settings.setValue("min_area", self.min_area_spinbox.value())
         self.settings.setValue("max_area", self.max_area_spinbox.value())
+        self.settings.setValue("detection_mode", self.detection_mode_combo.currentData())
         self.settings.setValue("use_gpu", self.use_gpu_checkbox.isChecked())
         self.settings.setValue("start_frame", self.start_frame_spinbox.value())
         self.settings.setValue("end_frame", self.end_frame_spinbox.value())
@@ -506,6 +525,7 @@ class PSTNNWidget(QDialog):
             'max_area': self.max_area_spinbox.value(),
             'use_gpu': self.use_gpu_checkbox.isChecked(),
             'threshold_multiplier': self.threshold_spinbox.value(),
+            'detection_mode': self.detection_mode_combo.currentData(),
         }
 
         selected_aoi = self.aoi_combo.currentData()
@@ -559,6 +579,7 @@ class PSTNNWidget(QDialog):
         self.threshold_spinbox.setEnabled(enabled)
         gpu_available = HAS_TORCH and torch.cuda.is_available()
         self.use_gpu_checkbox.setEnabled(enabled and gpu_available)
+        self.detection_mode_combo.setEnabled(enabled)
         self.min_area_spinbox.setEnabled(enabled)
         self.max_area_spinbox.setEnabled(enabled)
         self.start_frame_spinbox.setEnabled(enabled)

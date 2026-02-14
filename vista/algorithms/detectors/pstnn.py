@@ -54,6 +54,11 @@ class PSTNN:
     threshold_multiplier : float
         Number of standard deviations above the mean of the absolute sparse component
         for adaptive thresholding during blob detection
+    detection_mode : str
+        Type of targets to detect in the sparse component:
+        - 'bright': Detect bright targets (positive sparse values exceeding threshold)
+        - 'dark': Detect dark targets (negative sparse values exceeding threshold)
+        - 'both': Detect both bright and dark targets (absolute deviation exceeding threshold)
 
     Attributes
     ----------
@@ -76,7 +81,7 @@ class PSTNN:
                  lambda_param: float = None, convergence_tolerance: float = 1e-7,
                  max_iterations: int = 50, n_skipped_singular_values: int = 1,
                  min_area: int = 1, max_area: int = 1000, use_gpu: bool = False,
-                 threshold_multiplier: float = 5.0):
+                 threshold_multiplier: float = 5.0, detection_mode: str = 'both'):
         self.patch_size = patch_size
         self.stride = stride
         self.lambda_param = lambda_param
@@ -87,6 +92,7 @@ class PSTNN:
         self.max_area = max_area
         self.use_gpu = use_gpu and HAS_TORCH
         self.threshold_multiplier = threshold_multiplier
+        self.detection_mode = detection_mode
 
     def decompose(self, images: np.ndarray, callback=None) -> np.ndarray:
         """
@@ -148,18 +154,36 @@ class PSTNN:
         columns : ndarray
             Array of detection centroid column coordinates (float64)
         """
-        # Adaptive threshold on the absolute value of the sparse component
-        abs_target = np.abs(target_image)
-        mean_val = np.mean(abs_target)
-        std_val = np.std(abs_target)
-        threshold = mean_val + self.threshold_multiplier * std_val
-        binary = abs_target > threshold
+        # Threshold based on detection mode
+        if self.detection_mode == 'bright':
+            # Detect only positive (bright) sparse values
+            mean_val = np.mean(target_image)
+            std_val = np.std(target_image)
+            threshold = mean_val + self.threshold_multiplier * std_val
+            binary = target_image > threshold
+            intensity_image = np.maximum(target_image, 0)
+        elif self.detection_mode == 'dark':
+            # Detect only negative (dark) sparse values
+            negated = -target_image
+            mean_val = np.mean(negated)
+            std_val = np.std(negated)
+            threshold = mean_val + self.threshold_multiplier * std_val
+            binary = negated > threshold
+            intensity_image = np.maximum(negated, 0)
+        else:
+            # 'both' - detect both bright and dark (original behavior)
+            abs_target = np.abs(target_image)
+            mean_val = np.mean(abs_target)
+            std_val = np.std(abs_target)
+            threshold = mean_val + self.threshold_multiplier * std_val
+            binary = abs_target > threshold
+            intensity_image = abs_target
 
         # Label connected components (8-connectivity)
         labeled = label(binary)
 
-        # Get region properties using absolute target as intensity image
-        regions = regionprops(labeled, intensity_image=abs_target)
+        # Get region properties using intensity image for weighted centroids
+        regions = regionprops(labeled, intensity_image=intensity_image)
 
         # Filter by area
         valid_regions = [r for r in regions if self.min_area <= r.area <= self.max_area]

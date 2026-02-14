@@ -158,7 +158,7 @@ class TrackExtractionDialog(QDialog):
             parent=self,
             show_visualization=False,
             show_area_filters=False,
-            show_detection_mode=False,
+            show_detection_mode=True,
             settings_prefix="TrackExtraction/CFAR",
             show_group_box=True
         )
@@ -265,6 +265,7 @@ class TrackExtractionDialog(QDialog):
             'ignore_radius': cfar_params['ignore_radius'],
             'threshold_deviation': cfar_params['threshold_deviation'],
             'annulus_shape': cfar_params['annulus_shape'],
+            'detection_mode': cfar_params['detection_mode'],
             'update_centroids': self.update_centroids_check.isChecked(),
             'max_centroid_shift': self.max_centroid_shift_spin.value()
         }

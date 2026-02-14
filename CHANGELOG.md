@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🥳 Added sliding window subspace background removal algorithm.
 - 🥳 Added GoDec background removal with GPU support.
 - ✨ Updated to use `numba` to fuse multiple numpy imagery operations into a single memory pass.
+- 🛠️ Updated to track point selection, all detectors, and extraction window to enable selecting exceedingly dark, bright, or both pixels.
+- 🛠️ Updated the track export to include track metadata fields such as signal total, signal pixels, noise std, etc.
  
 ### Bug Fixes
 

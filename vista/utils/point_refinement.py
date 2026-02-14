@@ -4,7 +4,7 @@ Utilities for refining clicked point locations using image features.
 This module provides three point refinement modes for intelligent point placement during
 manual track and detection creation/editing:
 - Verbatim: Use exact clicked location without modification
-- Peak: Find brightest pixel within configurable radius
+- Peak: Find most extreme pixel within configurable radius (bright, dark, or both)
 - CFAR: Use CFAR detection to locate signal blob centroid
 
 All refinement functions accept image coordinates and return refined coordinates,
@@ -43,15 +43,15 @@ def refine_verbatim(row, col, imagery, frame_index):
     return row, col
 
 
-def refine_peak(row, col, imagery, frame_index, radius=5):
+def refine_peak(row, col, imagery, frame_index, radius=5, detection_mode='bright'):
     """
-    Peak mode: Find the pixel with the maximum value within a radius.
+    Peak mode: Find the most extreme pixel within a radius.
 
-    Searches for the brightest pixel within a specified radius of the clicked
+    Searches for the most extreme pixel within a specified radius of the clicked
     location and returns its coordinates. A +0.5 offset is applied to both
     row and column to place the point at the pixel center for sub-pixel accuracy.
 
-    Best for bright objects like stars, satellites, or aircraft where the user
+    Best for objects like stars, satellites, or aircraft where the user
     clicks near but not precisely on the peak.
 
     Parameters
@@ -66,13 +66,18 @@ def refine_peak(row, col, imagery, frame_index, radius=5):
         Index of the current frame
     radius : int, optional
         Search radius in pixels, by default 5
+    detection_mode : str, optional
+        Type of pixel to search for, by default 'bright':
+        - 'bright': Find the pixel with the maximum value
+        - 'dark': Find the pixel with the minimum value
+        - 'both': Find the pixel with the largest absolute deviation from the local mean
 
     Returns
     -------
     peak_row : float
-        Row coordinate of the brightest pixel within radius (+ 0.5 for center)
+        Row coordinate of the most extreme pixel within radius (+ 0.5 for center)
     peak_col : float
-        Column coordinate of the brightest pixel within radius (+ 0.5 for center)
+        Column coordinate of the most extreme pixel within radius (+ 0.5 for center)
 
     Notes
     -----
@@ -95,12 +100,19 @@ def refine_peak(row, col, imagery, frame_index, radius=5):
     # Extract the search region
     search_region = frame_data[row_min:row_max, col_min:col_max]
 
-    # Find the maximum value and its location within the search region
-    max_idx = np.unravel_index(np.argmax(search_region), search_region.shape)
+    # Find the most extreme pixel based on detection mode
+    if detection_mode == 'dark':
+        peak_idx = np.unravel_index(np.argmin(search_region), search_region.shape)
+    elif detection_mode == 'both':
+        deviation = np.abs(search_region - np.mean(search_region))
+        peak_idx = np.unravel_index(np.argmax(deviation), search_region.shape)
+    else:
+        # 'bright' (default)
+        peak_idx = np.unravel_index(np.argmax(search_region), search_region.shape)
 
     # Convert back to full image coordinates and add 0.5 offset to center in pixel
-    peak_row = row_min + max_idx[0] + 0.5 + imagery.row_offset
-    peak_col = col_min + max_idx[1] + 0.5 + imagery.column_offset
+    peak_row = row_min + peak_idx[0] + 0.5 + imagery.row_offset
+    peak_col = col_min + peak_idx[1] + 0.5 + imagery.column_offset
 
     return float(peak_row), float(peak_col)
 
@@ -240,6 +252,8 @@ def refine_point(row, col, imagery, frame_index, mode='verbatim', **kwargs):
         For 'peak' mode:
             radius : int
                 Search radius in pixels (default: 5)
+            detection_mode : str
+                'bright', 'dark', or 'both' (default: 'bright')
 
         For 'cfar' mode:
             background_radius : int
@@ -269,7 +283,8 @@ def refine_point(row, col, imagery, frame_index, mode='verbatim', **kwargs):
         return refine_verbatim(row, col, imagery, frame_index)
     elif mode == 'peak':
         radius = kwargs.get('radius', 5)
-        return refine_peak(row, col, imagery, frame_index, radius)
+        detection_mode = kwargs.get('detection_mode', 'bright')
+        return refine_peak(row, col, imagery, frame_index, radius, detection_mode)
     elif mode == 'cfar':
         background_radius = kwargs.get('background_radius', 10)
         ignore_radius = kwargs.get('ignore_radius', 3)

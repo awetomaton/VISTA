@@ -688,6 +688,18 @@ class Track:
         if track_times is not None:
             data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
 
+        # Include extraction metadata if present
+        if self.extraction_metadata is not None:
+            chips = self.extraction_metadata.get('chips')
+            masks = self.extraction_metadata.get('signal_masks')
+            noise = self.extraction_metadata.get('noise_stds')
+
+            if chips is not None and masks is not None:
+                data["Signal Total"] = np.sum(chips * masks, axis=(1, 2))
+                data["Signal Pixels"] = np.sum(masks, axis=(1, 2)).astype(float)
+            if noise is not None:
+                data["Noise Std"] = noise
+
         # Include uncertainty data if present
         if self.has_uncertainty():
             data["Covariance 00"] = self.covariance_00

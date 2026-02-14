@@ -39,6 +39,9 @@ class TrackExtraction:
         Number of standard deviations above mean for signal detection
     annulus_shape : str, optional
         Shape of the annulus ('circular' or 'square'), by default 'circular'
+    detection_mode : str, optional
+        Type of pixels to detect: 'above' for bright, 'below' for dark, 'both' for
+        absolute deviation. By default 'above'
     search_radius : int, optional
         When specified, only keep signal blobs that have at least one pixel within the
         central search region of this radius. By default None (keep all blobs)
@@ -73,7 +76,7 @@ class TrackExtraction:
     Notes
     -----
     - Chips near image edges are padded with np.nan values
-    - Signal detection threshold: pixel > mean + threshold_deviation * std
+    - Signal detection threshold depends on detection_mode (above/below/both)
     - Only the largest connected signal blob is used for centroid calculation
     - Centroid updates respect max_centroid_shift constraint
     """
@@ -82,7 +85,8 @@ class TrackExtraction:
 
     def __init__(self, track: Track, imagery: Imagery, chip_radius: int,
                  background_radius: int, ignore_radius: int, threshold_deviation: float,
-                 annulus_shape: str = 'circular', search_radius: int = None,
+                 annulus_shape: str = 'circular', detection_mode: str = 'above',
+                 search_radius: int = None,
                  update_centroids: bool = False, max_centroid_shift: float = np.inf):
         # Validate chip_radius
         if not isinstance(chip_radius, int) or chip_radius <= 0:
@@ -96,6 +100,7 @@ class TrackExtraction:
         self.ignore_radius = ignore_radius
         self.threshold_deviation = threshold_deviation
         self.annulus_shape = annulus_shape
+        self.detection_mode = detection_mode
         self.search_radius = search_radius
         self.update_centroids = update_centroids
         self.max_centroid_shift = max_centroid_shift
@@ -106,6 +111,7 @@ class TrackExtraction:
             ignore_radius=ignore_radius,
             threshold_deviation=threshold_deviation,
             annulus_shape=annulus_shape,
+            detection_mode=detection_mode,
             search_radius=search_radius
         )
 

@@ -8,7 +8,7 @@ supported: Verbatim (exact location), Peak (brightest pixel within radius), and 
 """
 from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
+    QComboBox, QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 )
 
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
@@ -21,7 +21,7 @@ class PointSelectionDialog(QDialog):
     This dialog allows users to choose how point locations are determined when clicking
     to add track or detection points. Three modes are available:
     - Verbatim: Use exact clicked location
-    - Peak: Find brightest pixel within radius
+    - Peak: Find the most extreme pixel within radius (bright, dark, or both)
     - CFAR: Use CFAR algorithm to find signal blob centroid
 
     The dialog is non-modal and stays on top of other windows. Settings are persisted
@@ -111,13 +111,32 @@ class PointSelectionDialog(QDialog):
         peak_layout = QVBoxLayout()
         peak_info = QLabel(
             "<b>Peak Mode</b><br><br>"
-            "Find the brightest pixel within a radius of the clicked location.<br><br>"
-            "<b>Best for:</b> Clicking near bright objects like stars, satellites, or aircraft.<br><br>"
-            "<b>How it works:</b> Searches for the pixel with the maximum value "
+            "Find the most extreme pixel within a radius of the clicked location.<br><br>"
+            "<b>Best for:</b> Clicking near objects like stars, satellites, or aircraft.<br><br>"
+            "<b>How it works:</b> Searches for the pixel with the most extreme value "
             "within the specified radius of the click location and uses that as the point."
         )
         peak_info.setWordWrap(True)
         peak_layout.addWidget(peak_info)
+
+        # Detection mode parameter
+        peak_mode_layout = QHBoxLayout()
+        peak_mode_label = QLabel("Detection Mode:")
+        peak_mode_label.setToolTip(
+            "Type of pixels to search for.\n"
+            "Bright: Find the brightest pixel (maximum value)\n"
+            "Dark: Find the darkest pixel (minimum value)\n"
+            "Both: Find the pixel with the largest absolute deviation from the local mean"
+        )
+        self.peak_mode_combo = QComboBox()
+        self.peak_mode_combo.addItem("Bright (Maximum)", "bright")
+        self.peak_mode_combo.addItem("Dark (Minimum)", "dark")
+        self.peak_mode_combo.addItem("Both (Max Absolute Deviation)", "both")
+        self.peak_mode_combo.setToolTip(peak_mode_label.toolTip())
+        peak_mode_layout.addWidget(peak_mode_label)
+        peak_mode_layout.addWidget(self.peak_mode_combo)
+        peak_mode_layout.addStretch()
+        peak_layout.addLayout(peak_mode_layout)
 
         # Radius parameter
         radius_layout = QHBoxLayout()
@@ -212,6 +231,7 @@ class PointSelectionDialog(QDialog):
             - 'mode' : str - One of 'verbatim', 'peak', or 'cfar'
             - For 'peak' mode:
                 - 'radius' : int - Search radius in pixels
+                - 'detection_mode' : str - 'bright', 'dark', or 'both'
             - For 'cfar' mode:
                 - 'background_radius' : int
                 - 'ignore_radius' : int
@@ -225,6 +245,7 @@ class PointSelectionDialog(QDialog):
 
         if mode == 'peak':
             params['radius'] = self.peak_radius_spinbox.value()
+            params['detection_mode'] = self.peak_mode_combo.currentData()
         elif mode == 'cfar':
             params.update(self.cfar_config.get_parameters())
             params['search_radius'] = self.cfar_search_radius_spinbox.value()
@@ -242,10 +263,15 @@ class PointSelectionDialog(QDialog):
         last_tab = self.settings.value("selected_tab", 0, type=int)
         self.tab_widget.setCurrentIndex(last_tab)
 
-        # Load peak radius
+        # Load peak radius and detection mode
         self.peak_radius_spinbox.setValue(
             self.settings.value("peak_radius", 5, type=int)
         )
+        peak_detection_mode = self.settings.value("peak_detection_mode", "bright")
+        for i in range(self.peak_mode_combo.count()):
+            if self.peak_mode_combo.itemData(i) == peak_detection_mode:
+                self.peak_mode_combo.setCurrentIndex(i)
+                break
 
         # Load CFAR search radius
         self.cfar_search_radius_spinbox.setValue(
@@ -272,8 +298,9 @@ class PointSelectionDialog(QDialog):
         # Save selected tab
         self.settings.setValue("selected_tab", self.tab_widget.currentIndex())
 
-        # Save peak radius
+        # Save peak radius and detection mode
         self.settings.setValue("peak_radius", self.peak_radius_spinbox.value())
+        self.settings.setValue("peak_detection_mode", self.peak_mode_combo.currentData())
 
         # Save CFAR search radius
         self.settings.setValue("cfar_search_radius", self.cfar_search_radius_spinbox.value())
