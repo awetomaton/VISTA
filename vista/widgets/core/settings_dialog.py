@@ -2,7 +2,7 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
+    QGroupBox, QLabel, QLineEdit, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 )
 
 try:
@@ -350,6 +350,91 @@ class GPUSettingsTab(QVBoxLayout):
         self.settings.setValue("gpu/device", self.device_combo.currentData())
 
 
+class WMSSettingsTab(QVBoxLayout):
+    """Tab for configuring WMS map view settings"""
+
+    def __init__(self, settings):
+        """
+        Initialize the WMS settings tab
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings
+        """
+        super().__init__()
+        self.settings = settings
+
+        # Basemap server settings group
+        server_group = QGroupBox("Basemap Server")
+        server_layout = QFormLayout()
+
+        self.url_edit = QLineEdit()
+        self.url_edit.setToolTip(
+            "ESRI ArcGIS MapServer base URL.\n"
+            "Tiles fetched from {url}/tile/{z}/{y}/{x}.\n"
+            "Default: ESRI World Imagery"
+        )
+        server_layout.addRow("MapServer URL:", self.url_edit)
+
+        server_group.setLayout(server_layout)
+        self.addWidget(server_group)
+
+        # Cache settings group
+        cache_group = QGroupBox("Cache")
+        cache_layout = QFormLayout()
+
+        self.tile_cache_spinbox = QSpinBox()
+        self.tile_cache_spinbox.setRange(16, 2048)
+        self.tile_cache_spinbox.setValue(256)
+        self.tile_cache_spinbox.setToolTip(
+            "Maximum number of WMS tiles to keep in memory.\n"
+            "Higher values use more memory but reduce network requests.\n"
+            "Default: 256"
+        )
+        cache_layout.addRow("Tile Cache Size:", self.tile_cache_spinbox)
+
+        self.projection_cache_spinbox = QSpinBox()
+        self.projection_cache_spinbox.setRange(8, 262144)
+        self.projection_cache_spinbox.setValue(2048)
+        self.projection_cache_spinbox.setToolTip(
+            "Maximum number of projected imagery frames to cache.\n"
+            "Higher values use more memory but reduce recomputation.\n"
+            "Default: 64"
+        )
+        cache_layout.addRow("Projection Cache Size:", self.projection_cache_spinbox)
+
+        cache_group.setLayout(cache_layout)
+        self.addWidget(cache_group)
+
+        self.addStretch()
+
+        # Load saved settings
+        self.load_settings()
+
+    def load_settings(self):
+        """Load settings from QSettings"""
+        default_url = (
+            "https://services.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Imagery/MapServer"
+        )
+        self.url_edit.setText(
+            self.settings.value("wms/base_url", default_url, type=str)
+        )
+        self.tile_cache_spinbox.setValue(
+            self.settings.value("wms/tile_cache_size", 256, type=int)
+        )
+        self.projection_cache_spinbox.setValue(
+            self.settings.value("wms/projection_cache_size", 64, type=int)
+        )
+
+    def save_settings(self):
+        """Save settings to QSettings"""
+        self.settings.setValue("wms/base_url", self.url_edit.text())
+        self.settings.setValue("wms/tile_cache_size", self.tile_cache_spinbox.value())
+        self.settings.setValue("wms/projection_cache_size", self.projection_cache_spinbox.value())
+
+
 class SettingsDialog(QDialog):
     """Main settings dialog for VISTA application"""
 
@@ -423,6 +508,16 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(gpu_container, "GPU")
 
+        # Create WMS (Map View) settings tab
+        self.wms_tab = WMSSettingsTab(self.settings)
+        wms_widget = QVBoxLayout()
+        wms_widget.addLayout(self.wms_tab)
+
+        wms_container = QWidget()
+        wms_container.setLayout(wms_widget)
+
+        self.tabs.addTab(wms_container, "Map View")
+
         layout.addWidget(self.tabs)
 
         # Add standard dialog buttons
@@ -443,6 +538,7 @@ class SettingsDialog(QDialog):
         self.track_viz_tab.save_settings()
         self.data_manager_tab.save_settings()
         self.gpu_tab.save_settings()
+        self.wms_tab.save_settings()
 
     def accept_settings(self):
         """Accept and save settings, then close dialog"""

@@ -33,6 +33,7 @@ dependencies = [
     "h5py",
     "numpy",
     "pandas",
+    "Pillow",
     "PyQt6",
     "pyqtgraph",
     "pyshp",

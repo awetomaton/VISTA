@@ -123,6 +123,11 @@ class VistaMainWindow(QMainWindow):
             self.on_cancel_sensor_loading
         )
 
+        # Connect sensor selection to map view state updates
+        self.data_manager.sensors_panel.sensor_selected.connect(
+            lambda _sensor: self._update_map_view_action_state()
+        )
+
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
         self.data_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
@@ -253,6 +258,13 @@ class VistaMainWindow(QMainWindow):
         self.toggle_histogram_menu_action.setChecked(True)
         self.toggle_histogram_menu_action.triggered.connect(self.on_toggle_histogram)
         view_menu.addAction(self.toggle_histogram_menu_action)
+
+        self.toggle_map_view_menu_action = QAction("Map View", self)
+        self.toggle_map_view_menu_action.setCheckable(True)
+        self.toggle_map_view_menu_action.setChecked(False)
+        self.toggle_map_view_menu_action.setEnabled(False)
+        self.toggle_map_view_menu_action.triggered.connect(self.on_map_view_toggled)
+        view_menu.addAction(self.toggle_map_view_menu_action)
 
         # Labels action
         manage_labels_action = QAction("Labels", self)
@@ -476,6 +488,19 @@ class VistaMainWindow(QMainWindow):
         self.toggle_histogram_action.toggled.connect(self.on_toggle_histogram)
         toolbar.addAction(self.toggle_histogram_action)
 
+        # Map View toggle
+        toolbar.addSeparator()
+        if darkdetect.isDark():
+            self.map_view_action = QAction(self.icons.map_view_light, "Map View", self)
+        else:
+            self.map_view_action = QAction(self.icons.map_view_dark, "Map View", self)
+        self.map_view_action.setCheckable(True)
+        self.map_view_action.setChecked(False)
+        self.map_view_action.setEnabled(False)
+        self.map_view_action.setToolTip("Toggle WMS map view (requires geolocatable sensor)")
+        self.map_view_action.toggled.connect(self.on_map_view_toggled)
+        toolbar.addAction(self.map_view_action)
+
     def create_interactive_mode_action_group(self):
         """
         Create action group for mutually exclusive interactive modes.
@@ -546,6 +571,68 @@ class VistaMainWindow(QMainWindow):
     def on_pixel_value_toggled(self, checked):
         """Handle pixel value tooltip toggle"""
         self.viewer.set_pixel_value_enabled(checked)
+
+    def on_map_view_toggled(self, checked: bool):
+        """Handle map view toggle from toolbar or menu.
+
+        Parameters
+        ----------
+        checked : bool
+            Whether map view is being enabled or disabled.
+        """
+        if checked:
+            if self.viewer.selected_sensor is None or not self.viewer.selected_sensor.can_geolocate():
+                QMessageBox.warning(
+                    self, "Cannot Enable Map View",
+                    "Map view requires a sensor with forward and reverse geolocation capability.\n\n"
+                    "The currently selected sensor does not support geolocation.",
+                    QMessageBox.StandardButton.Ok
+                )
+                self.map_view_action.blockSignals(True)
+                self.map_view_action.setChecked(False)
+                self.map_view_action.blockSignals(False)
+                self.toggle_map_view_menu_action.blockSignals(True)
+                self.toggle_map_view_menu_action.setChecked(False)
+                self.toggle_map_view_menu_action.blockSignals(False)
+                return
+
+            # Deactivate interactive modes that conflict with map view
+            self.deactivate_all_interactive_modes()
+
+            success = self.viewer.set_map_view_mode(True)
+            if not success:
+                self.map_view_action.blockSignals(True)
+                self.map_view_action.setChecked(False)
+                self.map_view_action.blockSignals(False)
+                self.toggle_map_view_menu_action.blockSignals(True)
+                self.toggle_map_view_menu_action.setChecked(False)
+                self.toggle_map_view_menu_action.blockSignals(False)
+            else:
+                self.data_manager.imagery_panel.set_opacity_column_visible(True)
+                self.statusBar().showMessage("Map view enabled", 3000)
+        else:
+            self.viewer.set_map_view_mode(False)
+            self.data_manager.imagery_panel.set_opacity_column_visible(False)
+            self.statusBar().showMessage("Map view disabled", 3000)
+
+        # Keep toolbar and menu actions in sync
+        self.map_view_action.blockSignals(True)
+        self.map_view_action.setChecked(checked and self.viewer.map_view_mode)
+        self.map_view_action.blockSignals(False)
+        self.toggle_map_view_menu_action.blockSignals(True)
+        self.toggle_map_view_menu_action.setChecked(checked and self.viewer.map_view_mode)
+        self.toggle_map_view_menu_action.blockSignals(False)
+
+    def _update_map_view_action_state(self):
+        """Enable/disable map view action based on current sensor's geolocation capability."""
+        sensor = self.viewer.selected_sensor
+        can_map = sensor is not None and sensor.can_geolocate()
+        self.map_view_action.setEnabled(can_map)
+        self.toggle_map_view_menu_action.setEnabled(can_map)
+
+        # If map view is active but sensor changed to one that can't geolocate, disable map view
+        if not can_map and self.map_view_action.isChecked():
+            self.map_view_action.setChecked(False)
 
     def on_draw_roi_toggled(self, checked):
         """Handle Draw AOI toggle"""
@@ -808,6 +895,9 @@ class VistaMainWindow(QMainWindow):
 
         # Disable algorithm actions while loading
         self._update_algorithm_actions_state()
+
+        # Update map view button state (sensor may now support geolocation)
+        self._update_map_view_action_state()
 
         self.statusBar().showMessage(
             f"Loading imagery: {imagery.name} ({imagery.loaded_frame_count}/{total_frames} frames)...", 0
@@ -2630,6 +2720,11 @@ class VistaMainWindow(QMainWindow):
         for uid, thread in list(self._loading_imageries.items()):
             thread.wait(5000)  # Wait up to 5 seconds per thread
         self._loading_imageries.clear()
+
+        # Cancel any active WMS tile fetcher thread
+        if self.viewer.wms_fetcher_thread is not None:
+            self.viewer.wms_fetcher_thread.cancel()
+            self.viewer.wms_fetcher_thread.wait(3000)
 
         # Save window geometry (position and size)
         self.settings.setValue("window_geometry", self.saveGeometry())

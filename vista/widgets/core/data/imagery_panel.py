@@ -1,7 +1,7 @@
 """Imagery panel for data manager"""
 from PyQt6.QtWidgets import (
     QHBoxLayout, QHeaderView, QMessageBox, QProgressBar, QPushButton,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -40,9 +40,9 @@ class ImageryPanel(QWidget):
 
         # Imagery table
         self.imagery_table = QTableWidget()
-        self.imagery_table.setColumnCount(3)
+        self.imagery_table.setColumnCount(4)
         self.imagery_table.setHorizontalHeaderLabels([
-            "Name", "Frames", "GPU"
+            "Name", "Frames", "GPU", "Opacity"
         ])
 
         # Enable row selection via vertical header (single selection only)
@@ -54,6 +54,10 @@ class ImageryPanel(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Opacity
+
+        # Opacity column is hidden by default (shown only in map view)
+        self.imagery_table.setColumnHidden(3, True)
 
         self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
         self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
@@ -99,6 +103,18 @@ class ImageryPanel(QWidget):
             gpu_item = QTableWidgetItem(gpu_text)
             gpu_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.imagery_table.setItem(row, 2, gpu_item)
+
+            # Opacity column: QSpinBox (0-100%) for map view
+            opacity_pct = int(self.viewer.imagery_opacity.get(imagery.uuid, 1.0) * 100)
+            opacity_spinbox = QSpinBox()
+            opacity_spinbox.setRange(0, 100)
+            opacity_spinbox.setSuffix("%")
+            opacity_spinbox.setValue(opacity_pct)
+            opacity_spinbox.setToolTip("Imagery opacity in map view")
+            opacity_spinbox.valueChanged.connect(
+                lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val)
+            )
+            self.imagery_table.setCellWidget(row, 3, opacity_spinbox)
 
         self.imagery_table.blockSignals(False)
 
@@ -369,3 +385,26 @@ class ImageryPanel(QWidget):
         # Refresh table
         self.refresh_imagery_table()
         self.data_changed.emit()
+
+    def set_opacity_column_visible(self, visible: bool) -> None:
+        """Show or hide the opacity column.
+
+        Parameters
+        ----------
+        visible : bool
+            True to show the opacity column, False to hide it.
+        """
+        self.imagery_table.setColumnHidden(3, not visible)
+
+    def _on_opacity_changed(self, imagery_uuid: str, value: int) -> None:
+        """Handle opacity spinbox change for an imagery.
+
+        Parameters
+        ----------
+        imagery_uuid : str
+            UUID of the imagery.
+        value : int
+            Opacity percentage (0-100).
+        """
+        opacity = value / 100.0
+        self.viewer.set_imagery_opacity(imagery_uuid, opacity)
