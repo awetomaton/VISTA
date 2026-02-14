@@ -24,3 +24,5 @@ class VistaIcons(object):
         self.select_detections_dark = QIcon(str(ICON_DIR / "select_detections_dark.png"))
         self.lasso_select_light = QIcon(str(ICON_DIR / "lasso_select_light.png"))
         self.lasso_select_dark = QIcon(str(ICON_DIR / "lasso_select_dark.png"))
+        self.histogram_light = QIcon(str(ICON_DIR / "histogram_light.png"))
+        self.histogram_dark = QIcon(str(ICON_DIR / "histogram_dark.png"))

@@ -159,6 +159,17 @@ class VistaMainWindow(QMainWindow):
                 # If restoration fails, just continue with defaults
                 pass
 
+        # Restore histogram visibility from settings
+        histogram_visible = self.settings.value("histogram_visible", True, type=bool)
+        if not histogram_visible:
+            self.viewer.set_histogram_visible(False)
+            self.toggle_histogram_action.blockSignals(True)
+            self.toggle_histogram_action.setChecked(False)
+            self.toggle_histogram_action.blockSignals(False)
+            self.toggle_histogram_menu_action.blockSignals(True)
+            self.toggle_histogram_menu_action.setChecked(False)
+            self.toggle_histogram_menu_action.blockSignals(False)
+
     def create_menu_bar(self):
         """Create menu bar with file loading options"""
         menubar = self.menuBar()
@@ -236,6 +247,12 @@ class VistaMainWindow(QMainWindow):
         self.toggle_point_selection_action.setChecked(False)
         self.toggle_point_selection_action.triggered.connect(self.toggle_point_selection_dialog)
         view_menu.addAction(self.toggle_point_selection_action)
+
+        self.toggle_histogram_menu_action = QAction("Histogram", self)
+        self.toggle_histogram_menu_action.setCheckable(True)
+        self.toggle_histogram_menu_action.setChecked(True)
+        self.toggle_histogram_menu_action.triggered.connect(self.on_toggle_histogram)
+        view_menu.addAction(self.toggle_histogram_menu_action)
 
         # Labels action
         manage_labels_action = QAction("Labels", self)
@@ -444,6 +461,20 @@ class VistaMainWindow(QMainWindow):
         self.lasso_select_action.toggled.connect(self.on_lasso_select_toggled)
         self.interactive_mode_group.addAction(self.lasso_select_action)
         toolbar.addAction(self.lasso_select_action)
+
+        # Separator before display toggles
+        toolbar.addSeparator()
+
+        # Histogram toggle
+        if darkdetect.isDark():
+            self.toggle_histogram_action = QAction(self.icons.histogram_light, "Toggle Histogram", self)
+        else:
+            self.toggle_histogram_action = QAction(self.icons.histogram_dark, "Toggle Histogram", self)
+        self.toggle_histogram_action.setCheckable(True)
+        self.toggle_histogram_action.setChecked(True)
+        self.toggle_histogram_action.setToolTip("Show/hide the histogram widget")
+        self.toggle_histogram_action.toggled.connect(self.on_toggle_histogram)
+        toolbar.addAction(self.toggle_histogram_action)
 
     def create_interactive_mode_action_group(self):
         """
@@ -1687,6 +1718,17 @@ class VistaMainWindow(QMainWindow):
         """Toggle point selection dialog visibility"""
         self.viewer.toggle_point_selection_dialog(checked)
 
+    def on_toggle_histogram(self, checked):
+        """Toggle histogram widget visibility"""
+        self.viewer.set_histogram_visible(checked)
+        # Keep toolbar and menu actions in sync
+        self.toggle_histogram_action.blockSignals(True)
+        self.toggle_histogram_action.setChecked(checked)
+        self.toggle_histogram_action.blockSignals(False)
+        self.toggle_histogram_menu_action.blockSignals(True)
+        self.toggle_histogram_menu_action.setChecked(checked)
+        self.toggle_histogram_menu_action.blockSignals(False)
+
     def on_point_selection_dialog_created(self):
         """
         Called when the point selection dialog is first created.
@@ -2595,6 +2637,9 @@ class VistaMainWindow(QMainWindow):
         # Save histogram gradient state
         if self.viewer.user_histogram_state is not None:
             self.settings.setValue("histogram_gradient_state", self.viewer.user_histogram_state)
+
+        # Save histogram visibility state
+        self.settings.setValue("histogram_visible", self.viewer.histogram_visible)
 
         # Accept the close event
         event.accept()

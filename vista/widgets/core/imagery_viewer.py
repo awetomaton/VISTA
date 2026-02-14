@@ -154,6 +154,9 @@ class ImageryViewer(QWidget):
         # Histogram gradient state persistence (across sessions, managed by main window)
         self.user_histogram_state = None  # Single global gradient state
 
+        # Histogram visibility (toggled by toolbar button for performance)
+        self.histogram_visible = True
+
         # Imagery selection
         self.setting_imagery = False
 
@@ -314,11 +317,6 @@ class ImageryViewer(QWidget):
 
             if image_index is not None:
 
-                # Get user histogram limits if set
-                user_histogram_bounds = None
-                if self.imagery.uuid in self.user_histogram_bounds:
-                    user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
-
                 # Block signals to prevent histogram recomputation
                 try:
                     self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
@@ -326,33 +324,41 @@ class ImageryViewer(QWidget):
                     # Signal not connected yet, ignore
                     pass
 
-                # Use cached histogram if available
-                if self.imagery.has_cached_histograms():
-                    # Update the image without auto-levels
-                    self.image_item.setImage(self.imagery.images[image_index], autoLevels=False)
+                # Always set image without auto-levels to prevent flickering
+                self.image_item.setImage(self.imagery.images[image_index], autoLevels=False)
 
-                    # Manually update histogram with cached data
-                    hist_y, hist_x = self.imagery.get_histogram(image_index)
-                    self.histogram.plot.setData(hist_x, hist_y)
-                else:
-                    # Let HistogramLUTItem compute histogram automatically
-                    self.image_item.setImage(self.imagery.images[image_index])
+                if self.histogram_visible:
+                    # Get user histogram limits if set
+                    user_histogram_bounds = None
+                    if self.imagery.uuid in self.user_histogram_bounds:
+                        user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
 
-                # Reconnect the histogram image changed signal
-                try:
-                    self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
-                except TypeError:
-                    # Signal already connected, ignore
-                    pass
-
-                # Restore user's histogram bounds if they were manually set
-                if user_histogram_bounds is None:
-                    if (self.imagery.default_histogram_bounds is None):
-                        self.histogram.setLevels(self.histogram.plot.xData[0], self.histogram.plot.xData[-1])
+                    # Update histogram plot data
+                    if self.imagery.has_cached_histograms():
+                        # Use pre-computed histogram data
+                        hist_y, hist_x = self.imagery.get_histogram(image_index)
+                        self.histogram.plot.setData(hist_x, hist_y)
                     else:
-                        self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
-                else:
-                    self.histogram.setLevels(*user_histogram_bounds)
+                        # Let HistogramLUTItem compute histogram from the current image
+                        self.histogram.imageChanged()
+
+                    # Reconnect the histogram image changed signal
+                    try:
+                        self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
+                    except TypeError:
+                        # Signal already connected, ignore
+                        pass
+
+                    # Restore user's histogram bounds if they were manually set
+                    if user_histogram_bounds is None:
+                        if (self.imagery.default_histogram_bounds is None):
+                            self.histogram.setLevels(
+                                self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
+                            )
+                        else:
+                            self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
+                    else:
+                        self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
@@ -439,6 +445,26 @@ class ImageryViewer(QWidget):
         if self.setting_imagery:
             return
         self.user_histogram_state = self.histogram.saveState()
+
+    def set_histogram_visible(self, visible: bool):
+        """
+        Show or hide the histogram widget.
+
+        When hidden, histogram updates are skipped during frame changes for improved performance.
+        The image levels/LUT remain frozen at their last values so rendering is unaffected.
+        When shown again, the histogram is refreshed to match the current frame.
+
+        Parameters
+        ----------
+        visible : bool
+            True to show the histogram, False to hide it
+        """
+        self.histogram_visible = visible
+        self.hist_widget.setVisible(visible)
+
+        # Refresh histogram for the current frame when becoming visible
+        if visible and self.imagery is not None:
+            self.set_frame_number(self.current_frame_number)
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
