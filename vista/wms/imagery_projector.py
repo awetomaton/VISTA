@@ -151,7 +151,7 @@ class ImageryProjector:
 
         # Build output grid of (lon, lat) coordinates
         lons = np.linspace(lon_min, lon_max, output_width)
-        lats = np.linspace(lat_max, lat_min, output_height)  # lat decreases downward for display
+        lats = np.linspace(lat_min, lat_max, output_height)  # lat increases upward (row 0 = south)
         lon_grid, lat_grid = np.meshgrid(lons, lats)
 
         # Flatten for geodetic_to_pixel
@@ -266,7 +266,7 @@ class ImageryProjector:
 
         # Build output grid on CPU
         lons = np.linspace(lon_min, lon_max, output_width)
-        lats = np.linspace(lat_max, lat_min, output_height)
+        lats = np.linspace(lat_min, lat_max, output_height)  # lat increases upward (row 0 = south)
         lon_grid, lat_grid = np.meshgrid(lons, lats)
         flat_lons = lon_grid.ravel()
         flat_lats = lat_grid.ravel()
