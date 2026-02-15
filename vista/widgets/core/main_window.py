@@ -129,6 +129,12 @@ class VistaMainWindow(QMainWindow):
             lambda _sensor: self._update_map_view_action_state()
         )
 
+        # Connect drag-and-drop file loading signals
+        self.data_manager.sensors_panel.files_dropped.connect(self.load_imagery_file)
+        self.data_manager.imagery_panel.files_dropped.connect(self.load_imagery_file)
+        self.data_manager.detections_panel.files_dropped.connect(self.load_detections_file)
+        self.data_manager.tracks_panel.files_dropped.connect(self.load_tracks_file)
+
         self.data_dock = QDockWidget("Data Manager", self)
         self.data_dock.setWidget(self.data_manager)
         self.data_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
@@ -835,14 +841,21 @@ class VistaMainWindow(QMainWindow):
         # Refresh the data manager to show updated AOIs
         self.data_manager.refresh_aois_table()
 
-    def load_imagery_file(self):
-        """Load imagery from HDF5 file(s) using background thread with incremental loading"""
-        # Get last used directory from settings
-        last_dir = self.settings.value("last_imagery_dir", "")
+    def load_imagery_file(self, file_paths=None):
+        """Load imagery from HDF5 file(s) using background thread with incremental loading
 
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "Load Imagery", last_dir, "HDF5 Files (*.h5 *.hdf5)"
-        )
+        Parameters
+        ----------
+        file_paths : list of str, optional
+            File paths to load. If None, a file dialog is shown.
+        """
+        if not isinstance(file_paths, list):
+            # Get last used directory from settings
+            last_dir = self.settings.value("last_imagery_dir", "")
+
+            file_paths, _ = QFileDialog.getOpenFileNames(
+                self, "Load Imagery", last_dir, "HDF5 Files (*.h5 *.hdf5)"
+            )
 
         if file_paths:
             file_path = file_paths[0]  # Process first file for now, can be extended later
@@ -1043,14 +1056,21 @@ class VistaMainWindow(QMainWindow):
             self.controls.set_frame(frame_to_set)
             self.viewer.set_frame_number(frame_to_set)
 
-    def load_detections_file(self):
-        """Load detections from CSV file(s) using background thread"""
-        # Get last used directory from settings
-        last_dir = self.settings.value("last_detections_dir", "")
+    def load_detections_file(self, file_paths=None):
+        """Load detections from CSV file(s) using background thread
 
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "Load Detections", last_dir, "CSV Files (*.csv)"
-        )
+        Parameters
+        ----------
+        file_paths : list of str, optional
+            File paths to load. If None, a file dialog is shown.
+        """
+        if not isinstance(file_paths, list):
+            # Get last used directory from settings
+            last_dir = self.settings.value("last_detections_dir", "")
+
+            file_paths, _ = QFileDialog.getOpenFileNames(
+                self, "Load Detections", last_dir, "CSV Files (*.csv)"
+            )
 
         if file_paths:
             # Save the directory for next time
@@ -1158,14 +1178,21 @@ class VistaMainWindow(QMainWindow):
 
         self.statusBar().showMessage(f"Loaded {len(detectors)} detector(s)", 3000)
 
-    def load_tracks_file(self):
-        """Load tracks from CSV file(s) using background thread"""
-        # Get last used directory from settings
-        last_dir = self.settings.value("last_tracks_dir", "")
+    def load_tracks_file(self, file_paths=None):
+        """Load tracks from CSV file(s) using background thread
 
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "Load Tracks", last_dir, "CSV Files (*.csv)"
-        )
+        Parameters
+        ----------
+        file_paths : list of str, optional
+            File paths to load. If None, a file dialog is shown.
+        """
+        if not isinstance(file_paths, list):
+            # Get last used directory from settings
+            last_dir = self.settings.value("last_tracks_dir", "")
+
+            file_paths, _ = QFileDialog.getOpenFileNames(
+                self, "Load Tracks", last_dir, "CSV Files (*.csv)"
+            )
 
         if file_paths:
             # Save the directory for next time

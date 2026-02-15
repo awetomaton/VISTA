@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🥳 Imagery now loads and displays in the viewer incrementally.
 - 🥳 Added sliding window subspace background removal algorithm.
 - 🥳 Added GoDec background removal with GPU support.
+- 🥳 Added the ability to drag and drop imagery, tracks, or detections into their respective data manager panels.
 - ✨ Updated to use `numba` to fuse multiple numpy imagery operations into a single memory pass.
 - ✨ Added the ability to hide the histogram widget to improve playback performance.
 - ✨ Added the ability set the tooltip text font, color, and weight.

@@ -61,14 +61,17 @@ For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.githu
 
 See the [User Guide](https://awetomaton.github.io/VISTA/1.10.0/user_guide/imagery.html) for detailed feature documentation.
 
-## Keyboard Shortcuts
+## App Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | **Left Arrow** / **A** | Previous frame |
 | **Right Arrow** / **D** | Next frame |
-| **CTRL** / **Z** | Undo track / detection panel action |
+| **CTRL** + **Z** | Undo track / detection panel action |
 | **Spacebar** | Play/Pause |
+| **Drag and Drop on Sensors / Imagery panels** | Load sensor / imagery data  |
+| **Drag and Drop on Tracks Panels** | Load tracks data  |
+| **Drag and Drop on Detections Panels** | Load detections data  |
 
 ## Input Data Formats
 

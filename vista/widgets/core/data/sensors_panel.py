@@ -5,6 +5,8 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget
 )
 
+_HDF5_EXTENSIONS = ('.h5', '.hdf5')
+
 
 class SensorsPanel(QWidget):
     """Panel for managing sensors"""
@@ -12,6 +14,7 @@ class SensorsPanel(QWidget):
     data_changed = pyqtSignal()  # Signal when data is modified
     sensor_selected = pyqtSignal(object)  # Signal when sensor selection changes
     cancel_sensor_loading_requested = pyqtSignal(object)  # Emits sensor being deleted (to cancel loading imagery)
+    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
 
     def __init__(self, viewer):
         super().__init__()
@@ -51,6 +54,9 @@ class SensorsPanel(QWidget):
 
         layout.addWidget(self.sensors_table)
         self.setLayout(layout)
+
+        # Accept drag-and-drop of HDF5 files
+        self.setAcceptDrops(True)
 
     def refresh_sensors_table(self):
         """Refresh the sensors table"""
@@ -198,3 +204,21 @@ class SensorsPanel(QWidget):
                 "Sensor Deleted",
                 f"Sensor '{sensor.name}' and all associated data have been deleted."
             )
+
+    def dragEnterEvent(self, event):
+        """Accept drag events containing HDF5 files."""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event):
+        """Handle dropped HDF5 files by emitting the files_dropped signal."""
+        file_paths = [
+            url.toLocalFile() for url in event.mimeData().urls()
+            if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS)
+        ]
+        if file_paths:
+            self.files_dropped.emit(file_paths)

@@ -110,7 +110,11 @@ Common keyboard shortcuts:
 
 * ``Space``: Play/Pause playback
 * ``Left/Right Arrow`` or ``A/D``: Previous/Next frame
-
+* ``CTRL`` + ``Z``: Undo track / detection panel action
+* ``Spacebar``: Play/Pause
+* ``Drag and Drop on Sensors / Imagery panels``: Load sensor / imagery data
+* ``Drag and Drop on Tracks Panels``: Load tracks data
+* ``Drag and Drop on Detections Panels``: Load detections data
 
 Example: Using the API - Detection Workflow
 -------------------------------------------

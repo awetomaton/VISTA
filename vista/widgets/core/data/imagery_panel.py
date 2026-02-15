@@ -7,12 +7,15 @@ from PyQt6.QtCore import Qt, pyqtSignal
 
 from vista.imagery.imagery import HAS_TORCH
 
+_HDF5_EXTENSIONS = ('.h5', '.hdf5')
+
 
 class ImageryPanel(QWidget):
     """Panel for managing imagery"""
 
     data_changed = pyqtSignal()  # Signal when data is modified
     cancel_loading_requested = pyqtSignal(object)  # Emits imagery UUID to cancel loading
+    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
 
     def __init__(self, viewer):
         super().__init__()
@@ -64,6 +67,9 @@ class ImageryPanel(QWidget):
 
         layout.addWidget(self.imagery_table)
         self.setLayout(layout)
+
+        # Accept drag-and-drop of HDF5 files
+        self.setAcceptDrops(True)
 
     def refresh_imagery_table(self):
         """Refresh the imagery table, filtering by selected sensor"""
@@ -408,3 +414,21 @@ class ImageryPanel(QWidget):
         """
         opacity = value / 100.0
         self.viewer.set_imagery_opacity(imagery_uuid, opacity)
+
+    def dragEnterEvent(self, event):
+        """Accept drag events containing HDF5 files."""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event):
+        """Handle dropped HDF5 files by emitting the files_dropped signal."""
+        file_paths = [
+            url.toLocalFile() for url in event.mimeData().urls()
+            if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS)
+        ]
+        if file_paths:
+            self.files_dropped.emit(file_paths)

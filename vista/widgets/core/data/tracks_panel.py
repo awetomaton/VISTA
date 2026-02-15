@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import pathlib
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import QEvent, Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
     QApplication, QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
@@ -239,10 +239,14 @@ class OrderByDialog(QDialog):
         return result
 
 
+_CSV_EXTENSIONS = ('.csv',)
+
+
 class TracksPanel(QWidget):
     """Panel for managing tracks"""
 
     data_changed = pyqtSignal()  # Signal when data is modified
+    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
 
     def __init__(self, viewer):
         super().__init__()
@@ -610,8 +614,51 @@ class TracksPanel(QWidget):
 
         self.setLayout(layout)
 
+        # Accept drag-and-drop of CSV files
+        self.setAcceptDrops(True)
+        self.tracks_table.viewport().installEventFilter(self)
+
         # Initialize bulk action controls visibility
         self.on_bulk_property_changed(0)
+
+    def eventFilter(self, source, event):
+        """Intercept drag-and-drop on the table viewport so external file drops are handled by the panel."""
+        if source is self.tracks_table.viewport():
+            if event.type() == QEvent.Type.DragEnter and event.mimeData().hasUrls():
+                for url in event.mimeData().urls():
+                    if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS):
+                        event.acceptProposedAction()
+                        return True
+            elif event.type() == QEvent.Type.DragMove and event.mimeData().hasUrls():
+                event.acceptProposedAction()
+                return True
+            elif event.type() == QEvent.Type.Drop and event.mimeData().hasUrls():
+                file_paths = [
+                    url.toLocalFile() for url in event.mimeData().urls()
+                    if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
+                ]
+                if file_paths:
+                    self.files_dropped.emit(file_paths)
+                return True
+        return super().eventFilter(source, event)
+
+    def dragEnterEvent(self, event):
+        """Accept drag events containing CSV files."""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event):
+        """Handle dropped CSV files by emitting the files_dropped signal."""
+        file_paths = [
+            url.toLocalFile() for url in event.mimeData().urls()
+            if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
+        ]
+        if file_paths:
+            self.files_dropped.emit(file_paths)
 
     def refresh_tracks_table(self):
         """Refresh the tracks table, filtering by selected sensor"""
