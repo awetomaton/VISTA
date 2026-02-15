@@ -1,4 +1,9 @@
-"""Create example shapefiles for testing VISTA features functionality"""
+"""Create example shapefiles for testing VISTA features functionality.
+
+All coordinates are geographic (lon, lat) as required by the shapefile standard.
+The caller specifies a bounding box and all shapes are scaled relative to it.
+"""
+import argparse
 import pathlib
 
 try:
@@ -9,120 +14,240 @@ except ImportError:
     exit(1)
 
 
-def create_polygon_shapefile(output_path):
-    """Create a shapefile with polygon features"""
+def create_polygon_shapefile(output_path: str, lon_min: float, lat_min: float, lon_max: float, lat_max: float) -> None:
+    """Create a shapefile with polygon features scaled to the given bounding box.
+
+    Parameters
+    ----------
+    output_path : str
+        Output path for the shapefile.
+    lon_min : float
+        Minimum longitude (degrees).
+    lat_min : float
+        Minimum latitude (degrees).
+    lon_max : float
+        Maximum longitude (degrees).
+    lat_max : float
+        Maximum latitude (degrees).
+    """
     w = shapefile.Writer(str(output_path), shapeType=shapefile.POLYGON)
+    dlon = lon_max - lon_min
+    dlat = lat_max - lat_min
 
-    # Define fields
     w.field('name', 'C', size=50)
-    w.field('area', 'N', decimal=2)
+    w.field('area', 'N', decimal=6)
 
-    # Add a rectangle
+    # Rectangle in the lower-left quadrant (10-40% of bbox)
+    x0, x1 = lon_min + 0.10 * dlon, lon_min + 0.40 * dlon
+    y0, y1 = lat_min + 0.10 * dlat, lat_min + 0.40 * dlat
     w.poly([
-        [[100, 100], [200, 100], [200, 200], [100, 200], [100, 100]]
+        [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
     ])
-    w.record('Rectangle Area', 10000.00)
+    w.record('Rectangle', abs((x1 - x0) * (y1 - y0)))
 
-    # Add a triangle
+    # Triangle in the upper-left quadrant
+    tx0 = lon_min + 0.10 * dlon
+    tx1 = lon_min + 0.40 * dlon
+    ty0 = lat_min + 0.60 * dlat
+    ty1 = lat_min + 0.90 * dlat
     w.poly([
-        [[250, 100], [350, 100], [300, 200], [250, 100]]
+        [[tx0, ty0], [tx1, ty0], [(tx0 + tx1) / 2, ty1], [tx0, ty0]]
     ])
-    w.record('Triangle Area', 5000.00)
+    w.record('Triangle', abs(0.5 * (tx1 - tx0) * (ty1 - ty0)))
 
-    # Add a pentagon
-    w.poly([
-        [[400, 150], [450, 120], [480, 180], [430, 220], [380, 190], [400, 150]]
-    ])
-    w.record('Pentagon Area', 7500.00)
+    # Pentagon in the upper-right quadrant
+    import math
+    cx = lon_min + 0.75 * dlon
+    cy = lat_min + 0.75 * dlat
+    r_lon = 0.12 * dlon
+    r_lat = 0.12 * dlat
+    pts = []
+    for i in range(5):
+        angle = math.pi / 2 + 2 * math.pi * i / 5
+        pts.append([cx + r_lon * math.cos(angle), cy + r_lat * math.sin(angle)])
+    pts.append(pts[0])  # close ring
+    w.poly([pts])
+    w.record('Pentagon', abs(r_lon * r_lat * 2.378))  # approximate area
 
-    # Add a polygon with a hole
-    outer_ring = [[550, 100], [650, 100], [650, 200], [550, 200], [550, 100]]
-    hole = [[575, 125], [625, 125], [625, 175], [575, 175], [575, 125]]
-    w.poly([outer_ring, hole])
-    w.record('Polygon with Hole', 8500.00)
+    # Polygon with hole in the lower-right quadrant
+    ox0, ox1 = lon_min + 0.60 * dlon, lon_min + 0.90 * dlon
+    oy0, oy1 = lat_min + 0.10 * dlat, lat_min + 0.40 * dlat
+    outer = [[ox0, oy0], [ox1, oy0], [ox1, oy1], [ox0, oy1], [ox0, oy0]]
+    # Hole inset by 25% of the sub-rectangle
+    hx0 = ox0 + 0.25 * (ox1 - ox0)
+    hx1 = ox1 - 0.25 * (ox1 - ox0)
+    hy0 = oy0 + 0.25 * (oy1 - oy0)
+    hy1 = oy1 - 0.25 * (oy1 - oy0)
+    hole = [[hx0, hy0], [hx1, hy0], [hx1, hy1], [hx0, hy1], [hx0, hy0]]
+    w.poly([outer, hole])
+    w.record('Polygon with Hole', abs((ox1 - ox0) * (oy1 - oy0) - (hx1 - hx0) * (hy1 - hy0)))
 
     w.close()
     print(f"Created polygon shapefile: {output_path}")
 
 
-def create_polyline_shapefile(output_path):
-    """Create a shapefile with polyline features"""
+def create_polyline_shapefile(
+    output_path: str, lon_min: float, lat_min: float, lon_max: float, lat_max: float,
+) -> None:
+    """Create a shapefile with polyline features scaled to the given bounding box.
+
+    Parameters
+    ----------
+    output_path : str
+        Output path for the shapefile.
+    lon_min : float
+        Minimum longitude (degrees).
+    lat_min : float
+        Minimum latitude (degrees).
+    lon_max : float
+        Maximum longitude (degrees).
+    lat_max : float
+        Maximum latitude (degrees).
+    """
     w = shapefile.Writer(str(output_path), shapeType=shapefile.POLYLINE)
+    dlon = lon_max - lon_min
+    dlat = lat_max - lat_min
 
-    # Define fields
     w.field('name', 'C', size=50)
-    w.field('length', 'N', decimal=2)
+    w.field('length', 'N', decimal=6)
 
-    # Add a simple line
-    w.line([
-        [[100, 300], [200, 350], [300, 320], [400, 380]]
-    ])
-    w.record('Curved Path', 320.50)
+    # Curved path across the lower third
+    w.line([[
+        [lon_min + 0.05 * dlon, lat_min + 0.25 * dlat],
+        [lon_min + 0.30 * dlon, lat_min + 0.35 * dlat],
+        [lon_min + 0.55 * dlon, lat_min + 0.20 * dlat],
+        [lon_min + 0.80 * dlon, lat_min + 0.30 * dlat],
+        [lon_min + 0.95 * dlon, lat_min + 0.25 * dlat],
+    ]])
+    w.record('Curved Path', 0.9 * dlon)
 
-    # Add a zigzag line
-    w.line([
-        [[100, 450], [150, 500], [200, 450], [250, 500], [300, 450]]
-    ])
-    w.record('Zigzag Path', 260.00)
+    # Zigzag across the middle
+    w.line([[
+        [lon_min + 0.05 * dlon, lat_min + 0.50 * dlat],
+        [lon_min + 0.20 * dlon, lat_min + 0.60 * dlat],
+        [lon_min + 0.35 * dlon, lat_min + 0.45 * dlat],
+        [lon_min + 0.50 * dlon, lat_min + 0.60 * dlat],
+        [lon_min + 0.65 * dlon, lat_min + 0.45 * dlat],
+        [lon_min + 0.80 * dlon, lat_min + 0.60 * dlat],
+        [lon_min + 0.95 * dlon, lat_min + 0.50 * dlat],
+    ]])
+    w.record('Zigzag Path', 1.2 * dlon)
 
-    # Add a multi-part line
+    # Multi-part line (two parallel segments) across the upper third
     w.line([
-        [[400, 300], [500, 320], [600, 310]],
-        [[400, 400], [500, 420], [600, 410]]
+        [
+            [lon_min + 0.10 * dlon, lat_min + 0.75 * dlat],
+            [lon_min + 0.45 * dlon, lat_min + 0.80 * dlat],
+            [lon_min + 0.90 * dlon, lat_min + 0.75 * dlat],
+        ],
+        [
+            [lon_min + 0.10 * dlon, lat_min + 0.85 * dlat],
+            [lon_min + 0.45 * dlon, lat_min + 0.90 * dlat],
+            [lon_min + 0.90 * dlon, lat_min + 0.85 * dlat],
+        ],
     ])
-    w.record('Multi-part Path', 410.00)
+    w.record('Multi-part Path', 1.6 * dlon)
 
     w.close()
     print(f"Created polyline shapefile: {output_path}")
 
 
-def create_point_shapefile(output_path):
-    """Create a shapefile with point features"""
-    w = shapefile.Writer(str(output_path), shapeType=shapefile.POINT)
+def create_point_shapefile(
+    output_path: str, lon_min: float, lat_min: float, lon_max: float, lat_max: float,
+) -> None:
+    """Create a shapefile with point features distributed within the bounding box.
 
-    # Define fields
+    Parameters
+    ----------
+    output_path : str
+        Output path for the shapefile.
+    lon_min : float
+        Minimum longitude (degrees).
+    lat_min : float
+        Minimum latitude (degrees).
+    lon_max : float
+        Maximum longitude (degrees).
+    lat_max : float
+        Maximum latitude (degrees).
+    """
+    w = shapefile.Writer(str(output_path), shapeType=shapefile.POINT)
+    dlon = lon_max - lon_min
+    dlat = lat_max - lat_min
+
     w.field('name', 'C', size=50)
     w.field('value', 'N', decimal=2)
 
-    # Add individual points
+    # Points distributed across the bounding box
     points_data = [
-        ([100, 600], 'Point A', 10.5),
-        ([200, 620], 'Point B', 25.3),
-        ([300, 590], 'Point C', 15.7),
-        ([400, 610], 'Point D', 30.1),
-        ([500, 630], 'Point E', 20.9),
-        ([150, 700], 'Point F', 18.2),
-        ([250, 720], 'Point G', 22.6),
-        ([350, 690], 'Point H', 28.4),
+        (0.15, 0.20, 'Point A', 10.5),
+        (0.35, 0.30, 'Point B', 25.3),
+        (0.55, 0.15, 'Point C', 15.7),
+        (0.75, 0.25, 'Point D', 30.1),
+        (0.90, 0.35, 'Point E', 20.9),
+        (0.20, 0.60, 'Point F', 18.2),
+        (0.50, 0.70, 'Point G', 22.6),
+        (0.80, 0.65, 'Point H', 28.4),
+        (0.40, 0.85, 'Point I', 12.0),
+        (0.65, 0.90, 'Point J', 35.5),
     ]
 
-    for coords, name, value in points_data:
-        w.point(coords[0], coords[1])
+    for frac_lon, frac_lat, name, value in points_data:
+        lon = lon_min + frac_lon * dlon
+        lat = lat_min + frac_lat * dlat
+        w.point(lon, lat)
         w.record(name, value)
 
     w.close()
     print(f"Created point shapefile: {output_path}")
 
 
-def create_multipoint_shapefile(output_path):
-    """Create a shapefile with multipoint features"""
-    w = shapefile.Writer(str(output_path), shapeType=shapefile.MULTIPOINT)
+def create_multipoint_shapefile(
+    output_path: str, lon_min: float, lat_min: float, lon_max: float, lat_max: float,
+) -> None:
+    """Create a shapefile with multipoint features within the bounding box.
 
-    # Define fields
+    Parameters
+    ----------
+    output_path : str
+        Output path for the shapefile.
+    lon_min : float
+        Minimum longitude (degrees).
+    lat_min : float
+        Minimum latitude (degrees).
+    lon_max : float
+        Maximum longitude (degrees).
+    lat_max : float
+        Maximum latitude (degrees).
+    """
+    w = shapefile.Writer(str(output_path), shapeType=shapefile.MULTIPOINT)
+    dlon = lon_max - lon_min
+    dlat = lat_max - lat_min
+
     w.field('name', 'C', size=50)
     w.field('count', 'N')
 
-    # Add a cluster of points
-    w.multipoint([
-        [550, 600], [560, 610], [570, 605], [555, 620], [565, 615]
-    ])
-    w.record('Cluster A', 5)
+    # Cluster A — lower-left region
+    cluster_a = [
+        [lon_min + 0.20 * dlon, lat_min + 0.20 * dlat],
+        [lon_min + 0.22 * dlon, lat_min + 0.23 * dlat],
+        [lon_min + 0.25 * dlon, lat_min + 0.21 * dlat],
+        [lon_min + 0.21 * dlon, lat_min + 0.26 * dlat],
+        [lon_min + 0.24 * dlon, lat_min + 0.24 * dlat],
+    ]
+    w.multipoint(cluster_a)
+    w.record('Cluster A', len(cluster_a))
 
-    # Add another cluster
-    w.multipoint([
-        [620, 650], [630, 660], [640, 655], [625, 670], [635, 665], [645, 660]
-    ])
-    w.record('Cluster B', 6)
+    # Cluster B — upper-right region
+    cluster_b = [
+        [lon_min + 0.72 * dlon, lat_min + 0.75 * dlat],
+        [lon_min + 0.74 * dlon, lat_min + 0.78 * dlat],
+        [lon_min + 0.77 * dlon, lat_min + 0.76 * dlat],
+        [lon_min + 0.73 * dlon, lat_min + 0.80 * dlat],
+        [lon_min + 0.76 * dlon, lat_min + 0.78 * dlat],
+        [lon_min + 0.79 * dlon, lat_min + 0.77 * dlat],
+    ]
+    w.multipoint(cluster_b)
+    w.record('Cluster B', len(cluster_b))
 
     w.close()
     print(f"Created multipoint shapefile: {output_path}")
@@ -130,27 +255,57 @@ def create_multipoint_shapefile(output_path):
 
 def main():
     """Create all example shapefiles"""
+    parser = argparse.ArgumentParser(
+        description="Create test shapefiles with geographic coordinates for VISTA."
+    )
+    parser.add_argument(
+        "--lon-min", type=float, default=-105.3, help="Minimum longitude in degrees (default: -105.3)"
+    )
+    parser.add_argument(
+        "--lat-min", type=float, default=39.95, help="Minimum latitude in degrees (default: 39.95)"
+    )
+    parser.add_argument(
+        "--lon-max", type=float, default=-105.2, help="Maximum longitude in degrees (default: -105.2)"
+    )
+    parser.add_argument(
+        "--lat-max", type=float, default=40.05, help="Maximum latitude in degrees (default: 40.05)"
+    )
+    parser.add_argument(
+        "--output-dir", type=str, default=None,
+        help="Output directory (default: <project>/data/shapefiles)"
+    )
+    args = parser.parse_args()
+
     # Create output directory
-    output_dir = pathlib.Path(__file__).parent.parent / "data" / "shapefiles"
+    if args.output_dir:
+        output_dir = pathlib.Path(args.output_dir)
+    else:
+        output_dir = pathlib.Path(__file__).parent.parent / "data" / "shapefiles"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create different shapefile types
-    create_polygon_shapefile(output_dir / "test_polygons.shp")
-    create_polyline_shapefile(output_dir / "test_polylines.shp")
-    create_point_shapefile(output_dir / "test_points.shp")
-    create_multipoint_shapefile(output_dir / "test_multipoints.shp")
+    bbox = (args.lon_min, args.lat_min, args.lon_max, args.lat_max)
 
-    print("\n" + "="*60)
+    print(f"Bounding box: lon [{bbox[0]}, {bbox[2]}], lat [{bbox[1]}, {bbox[3]}]")
+    print()
+
+    # Create different shapefile types
+    create_polygon_shapefile(output_dir / "test_polygons.shp", *bbox)
+    create_polyline_shapefile(output_dir / "test_polylines.shp", *bbox)
+    create_point_shapefile(output_dir / "test_points.shp", *bbox)
+    create_multipoint_shapefile(output_dir / "test_multipoints.shp", *bbox)
+
+    print()
+    print("=" * 60)
     print("All test shapefiles created successfully!")
     print(f"Location: {output_dir}")
-    print("="*60)
+    print("=" * 60)
     print("\nYou can now load these shapefiles in VISTA:")
     print("File > Load Shapefile")
     print("\nShapefiles created:")
-    print("  - test_polygons.shp (rectangles, triangles, pentagon, polygon with hole)")
-    print("  - test_polylines.shp (curved paths, zigzag, multi-part lines)")
-    print("  - test_points.shp (individual points)")
-    print("  - test_multipoints.shp (point clusters)")
+    print("  - test_polygons.shp (rectangle, triangle, pentagon, polygon with hole)")
+    print("  - test_polylines.shp (curved path, zigzag, multi-part lines)")
+    print("  - test_points.shp (10 individual points)")
+    print("  - test_multipoints.shp (2 point clusters)")
 
 
 if __name__ == "__main__":

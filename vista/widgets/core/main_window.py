@@ -1495,7 +1495,22 @@ class VistaMainWindow(QMainWindow):
         self.statusBar().showMessage(f"Loaded {len(aois)} AOI(s)", 3000)
 
     def load_shapefile(self):
-        """Load shapefile(s) and add as features"""
+        """Load shapefile(s) and add as features.
+
+        Requires a geolocatable sensor to be selected so that geographic shapefile
+        coordinates can be projected to pixel coordinates for the pixel view.
+        """
+        # Shapefile coordinates are geographic — we need a sensor to project them to pixels
+        sensor = self.viewer.selected_sensor
+        if sensor is None or not sensor.can_geolocate():
+            QMessageBox.warning(
+                self,
+                "Sensor Required",
+                "Loading shapefiles requires a sensor with geolocation capability.\n\n"
+                "Please load imagery with a geolocatable sensor before loading shapefiles."
+            )
+            return
+
         # Get last used directory from settings
         last_dir = self.settings.value("last_shapefile_dir", "")
 

@@ -26,10 +26,15 @@ class ImageryProjector:
     ----------
     sensor : Sensor
         Sensor with forward and reverse geolocation capability.
+    coarse_grid_size : int
+        Maximum dimension of the coarse grid used to accelerate coordinate mapping.
+        Set to 0 to disable coarse grid sampling and compute every pixel directly.
+        Default is 64.
     """
 
-    def __init__(self, sensor: Sensor):
+    def __init__(self, sensor: Sensor, coarse_grid_size: int = 64):
         self.sensor = sensor
+        self.coarse_grid_size = coarse_grid_size
 
     def compute_footprint(
         self,
@@ -105,6 +110,111 @@ class ImageryProjector:
 
         return (float(np.min(lons)), float(np.min(lats)), float(np.max(lons)), float(np.max(lats)))
 
+    def _compute_coordinate_mapping(
+        self,
+        frame: int,
+        output_bbox: tuple[float, float, float, float],
+        output_width: int,
+        output_height: int,
+        row_offset: int = 0,
+        column_offset: int = 0,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Compute the (lon, lat) → (row, col) coordinate mapping for a projection.
+
+        Uses a coarse grid with bilinear interpolation to avoid calling the expensive
+        sensor.geodetic_to_pixel() at every output pixel. The sensor model is polynomial,
+        so interpolation from a 64x64 grid gives sub-pixel accuracy.
+
+        Parameters
+        ----------
+        frame : int
+            Frame number for geolocation.
+        output_bbox : tuple[float, float, float, float]
+            Output bounding box as (lon_min, lat_min, lon_max, lat_max).
+        output_width : int
+            Width of the output projected image in pixels.
+        output_height : int
+            Height of the output projected image in pixels.
+        row_offset : int
+            Row offset of the imagery.
+        column_offset : int
+            Column offset of the imagery.
+
+        Returns
+        -------
+        src_rows : NDArray[np.float64]
+            Flattened array of source row coordinates (length output_height * output_width).
+        src_cols : NDArray[np.float64]
+            Flattened array of source column coordinates (length output_height * output_width).
+        """
+        lon_min, lat_min, lon_max, lat_max = output_bbox
+
+        # Determine coarse grid size — only use coarse grid when it saves significant work
+        coarse_max = self.coarse_grid_size
+        use_coarse = coarse_max > 0 and (output_width > coarse_max or output_height > coarse_max)
+
+        if use_coarse:
+            # Maintain aspect ratio in the coarse grid
+            aspect = output_width / max(1, output_height)
+            if aspect >= 1:
+                coarse_w = coarse_max
+                coarse_h = max(4, int(round(coarse_max / aspect)))
+            else:
+                coarse_h = coarse_max
+                coarse_w = max(4, int(round(coarse_max * aspect)))
+
+            coarse_lons = np.linspace(lon_min, lon_max, coarse_w)
+            coarse_lats = np.linspace(lat_min, lat_max, coarse_h)
+            coarse_lon_grid, coarse_lat_grid = np.meshgrid(coarse_lons, coarse_lats)
+
+            earth_locs = EarthLocation.from_geodetic(
+                lon=coarse_lon_grid.ravel() * units.deg,
+                lat=coarse_lat_grid.ravel() * units.deg,
+                height=0 * units.m,
+            )
+            c_rows, c_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
+            c_rows = (c_rows - row_offset).reshape(coarse_h, coarse_w)
+            c_cols = (c_cols - column_offset).reshape(coarse_h, coarse_w)
+
+            # Handle NaN values: replace with 0, interpolate, then restore NaN from mask
+            nan_mask = np.isnan(c_rows) | np.isnan(c_cols)
+            c_rows_clean = np.where(nan_mask, 0.0, c_rows)
+            c_cols_clean = np.where(nan_mask, 0.0, c_cols)
+
+            # Interpolate coarse coordinate maps to full resolution using map_coordinates
+            fy = np.linspace(0, coarse_h - 1, output_height)
+            fx = np.linspace(0, coarse_w - 1, output_width)
+            fy_grid, fx_grid = np.meshgrid(fy, fx, indexing='ij')
+            interp_coords = np.array([fy_grid.ravel(), fx_grid.ravel()])
+
+            src_rows = map_coordinates(c_rows_clean, interp_coords, order=1, mode='nearest')
+            src_cols = map_coordinates(c_cols_clean, interp_coords, order=1, mode='nearest')
+
+            # Restore NaN where the coarse grid had invalid points
+            if np.any(nan_mask):
+                validity = map_coordinates(
+                    (~nan_mask).astype(np.float64), interp_coords, order=1, mode='nearest'
+                )
+                invalid = validity < 0.5
+                src_rows[invalid] = np.nan
+                src_cols[invalid] = np.nan
+        else:
+            # Small output — compute directly at every pixel
+            lons = np.linspace(lon_min, lon_max, output_width)
+            lats = np.linspace(lat_min, lat_max, output_height)
+            lon_grid, lat_grid = np.meshgrid(lons, lats)
+
+            earth_locs = EarthLocation.from_geodetic(
+                lon=lon_grid.ravel() * units.deg,
+                lat=lat_grid.ravel() * units.deg,
+                height=0 * units.m,
+            )
+            src_rows, src_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
+            src_rows = src_rows - row_offset
+            src_cols = src_cols - column_offset
+
+        return src_rows, src_cols
+
     def project_frame_cpu(
         self,
         image: NDArray[np.float32],
@@ -117,12 +227,9 @@ class ImageryProjector:
     ) -> NDArray[np.float32]:
         """Project a single frame onto a geodetic grid using CPU interpolation.
 
-        Builds an output grid of (lon, lat) coordinates covering output_bbox, uses
-        sensor.geodetic_to_pixel() to find source (row, col) for each output point,
-        then uses scipy.ndimage.map_coordinates for bilinear interpolation.
-
-        If the source image has much higher resolution than the output grid, the source
-        image is down-sampled first to reduce aliasing.
+        Uses a coarse-grid approach for the expensive geodetic_to_pixel() call: the
+        coordinate mapping is computed on a small grid (64x64) and bilinearly interpolated
+        to full resolution, since the sensor model is smooth (polynomial-based).
 
         Parameters
         ----------
@@ -147,35 +254,13 @@ class ImageryProjector:
             Projected image array with shape (output_height, output_width). Pixels outside
             the source image bounds are set to NaN.
         """
-        lon_min, lat_min, lon_max, lat_max = output_bbox
-
-        # Build output grid of (lon, lat) coordinates
-        lons = np.linspace(lon_min, lon_max, output_width)
-        lats = np.linspace(lat_min, lat_max, output_height)  # lat increases upward (row 0 = south)
-        lon_grid, lat_grid = np.meshgrid(lons, lats)
-
-        # Flatten for geodetic_to_pixel
-        flat_lons = lon_grid.ravel()
-        flat_lats = lat_grid.ravel()
-
-        # Create EarthLocation for all output pixels (altitude = 0)
-        earth_locs = EarthLocation.from_geodetic(
-            lon=flat_lons * units.deg,
-            lat=flat_lats * units.deg,
-            height=0 * units.m,
+        src_rows, src_cols = self._compute_coordinate_mapping(
+            frame, output_bbox, output_width, output_height, row_offset, column_offset,
         )
-
-        # Reverse-project to pixel coordinates
-        src_rows, src_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
-
-        # Convert scene coordinates to imagery-relative coordinates
-        src_rows = src_rows - row_offset
-        src_cols = src_cols - column_offset
 
         img_h, img_w = image.shape
 
         # Determine downsampling factor if source resolution >> output resolution
-        # Estimate: average number of source pixels per output pixel
         valid_mask = (
             (src_rows >= 0) & (src_rows < img_h) &
             (src_cols >= 0) & (src_cols < img_w) &

@@ -412,6 +412,10 @@ class ImageryViewer(QWidget):
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
 
+        # Re-render shapefile features in pixel view (their pixel coords change per frame)
+        if not self.map_view_mode:
+            self._rerender_shapefile_features()
+
         # Update extraction overlay if in extraction view or edit mode
         # Prioritize editing mode over viewing mode (editing shows working copy)
         if self.extraction_editing_mode:
@@ -1695,6 +1699,23 @@ class ImageryViewer(QWidget):
             if feature.visible:
                 self._render_feature(feature)
 
+    def _rerender_shapefile_features(self) -> None:
+        """Re-render only shapefile features (needed on frame change in pixel view).
+
+        Shapefile coordinates are geographic and must be re-projected to pixel
+        coordinates each frame because the sensor moves between frames.
+        """
+        for feature in self.features:
+            if not isinstance(feature, ShapefileFeature):
+                continue
+            if feature._plot_items:
+                for item in feature._plot_items:
+                    self.plot_item.removeItem(item)
+                    item.deleteLater()
+                feature._plot_items = []
+            if feature.visible:
+                self._render_shapefile(feature)
+
     def _render_feature(self, feature):
         """Render a feature on the plot"""
         if not feature.visible:
@@ -1743,9 +1764,44 @@ class ImageryViewer(QWidget):
         self.plot_item.addItem(text_item)
         feature._plot_items.append(text_item)
 
-    def _render_shapefile(self, feature):
-        """Render a shapefile feature"""
+    def _shapefile_geo_to_pixel(
+        self, all_lons: np.ndarray, all_lats: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Convert shapefile geographic coordinates to pixel coordinates.
 
+        Uses the current sensor and frame to project (lon, lat) to (col, row).
+
+        Parameters
+        ----------
+        all_lons : np.ndarray
+            Longitude values in degrees.
+        all_lats : np.ndarray
+            Latitude values in degrees.
+
+        Returns
+        -------
+        pixel_x : np.ndarray
+            Column (x) pixel coordinates.
+        pixel_y : np.ndarray
+            Row (y) pixel coordinates.
+        """
+        earth_locs = EarthLocation.from_geodetic(
+            lon=all_lons * units.deg,
+            lat=all_lats * units.deg,
+            height=0 * units.m,
+        )
+        rows, cols = self.selected_sensor.geodetic_to_pixel(
+            self.current_frame_number, earth_locs
+        )
+        return cols, rows
+
+    def _render_shapefile(self, feature):
+        """Render a shapefile feature.
+
+        In map view, geographic coordinates are used directly. In pixel view,
+        geographic coordinates are converted to pixel (col, row) using the
+        current sensor and frame.
+        """
         if not isinstance(feature, ShapefileFeature):
             return
 
@@ -1756,75 +1812,109 @@ class ImageryViewer(QWidget):
         shapes = geometry['shapes']
         color = pg.mkColor(feature.color)
 
-        # Render each shape in the shapefile
+        # In pixel view, batch-convert all shapefile points from geo to pixel
+        pixel_coords_map = None
+        if not self.map_view_mode and self.selected_sensor is not None and self.selected_sensor.can_geolocate():
+            # Collect all points across all shapes for a single batch conversion
+            all_lons = []
+            all_lats = []
+            for shape in shapes:
+                for pt in shape.points:
+                    all_lons.append(pt[0])
+                    all_lats.append(pt[1])
+
+            if all_lons:
+                all_lons_arr = np.array(all_lons)
+                all_lats_arr = np.array(all_lats)
+                px_x, px_y = self._shapefile_geo_to_pixel(all_lons_arr, all_lats_arr)
+
+                # Build a lookup: flat index -> (pixel_x, pixel_y)
+                pixel_coords_map = (px_x, px_y)
+
+        # Track current flat index into the batch conversion results
+        flat_idx = 0
+
         for shape in shapes:
             shape_type = shape.shapeType
+            n_points = len(shape.points)
+
+            # Get display coordinates for this shape's points
+            if self.map_view_mode:
+                # Use geographic coords directly (x=lon, y=lat)
+                coords = np.array(shape.points)
+                display_x = coords[:, 0]
+                display_y = coords[:, 1]
+            elif pixel_coords_map is not None:
+                # Use pre-computed pixel coords
+                display_x = pixel_coords_map[0][flat_idx:flat_idx + n_points]
+                display_y = pixel_coords_map[1][flat_idx:flat_idx + n_points]
+            else:
+                # No sensor available — skip rendering
+                flat_idx += n_points
+                continue
+
+            flat_idx += n_points
+
+            # Filter out NaN values (points that don't intersect the Earth)
+            valid = ~(np.isnan(display_x) | np.isnan(display_y))
+            if not np.any(valid):
+                continue
 
             # Handle polygon shapes (5 = Polygon, 15 = PolygonZ, 25 = PolygonM)
             if shape_type in [5, 15, 25]:
-                # Get all parts of the polygon
-                points = shape.points
-                parts = shape.parts if hasattr(shape, 'parts') else [0]
+                parts = list(shape.parts) if hasattr(shape, 'parts') else [0]
+                parts = parts + [n_points]
 
-                # Add ending index
-                parts = list(parts) + [len(points)]
-
-                # Draw each part (outer ring and holes)
                 for i in range(len(parts) - 1):
                     start_idx = parts[i]
                     end_idx = parts[i + 1]
-                    part_points = points[start_idx:end_idx]
+                    x = display_x[start_idx:end_idx]
+                    y = display_y[start_idx:end_idx]
 
-                    if len(part_points) > 0:
-                        # Convert to numpy array and separate x, y
-                        coords = np.array(part_points)
-                        x = coords[:, 0]
-                        y = coords[:, 1]
+                    # Filter NaN within this part
+                    part_valid = ~(np.isnan(x) | np.isnan(y))
+                    if not np.any(part_valid):
+                        continue
+                    x = x[part_valid]
+                    y = y[part_valid]
 
+                    if len(x) > 0:
                         # Close the polygon if not already closed
                         if not (x[0] == x[-1] and y[0] == y[-1]):
                             x = np.append(x, x[0])
                             y = np.append(y, y[0])
 
-                        # Create plot item for this polygon part
                         plot_item = pg.PlotCurveItem(x, y, pen=pg.mkPen(color, width=2))
                         self.plot_item.addItem(plot_item)
                         feature._plot_items.append(plot_item)
 
             # Handle polyline shapes (3 = PolyLine, 13 = PolyLineZ, 23 = PolyLineM)
             elif shape_type in [3, 13, 23]:
-                points = shape.points
-                parts = shape.parts if hasattr(shape, 'parts') else [0]
+                parts = list(shape.parts) if hasattr(shape, 'parts') else [0]
+                parts = parts + [n_points]
 
-                # Add ending index
-                parts = list(parts) + [len(points)]
-
-                # Draw each part
                 for i in range(len(parts) - 1):
                     start_idx = parts[i]
                     end_idx = parts[i + 1]
-                    part_points = points[start_idx:end_idx]
+                    x = display_x[start_idx:end_idx]
+                    y = display_y[start_idx:end_idx]
 
-                    if len(part_points) > 0:
-                        # Convert to numpy array and separate x, y
-                        coords = np.array(part_points)
-                        x = coords[:, 0]
-                        y = coords[:, 1]
+                    part_valid = ~(np.isnan(x) | np.isnan(y))
+                    if not np.any(part_valid):
+                        continue
+                    x = x[part_valid]
+                    y = y[part_valid]
 
-                        # Create plot item for this polyline part
+                    if len(x) > 0:
                         plot_item = pg.PlotCurveItem(x, y, pen=pg.mkPen(color, width=2))
                         self.plot_item.addItem(plot_item)
                         feature._plot_items.append(plot_item)
 
             # Handle point shapes (1 = Point, 11 = PointZ, 21 = PointM)
             elif shape_type in [1, 11, 21]:
-                points = shape.points
-                if len(points) > 0:
-                    coords = np.array(points)
-                    x = coords[:, 0]
-                    y = coords[:, 1]
-
-                    # Create scatter plot for points
+                x = display_x[valid]
+                y = display_y[valid]
+                if len(x) > 0:
                     scatter_item = pg.ScatterPlotItem(
                         x=x, y=y,
                         size=8,
@@ -1836,13 +1926,9 @@ class ImageryViewer(QWidget):
 
             # Handle multipoint shapes (8 = MultiPoint, 18 = MultiPointZ, 28 = MultiPointM)
             elif shape_type in [8, 18, 28]:
-                points = shape.points
-                if len(points) > 0:
-                    coords = np.array(points)
-                    x = coords[:, 0]
-                    y = coords[:, 1]
-
-                    # Create scatter plot for points
+                x = display_x[valid]
+                y = display_y[valid]
+                if len(x) > 0:
                     scatter_item = pg.ScatterPlotItem(
                         x=x, y=y,
                         size=8,
@@ -2837,7 +2923,9 @@ class ImageryViewer(QWidget):
                 self.projection_cache = ProjectionCache(max_entries=max_proj)
 
             # Create projector for current sensor
-            self.imagery_projector = ImageryProjector(self.selected_sensor)
+            coarse_enabled = settings.value("wms/coarse_grid_enabled", True, type=bool)
+            coarse_size = settings.value("wms/coarse_grid_size", 64, type=int) if coarse_enabled else 0
+            self.imagery_projector = ImageryProjector(self.selected_sensor, coarse_grid_size=coarse_size)
 
             # Compute imagery footprint
             frame = self.imagery.frames[0]

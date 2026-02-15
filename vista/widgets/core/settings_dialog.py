@@ -1,7 +1,7 @@
 """Settings dialog for global VISTA application configuration"""
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
+    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QPushButton, QRadioButton,
     QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
@@ -509,6 +509,34 @@ class WMSSettingsTab(QVBoxLayout):
         cache_group.setLayout(cache_layout)
         self.addWidget(cache_group)
 
+        # ---- Projection group ----
+        proj_group = QGroupBox("Projection")
+        proj_layout = QFormLayout()
+
+        self.coarse_grid_checkbox = QCheckBox("Use coarse grid sampling")
+        self.coarse_grid_checkbox.setToolTip(
+            "When enabled, the coordinate mapping is computed on a small grid\n"
+            "and interpolated to full resolution. This is much faster but\n"
+            "slightly approximate. Disable for exact per-pixel projection."
+        )
+        self.coarse_grid_checkbox.setChecked(True)
+        proj_layout.addRow(self.coarse_grid_checkbox)
+
+        self.coarse_grid_spinbox = QSpinBox()
+        self.coarse_grid_spinbox.setRange(8, 512)
+        self.coarse_grid_spinbox.setValue(64)
+        self.coarse_grid_spinbox.setToolTip(
+            "Maximum dimension of the coarse sampling grid.\n"
+            "Higher values are more accurate but slower.\n"
+            "Default: 64"
+        )
+        proj_layout.addRow("Coarse Grid Size:", self.coarse_grid_spinbox)
+
+        self.coarse_grid_checkbox.toggled.connect(self.coarse_grid_spinbox.setEnabled)
+
+        proj_group.setLayout(proj_layout)
+        self.addWidget(proj_group)
+
         self.addStretch()
 
         # Internal server list (loaded from settings)
@@ -595,12 +623,22 @@ class WMSSettingsTab(QVBoxLayout):
             self.settings.value("wms/projection_cache_size", 64, type=int)
         )
 
+        # Projection settings
+        coarse_enabled = self.settings.value("wms/coarse_grid_enabled", True, type=bool)
+        self.coarse_grid_checkbox.setChecked(coarse_enabled)
+        self.coarse_grid_spinbox.setValue(
+            self.settings.value("wms/coarse_grid_size", 64, type=int)
+        )
+        self.coarse_grid_spinbox.setEnabled(coarse_enabled)
+
     def save_settings(self) -> None:
         """Save settings to QSettings."""
         save_tile_servers(self.settings, self._servers)
         self.settings.setValue("wms/selected_server", max(0, self.server_table.currentRow()))
         self.settings.setValue("wms/tile_cache_size", self.tile_cache_spinbox.value())
         self.settings.setValue("wms/projection_cache_size", self.projection_cache_spinbox.value())
+        self.settings.setValue("wms/coarse_grid_enabled", self.coarse_grid_checkbox.isChecked())
+        self.settings.setValue("wms/coarse_grid_size", self.coarse_grid_spinbox.value())
 
 
 class SettingsDialog(QDialog):
