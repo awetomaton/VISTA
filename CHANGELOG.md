@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  
 ### Bug Fixes
 
+- 🔧 Fixed bug where lasso'ed selected detection highlights were still shown after starting manually create a track.
+
 ## [1.9.1] - 2026-2-7
 
 ### Improvements

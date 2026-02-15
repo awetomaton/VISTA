@@ -540,6 +540,10 @@ class VistaMainWindow(QMainWindow):
                     self.data_manager.detections_panel.clear_detection_selection()
                 elif action == self.lasso_select_action:
                     self.viewer.set_lasso_selection_mode(False)
+                    # Also clear any selected detections highlights from lasso selection
+                    self.viewer.selected_detections = []
+                    self.viewer._update_selected_detections_display()
+                    self.data_manager.detections_panel.clear_detection_selection()
 
                 # Now uncheck the action without triggering signals
                 action.blockSignals(True)
@@ -596,9 +600,6 @@ class VistaMainWindow(QMainWindow):
                 self.toggle_map_view_menu_action.setChecked(False)
                 self.toggle_map_view_menu_action.blockSignals(False)
                 return
-
-            # Deactivate interactive modes that conflict with map view
-            self.deactivate_all_interactive_modes()
 
             success = self.viewer.set_map_view_mode(True)
             if not success:

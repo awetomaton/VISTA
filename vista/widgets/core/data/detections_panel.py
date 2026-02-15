@@ -1445,6 +1445,10 @@ class DetectionsPanel(QWidget):
         self.label_detections_btn.setEnabled(False)
         self.delete_selected_points_btn.setEnabled(False)
 
+        # Also clear the viewer's selected detections highlight
+        self.viewer.selected_detections = []
+        self.viewer._update_selected_detections_display()
+
     def delete_selected_detection_points(self):
         """Delete the selected detection points from their detectors"""
         if len(self.selected_detections) == 0:
@@ -1526,6 +1530,10 @@ class DetectionsPanel(QWidget):
         if len(self.selected_detections) < 2:
             QMessageBox.warning(self, "Insufficient Detections", "Select at least 2 detections to create a track.")
             return
+
+        # Immediately clear the viewer's selected detections highlight
+        self.viewer.selected_detections = []
+        self.viewer._update_selected_detections_display()
 
         # Extract frames, rows, columns from selected detections
         frames_list = []
