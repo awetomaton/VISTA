@@ -610,10 +610,18 @@ class VistaMainWindow(QMainWindow):
                 self.toggle_map_view_menu_action.blockSignals(False)
             else:
                 self.data_manager.imagery_panel.set_opacity_column_visible(True)
+                # Uncheck and disable extraction buttons (extraction is pixel-space only)
+                tracks_panel = self.data_manager.tracks_panel
+                tracks_panel.view_extraction_btn.setChecked(False)
+                tracks_panel.view_extraction_btn.setEnabled(False)
+                tracks_panel.edit_extraction_btn.setChecked(False)
+                tracks_panel.edit_extraction_btn.setEnabled(False)
                 self.statusBar().showMessage("Map view enabled", 3000)
         else:
             self.viewer.set_map_view_mode(False)
             self.data_manager.imagery_panel.set_opacity_column_visible(False)
+            # Re-enable extraction buttons (tracks_panel selection handler will set correct state)
+            self.data_manager.tracks_panel.on_track_selection_changed()
             self.statusBar().showMessage("Map view disabled", 3000)
 
         # Keep toolbar and menu actions in sync

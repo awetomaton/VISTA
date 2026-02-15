@@ -90,9 +90,18 @@ def fit_2d_polynomial(x, y, f, order):
             A[:, coeff_idx] = (x ** x_power) * (y ** y_power)
             coeff_idx += 1
 
-    # Solve least squares problem: A * coeffs = f
-    result = np.linalg.lstsq(A, f, rcond=None)
-    coeffs = result[0]
+    # Column-scale the design matrix for numerical stability.
+    # Without scaling, high-order terms (e.g. x^4 with x in [0, 2047]) create columns
+    # spanning many orders of magnitude, causing lstsq to produce inaccurate coefficients.
+    # Scaling each column to unit norm and then adjusting the coefficients back preserves
+    # the original coordinate semantics so evaluate_2d_polynomial works unchanged.
+    col_norms = np.linalg.norm(A, axis=0)
+    col_norms[col_norms == 0] = 1.0
+    A_scaled = A / col_norms
+
+    # Solve least squares problem: A_scaled * coeffs_scaled = f
+    result = np.linalg.lstsq(A_scaled, f, rcond=None)
+    coeffs = result[0] / col_norms
     residuals = result[1][0] if len(result[1]) > 0 else 0.0
     rank = result[2]
     singular_values = result[3]

@@ -3085,9 +3085,9 @@ class ImageryViewer(QWidget):
 
             # Disable extraction view if active
             if self.extraction_view_mode:
-                self.stop_extraction_viewing()
+                self.finish_extraction_viewing()
             if self.extraction_editing_mode:
-                self.stop_extraction_editing()
+                self.finish_extraction_editing()
 
             # Hide AOIs in map mode (they use pixel coordinates)
             for aoi in self.aois:
@@ -3180,6 +3180,9 @@ class ImageryViewer(QWidget):
 
         # Update overlays for new coordinate mode
         self.update_overlays()
+
+        # Re-project selected detection highlights for the new coordinate system
+        self._update_selected_detections_display()
 
         return True
 

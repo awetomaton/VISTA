@@ -2177,8 +2177,10 @@ class TracksPanel(QWidget):
                             selected_track = t
                             break
 
-        self.view_extraction_btn.setEnabled(has_extraction)
-        self.edit_extraction_btn.setEnabled(has_extraction)
+        # Disable extraction buttons in map view mode (extraction is pixel-space only)
+        in_map_view = getattr(self.viewer, 'map_view_mode', False)
+        self.view_extraction_btn.setEnabled(has_extraction and not in_map_view)
+        self.edit_extraction_btn.setEnabled(has_extraction and not in_map_view)
 
         # If buttons are checked but selection changed, update or uncheck them
         if self.view_extraction_btn.isChecked():
@@ -2459,8 +2461,9 @@ class TracksPanel(QWidget):
             # Manually trigger selection changed to update button states
             self.on_track_selection_changed()
 
-        # Auto-enable "View Extraction" if exactly one track was extracted
-        if len(tracks) == 1 and not self.view_extraction_btn.isChecked():
+        # Auto-enable "View Extraction" if exactly one track was extracted (not in map view)
+        in_map_view = getattr(self.viewer, 'map_view_mode', False)
+        if len(tracks) == 1 and not self.view_extraction_btn.isChecked() and not in_map_view:
             self.view_extraction_btn.setChecked(True)
             self.on_view_extraction_clicked(True)
 
