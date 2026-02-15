@@ -79,6 +79,9 @@ class ImageryViewer(QWidget):
     # Signal emitted when frame changes (emits frame number)
     frame_changed = pyqtSignal(int)
 
+    # Signals for WMS tile loading status (emits status message string; empty string = done)
+    wms_status_changed = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.current_frame_number = 0  # Actual frame number from imagery
@@ -189,6 +192,7 @@ class ImageryViewer(QWidget):
         self._pending_tiles = []             # Tiles received during a fetch cycle
         self._pending_tile_bbox = None       # View bbox for the pending tile fetch
         self._imagery_footprint = None       # Cached imagery footprint bbox
+        self._wms_total_tiles = 0            # Total tiles expected in current fetch
 
         # Performance monitoring
         self.perf_frame_times = []  # List of frame update times
@@ -516,11 +520,20 @@ class ImageryViewer(QWidget):
         # Get the current view rectangle in data coordinates
         view_rect = self.plot_item.viewRect()
 
+        # When invertY is False (map mode), view_rect.bottom() is max Y = visual TOP,
+        # and view_rect.top() is min Y = visual BOTTOM. Use the visual bottom edge.
+        if self.map_view_mode:
+            bottom_y = view_rect.top()
+            offset_sign = 1  # offset upward in data coords = upward on screen
+        else:
+            bottom_y = view_rect.bottom()
+            offset_sign = -1  # offset upward in data coords = upward on screen (Y inverted)
+
         # Position text items at bottom-right of viewport
         # The anchor=(1,1) means the bottom-right corner of the text aligns with the position
         if self.pixel_value_enabled and self.pixel_value_text.isVisible():
             # Pixel value at the very bottom-right
-            self.pixel_value_text.setPos(view_rect.right(), view_rect.bottom())
+            self.pixel_value_text.setPos(view_rect.right(), bottom_y)
 
         if self.geolocation_enabled and self.geolocation_text.isVisible():
             # If pixel value is also visible, offset geolocation above it
@@ -536,10 +549,10 @@ class ImageryViewer(QWidget):
                 else:
                     text_offset = view_height * 0.05  # Fallback to 5% of view height
 
-                self.geolocation_text.setPos(view_rect.right(), view_rect.bottom() - text_offset)
+                self.geolocation_text.setPos(view_rect.right(), bottom_y + offset_sign * text_offset)
             else:
                 # No pixel value, position at bottom-right
-                self.geolocation_text.setPos(view_rect.right(), view_rect.bottom())
+                self.geolocation_text.setPos(view_rect.right(), bottom_y)
 
     def update_detection_display(self):
         """Update detection display (e.g., when filters change)"""
@@ -1420,7 +1433,7 @@ class ImageryViewer(QWidget):
 
     def start_draw_roi(self):
         """Start drawing a new ROI"""
-        if self.imagery is None:
+        if self.imagery is None or self.map_view_mode:
             return
 
         # Get image dimensions for default size
@@ -1671,6 +1684,17 @@ class ImageryViewer(QWidget):
         if feature.visible:
             self._render_feature(feature)
 
+    def _rerender_all_features(self) -> None:
+        """Re-render all features (e.g. when switching between pixel and map view)."""
+        for feature in self.features:
+            if feature._plot_items:
+                for item in feature._plot_items:
+                    self.plot_item.removeItem(item)
+                    item.deleteLater()
+                feature._plot_items = []
+            if feature.visible:
+                self._render_feature(feature)
+
     def _render_feature(self, feature):
         """Render a feature on the plot"""
         if not feature.visible:
@@ -1692,13 +1716,19 @@ class ImageryViewer(QWidget):
         if not geometry or 'row' not in geometry or 'col' not in geometry:
             return
 
-        row = geometry['row']
-        col = geometry['col']
+        # In map view, use geographic coordinates if available
+        if self.map_view_mode and geometry.get('lon') is not None and geometry.get('lat') is not None:
+            x_pos = geometry['lon']
+            y_pos = geometry['lat']
+        else:
+            x_pos = geometry['col']
+            y_pos = geometry['row']
+
         color = pg.mkColor(feature.color)
 
         # Create a larger marker for the placemark
         scatter_item = pg.ScatterPlotItem(
-            x=[col], y=[row],
+            x=[x_pos], y=[y_pos],
             size=12,
             pen=pg.mkPen(color, width=2),
             brush=pg.mkBrush(color),
@@ -1709,7 +1739,7 @@ class ImageryViewer(QWidget):
 
         # Add text label for the placemark
         text_item = pg.TextItem(feature.name, color=color, anchor=(0, 1))
-        text_item.setPos(col, row)
+        text_item.setPos(x_pos, y_pos)
         self.plot_item.addItem(text_item)
         feature._plot_items.append(text_item)
 
@@ -2790,22 +2820,20 @@ class ImageryViewer(QWidget):
 
             self.map_view_mode = True
 
-            # Initialize WMS infrastructure (lazy, only once)
-            if self.wms_client is None:
-                settings = QSettings("Vista", "VistaApp")
-                default_url = (
-                    "https://services.arcgisonline.com/ArcGIS/rest/services/"
-                    "World_Imagery/MapServer"
-                )
-                base_url = settings.value("wms/base_url", default_url, type=str)
-                # Migrate from old broken WMS/export URL to tile endpoint
-                if "WMSServer" in base_url or base_url.endswith("/export"):
-                    base_url = default_url
-                    settings.setValue("wms/base_url", base_url)
-                max_tiles = settings.value("wms/tile_cache_size", 256, type=int)
-                max_proj = settings.value("wms/projection_cache_size", 64, type=int)
-                self.wms_client = WMSClient(base_url=base_url)
+            # Initialize WMS infrastructure (re-create each time to pick up server changes)
+            settings = QSettings("Vista", "VistaApp")
+            max_tiles = settings.value("wms/tile_cache_size", 256, type=int)
+            max_proj = settings.value("wms/projection_cache_size", 64, type=int)
+            new_client = WMSClient.from_settings(settings)
+            # Clear tile cache if server URL changed (tiles from different servers can't mix)
+            if (self.wms_client is not None
+                    and self.wms_client.url_template != new_client.url_template
+                    and self.wms_tile_cache is not None):
+                self.wms_tile_cache.clear()
+            self.wms_client = new_client
+            if self.wms_tile_cache is None:
                 self.wms_tile_cache = WMSTileCache(max_tiles=max_tiles)
+            if self.projection_cache is None:
                 self.projection_cache = ProjectionCache(max_entries=max_proj)
 
             # Create projector for current sensor
@@ -2837,7 +2865,7 @@ class ImageryViewer(QWidget):
 
             # Create projected imagery ImageItem (above basemap, below overlays)
             self.projected_image_item = pg.ImageItem()
-            self.projected_image_item.setZValue(0)
+            self.projected_image_item.setZValue(-0.5)
             opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
             self.projected_image_item.setOpacity(opacity)
             self.plot_item.addItem(self.projected_image_item)
@@ -2850,6 +2878,16 @@ class ImageryViewer(QWidget):
                 self.stop_extraction_viewing()
             if self.extraction_editing_mode:
                 self.stop_extraction_editing()
+
+            # Hide AOIs in map mode (they use pixel coordinates)
+            for aoi in self.aois:
+                if aoi._roi_item:
+                    aoi._roi_item.setVisible(False)
+                if aoi._text_item:
+                    aoi._text_item.setVisible(False)
+
+            # Re-render features with geographic coordinates
+            self._rerender_all_features()
 
             # Set view range to imagery footprint
             lon_min, lat_min, lon_max, lat_max = self._imagery_footprint
@@ -2912,6 +2950,16 @@ class ImageryViewer(QWidget):
             self._current_zoom_level = None
             self._pending_tiles = []
             self._imagery_footprint = None
+
+            # Restore AOI visibility
+            for aoi in self.aois:
+                if aoi._roi_item:
+                    aoi._roi_item.setVisible(aoi.visible)
+                if aoi._text_item:
+                    aoi._text_item.setVisible(aoi.visible)
+
+            # Re-render features with pixel coordinates
+            self._rerender_all_features()
 
             # Re-select the current imagery to restore display
             if self.imagery is not None:
@@ -2979,6 +3027,10 @@ class ImageryViewer(QWidget):
         self._pending_tiles = []
         self._pending_tile_bbox = view_bbox
         self._current_zoom_level = zoom_level
+        self._wms_total_tiles = len(tile_coords)
+
+        # Notify loading started
+        self.wms_status_changed.emit(f"Loading map tiles (0/{self._wms_total_tiles})...")
 
         # Start background fetch
         self.wms_fetcher_thread = WMSTileFetcherThread(
@@ -3001,20 +3053,24 @@ class ImageryViewer(QWidget):
             The fetched tile.
         """
         self._pending_tiles.append(tile)
+        loaded = len(self._pending_tiles)
+        self.wms_status_changed.emit(f"Loading map tiles ({loaded}/{self._wms_total_tiles})...")
 
     def _on_all_wms_tiles_fetched(self) -> None:
         """Handle all WMS tiles being fetched. Composite and display.
 
-        Mercator tiles have non-uniform latitude heights so each tile is resized
-        to its correct geographic height before compositing into a uniform
-        pixels-per-degree array.
+        For EPSG:3857 (Mercator), tiles have non-uniform latitude heights so each
+        tile is resized to its correct geographic height before compositing.
+        For EPSG:4326, tiles are uniform in geographic size and no resize is needed.
         """
         if not self.map_view_mode or not self._pending_tiles:
+            self.wms_status_changed.emit("")
             return
 
         from PIL import Image as PILImage
 
         tile_px = self._pending_tiles[0].image.shape[0]
+        is_geographic = self.wms_client is not None and self.wms_client.epsg == 4326
 
         # Compute the composite geographic extent from all tiles
         all_lon_min = min(t.bbox[0] for t in self._pending_tiles)
@@ -3028,12 +3084,11 @@ class ImageryViewer(QWidget):
             return
 
         # Compute uniform pixels-per-degree from the tile longitude resolution
-        # (all tiles at a zoom level have the same longitude span)
         first_tile = self._pending_tiles[0]
         tile_lon_span = first_tile.bbox[2] - first_tile.bbox[0]
         if tile_lon_span <= 0:
             return
-        ppd = tile_px / tile_lon_span  # pixels per degree (uniform for both axes)
+        ppd = tile_px / tile_lon_span  # pixels per degree
 
         composite_w = max(1, int(round(total_lon_span * ppd)))
         composite_h = max(1, int(round(total_lat_span * ppd)))
@@ -3053,12 +3108,22 @@ class ImageryViewer(QWidget):
             if dst_w <= 0 or dst_h <= 0:
                 continue
 
-            # Resize tile to correct geographic dimensions
-            # Tile image has north at row 0, so flip vertically for our south-at-row-0 composite
+            # Flip tile vertically (tile row 0 = north -> composite row 0 = south)
             tile_flipped = tile_img[::-1]
-            pil_img = PILImage.fromarray(tile_flipped)
-            pil_resized = pil_img.resize((dst_w, dst_h), PILImage.Resampling.BILINEAR)
-            resized_arr = np.array(pil_resized)
+
+            if is_geographic:
+                # EPSG:4326 tiles have uniform geographic size; just resize to destination dims
+                if tile_flipped.shape[1] != dst_w or tile_flipped.shape[0] != dst_h:
+                    pil_img = PILImage.fromarray(tile_flipped)
+                    pil_resized = pil_img.resize((dst_w, dst_h), PILImage.Resampling.BILINEAR)
+                    resized_arr = np.array(pil_resized)
+                else:
+                    resized_arr = tile_flipped
+            else:
+                # EPSG:3857 Mercator tiles have non-uniform latitude heights; resize to fit
+                pil_img = PILImage.fromarray(tile_flipped)
+                pil_resized = pil_img.resize((dst_w, dst_h), PILImage.Resampling.BILINEAR)
+                resized_arr = np.array(pil_resized)
 
             # Blit into composite (clamp to bounds)
             cx = max(0, dst_x)
@@ -3088,6 +3153,7 @@ class ImageryViewer(QWidget):
             self.wms_image_item.setPos(all_lon_min, all_lat_min)
 
         self._pending_tiles = []
+        self.wms_status_changed.emit("")
 
     def _on_wms_error(self, message: str) -> None:
         """Handle WMS fetch errors.

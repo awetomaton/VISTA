@@ -116,6 +116,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.track_selected.connect(self.data_manager.on_track_selected_in_viewer)
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
         self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
+        self.viewer.wms_status_changed.connect(self._on_wms_status_changed)
 
         # Connect imagery panel cancel signal for incremental loading
         self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
@@ -633,6 +634,19 @@ class VistaMainWindow(QMainWindow):
         # If map view is active but sensor changed to one that can't geolocate, disable map view
         if not can_map and self.map_view_action.isChecked():
             self.map_view_action.setChecked(False)
+
+    def _on_wms_status_changed(self, message: str) -> None:
+        """Handle WMS tile loading status updates.
+
+        Parameters
+        ----------
+        message : str
+            Status message to display. Empty string clears the status.
+        """
+        if message:
+            self.statusBar().showMessage(message)
+        else:
+            self.statusBar().showMessage("Map tiles loaded", 2000)
 
     def on_draw_roi_toggled(self, checked):
         """Handle Draw AOI toggle"""

@@ -2,8 +2,11 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QLabel, QLineEdit, QSpinBox, QTabWidget, QVBoxLayout, QWidget
+    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QPushButton, QRadioButton,
+    QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
+
+from vista.wms.wms_client import get_tile_servers, save_tile_servers
 
 try:
     import torch
@@ -350,37 +353,136 @@ class GPUSettingsTab(QVBoxLayout):
         self.settings.setValue("gpu/device", self.device_combo.currentData())
 
 
-class WMSSettingsTab(QVBoxLayout):
-    """Tab for configuring WMS map view settings"""
+class TileServerEditDialog(QDialog):
+    """Dialog for creating or editing a tile server entry.
 
-    def __init__(self, settings):
+    Parameters
+    ----------
+    parent : QWidget, optional
+        Parent widget.
+    server : dict, optional
+        Existing server dict to edit. If None, creates a new entry.
+    """
+
+    def __init__(self, parent=None, server: dict = None):
+        super().__init__(parent)
+        self.setWindowTitle("Edit Tile Server" if server else "Add Tile Server")
+        self.setMinimumWidth(500)
+        self.setModal(True)
+
+        layout = QVBoxLayout()
+
+        form = QFormLayout()
+
+        self.name_edit = QLineEdit()
+        self.name_edit.setToolTip("Display name for this server")
+        form.addRow("Name:", self.name_edit)
+
+        self.url_edit = QLineEdit()
+        self.url_edit.setToolTip(
+            "URL template with {z}, {x}, {y} placeholders.\n"
+            "Examples:\n"
+            "  ESRI: https://services.arcgisonline.com/.../tile/{z}/{y}/{x}\n"
+            "  OSM:  https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        )
+        form.addRow("URL Template:", self.url_edit)
+
+        # EPSG radio buttons
+        epsg_group = QGroupBox("Coordinate System")
+        epsg_layout = QHBoxLayout()
+        self.epsg_3857_radio = QRadioButton("EPSG:3857 (Web Mercator)")
+        self.epsg_4326_radio = QRadioButton("EPSG:4326 (Geographic)")
+        self.epsg_3857_radio.setChecked(True)
+        epsg_layout.addWidget(self.epsg_3857_radio)
+        epsg_layout.addWidget(self.epsg_4326_radio)
+        epsg_group.setLayout(epsg_layout)
+
+        layout.addLayout(form)
+        layout.addWidget(epsg_group)
+
+        # Buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+        # Populate if editing
+        if server:
+            self.name_edit.setText(server.get("name", ""))
+            self.url_edit.setText(server.get("url_template", ""))
+            if server.get("epsg", 3857) == 4326:
+                self.epsg_4326_radio.setChecked(True)
+            else:
+                self.epsg_3857_radio.setChecked(True)
+
+    def get_server(self) -> dict:
+        """Return the configured server dict.
+
+        Returns
+        -------
+        dict
+            Server configuration with keys: name, url_template, epsg.
         """
-        Initialize the WMS settings tab
+        return {
+            "name": self.name_edit.text().strip(),
+            "url_template": self.url_edit.text().strip(),
+            "epsg": 4326 if self.epsg_4326_radio.isChecked() else 3857,
+        }
+
+
+class WMSSettingsTab(QVBoxLayout):
+    """Tab for configuring WMS map view settings including tile server management"""
+
+    def __init__(self, settings: QSettings):
+        """
+        Initialize the WMS settings tab.
 
         Parameters
         ----------
         settings : QSettings
-            QSettings object for storing/loading settings
+            QSettings object for storing/loading settings.
         """
         super().__init__()
         self.settings = settings
 
-        # Basemap server settings group
-        server_group = QGroupBox("Basemap Server")
-        server_layout = QFormLayout()
+        # ---- Tile Servers group ----
+        server_group = QGroupBox("Tile Servers (click a row to select the active server)")
+        server_layout = QVBoxLayout()
 
-        self.url_edit = QLineEdit()
-        self.url_edit.setToolTip(
-            "ESRI ArcGIS MapServer base URL.\n"
-            "Tiles fetched from {url}/tile/{z}/{y}/{x}.\n"
-            "Default: ESRI World Imagery"
-        )
-        server_layout.addRow("MapServer URL:", self.url_edit)
+        self.server_table = QTableWidget()
+        self.server_table.setColumnCount(3)
+        self.server_table.setHorizontalHeaderLabels(["Name", "URL Template", "EPSG"])
+        self.server_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self.server_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.server_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.server_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.server_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.server_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.server_table.verticalHeader().setVisible(False)
+        server_layout.addWidget(self.server_table)
+
+        # Buttons row
+        btn_layout = QHBoxLayout()
+        self.add_btn = QPushButton("Add")
+        self.edit_btn = QPushButton("Edit")
+        self.remove_btn = QPushButton("Remove")
+        self.add_btn.clicked.connect(self._on_add)
+        self.edit_btn.clicked.connect(self._on_edit)
+        self.remove_btn.clicked.connect(self._on_remove)
+        btn_layout.addWidget(self.add_btn)
+        btn_layout.addWidget(self.edit_btn)
+        btn_layout.addWidget(self.remove_btn)
+        btn_layout.addStretch()
+        server_layout.addLayout(btn_layout)
 
         server_group.setLayout(server_layout)
         self.addWidget(server_group)
 
-        # Cache settings group
+        # ---- Cache group ----
         cache_group = QGroupBox("Cache")
         cache_layout = QFormLayout()
 
@@ -388,7 +490,7 @@ class WMSSettingsTab(QVBoxLayout):
         self.tile_cache_spinbox.setRange(16, 2048)
         self.tile_cache_spinbox.setValue(256)
         self.tile_cache_spinbox.setToolTip(
-            "Maximum number of WMS tiles to keep in memory.\n"
+            "Maximum number of map tiles to keep in memory.\n"
             "Higher values use more memory but reduce network requests.\n"
             "Default: 256"
         )
@@ -409,18 +511,83 @@ class WMSSettingsTab(QVBoxLayout):
 
         self.addStretch()
 
+        # Internal server list (loaded from settings)
+        self._servers: list[dict] = []
+
         # Load saved settings
         self.load_settings()
 
-    def load_settings(self):
-        """Load settings from QSettings"""
-        default_url = (
-            "https://services.arcgisonline.com/ArcGIS/rest/services/"
-            "World_Imagery/MapServer"
-        )
-        self.url_edit.setText(
-            self.settings.value("wms/base_url", default_url, type=str)
-        )
+    # ---- Table helpers ----
+
+    def _populate_table(self, select_row: int = -1) -> None:
+        """Refresh the server table from the internal list.
+
+        Parameters
+        ----------
+        select_row : int
+            Row to select after populating. -1 keeps the current selection.
+        """
+        prev_row = self.server_table.currentRow() if select_row < 0 else select_row
+        self.server_table.setRowCount(len(self._servers))
+        for i, srv in enumerate(self._servers):
+            name_item = QTableWidgetItem(srv.get("name", ""))
+            url_item = QTableWidgetItem(srv.get("url_template", ""))
+            epsg_item = QTableWidgetItem(str(srv.get("epsg", 3857)))
+            self.server_table.setItem(i, 0, name_item)
+            self.server_table.setItem(i, 1, url_item)
+            self.server_table.setItem(i, 2, epsg_item)
+
+        # Restore / set selection
+        if 0 <= prev_row < len(self._servers):
+            self.server_table.selectRow(prev_row)
+        elif len(self._servers) > 0:
+            self.server_table.selectRow(0)
+
+    def _on_add(self) -> None:
+        """Open dialog to add a new tile server."""
+        dlg = TileServerEditDialog(parent=self.server_table.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            server = dlg.get_server()
+            if server["name"] and server["url_template"]:
+                self._servers.append(server)
+                self._populate_table(select_row=len(self._servers) - 1)
+
+    def _on_edit(self) -> None:
+        """Open dialog to edit the selected tile server."""
+        row = self.server_table.currentRow()
+        if row < 0 or row >= len(self._servers):
+            return
+        dlg = TileServerEditDialog(parent=self.server_table.window(), server=self._servers[row])
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            server = dlg.get_server()
+            if server["name"] and server["url_template"]:
+                self._servers[row] = server
+                self._populate_table(select_row=row)
+
+    def _on_remove(self) -> None:
+        """Remove the selected tile server."""
+        row = self.server_table.currentRow()
+        if row < 0 or row >= len(self._servers):
+            return
+        # Don't allow removing the last server
+        if len(self._servers) <= 1:
+            return
+        self._servers.pop(row)
+        new_row = min(row, len(self._servers) - 1)
+        self._populate_table(select_row=new_row)
+
+    # ---- Settings persistence ----
+
+    def load_settings(self) -> None:
+        """Load settings from QSettings."""
+        self._servers = get_tile_servers(self.settings)
+
+        # Selected server index
+        idx = self.settings.value("wms/selected_server", 0, type=int)
+        idx = max(0, min(idx, len(self._servers) - 1))
+        self._populate_table(select_row=idx)
+
+        # Cache sizes
         self.tile_cache_spinbox.setValue(
             self.settings.value("wms/tile_cache_size", 256, type=int)
         )
@@ -428,9 +595,10 @@ class WMSSettingsTab(QVBoxLayout):
             self.settings.value("wms/projection_cache_size", 64, type=int)
         )
 
-    def save_settings(self):
-        """Save settings to QSettings"""
-        self.settings.setValue("wms/base_url", self.url_edit.text())
+    def save_settings(self) -> None:
+        """Save settings to QSettings."""
+        save_tile_servers(self.settings, self._servers)
+        self.settings.setValue("wms/selected_server", max(0, self.server_table.currentRow()))
         self.settings.setValue("wms/tile_cache_size", self.tile_cache_spinbox.value())
         self.settings.setValue("wms/projection_cache_size", self.projection_cache_spinbox.value())
 
@@ -453,8 +621,8 @@ class SettingsDialog(QDialog):
 
         self.setWindowTitle("VISTA Settings")
         self.setModal(True)
-        self.setMinimumWidth(500)
-        self.setMinimumHeight(400)
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(500)
 
         self.init_ui()
 
