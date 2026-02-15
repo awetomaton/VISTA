@@ -508,6 +508,13 @@ class VistaMainWindow(QMainWindow):
         self.map_view_action.toggled.connect(self.on_map_view_toggled)
         toolbar.addAction(self.map_view_action)
 
+        # About button
+        toolbar.addSeparator()
+        self.about_action = QAction(self.icons.about, "About", self)
+        self.about_action.setToolTip("About VISTA")
+        self.about_action.triggered.connect(self.show_about)
+        toolbar.addAction(self.about_action)
+
     def create_interactive_mode_action_group(self):
         """
         Create action group for mutually exclusive interactive modes.
@@ -1902,6 +1909,26 @@ class VistaMainWindow(QMainWindow):
         self.toggle_point_selection_action.blockSignals(True)
         self.toggle_point_selection_action.setChecked(visible)
         self.toggle_point_selection_action.blockSignals(False)
+
+    def show_about(self):
+        """Show the About dialog."""
+        msg = QMessageBox(self)
+        msg.setWindowTitle("About VISTA")
+        msg.setIconPixmap(self.icons.about.pixmap(64, 64))
+        msg.setText(
+            f"<h2>VISTA</h2>"
+            f"<p>Visual Imagery Software Tool for Analysis</p>"
+            f"<p>Version {vista.__version__}</p>"
+            f"<p>An Open-Source project created by <a href='https://www.awetomaton.com/'>Awetomaton Ltd</a> for the GEOINT community.</p>"
+        )
+        msg.setInformativeText(
+            f"<b>Point of Contact</b><br>"
+            f"{vista.__author__}<br>"
+            f"<a href='mailto:{vista.__email__}'>{vista.__email__}</a><br><br>"
+            f"<b>License</b><br>"
+            f"<a href='https://github.com/awetomaton/VISTA/blob/main/LICENSE'>MIT License &copy; 2026 Awetomaton Ltd</a><br>"
+        )
+        msg.exec()
 
     def open_settings(self):
         """Open the settings dialog"""

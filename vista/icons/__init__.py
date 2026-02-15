@@ -28,3 +28,4 @@ class VistaIcons(object):
         self.histogram_dark = QIcon(str(ICON_DIR / "histogram_dark.png"))
         self.map_view_light = QIcon(str(ICON_DIR / "map_view_light.png"))
         self.map_view_dark = QIcon(str(ICON_DIR / "map_view_dark.png"))
+        self.about = QIcon(str(ICON_DIR / "tommy.png"))

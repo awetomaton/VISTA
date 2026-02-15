@@ -39,7 +39,9 @@ For detailed installation instructions, see the [Installation Guide](https://awe
 
 ## Quick Start
 
-1. **Load Imagery**: `File > Open` to load an HDF5 imagery file
+1. **Load or simulate Imagery**:
+ * (a) `File > Open` to load an HDF5 imagery file
+ * (b) `File > Simulate` to simulate example data
 2. **Navigate**: Use playback controls or arrow keys (Left/Right or A/D)
 3. **Detect Objects**: `Algorithms > Detectors` to run CFAR or threshold detection
 4. **Track Objects**: `Algorithms > Tracking` to link detections into tracks
@@ -51,7 +53,8 @@ For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.githu
 
 - **Multi-frame imagery viewing** with playback controls and histogram adjustment
 - **View frame imagery in image or geodetic space** with tile servers to show imagery in geospatial context
-- **Background removal**: Temporal median, Robust PCA, GoDec
+- **Background removal**: Temporal median, Running sub-space tracker, Robust PCA, GoDec
+- **Signal Enhancement**: Decimating or running Coaddition
 - **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
 - **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
 - **Sensor calibration**: Bias removal, non-uniformity correction

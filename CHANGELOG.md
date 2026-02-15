@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+- ⚖️ Updated license to require modified version retain the page.
 - 🥳 Updated app to support GPU PyTorch tensors.
 - 🥳 Added PSTNN detector.
 - 🥳 Imagery now loads and displays in the viewer incrementally.
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✨ Added the ability to hide the histogram widget to improve playback performance.
 - ✨ Added the ability set the tooltip text font, color, and weight.
 - ✨ Added `delete` key shortcut for removing tracks, detection points, and detectors.
+- ✨ Added About page and corresponding toolbar action.
 - 🛠️ Updated shape files load to only interpret them as providing geographic coordinates.
 - 🛠️ Updated to track point selection, all detectors, and extraction window to enable selecting exceedingly dark, bright, or both pixels.
 - 🛠️ Updated the track export to include track metadata fields such as signal total, signal pixels, noise std, etc.
