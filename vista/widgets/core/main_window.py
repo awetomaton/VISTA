@@ -2817,6 +2817,10 @@ class VistaMainWindow(QMainWindow):
             self._handle_undo_shortcut()
             return
 
+        if key == Qt.Key.Key_Delete:
+            self._handle_delete_shortcut()
+            return
+
         if (key == Qt.Key.Key_Left) or (key == Qt.Key.Key_A):
             # Left arrow - previous frame
             self.controls.prev_frame()
@@ -2839,3 +2843,19 @@ class VistaMainWindow(QMainWindow):
         elif current_tab_index == 3:  # Detections tab
             if self.data_manager.detections_panel.undo_stack.can_undo():
                 self.data_manager.detections_panel.undo()
+
+    def _handle_delete_shortcut(self):
+        """Handle Delete key by deleting selected items on the active panel."""
+        current_tab_index = self.data_manager.tabs.currentIndex()
+        if current_tab_index == 0:  # Sensors tab
+            self.data_manager.sensors_panel.delete_selected_sensor()
+        elif current_tab_index == 1:  # Imagery tab
+            self.data_manager.imagery_panel.delete_selected_imagery()
+        elif current_tab_index == 2:  # Tracks tab
+            self.data_manager.tracks_panel.delete_selected_tracks()
+        elif current_tab_index == 3:  # Detections tab
+            detections_panel = self.data_manager.detections_panel
+            if detections_panel.selected_detections:
+                detections_panel.delete_selected_detection_points()
+            else:
+                detections_panel.delete_selected_detections()

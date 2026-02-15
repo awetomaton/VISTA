@@ -112,6 +112,7 @@ Common keyboard shortcuts:
 * ``Left/Right Arrow`` or ``A/D``: Previous/Next frame
 * ``CTRL`` + ``Z``: Undo track / detection panel action
 * ``Spacebar``: Play/Pause
+* ``Delete``: Remove selected sensors, imagery, tracks, detectors, detection points
 * ``Drag and Drop on Sensors / Imagery panels``: Load sensor / imagery data
 * ``Drag and Drop on Tracks Panels``: Load tracks data
 * ``Drag and Drop on Detections Panels``: Load detections data
