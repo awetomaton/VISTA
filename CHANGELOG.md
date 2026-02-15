@@ -16,9 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🥳 Added GoDec background removal with GPU support.
 - ✨ Updated to use `numba` to fuse multiple numpy imagery operations into a single memory pass.
 - ✨ Added the ability to hide the histogram widget to improve playback performance.
+- ✨ Added the ability set the tooltip text font, color, and weight.
 - 🛠️ Updated shape files load to only interpret them as providing geographic coordinates.
 - 🛠️ Updated to track point selection, all detectors, and extraction window to enable selecting exceedingly dark, bright, or both pixels.
 - 🛠️ Updated the track export to include track metadata fields such as signal total, signal pixels, noise std, etc.
+- 🛠️ Improved imagery simulation to better handle large image sizes that could produce numerical instability that degraded polynomial accuracy.
  
 ### Bug Fixes
 

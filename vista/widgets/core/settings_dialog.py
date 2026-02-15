@@ -1,7 +1,8 @@
 """Settings dialog for global VISTA application configuration"""
 from PyQt6.QtCore import QSettings
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
+    QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QPushButton, QRadioButton,
     QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
@@ -88,10 +89,58 @@ class ImagerySettingsTab(QVBoxLayout):
         histogram_group.setLayout(histogram_layout)
         self.addWidget(histogram_group)
 
+        # Create hover tooltip font settings group
+        tooltip_group = QGroupBox("Hover Tooltips")
+        tooltip_layout = QFormLayout()
+
+        # Font color picker
+        self._tooltip_color = QColor("yellow")
+        self.tooltip_color_button = QPushButton()
+        self.tooltip_color_button.setFixedWidth(80)
+        self.tooltip_color_button.clicked.connect(self._pick_tooltip_color)
+        self._update_color_button_style()
+        tooltip_layout.addRow("Font Color:", self.tooltip_color_button)
+
+        # Font size
+        self.tooltip_size_spinbox = QSpinBox()
+        self.tooltip_size_spinbox.setRange(6, 72)
+        self.tooltip_size_spinbox.setValue(12)
+        self.tooltip_size_spinbox.setToolTip(
+            "Font size (in points) for geolocation and pixel value tooltips.\n"
+            "Default: 12"
+        )
+        tooltip_layout.addRow("Font Size:", self.tooltip_size_spinbox)
+
+        # Font weight
+        self.tooltip_weight_combo = QComboBox()
+        self.tooltip_weight_combo.addItems(["Thin", "Light", "Normal", "DemiBold", "Bold", "Black"])
+        self.tooltip_weight_combo.setCurrentText("Normal")
+        self.tooltip_weight_combo.setToolTip(
+            "Font weight for geolocation and pixel value tooltips.\n"
+            "Default: Normal"
+        )
+        tooltip_layout.addRow("Font Weight:", self.tooltip_weight_combo)
+
+        tooltip_group.setLayout(tooltip_layout)
+        self.addWidget(tooltip_group)
+
         self.addStretch()
 
         # Load saved settings
         self.load_settings()
+
+    def _pick_tooltip_color(self):
+        """Open a color picker dialog for the tooltip font color."""
+        color = QColorDialog.getColor(self._tooltip_color, self.tooltip_color_button.window(), "Tooltip Font Color")
+        if color.isValid():
+            self._tooltip_color = color
+            self._update_color_button_style()
+
+    def _update_color_button_style(self):
+        """Update the color button background to reflect the current tooltip color."""
+        self.tooltip_color_button.setStyleSheet(
+            f"background-color: {self._tooltip_color.name()}; border: 1px solid gray;"
+        )
 
     def load_settings(self):
         """Load settings from QSettings"""
@@ -106,6 +155,17 @@ class ImagerySettingsTab(QVBoxLayout):
         )
         self.max_rowcol_spinbox.setValue(
             self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
+        )
+
+        # Tooltip font settings
+        color_name = self.settings.value("imagery/tooltip_font_color", "yellow", type=str)
+        self._tooltip_color = QColor(color_name)
+        self._update_color_button_style()
+        self.tooltip_size_spinbox.setValue(
+            self.settings.value("imagery/tooltip_font_size", 12, type=int)
+        )
+        self.tooltip_weight_combo.setCurrentText(
+            self.settings.value("imagery/tooltip_font_weight", "Normal", type=str)
         )
 
     def save_settings(self):
@@ -123,6 +183,11 @@ class ImagerySettingsTab(QVBoxLayout):
             "imagery/histogram_max_rowcol",
             self.max_rowcol_spinbox.value()
         )
+
+        # Tooltip font settings
+        self.settings.setValue("imagery/tooltip_font_color", self._tooltip_color.name())
+        self.settings.setValue("imagery/tooltip_font_size", self.tooltip_size_spinbox.value())
+        self.settings.setValue("imagery/tooltip_font_weight", self.tooltip_weight_combo.currentText())
 
 
 class TrackVisualizationSettingsTab(QVBoxLayout):

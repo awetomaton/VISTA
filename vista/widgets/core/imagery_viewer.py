@@ -7,6 +7,7 @@ import pyqtgraph as pg
 from shapely.geometry import Point, Polygon
 import time
 from PyQt6.QtCore import Qt, QRectF, QSettings, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QWidget, QVBoxLayout
 
 from vista.aoi.aoi import AOI
@@ -233,6 +234,9 @@ class ImageryViewer(QWidget):
         self.pixel_value_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
         self.pixel_value_text.setVisible(False)
         self.plot_item.addItem(self.pixel_value_text, ignoreBounds=True)
+
+        # Apply saved tooltip font settings
+        self.apply_tooltip_font_settings()
 
         # Connect to view range changes to update text positions
         self.plot_item.vb.sigRangeChanged.connect(self.update_text_positions)
@@ -1059,6 +1063,32 @@ class ImageryViewer(QWidget):
             self.pixel_value_text.setText("")
         # Update cursor based on both tooltip states
         self.update_cursor()
+
+    def apply_tooltip_font_settings(self):
+        """Load tooltip font color, size, and weight from QSettings and apply to the text overlays."""
+        settings = QSettings("Vista", "VistaApp")
+        color_name = settings.value("imagery/tooltip_font_color", "yellow", type=str)
+        font_size = settings.value("imagery/tooltip_font_size", 12, type=int)
+        weight_name = settings.value("imagery/tooltip_font_weight", "Normal", type=str)
+
+        weight_map = {
+            "Thin": QFont.Weight.Thin,
+            "Light": QFont.Weight.Light,
+            "Normal": QFont.Weight.Normal,
+            "DemiBold": QFont.Weight.DemiBold,
+            "Bold": QFont.Weight.Bold,
+            "Black": QFont.Weight.Black,
+        }
+        weight = weight_map.get(weight_name, QFont.Weight.Normal)
+
+        color = QColor(color_name)
+        font = QFont()
+        font.setPointSize(font_size)
+        font.setWeight(weight)
+
+        for text_item in (self.geolocation_text, self.pixel_value_text):
+            text_item.setColor(color)
+            text_item.setFont(font)
 
     def set_lasso_selection_mode(self, enabled):
         """

@@ -1885,6 +1885,9 @@ class VistaMainWindow(QMainWindow):
             self.data_manager.tracks_panel.undo_stack.max_depth = undo_depth
             self.data_manager.detections_panel.undo_stack.max_depth = undo_depth
 
+            # Apply tooltip font settings to the viewer
+            self.viewer.apply_tooltip_font_settings()
+
     def manage_labels(self):
         """Open the labels manager dialog"""
         dialog = LabelsManagerDialog(self, viewer=self.viewer)

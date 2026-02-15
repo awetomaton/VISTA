@@ -50,12 +50,13 @@ For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.githu
 ## Key Features
 
 - **Multi-frame imagery viewing** with playback controls and histogram adjustment
-- **Detection algorithms**: CFAR and simple threshold detectors
+- **View frame imagery in image or geodetic space** with tile servers to show imagery in geospatial context
+- **Background removal**: Temporal median, Robust PCA, GoDec
+- **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
 - **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
-- **Background removal**: Temporal median and Robust PCA
 - **Sensor calibration**: Bias removal, non-uniformity correction
-- **Geodetic support**: Pixel-to-geodetic coordinate conversion via ARF
-- **Manual annotation**: Create/edit tracks and detections interactively
+- **Geodetic support**: Pixel-to-geodetic coordinate conversion
+- **Manual annotation**: Create/edit/label tracks and detections interactively
 - **Feature overlays**: AOIs, placemarks, and shapefile import
 
 See the [User Guide](https://awetomaton.github.io/VISTA/1.10.0/user_guide/imagery.html) for detailed feature documentation.
