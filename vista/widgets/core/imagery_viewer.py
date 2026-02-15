@@ -3247,24 +3247,12 @@ class ImageryViewer(QWidget):
             # Project imagery
             image = self.imagery.images[image_index]
 
-            if self.imagery.has_gpu_images:
-                try:
-                    gpu_image = self.imagery.gpu_images[image_index]
-                    projected = self.imagery_projector.project_frame_gpu(
-                        gpu_image, frame, output_bbox, output_width, output_height,
-                        self.imagery.row_offset, self.imagery.column_offset,
-                    )
-                except Exception:
-                    # Fall back to CPU
-                    projected = self.imagery_projector.project_frame_cpu(
-                        image, frame, output_bbox, output_width, output_height,
-                        self.imagery.row_offset, self.imagery.column_offset,
-                    )
-            else:
-                projected = self.imagery_projector.project_frame_cpu(
-                    image, frame, output_bbox, output_width, output_height,
-                    self.imagery.row_offset, self.imagery.column_offset,
-                )
+            # Always use CPU projection — the bottleneck is sensor.geodetic_to_pixel()
+            # which runs on CPU regardless, so the GPU path only adds transfer overhead.
+            projected = self.imagery_projector.project_frame_cpu(
+                image, frame, output_bbox, output_width, output_height,
+                self.imagery.row_offset, self.imagery.column_offset,
+            )
 
             # Cache the result
             self.projection_cache.put(

@@ -44,7 +44,7 @@ class Simulation:
     center_lat: float = 40.0  # Center latitude for scene (degrees)
     center_lon: float = -105.0  # Center longitude for scene (degrees)
     sensor_altitude_km: float = 500.0  # Sensor altitude in kilometers
-    ifov_rad: float = 0.00005  # Instantaneous field of view in radians per pixel
+    ifov_rad: float = 0.0005  # Instantaneous field of view in radians per pixel
     polynomial_order: int = 4  # Order of the polynomial fit for ARF conversion
     # Sensor calibration data simulation parameters
     enable_bias_images: bool = False  # If True, generate bias/dark frames
@@ -495,6 +495,16 @@ class Simulation:
             # Pick ONE random base position for the entire sequence
             # Add margin for jitter (3 sigma should cover ~99.7% of jitter)
             jitter_margin = int(3 * self.earth_jitter_std)
+            required_height = self.rows + 2 * jitter_margin
+            required_width = self.columns + 2 * jitter_margin
+
+            # Tile the earth image if it's too small for the simulation dimensions
+            if earth_height < required_height or earth_width < required_width:
+                tile_rows = int(np.ceil(required_height / earth_height))
+                tile_cols = int(np.ceil(required_width / earth_width))
+                earth_array = np.tile(earth_array, (tile_rows, tile_cols))
+                earth_height, earth_width = earth_array.shape
+
             max_base_row = max(0, earth_height - self.rows - 2 * jitter_margin)
             max_base_col = max(0, earth_width - self.columns - 2 * jitter_margin)
 
@@ -502,7 +512,6 @@ class Simulation:
                 base_row = np.random.randint(0, max_base_row) + jitter_margin
                 base_col = np.random.randint(0, max_base_col) + jitter_margin
             else:
-                # Fallback if image is too small
                 base_row = jitter_margin
                 base_col = jitter_margin
 
