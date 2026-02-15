@@ -199,7 +199,7 @@ class VistaMainWindow(QMainWindow):
         self.load_aois_action.triggered.connect(self.load_aois_file)
         file_menu.addAction(self.load_aois_action)
 
-        load_shapefile_action = QAction("Load Shapefile", self)
+        load_shapefile_action = QAction("Load Shapefiles", self)
         load_shapefile_action.triggered.connect(self.load_shapefile)
         file_menu.addAction(load_shapefile_action)
 

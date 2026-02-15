@@ -77,7 +77,7 @@ class Imagery:
         Extract spatial subset defined by Area of Interest
     pixel_to_geodetic(frame, rows, columns)
         Convert pixel coordinates to geodetic (lat/lon/alt)
-    geodetic_to_pixel(frame, location)
+    (frame, location)
         Convert geodetic coordinates to pixel (row/column)
     get_histogram(frame_index)
         Compute or retrieve cached histogram for a frame

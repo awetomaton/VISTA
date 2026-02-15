@@ -1110,6 +1110,8 @@ class ImageryViewer(QWidget):
             'features': []
         }
 
+        _map_mode = self.map_view_mode
+
         # Check tracks (wholly contained = ALL visible points inside)
         for track in self.tracks:
             if not track.visible:
@@ -1126,9 +1128,17 @@ class ImageryViewer(QWidget):
             visible_rows = track.rows[visible_indices]
             visible_cols = track.columns[visible_indices]
 
+            if _map_mode and track.sensor and track.sensor.can_geolocate():
+                # Project to (lon, lat) — lasso polygon is in map coords
+                check_x, check_y = self._project_overlay_coords(
+                    track.sensor, self.current_frame_number, visible_rows, visible_cols
+                )
+            else:
+                check_x, check_y = visible_cols, visible_rows
+
             all_contained = True
-            for col, row in zip(visible_cols, visible_rows):
-                if not lasso_polygon.contains(Point(col, row)):
+            for x, y in zip(check_x, check_y):
+                if np.isnan(x) or np.isnan(y) or not lasso_polygon.contains(Point(x, y)):
                     all_contained = False
                     break
 
@@ -1183,28 +1193,36 @@ class ImageryViewer(QWidget):
                 except AttributeError:
                     pass  # Use unfiltered rows/cols/indices
 
-            for i, (row, col) in enumerate(zip(rows, cols)):
-                if lasso_polygon.contains(Point(col, row)):
+            if _map_mode and detector.sensor and detector.sensor.can_geolocate():
+                check_x, check_y = self._project_overlay_coords(
+                    detector.sensor, self.current_frame_number, rows, cols
+                )
+            else:
+                check_x, check_y = cols, rows
+
+            for i, (x, y) in enumerate(zip(check_x, check_y)):
+                if not np.isnan(x) and not np.isnan(y) and lasso_polygon.contains(Point(x, y)):
                     # Store as (detector, frame, original_index)
                     detection_frame = detector.frames[indices[i]]
                     selected_items['detections'].append((detector, int(detection_frame), int(indices[i])))
 
-        # Check AOIs (wholly contained = ALL 4 corners inside)
-        for aoi in self.aois:
-            if not aoi.visible:
-                continue
+        # Check AOIs (wholly contained = ALL 4 corners inside) — skip in map view (AOIs are pixel-space)
+        if not _map_mode:
+            for aoi in self.aois:
+                if not aoi.visible:
+                    continue
 
-            # Get all 4 corners
-            corners = [
-                (aoi.x, aoi.y),
-                (aoi.x + aoi.width, aoi.y),
-                (aoi.x + aoi.width, aoi.y + aoi.height),
-                (aoi.x, aoi.y + aoi.height)
-            ]
+                # Get all 4 corners
+                corners = [
+                    (aoi.x, aoi.y),
+                    (aoi.x + aoi.width, aoi.y),
+                    (aoi.x + aoi.width, aoi.y + aoi.height),
+                    (aoi.x, aoi.y + aoi.height)
+                ]
 
-            all_contained = all(lasso_polygon.contains(Point(corner)) for corner in corners)
-            if all_contained:
-                selected_items['aois'].append(aoi)
+                all_contained = all(lasso_polygon.contains(Point(corner)) for corner in corners)
+                if all_contained:
+                    selected_items['aois'].append(aoi)
 
         # Check features (placemarks and shapefiles)
         for feature in self.features:
@@ -1212,27 +1230,59 @@ class ImageryViewer(QWidget):
                 continue
 
             if isinstance(feature, PlacemarkFeature):
-                # Single point - just check if inside
-                row = feature.geometry.get('row')
-                col = feature.geometry.get('col')
-                if row is not None and col is not None:
-                    if lasso_polygon.contains(Point(col, row)):
-                        selected_items['features'].append(feature)
+                if _map_mode:
+                    # Use geographic coordinates directly
+                    lon = feature.geometry.get('lon')
+                    lat = feature.geometry.get('lat')
+                    if lon is not None and lat is not None:
+                        if lasso_polygon.contains(Point(lon, lat)):
+                            selected_items['features'].append(feature)
+                else:
+                    # Use pixel coordinates
+                    row = feature.geometry.get('row')
+                    col = feature.geometry.get('col')
+                    if row is not None and col is not None:
+                        if lasso_polygon.contains(Point(col, row)):
+                            selected_items['features'].append(feature)
 
             elif isinstance(feature, ShapefileFeature):
-                # Check all vertices of all shapes
+                # Shapefile points are geographic (lon, lat) — same coords used in map view
                 shapes = feature.geometry.get('shapes', [])
                 all_contained = True
                 has_points = False
 
-                for shape in shapes:
-                    for point in shape.points:
-                        has_points = True
-                        if not lasso_polygon.contains(Point(point[0], point[1])):
-                            all_contained = False
+                if _map_mode:
+                    # Lasso is in (lon, lat), shapefile points are (lon, lat) — direct comparison
+                    for shape in shapes:
+                        for point in shape.points:
+                            has_points = True
+                            if not lasso_polygon.contains(Point(point[0], point[1])):
+                                all_contained = False
+                                break
+                        if not all_contained:
                             break
-                    if not all_contained:
-                        break
+                else:
+                    # Lasso is in pixel space — project shapefile geo coords to pixel
+                    all_lons = []
+                    all_lats = []
+                    shape_lengths = []
+                    for shape in shapes:
+                        for point in shape.points:
+                            has_points = True
+                            all_lons.append(point[0])
+                            all_lats.append(point[1])
+                        shape_lengths.append(len(shape.points))
+
+                    if has_points and self.selected_sensor and self.selected_sensor.can_geolocate():
+                        px_x, px_y = self._shapefile_geo_to_pixel(
+                            np.array(all_lons), np.array(all_lats)
+                        )
+                        for x, y in zip(px_x, px_y):
+                            if np.isnan(x) or np.isnan(y) or not lasso_polygon.contains(Point(x, y)):
+                                all_contained = False
+                                break
+                    else:
+                        all_contained = False
 
                 if has_points and all_contained:
                     selected_items['features'].append(feature)
@@ -2507,12 +2557,24 @@ class ImageryViewer(QWidget):
 
             # Handle track creation/editing
             if self.track_creation_mode or self.track_editing_mode:
+                # In map view, convert (lon, lat) click to pixel for comparison and refinement
+                if self.map_view_mode:
+                    pixel_row, pixel_col = self._map_click_to_pixel(col, row)
+                    if np.isnan(pixel_row) or np.isnan(pixel_col):
+                        return
+                else:
+                    pixel_row, pixel_col = row, col
+
                 # Check if there's already a track point at the current frame
                 if self.current_frame_number in self.current_track_data:
                     existing_row, existing_col = self.current_track_data[self.current_frame_number]
 
-                    # Calculate distance in data coordinates
-                    distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+                    if self.map_view_mode:
+                        # Compare in map (lon, lat) space for consistent tolerance
+                        ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
+                        distance = np.sqrt((col - ex_lon)**2 + (row - ex_lat)**2)
+                    else:
+                        distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
 
                     # If click is near the existing point, remove it
                     if distance < tolerance:
@@ -2521,10 +2583,10 @@ class ImageryViewer(QWidget):
                         self._update_temp_track_display()
                         return
 
-                # Refine the point using the selected mode
-                refined_row, refined_col = self._refine_clicked_point(row, col)
+                # Refine the point using the selected mode (always in pixel space)
+                refined_row, refined_col = self._refine_clicked_point(pixel_row, pixel_col)
 
-                # Add or update track point for current frame
+                # Store in pixel coordinates (tracks always store row/col)
                 self.current_track_data[self.current_frame_number] = (refined_row, refined_col)
 
                 # Update temporary track display
@@ -2532,6 +2594,14 @@ class ImageryViewer(QWidget):
 
             # Handle detection creation/editing
             elif self.detection_creation_mode or self.detection_editing_mode:
+                # In map view, convert (lon, lat) click to pixel for comparison and refinement
+                if self.map_view_mode:
+                    pixel_row, pixel_col = self._map_click_to_pixel(col, row)
+                    if np.isnan(pixel_row) or np.isnan(pixel_col):
+                        return
+                else:
+                    pixel_row, pixel_col = row, col
+
                 # Initialize list for this frame if needed
                 if self.current_frame_number not in self.current_detection_data:
                     self.current_detection_data[self.current_frame_number] = []
@@ -2539,7 +2609,12 @@ class ImageryViewer(QWidget):
                 # Check if click is near an existing detection point on this frame
                 detection_list = self.current_detection_data[self.current_frame_number]
                 for i, (existing_row, existing_col) in enumerate(detection_list):
-                    distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+                    if self.map_view_mode:
+                        # Compare in map (lon, lat) space for consistent tolerance
+                        ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
+                        distance = np.sqrt((col - ex_lon)**2 + (row - ex_lat)**2)
+                    else:
+                        distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
 
                     # If click is near an existing point, remove it
                     if distance < tolerance:
@@ -2551,10 +2626,10 @@ class ImageryViewer(QWidget):
                         self._update_temp_detection_display()
                         return
 
-                # Refine the point using the selected mode
-                refined_row, refined_col = self._refine_clicked_point(row, col)
+                # Refine the point using the selected mode (always in pixel space)
+                refined_row, refined_col = self._refine_clicked_point(pixel_row, pixel_col)
 
-                # Add new detection point for current frame
+                # Store in pixel coordinates (detections always store row/col)
                 self.current_detection_data[self.current_frame_number].append((refined_row, refined_col))
 
                 # Update temporary detection display
@@ -2611,9 +2686,19 @@ class ImageryViewer(QWidget):
                     if len(visible_rows) == 0:
                         continue
 
-                    # Calculate distances to all visible points
-                    distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
-                    min_distance = np.min(distances)
+                    if self.map_view_mode:
+                        # Project track pixel coords to (lon, lat) for comparison
+                        track_x, track_y = self._project_overlay_coords(
+                            track.sensor, self.current_frame_number, visible_rows, visible_cols
+                        )
+                        distances = np.sqrt((track_x - col)**2 + (track_y - row)**2)
+                    else:
+                        distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
+
+                    valid = ~np.isnan(distances)
+                    if not np.any(valid):
+                        continue
+                    min_distance = np.nanmin(distances)
 
                     # Check if this is the closest track so far
                     if min_distance < tolerance and min_distance < closest_distance:
@@ -2685,9 +2770,22 @@ class ImageryViewer(QWidget):
                         continue
 
                     # Calculate distances to all visible detections
-                    distances = np.sqrt((cols - col)**2 + (rows - row)**2)
-                    min_idx = np.argmin(distances)
-                    min_distance = distances[min_idx]
+                    if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
+                        # Project detection pixel coords to (lon, lat) for comparison
+                        det_x, det_y = self._project_overlay_coords(
+                            detector.sensor, self.current_frame_number, rows, cols
+                        )
+                        distances = np.sqrt((det_x - col)**2 + (det_y - row)**2)
+                    else:
+                        distances = np.sqrt((cols - col)**2 + (rows - row)**2)
+
+                    valid = ~np.isnan(distances)
+                    if not np.any(valid):
+                        continue
+                    # Mask out NaN distances before finding minimum
+                    distances_clean = np.where(valid, distances, np.inf)
+                    min_idx = np.argmin(distances_clean)
+                    min_distance = distances_clean[min_idx]
 
                     # Check if this is the closest detection so far
                     if min_distance < tolerance and min_distance < closest_distance:
@@ -2727,28 +2825,37 @@ class ImageryViewer(QWidget):
             return
 
         # Separate points into current frame and other frames
-        current_frame_rows = []
-        current_frame_cols = []
-        other_frame_rows = []
-        other_frame_cols = []
+        current_frame_x = []
+        current_frame_y = []
+        other_frame_x = []
+        other_frame_y = []
 
         for frame in sorted(self.current_track_data.keys()):
             row, col = self.current_track_data[frame]
-            if frame == self.current_frame_number:
-                current_frame_rows.append(row)
-                current_frame_cols.append(col)
+            if self.map_view_mode:
+                # Project pixel coords to map (lon, lat) for display
+                lon, lat = self._pixel_to_map(row, col)
+                if np.isnan(lon):
+                    continue
+                x, y = lon, lat
             else:
-                other_frame_rows.append(row)
-                other_frame_cols.append(col)
+                x, y = col, row
+
+            if frame == self.current_frame_number:
+                current_frame_x.append(x)
+                current_frame_y.append(y)
+            else:
+                other_frame_x.append(x)
+                other_frame_y.append(y)
 
         # Create scatter plots with different sizes
         plots = []
 
         # Draw other frames with smaller points
-        if len(other_frame_rows) > 0:
+        if len(other_frame_x) > 0:
             other_plot = pg.ScatterPlotItem(
-                x=np.array(other_frame_cols),
-                y=np.array(other_frame_rows),
+                x=np.array(other_frame_x),
+                y=np.array(other_frame_y),
                 pen=pg.mkPen('m', width=1),
                 brush=pg.mkBrush('m'),
                 size=6,  # Smaller size for other frames
@@ -2758,10 +2865,10 @@ class ImageryViewer(QWidget):
             plots.append(other_plot)
 
         # Draw current frame with larger points
-        if len(current_frame_rows) > 0:
+        if len(current_frame_x) > 0:
             current_plot = pg.ScatterPlotItem(
-                x=np.array(current_frame_cols),
-                y=np.array(current_frame_rows),
+                x=np.array(current_frame_x),
+                y=np.array(current_frame_y),
                 pen=pg.mkPen('m', width=2),
                 brush=pg.mkBrush('m'),
                 size=14,  # Larger size for current frame
@@ -2789,20 +2896,27 @@ class ImageryViewer(QWidget):
             return
 
         # Only show detections for the current frame
-        current_frame_rows = []
-        current_frame_cols = []
+        current_frame_x = []
+        current_frame_y = []
 
         # Get detections for current frame only
         if self.current_frame_number in self.current_detection_data:
             for row, col in self.current_detection_data[self.current_frame_number]:
-                current_frame_rows.append(row)
-                current_frame_cols.append(col)
+                if self.map_view_mode:
+                    lon, lat = self._pixel_to_map(row, col)
+                    if np.isnan(lon):
+                        continue
+                    current_frame_x.append(lon)
+                    current_frame_y.append(lat)
+                else:
+                    current_frame_x.append(col)
+                    current_frame_y.append(row)
 
         # Draw current frame detections
-        if len(current_frame_rows) > 0:
+        if len(current_frame_x) > 0:
             current_plot = pg.ScatterPlotItem(
-                x=np.array(current_frame_cols),
-                y=np.array(current_frame_rows),
+                x=np.array(current_frame_x),
+                y=np.array(current_frame_y),
                 pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
                 brush=pg.mkBrush('c'),
                 size=14,  # Larger size for visibility
@@ -2831,30 +2945,38 @@ class ImageryViewer(QWidget):
             return
 
         # Separate detections into current frame and other frames
-        current_frame_rows = []
-        current_frame_cols = []
-        other_frame_rows = []
-        other_frame_cols = []
+        current_frame_x = []
+        current_frame_y = []
+        other_frame_x = []
+        other_frame_y = []
 
         for detector, frame, index in self.selected_detections:
             row = detector.rows[index]
             col = detector.columns[index]
 
-            if frame == self.current_frame_number:
-                current_frame_rows.append(row)
-                current_frame_cols.append(col)
+            if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
+                lon, lat = self._pixel_to_map(row, col)
+                if np.isnan(lon):
+                    continue
+                x, y = lon, lat
             else:
-                other_frame_rows.append(row)
-                other_frame_cols.append(col)
+                x, y = col, row
+
+            if frame == self.current_frame_number:
+                current_frame_x.append(x)
+                current_frame_y.append(y)
+            else:
+                other_frame_x.append(x)
+                other_frame_y.append(y)
 
         # Create scatter plots with different sizes
         plots = []
 
         # Draw other frames with smaller points
-        if len(other_frame_rows) > 0:
+        if len(other_frame_x) > 0:
             other_plot = pg.ScatterPlotItem(
-                x=np.array(other_frame_cols),
-                y=np.array(other_frame_rows),
+                x=np.array(other_frame_x),
+                y=np.array(other_frame_y),
                 pen=pg.mkPen('m', width=2),  # Dark purple border
                 brush=None,  # No fill, just border
                 size=10,  # Smaller size for other frames
@@ -2864,10 +2986,10 @@ class ImageryViewer(QWidget):
             plots.append(other_plot)
 
         # Draw current frame with larger points
-        if len(current_frame_rows) > 0:
+        if len(current_frame_x) > 0:
             current_plot = pg.ScatterPlotItem(
-                x=np.array(current_frame_cols),
-                y=np.array(current_frame_rows),
+                x=np.array(current_frame_x),
+                y=np.array(current_frame_y),
                 pen=pg.mkPen('m', width=3),  # Thick dark purple border
                 brush=None,  # No fill, just border
                 size=16,  # Larger size for current frame
@@ -3407,3 +3529,58 @@ class ImageryViewer(QWidget):
         lats = locations.lat.deg
 
         return lons, lats
+
+    def _map_click_to_pixel(self, lon: float, lat: float) -> tuple[float, float]:
+        """Convert a map view click position (lon, lat) to pixel (row, col).
+
+        Parameters
+        ----------
+        lon : float
+            Longitude in degrees.
+        lat : float
+            Latitude in degrees.
+
+        Returns
+        -------
+        tuple[float, float]
+            (row, col) in pixel coordinates, or (NaN, NaN) if projection fails.
+        """
+        sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
+        if sensor is None or not sensor.can_geolocate():
+            return float('nan'), float('nan')
+
+        earth_loc = EarthLocation.from_geodetic(
+            lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m
+        )
+        rows, cols = sensor.geodetic_to_pixel(self.current_frame_number, earth_loc)
+        if len(rows) > 0 and not np.isnan(rows[0]) and not np.isnan(cols[0]):
+            return float(rows[0]), float(cols[0])
+        return float('nan'), float('nan')
+
+    def _pixel_to_map(self, row: float, col: float) -> tuple[float, float]:
+        """Convert pixel (row, col) to map view coordinates (lon, lat).
+
+        Parameters
+        ----------
+        row : float
+            Row pixel coordinate.
+        col : float
+            Column pixel coordinate.
+
+        Returns
+        -------
+        tuple[float, float]
+            (lon, lat) in degrees, or (NaN, NaN) if projection fails.
+        """
+        sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
+        if sensor is None or not sensor.can_geolocate():
+            return float('nan'), float('nan')
+
+        locations = sensor.pixel_to_geodetic(
+            self.current_frame_number, np.array([row]), np.array([col])
+        )
+        lon = float(locations.lon.deg[0])
+        lat = float(locations.lat.deg[0])
+        if not np.isnan(lon) and not np.isnan(lat):
+            return lon, lat
+        return float('nan'), float('nan')
