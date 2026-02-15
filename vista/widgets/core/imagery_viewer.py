@@ -3125,9 +3125,16 @@ class ImageryViewer(QWidget):
             except (TypeError, RuntimeError):
                 pass
 
-            # Cancel any active WMS fetch
+            # Cancel any active WMS fetch and wait for it to finish before dropping reference
             if self.wms_fetcher_thread is not None:
                 self.wms_fetcher_thread.cancel()
+                try:
+                    self.wms_fetcher_thread.tile_fetched.disconnect(self._on_wms_tile_fetched)
+                    self.wms_fetcher_thread.all_tiles_fetched.disconnect(self._on_all_wms_tiles_fetched)
+                    self.wms_fetcher_thread.error_occurred.disconnect(self._on_wms_error)
+                except (TypeError, RuntimeError):
+                    pass
+                self.wms_fetcher_thread.wait(2000)
                 self.wms_fetcher_thread = None
 
             # Cancel debounce timer
