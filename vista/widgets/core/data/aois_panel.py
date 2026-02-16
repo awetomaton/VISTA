@@ -3,6 +3,7 @@ import pathlib
 
 import pandas as pd
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFileDialog, QHeaderView, QHBoxLayout, QLabel, QMessageBox,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
@@ -66,6 +67,16 @@ class AOIsPanel(QWidget):
 
         layout.addWidget(self.aois_table)
         self.setLayout(layout)
+
+        # Delete key shortcuts (active when this panel or its children have focus)
+        delete_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Delete), self)
+        delete_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        delete_shortcut.activated.connect(self.delete_selected_aois)
+
+        # Backspace shortcut for macOS (the Mac "Delete" key sends Key_Backspace)
+        backspace_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Backspace), self)
+        backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        backspace_shortcut.activated.connect(self.delete_selected_aois)
 
     def clear_selection(self):
         """Clear all AOI selections in the table, which deselects AOIs in the viewer"""
