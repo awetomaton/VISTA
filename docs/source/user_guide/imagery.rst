@@ -783,6 +783,18 @@ Tooltips
    :alt: Imagery tooltips
    :align: center
 
+Map View
+~~~~~~~~
+
+Users can view geolocated imagery in a geographic view or image space. You can tell if your imagery supports geolocation
+if there is a checkmark in the Geolocation column for the imagery's sensor in the **Sensors Panel**. This will also 
+show the imagery with reference imagery from a Web Map Tile Server (WMTS). The WMTS can be configured from the Settings
+menu. The opacity of the loaded imagery can also be adjusted on the imagery tab.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-map-view.gif
+   :alt: Map view
+   :align: center
+
 Treatments and Processing
 --------------------------
 

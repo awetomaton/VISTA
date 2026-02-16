@@ -90,6 +90,7 @@ Documentation Contents
    developer_guide/contributing
    developer_guide/architecture
    developer_guide/extending
+   developer_guide/custom_sensors
 
 .. toctree::
    :maxdepth: 1
