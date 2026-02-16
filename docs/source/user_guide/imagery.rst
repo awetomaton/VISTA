@@ -8,7 +8,123 @@ This guide covers loading, managing, and processing imagery in VISTA.
    detections and tracks.
 
 Simulate Imagery
----------------
+----------------
+
+VISTA includes several scripts in the ``scripts/`` directory for generating synthetic datasets. These are useful
+for getting familiar with VISTA, testing features, and creating reproducible example data.
+
+All simulation scripts use the :class:`~vista.simulate.simulation.Simulation` class, which generates imagery with
+Gaussian noise and embedded point-source tracks that follow random walks, along with corresponding detections and
+tracker outputs. Output files are saved to the ``data/`` directory by default.
+
+simulate_basic.py
+~~~~~~~~~~~~~~~~~
+
+Generates a basic simulation with default parameters (100 frames, 256 x 256 pixels, 5-8 tracks, 1 tracker).
+
+.. code-block:: bash
+
+   python scripts/simulate_basic.py
+
+Output is saved to ``data/basic/``.
+
+simulate_many_tracks.py
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Generates a simulation with a higher track density: 3 trackers and 20-40 tracks per tracker.
+
+.. code-block:: bash
+
+   python scripts/simulate_many_tracks.py
+
+Output is saved to ``data/many_tracks/``.
+
+simulate_sub_sampled_imagery.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Generates a basic simulation and then sub-samples the imagery to every other frame. This produces imagery where
+tracks and detections reference frames that may not exist in the imagery, useful for testing temporal misalignment
+handling.
+
+.. code-block:: bash
+
+   python scripts/simulate_sub_sampled_imagery.py
+
+Output is saved to ``data/sub_sampled_imagery_scenario/``.
+
+large_imagery.py
+~~~~~~~~~~~~~~~~
+
+Generates a large simulation with 400 frames at 4096 x 4096 pixels. Useful for stress-testing rendering,
+incremental loading, and algorithm performance on large datasets.
+
+.. code-block:: bash
+
+   python scripts/large_imagery.py
+
+Output is saved to ``data/large/``.
+
+.. note::
+   This script requires ``plotly`` as an additional dependency.
+
+simulate_comprehensive_data.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Generates five distinct simulation scenarios that exercise different combinations of VISTA features:
+
+1. **Normal** — Frames with pixel coordinates only (``data/sim_normal/``)
+2. **Times only** — Tracks have timestamps but no frame numbers (``data/sim_times_only/``)
+3. **Geodetic only** — Tracks have latitude/longitude/altitude but no pixel coordinates (``data/sim_geodetic_only/``)
+4. **Times + Geodetic** — Tracks have timestamps and geodetic coordinates, no frames or pixels
+   (``data/sim_times_geodetic/``)
+5. **All features** — 200 frames at 1024 x 1024 with all capabilities enabled (``data/sim_all_features/``):
+
+   - Temporal metadata and geodetic conversion polynomials
+   - Sensor calibration data (bias images, uniformity gain, bad pixel masks, radiometric gain)
+   - Earth image background with realistic jittering
+   - Track uncertainty ellipses
+
+.. code-block:: bash
+
+   python scripts/simulate_comprehensive_data.py
+
+example_programmatic_loading.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Demonstrates how to create imagery, detections, and tracks in-memory and launch VISTA programmatically without
+saving to disk. This script creates a 50-frame 256 x 256 imagery dataset containing a moving bright spot that
+follows a circular path, along with noisy detections and a ground-truth track.
+
+.. code-block:: bash
+
+   python scripts/example_programmatic_loading.py
+
+create_test_shapefile.py
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Creates example shapefiles (polygons, polylines, points, and multipoints) for testing VISTA's shapefile overlay
+feature. Accepts an optional bounding box to control the geographic extent of the generated shapes.
+
+.. code-block:: bash
+
+   python scripts/create_test_shapefile.py
+   python scripts/create_test_shapefile.py --lon-min -105.3 --lat-min 39.95 --lon-max -105.2 --lat-max 40.05
+
+Output is saved to ``data/shapefiles/`` by default, or to a custom directory via ``--output-dir``.
+
+.. note::
+   This script requires the ``pyshp`` package (``pip install pyshp``).
+
+test_poly_roundtrip.py
+~~~~~~~~~~~~~~~~~~~~~~
+
+A diagnostic script that validates the accuracy of the 2D polynomial round-trip transformations used in
+geolocation. It fits forward (pixel to ARF angle) and reverse (ARF angle to pixel) polynomials and reports
+residuals and round-trip errors at sample points.
+
+.. code-block:: bash
+
+   python scripts/test_poly_roundtrip.py
 
 Loading Imagery
 ---------------
