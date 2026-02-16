@@ -23,7 +23,7 @@ class GoDecThread(QThread):
     error_occurred = pyqtSignal(str)
 
     def __init__(self, imagery, rank, sparsity, max_iter, power_iters, use_gpu=True, aoi=None,
-                 start_frame=0, end_frame=None):
+                 start_frame=0, end_frame=None, frame_block_size=None, block_overlap_frames=0):
         """
         Initialize the processing thread.
 
@@ -47,6 +47,10 @@ class GoDecThread(QThread):
             Starting frame index, by default 0
         end_frame : int, optional
             Ending frame index (exclusive), by default None for all frames
+        frame_block_size : int or None, optional
+            Number of frames per block, or None to process all at once
+        block_overlap_frames : int, optional
+            Number of overlapping frames between consecutive blocks
         """
         super().__init__()
         self.imagery = imagery
@@ -58,6 +62,8 @@ class GoDecThread(QThread):
         self.aoi = aoi
         self.start_frame = start_frame
         self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
+        self.frame_block_size = frame_block_size
+        self.block_overlap_frames = block_overlap_frames
         self._cancelled = False
 
     def cancel(self):
@@ -127,6 +133,8 @@ class GoDecThread(QThread):
                 max_iter=self.max_iter,
                 power_iters=self.power_iters,
                 callback=self._iteration_callback,
+                frame_block_size=self.frame_block_size,
+                block_overlap_frames=self.block_overlap_frames,
             )
 
             if self._cancelled:
@@ -374,6 +382,48 @@ class GoDecDialog(QDialog):
         frame_group.setLayout(frame_layout)
         layout.addWidget(frame_group)
 
+        # Block processing
+        block_group = QGroupBox("Block Processing")
+        block_layout = QFormLayout()
+
+        self.use_blocks_checkbox = QCheckBox("Process in frame blocks")
+        self.use_blocks_checkbox.setChecked(False)
+        self.use_blocks_checkbox.setToolTip(
+            "When enabled, the imagery is split into overlapping blocks of frames.\n"
+            "GoDec runs independently on each block and the results are combined.\n"
+            "This can reduce memory usage and may improve results for very long sequences\n"
+            "where the background changes significantly over time."
+        )
+        self.use_blocks_checkbox.stateChanged.connect(self.on_use_blocks_changed)
+        block_layout.addRow("", self.use_blocks_checkbox)
+
+        self.block_size_spinbox = QSpinBox()
+        self.block_size_spinbox.setRange(10, 999999)
+        self.block_size_spinbox.setValue(100)
+        self.block_size_spinbox.setEnabled(False)
+        self.block_size_spinbox.setToolTip(
+            "Number of frames in each processing block.\n"
+            "Smaller blocks use less memory but may miss longer-term background patterns.\n"
+            "Recommended: 50-500"
+        )
+        block_layout.addRow("Frame Block Size:", self.block_size_spinbox)
+
+        self.block_overlap_spinbox = QSpinBox()
+        self.block_overlap_spinbox.setRange(0, 999999)
+        self.block_overlap_spinbox.setValue(20)
+        self.block_overlap_spinbox.setEnabled(False)
+        self.block_overlap_spinbox.setToolTip(
+            "Number of overlapping frames between consecutive blocks.\n"
+            "Overlap helps avoid discontinuities at block boundaries.\n"
+            "The overlapping region is split at its midpoint between adjacent blocks.\n"
+            "Must be less than the frame block size.\n"
+            "Recommended: 10-50"
+        )
+        block_layout.addRow("Block Overlap Frames:", self.block_overlap_spinbox)
+
+        block_group.setLayout(block_layout)
+        layout.addWidget(block_group)
+
         # Output options
         output_group = QGroupBox("Output Options")
         output_layout = QVBoxLayout()
@@ -423,6 +473,12 @@ class GoDecDialog(QDialog):
         """Handle auto rank checkbox change."""
         self.rank_spinbox.setEnabled(state != Qt.CheckState.Checked.value)
 
+    def on_use_blocks_changed(self, state):
+        """Handle block processing checkbox change."""
+        enabled = state == Qt.CheckState.Checked.value
+        self.block_size_spinbox.setEnabled(enabled)
+        self.block_overlap_spinbox.setEnabled(enabled)
+
     def load_settings(self):
         """Load previously saved settings."""
         self.auto_rank.setChecked(self.settings.value("auto_rank", True, type=bool))
@@ -436,6 +492,9 @@ class GoDecDialog(QDialog):
         self.end_frame.setValue(self.settings.value("end_frame", 999999, type=int))
         self.add_background.setChecked(self.settings.value("add_background", False, type=bool))
         self.add_foreground.setChecked(self.settings.value("add_foreground", True, type=bool))
+        self.use_blocks_checkbox.setChecked(self.settings.value("use_blocks", False, type=bool))
+        self.block_size_spinbox.setValue(self.settings.value("block_size", 100, type=int))
+        self.block_overlap_spinbox.setValue(self.settings.value("block_overlap", 20, type=int))
 
     def save_settings(self):
         """Save current settings for next time."""
@@ -449,6 +508,9 @@ class GoDecDialog(QDialog):
         self.settings.setValue("end_frame", self.end_frame.value())
         self.settings.setValue("add_background", self.add_background.isChecked())
         self.settings.setValue("add_foreground", self.add_foreground.isChecked())
+        self.settings.setValue("use_blocks", self.use_blocks_checkbox.isChecked())
+        self.settings.setValue("block_size", self.block_size_spinbox.value())
+        self.settings.setValue("block_overlap", self.block_overlap_spinbox.value())
 
     def run_processing(self):
         """Start GoDec background removal."""
@@ -489,6 +551,9 @@ class GoDecDialog(QDialog):
         self.end_frame.setEnabled(False)
         self.add_background.setEnabled(False)
         self.add_foreground.setEnabled(False)
+        self.use_blocks_checkbox.setEnabled(False)
+        self.block_size_spinbox.setEnabled(False)
+        self.block_overlap_spinbox.setEnabled(False)
         self.cancel_button.setVisible(True)
         self.status_label.setVisible(True)
         self.status_label.setText("Initializing...")
@@ -497,9 +562,14 @@ class GoDecDialog(QDialog):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
 
+        # Get blocking parameters
+        frame_block_size = self.block_size_spinbox.value() if self.use_blocks_checkbox.isChecked() else None
+        block_overlap_frames = self.block_overlap_spinbox.value() if self.use_blocks_checkbox.isChecked() else 0
+
         # Create and start worker thread
         self.worker = GoDecThread(
-            self.imagery, rank, sparsity, max_iter, power_iters, use_gpu, selected_aoi, start_frame, end_frame
+            self.imagery, rank, sparsity, max_iter, power_iters, use_gpu, selected_aoi, start_frame, end_frame,
+            frame_block_size, block_overlap_frames
         )
         self.worker.progress_updated.connect(self.on_progress_updated)
         self.worker.status_updated.connect(self.on_status_updated)
@@ -591,6 +661,8 @@ class GoDecDialog(QDialog):
         self.end_frame.setEnabled(True)
         self.add_background.setEnabled(True)
         self.add_foreground.setEnabled(True)
+        self.use_blocks_checkbox.setEnabled(True)
+        self.on_use_blocks_changed(self.use_blocks_checkbox.checkState())
         self.cancel_button.setVisible(False)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")

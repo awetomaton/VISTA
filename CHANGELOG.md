@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
+ - ✨ Updated GoDec to enable running in overlapping blocks.
  - ✨ Added the ability to delete AOIs with the `delete` key.
  - ✨ Added detector and track projected lat / lon caching to drastically speed up viewing these overlays in the geographic view.
  - 🛠️ Updated track plot window to reset zoom view when axes are changed.

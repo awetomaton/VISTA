@@ -99,7 +99,93 @@ def _hard_threshold(tensor, card):
     return tensor * (tensor.abs() >= threshold)
 
 
-def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=None):
+def _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
+                   frame_block_size, block_overlap_frames):
+    """
+    Run GoDec in overlapping frame blocks and combine results.
+
+    Splits the imagery into overlapping blocks, runs GoDec independently on each,
+    and stitches the results together by splitting overlapping regions at their midpoint.
+
+    Parameters
+    ----------
+    images : torch.Tensor
+        3D tensor of shape (num_frames, height, width)
+    rank, sparsity, max_iter, power_iters, callback
+        Same as :func:`godec`
+    frame_block_size : int
+        Number of frames per block
+    block_overlap_frames : int
+        Number of overlapping frames between consecutive blocks
+    """
+    num_frames = images.shape[0]
+    stride = frame_block_size - block_overlap_frames
+
+    if stride <= 0:
+        raise ValueError(
+            f"block_overlap_frames ({block_overlap_frames}) must be less than "
+            f"frame_block_size ({frame_block_size})"
+        )
+
+    # Compute block start indices
+    block_starts = []
+    start = 0
+    while start < num_frames:
+        block_starts.append(start)
+        if start + frame_block_size >= num_frames:
+            break
+        start += stride
+
+    num_blocks = len(block_starts)
+    total_iters = num_blocks * max_iter
+
+    # Run GoDec on each block
+    block_results = []
+    for block_idx, blk_start in enumerate(block_starts):
+        blk_end = min(blk_start + frame_block_size, num_frames)
+        block_images = images[blk_start:blk_end]
+
+        # Wrap callback to report overall progress across all blocks
+        def block_callback(iteration, block_max_iter, _idx=block_idx):
+            if callback is not None:
+                overall_iter = _idx * max_iter + iteration
+                return callback(overall_iter, total_iters)
+            return True
+
+        bg, fg = godec(block_images, rank=rank, sparsity=sparsity, max_iter=max_iter,
+                       power_iters=power_iters, callback=block_callback)
+        block_results.append((blk_start, blk_end, bg, fg))
+
+    # Combine block results by splitting overlapping regions at their midpoint
+    background = torch.empty_like(images)
+    foreground = torch.empty_like(images)
+
+    for i, (blk_start, blk_end, bg, fg) in enumerate(block_results):
+        # Determine the output range this block is responsible for
+        if i == 0:
+            out_start = blk_start
+        else:
+            prev_end = block_results[i - 1][1]
+            overlap = prev_end - blk_start
+            out_start = blk_start + overlap // 2
+
+        if i == num_blocks - 1:
+            out_end = blk_end
+        else:
+            next_start = block_results[i + 1][0]
+            overlap = blk_end - next_start
+            out_end = next_start + overlap // 2
+
+        local_start = out_start - blk_start
+        local_end = out_end - blk_start
+        background[out_start:out_end] = bg[local_start:local_end]
+        foreground[out_start:out_end] = fg[local_start:local_end]
+
+    return background, foreground
+
+
+def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=None,
+          frame_block_size=None, block_overlap_frames=0):
     """
     Remove background from imagery using GoDec (Go Decomposition).
 
@@ -135,6 +221,15 @@ def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=No
     callback : callable, optional
         Called after each iteration with (iteration, max_iter).
         Should return False to cancel processing.
+    frame_block_size : int or None, optional
+        When set, the imagery is split into blocks of this many frames and GoDec
+        is run on each block independently. Results are combined by splitting
+        overlapping regions at their midpoint. By default None (process all frames
+        at once).
+    block_overlap_frames : int, optional
+        Number of frames of overlap between consecutive blocks, by default 0.
+        Must be less than ``frame_block_size``. Overlapping regions are split at
+        their midpoint when combining block results.
 
     Returns
     -------
@@ -149,6 +244,11 @@ def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=No
     """
     if not HAS_TORCH:
         raise ImportError("PyTorch is required for GoDec background removal. Install with: pip install torch")
+
+    # Dispatch to blocked processing if frame_block_size is set
+    if frame_block_size is not None:
+        return _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
+                              frame_block_size, block_overlap_frames)
 
     num_frames, height, width = images.shape
     num_pixels = height * width
