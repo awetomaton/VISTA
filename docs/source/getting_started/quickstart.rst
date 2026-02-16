@@ -49,7 +49,7 @@ Loading Imagery
 
 VISTA supports various imagery formats. To load imagery:
 
-1. **File Menu**: Click ``File > Open`` and select your imagery file
+1. **File Menu**: Click ``File > Load Imagery (HDF5)`` and select your imagery file
 2. **Drag and Drop**: Drag imagery files directly into the VISTA window
 3. **Programmatically**: Use the VISTA API to load imagery
 
@@ -107,8 +107,8 @@ Navigation
 Running Algorithms
 ~~~~~~~~~~~~~~~~~~
 
-1. Select ``Algorithms`` from the menu bar
-2. Choose an algorithm category (Detection, Tracking, Enhancement, etc.)
+1. Select ``Image Processing`` from the menu bar
+2. Choose an algorithm category (Background Removal, Enhancement, Detectors, Tracking, or Treatment)
 3. Configure algorithm parameters in the dialog
 4. Click ``Run`` to execute the algorithm
 5. Results will appear in the appropriate data panel

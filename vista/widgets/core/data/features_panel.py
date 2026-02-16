@@ -1,5 +1,6 @@
 """Features panel for data manager"""
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox, QHeaderView, QHBoxLayout, QMessageBox,
     QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
@@ -60,6 +61,11 @@ class FeaturesPanel(QWidget):
 
         layout.addWidget(self.features_table)
         self.setLayout(layout)
+
+        # Delete key shortcut (active when this panel or its children have focus)
+        delete_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Delete), self)
+        delete_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        delete_shortcut.activated.connect(self.delete_selected_features)
 
     def refresh_features_table(self):
         """Refresh the features table"""

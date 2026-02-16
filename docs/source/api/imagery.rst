@@ -16,54 +16,61 @@ Core Classes
 
 The :class:`~imagery.Imagery` class is the foundation for working with image data in VISTA. It provides:
 
-* Loading and saving imagery from various formats
 * Frame-based indexing and slicing
 * Area of interest (AOI) extraction
 * Integration with time and geodetic coordinate systems
-* Support for sensor metadata
+* Sensor metadata association
+* Incremental loading support
+* Optional GPU acceleration via PyTorch
 
 Basic Usage
 -----------
 
-Creating and Loading Imagery
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Creating Imagery
+~~~~~~~~~~~~~~~~
+
+Imagery objects are created directly using the constructor. Images are loaded from HDF5 files via
+``DataLoaderThread`` or constructed programmatically:
 
 .. code-block:: python
 
-   from vista.imagery import Imagery
+   import numpy as np
+   from vista.imagery.imagery import Imagery
+   from vista.sensors.sensor import Sensor
 
-   # Load from file
-   img = Imagery.from_file('path/to/data.h5')
+   sensor = Sensor(name="My Sensor")
+   images = np.random.randn(100, 256, 256).astype(np.float32)
+   frames = np.arange(100)
+
+   img = Imagery(name="Test", images=images, frames=frames, sensor=sensor)
 
    # Access imagery properties
-   print(f"Shape: {img.shape}")
-   print(f"Number of frames: {img.num_frames}")
-   print(f"Frame rate: {img.frame_rate}")
+   print(f"Shape: {img.images.shape}")    # (100, 256, 256)
+   print(f"Number of frames: {len(img)}")  # 100
 
 Slicing and Subsetting
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   # Get a single frame
-   frame_10 = img[10]
-
-   # Get a range of frames
-   frames = img[10:20]
+   # Get a range of frames (returns a new Imagery)
+   subset = img[10:20]
 
    # Get an area of interest
-   aoi = img.get_aoi(x_min=100, x_max=200, y_min=100, y_max=200)
+   from vista.aoi import AOI
+   aoi = AOI(name="Region", x=100, y=100, width=100, height=100)
+   cropped = img.get_aoi(aoi)
 
 Working with Copies
 ~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   # Create a deep copy
+   # Create a shallow copy (images array is shared by reference)
    img_copy = img.copy()
 
    # Modify the copy without affecting the original
-   img_copy.data *= 2.0
+   img_copy.images = img_copy.images * 2.0
 
 Module Reference
 ----------------

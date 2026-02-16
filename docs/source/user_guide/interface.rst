@@ -31,7 +31,7 @@ Navigation
 
 * **Pan**: Click and drag with left mouse button
 * **Zoom**: Mouse wheel or zoom controls
-* **Reset View**: Press ``R`` or use View menu
+* **Reset View**: Right-click the viewer and select ``View All``
 
 Display Controls
 ~~~~~~~~~~~~~~~~

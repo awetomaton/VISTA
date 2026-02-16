@@ -4,7 +4,7 @@ Installation
 Requirements
 ------------
 
-VISTA requires Python 3.13 or higher.
+VISTA requires Python 3.9 or higher.
 
 Installing from PyPI
 --------------------
@@ -55,7 +55,7 @@ If you prefer using conda, you can create an environment and install VISTA:
 
 .. code-block:: bash
 
-   conda create -n vista python=3.13
+   conda create -n vista python=3.13  # or any version >= 3.9
    conda activate vista
    pip install vista-imagery
 
@@ -78,8 +78,10 @@ VISTA depends on the following packages:
 * **astropy** - Astronomy and astrophysics library
 * **darkdetect** - Dark mode detection
 * **h5py** - HDF5 file support
+* **numba** - JIT compilation for performance-critical routines
 * **numpy** - Numerical computing
 * **pandas** - Data analysis and manipulation
+* **Pillow** - Image file I/O
 * **PyQt6** - Qt GUI framework
 * **pyqtgraph** - Scientific graphics and GUI library
 * **pyshp** - Shapefile reading/writing

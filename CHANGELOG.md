@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✨ Updated to use `numba` to fuse multiple numpy imagery operations into a single memory pass.
 - ✨ Added the ability to hide the histogram widget to improve playback performance.
 - ✨ Added the ability set the tooltip text font, color, and weight.
-- ✨ Added `delete` key shortcut for removing tracks, detection points, and detectors.
+- ✨ Added `delete` key shortcut for removing tracks, detection points, detectors, and features.
 - ✨ Added About page and corresponding toolbar action.
 - 🛠️ Updated shape files load to only interpret them as providing geographic coordinates.
 - 🛠️ Updated to track point selection, all detectors, and extraction window to enable selecting exceedingly dark, bright, or both pixels.
