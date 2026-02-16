@@ -17,6 +17,10 @@ The easiest way to install VISTA is from PyPI using pip:
 
 This will install VISTA and all of its dependencies.
 
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-install.gif
+   :alt: Install
+   :align: center
+
 Installing from Source
 ----------------------
 

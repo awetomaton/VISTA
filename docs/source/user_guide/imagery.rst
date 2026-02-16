@@ -7,6 +7,9 @@ This guide covers loading, managing, and processing imagery in VISTA.
    While working with imagery is a key VISTA use-case, users should be aware that VISTA can be used to analyze 
    detections and tracks.
 
+Simulate Imagery
+---------------
+
 Loading Imagery
 ---------------
 
@@ -24,6 +27,13 @@ To load imagery in the VISTA GUI:
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_loading.gif
    :alt: Loading imagery
+   :align: center
+
+The VISTA GUI includes an imagery simulator **File → Simulate** to help users get familiar with VISTA and to provided
+exmaples of VISTA inputs.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-simulate-imagery.gif
+   :alt: Simulate
    :align: center
 
 From Python API

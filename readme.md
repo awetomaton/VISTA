@@ -15,7 +15,7 @@ VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing 
 **Source Code**: https://github.com/awetomaton/VISTA
 
 ## Watch the Demo
-[![Watch the demo](docs/source/_static/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=9eRo5S4yLTs)
+[![Watch the demo](docs/source/_static/images/vista_demo_thumbnail.png)](https://www.youtube.com/watch?v=oDnTdtyQ7xw)
 
 ## Installation
 

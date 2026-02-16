@@ -34,6 +34,16 @@ From Python code:
    from vista.__main__ import main
    main()
 
+Simulating Imagery
+------------------
+
+One of the easiest ways to get started with VISTA is using it's built-in simulator. This helps introduce users to VISTA
+in addition to providing examples of ICD compliant imagery, detection, and tracks data.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-simulate-imagery.gif
+   :alt: Simulate
+   :align: center
+
 Loading Imagery
 ---------------
 
@@ -82,7 +92,7 @@ Main Interface Components
 
 * **Imagery Viewer**: Central display area showing the current frame
 * **Playback Controls**: Navigate through frames and control playback
-* **Data Panels**: Manage imagery, detections, tracks, and other data
+* **Data Panels**: Manage sensors, imagery, tracks, detections, and features
 * **Menu Bar**: Access file operations, algorithms, and settings
 * **Status Bar**: Shows current frame, coordinates, and pixel values
 
@@ -92,7 +102,7 @@ Navigation
 * **Frame Navigation**: Use the playback controls or arrow keys to move between frames
 * **Zoom**: Use the mouse wheel or zoom controls to zoom in/out
 * **Pan**: Click and drag to pan around the imagery
-* **ROI Selection**: Draw regions of interest by clicking and dragging
+* **AOI Selection**: Draw areas of interest by clicking and dragging
 
 Running Algorithms
 ~~~~~~~~~~~~~~~~~~

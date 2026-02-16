@@ -19,15 +19,16 @@ processing.
 Key Features
 ------------
 
-* **Multi-semspr viewing** to quickly switch between different sensor's perspective on the same event
-* **Multi-frame imagery viewing** with temporal navigation and playback controls
-* **Detection and tracking overlays** with support for multiple tracking algorithms
-* **Geodetic coordinate system support** for projecting to and from the image space
-* **Sensor calibration** and radiometric processing capabilities
-* **Background removal algorithms** including temporal median and robust PCA
-* **Unresolved object detection** including a Constant False-Alarm Rate (CFAR) detector
-* **Interactive analysis tools** for feature extraction and track refinement
-* **Export capabilities** for processed imagery and analysis results
+* **Multi-frame imagery viewing** with playback controls and histogram adjustment
+* **View frame imagery in image or geodetic space** with tile servers to show imagery in geospatial context
+* **Background removal**: Temporal median, Running sub-space tracker, Robust PCA, GoDec
+* **Signal Enhancement**: Decimating or running Coaddition
+* **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
+* **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
+* **Sensor calibration**: Bias removal, non-uniformity correction
+* **Geodetic support**: Pixel-to-geodetic coordinate conversion
+* **Manual annotation**: Create/edit/label tracks and detections interactively
+* **Feature overlays**: AOIs, placemarks, and shapefile import
 
 .. note::
    The algorithms and objects included in VISTA are basic and are provided for an initial capability and to illustrates 
