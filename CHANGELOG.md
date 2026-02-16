@@ -22,8 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - 🔧 Fixed edge-case bug where small images might not be able to project into the geographic view.
  - 🔧 Corrected where preventing histogram plot updates takes effect when histogram is hidden.
- - 🔧 Fixed bug where track points from all frames were projected using the current frame's geolocation metadata
- - 🔧 Fixed bug that could occur when viewing track details for tracks that contained frames that do not exist in the imagery
+ - 🔧 Fixed bug where when multiple imagery were created and one of them had a name that exists in the imagery panel.
+ - 🔧 Fixed bug where track points from all frames were projected using the current frame's geolocation metadata.
+ - 🔧 Fixed bug that could occur when viewing track details for tracks that contained frames that do not exist in the imagery.
 
 ## [1.10.0] - 2026-2-15
 

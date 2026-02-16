@@ -3034,7 +3034,7 @@ class ImageryViewer(QWidget):
             # Initialize WMS infrastructure (re-create each time to pick up server changes)
             settings = QSettings("Vista", "VistaApp")
             max_tiles = settings.value("wms/tile_cache_size", 256, type=int)
-            max_proj = settings.value("wms/projection_cache_size", 64, type=int)
+            max_proj = settings.value("wms/projection_cache_size", 16384, type=int)
             new_client = WMSClient.from_settings(settings)
             # Clear tile cache if server URL changed (tiles from different servers can't mix)
             if (self.wms_client is not None

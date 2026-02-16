@@ -2006,7 +2006,7 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.critical(
                     self,
                     "Duplicate Imagery Name",
-                    f"Imagery with the name '{processed_imagery.name}' already exists.\n\n"
+                    f"Imagery with the name '{imagery.name}' already exists.\n\n"
                     f"Please rename or remove the existing imagery before processing.",
                     QMessageBox.StandardButton.Ok
                 )
