@@ -186,8 +186,16 @@ class TrackPlotWindow(QWidget):
 
     def _on_settings_changed(self):
         """Handle plot settings change"""
+        # Check if axis selection changed
+        sender = self.sender()
+        axis_changed = (sender == self.x_combo or sender == self.y_combo)
+
         self.update_plot()
 
+        # Reset zoom if axis selection changed
+        if axis_changed:
+            self.plot.autoRange()
+        
     def _on_axis_changed(self):
         """Handle axis combo box change - reset zoom and update plot"""
         self.update_plot()

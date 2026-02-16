@@ -390,7 +390,8 @@ class DataLoaderThread(QThread):
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset, sensor)
 
-    def _load_images_incrementally(self, imagery: Imagery, images_dataset: h5py.Dataset, sensor):
+    def _load_images_incrementally(self, imagery: Imagery, images_dataset: h5py.Dataset, sensor,
+                                     image_dataset_slice=None):
         """Load images block-by-block, emitting signals so the UI can display frames as they arrive.
 
         Parameters
@@ -401,8 +402,19 @@ class DataLoaderThread(QThread):
             HDF5 dataset to read images from
         sensor : Sensor
             Associated sensor (passed to imagery_available signal)
+        image_dataset_slice : slice, optional
+            Slice into images_dataset selecting which images to load. When None (default),
+            all images in the dataset are loaded. When provided, only the specified subset
+            is read from the dataset into the imagery's images array.
         """
-        num_images = images_dataset.shape[0]
+        if image_dataset_slice is not None:
+            source_offset = image_dataset_slice.start or 0
+            slice_stop = image_dataset_slice.stop if image_dataset_slice.stop is not None else images_dataset.shape[0]
+            num_images = slice_stop - source_offset
+        else:
+            source_offset = 0
+            num_images = images_dataset.shape[0]
+
         images = imagery.images
 
         # Determine block size
@@ -417,7 +429,11 @@ class DataLoaderThread(QThread):
             self.imagery_load_complete.emit(imagery.uuid)
             return
 
-        images_dataset.read_direct(images, source_sel=np.s_[0:first_end], dest_sel=np.s_[0:first_end])
+        images_dataset.read_direct(
+            images,
+            source_sel=np.s_[source_offset:source_offset + first_end],
+            dest_sel=np.s_[0:first_end],
+        )
         imagery.loaded_frame_count = first_end
 
         # Emit imagery_available - the main thread can now add this imagery to the viewer
@@ -430,7 +446,11 @@ class DataLoaderThread(QThread):
                 return
 
             end_idx = min(start_idx + block_size, num_images)
-            images_dataset.read_direct(images, source_sel=np.s_[start_idx:end_idx], dest_sel=np.s_[start_idx:end_idx])
+            images_dataset.read_direct(
+                images,
+                source_sel=np.s_[source_offset + start_idx:source_offset + end_idx],
+                dest_sel=np.s_[start_idx:end_idx],
+            )
             imagery.loaded_frame_count = end_idx
             self.imagery_block_loaded.emit(imagery.uuid, end_idx)
 
