@@ -332,6 +332,7 @@ class ImageryViewer(QWidget):
 
             # Refresh the current frame display
             self.set_frame_number(self.current_frame_number)
+            self.histogram.vb.autoRange()
 
     def load_imagery(self, imagery: Imagery):
         """Load imagery data into the viewer (legacy method, now adds and selects)"""
