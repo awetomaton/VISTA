@@ -131,5 +131,3 @@ To create custom algorithm widgets, inherit from the appropriate base class:
                'threshold': self.threshold_spinbox.value(),
                'min_area': self.area_spinbox.value()
            }
-
-See :doc:`../developer_guide/extending` for more details on extending VISTA widgets.

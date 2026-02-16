@@ -62,13 +62,7 @@ If you prefer using conda, you can create an environment and install VISTA:
 Verifying Installation
 ----------------------
 
-After installation, verify that VISTA is correctly installed by running:
-
-.. code-block:: bash
-
-   vista --version
-
-Or launch the application:
+Launch the application:
 
 .. code-block:: bash
 

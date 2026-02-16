@@ -129,17 +129,6 @@ exmaples of VISTA inputs.
    :alt: Simulate
    :align: center
 
-From Python API
-~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from vista.imagery import Imagery
-   from vista.sensors import SampledSensor
-
-   # Imagery is typically loaded through the GUI's data loader
-   # For programmatic creation, see the HDF5 Format section below
-
 HDF5 File Format
 ----------------
 

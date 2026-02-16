@@ -37,7 +37,7 @@ From Python code:
 Simulating Imagery
 ------------------
 
-One of the easiest ways to get started with VISTA is using it's built-in simulator. This helps introduce users to VISTA
+One of the easiest ways to get started with VISTA is using its built-in simulator. This helps introduce users to VISTA
 in addition to providing examples of ICD compliant imagery, detection, and tracks data.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-simulate-imagery.gif
@@ -127,38 +127,8 @@ Common keyboard shortcuts:
 * ``Drag and Drop on Tracks Panels``: Load tracks data
 * ``Drag and Drop on Detections Panels``: Load detections data
 
-Example: Using the API - Detection Workflow
--------------------------------------------
-
-VISTA is also usable outside of the context of the GUI. Here's a simple example workflow using the VISTA API:
-
-.. code-block:: python
-
-   from vista.imagery import Imagery
-   from vista.algorithms.detectors.threshold import simple_threshold_detector
-   from vista.algorithms.trackers.simple_tracker import SimpleTracker
-
-   # Load imagery
-   imagery = Imagery.from_file('path/to/imagery.h5')
-
-   # Apply detection
-   detections = simple_threshold_detector(
-       imagery.data,
-       threshold=10.0
-   )
-
-   # Track detections
-   tracker = SimpleTracker(max_distance=5.0)
-   tracks = tracker.track(detections)
-
-   # Analyze results
-   print(f"Found {len(tracks)} tracks")
-   for track in tracks:
-       print(f"Track {track.id}: {len(track)} detections")
-
 Next Steps
 ----------
 
 * Learn more about the :doc:`../user_guide/interface`
 * Check the :doc:`../api/imagery` for programmatic usage
-* Read about :doc:`../developer_guide/extending` to add custom algorithms
