@@ -263,8 +263,16 @@ class Track:
 
         # Single vectorized call — sensor handles frame grouping internally
         locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
-        self._cached_lons = np.asarray(locations.lon.deg, dtype=np.float64)
-        self._cached_lats = np.asarray(locations.lat.deg, dtype=np.float64)
+        lons = np.asarray(locations.lon.deg, dtype=np.float64)
+        lats = np.asarray(locations.lat.deg, dtype=np.float64)
+
+        # Set invalid locations to NaN
+        invalid = (locations.y.value == 0) & (locations.z.value == 0)
+        lons[invalid] = np.nan
+        lats[invalid] = np.nan
+
+        self._cached_lons = lons
+        self._cached_lats = lats
         return self._cached_lons, self._cached_lats
 
     def invalidate_caches(self):
@@ -432,8 +440,10 @@ class Track:
         # Create output array filled with NaT
         track_times = np.full(len(self.frames), np.datetime64('NaT'), dtype='datetime64[ns]')
 
-        # Validate matches: check if indices are in bounds and values actually match
-        valid_mask = (indices < len(sensor_imagery_frames)) & (sensor_imagery_frames[indices] == self.frames)
+        # Clip so we can safely index; out-of-bounds entries are caught by in_bounds
+        in_bounds = indices < len(sensor_imagery_frames)
+        clipped = np.minimum(indices, len(sensor_imagery_frames) - 1)
+        valid_mask = in_bounds & (sensor_imagery_frames[clipped] == self.frames)
 
         # Assign matching times
         track_times[valid_mask] = sensor_imagery_times[indices[valid_mask]]

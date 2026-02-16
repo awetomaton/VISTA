@@ -153,8 +153,16 @@ class Detector:
 
         # Single vectorized call — sensor handles frame grouping internally
         locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
-        self._cached_lons = np.asarray(locations.lon.deg, dtype=np.float64)
-        self._cached_lats = np.asarray(locations.lat.deg, dtype=np.float64)
+        lons = np.asarray(locations.lon.deg, dtype=np.float64)
+        lats = np.asarray(locations.lat.deg, dtype=np.float64)
+
+        # Set invalid locations to NaN
+        invalid = (locations.y.value == 0) & (locations.z.value == 0)
+        lons[invalid] = np.nan
+        lats[invalid] = np.nan
+
+        self._cached_lons = lons
+        self._cached_lats = lats
         return self._cached_lons, self._cached_lats
 
     def invalidate_caches(self):

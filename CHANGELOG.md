@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 🛠️ Updated track plot window to reset zoom view when axes are changed.
  - 🛠️ Updated projection cache default.
  - 🛠️ Updated data loader to allow loading a slice of imagery incrementally.
+ - 🛠️ Improved how invalid projected tracks are handled so that invalid track projects simply aren't shown rather than projecting them to the North pole.
  - 🛠️ Updated pixel-geodetic sensor conversions to handle converting either many rows / cols on a single frame or arrays of rows / cols / frames of equal length for sensor geolocation models that are expedited that way.
  - 📙 Corrected some mistakes in the documentation.
 
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 🔧 Fixed edge-case bug where small images might not be able to project into the geographic view.
  - 🔧 Corrected where preventing histogram plot updates takes effect when histogram is hidden.
  - 🔧 Fixed bug where track points from all frames were projected using the current frame's geolocation metadata
+ - 🔧 Fixed bug that could occur when viewing track details for tracks that contained frames that do not exist in the imagery
 
 ## [1.10.0] - 2026-2-15
 
