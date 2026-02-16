@@ -883,18 +883,6 @@ class VistaMainWindow(QMainWindow):
 
     def on_imagery_available(self, imagery, sensor, total_frames):
         """Handle imagery becoming available for viewing (first block loaded, loading continues in background)"""
-        # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries if img.sensor == sensor]
-        if imagery.name in existing_names:
-            QMessageBox.critical(
-                self,
-                "Duplicate Imagery Name",
-                f"Imagery with the name '{imagery.name}' is already loaded.\n\n"
-                f"Please rename one of the imagery files or close the existing imagery before loading.",
-                QMessageBox.StandardButton.Ok
-            )
-            self.statusBar().showMessage(f"Failed to load imagery: duplicate name '{imagery.name}'", 5000)
-            return
 
         # Handle sensor - check if sensor with same UUID already exists
         existing_sensor = None
@@ -1996,21 +1984,9 @@ class VistaMainWindow(QMainWindow):
 
     def on_multiple_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that produce multiple imagery"""
-        # Check for duplicate imagery name
-        existing_names = [img.name for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
         processed_imagery = [imagery for imagery in processed_imagery if imagery.images.size != 0]
         if len(processed_imagery) == 0:
             return
-        for imagery in processed_imagery:
-            if imagery.name in existing_names:
-                QMessageBox.critical(
-                    self,
-                    "Duplicate Imagery Name",
-                    f"Imagery with the name '{imagery.name}' already exists.\n\n"
-                    f"Please rename or remove the existing imagery before processing.",
-                    QMessageBox.StandardButton.Ok
-                )
-                return
         
         for imagery in processed_imagery:
             # Add the processed imagery to the viewer
@@ -2032,18 +2008,7 @@ class VistaMainWindow(QMainWindow):
 
     def on_single_imagery_created(self, processed_imagery):
         """Handle completion of algorithms that create single imagery"""
-        # Check for duplicate imagery name
         if processed_imagery.images.size == 0:
-            return
-        existing_names = [img.name for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
-        if processed_imagery.name in existing_names:
-            QMessageBox.critical(
-                self,
-                "Duplicate Imagery Name",
-                f"Imagery with the name '{processed_imagery.name}' already exists.\n\n"
-                f"Please rename or remove the existing imagery before processing.",
-                QMessageBox.StandardButton.Ok
-            )
             return
 
         # Add the processed imagery to the viewer
@@ -2286,17 +2251,6 @@ class VistaMainWindow(QMainWindow):
 
     def on_simple_threshold_complete(self, detector):
         """Handle completion of Simple Threshold detector processing"""
-        # Check for duplicate detector name
-        existing_names = [det.name for det in self.viewer.detectors]
-        if detector.name in existing_names:
-            QMessageBox.critical(
-                self,
-                "Duplicate Detector Name",
-                f"A detector with the name '{detector.name}' already exists.\n\n"
-                f"Please rename or remove the existing detector before processing.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
 
         # Add the detector to the viewer
         self.viewer.add_detector(detector)
@@ -2336,17 +2290,6 @@ class VistaMainWindow(QMainWindow):
 
     def on_cfar_complete(self, detector):
         """Handle completion of CFAR detector processing"""
-        # Check for duplicate detector name
-        existing_names = [det.name for det in self.viewer.detectors]
-        if detector.name in existing_names:
-            QMessageBox.critical(
-                self,
-                "Duplicate Detector Name",
-                f"A detector with the name '{detector.name}' already exists.\n\n"
-                f"Please rename or remove the existing detector before processing.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
 
         # Add the detector to the viewer
         self.viewer.add_detector(detector)
@@ -2386,18 +2329,7 @@ class VistaMainWindow(QMainWindow):
 
     def on_pstnn_complete(self, detector):
         """Handle completion of PSTNN detector processing"""
-        # Check for duplicate detector name
-        existing_names = [det.name for det in self.viewer.detectors]
-        if detector.name in existing_names:
-            QMessageBox.critical(
-                self,
-                "Duplicate Detector Name",
-                f"A detector with the name '{detector.name}' already exists.\n\n"
-                f"Please rename or remove the existing detector before processing.",
-                QMessageBox.StandardButton.Ok
-            )
-            return
-
+        
         # Add the detector to the viewer
         self.viewer.add_detector(detector)
 

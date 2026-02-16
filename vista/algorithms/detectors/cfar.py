@@ -87,7 +87,7 @@ class CFAR:
     >>> signal_mask, noise_std = cfar.process_chip(chip, search_center=(chip_size//2, chip_size//2))
     """
 
-    name = "Constant False Alarm Rate"
+    name = "CFAR"
 
     def __init__(self, background_radius: int, ignore_radius: int,
                  threshold_deviation: float, min_area: int = 1, max_area: int = 1000,

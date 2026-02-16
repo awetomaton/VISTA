@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 🛠️ Improved how invalid projected tracks are handled so that invalid track projects simply aren't shown rather than projecting them to the North pole.
  - 🛠️ Updated pixel-geodetic sensor conversions to handle converting either many rows / cols on a single frame or arrays of rows / cols / frames of equal length for sensor geolocation models that are expedited that way.
  - 🛠️ Fixed nusance issue where the histogram zoom pan was not reset when changing imagery.
+ - 🛠️ Eliminated error raising when imagery or detections are created with a name that matches another existing dataset.
  - 📙 Corrected some mistakes in the documentation.
 
 ### Bug Fixes
