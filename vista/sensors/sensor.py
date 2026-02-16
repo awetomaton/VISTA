@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 import uuid
 
 
@@ -242,14 +242,16 @@ class Sensor:
         """
         return self.uniformity_gain_images is not None
 
-    def geodetic_to_pixel(self, frame: int, loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(self, frame: Union[int, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
 
         Parameters
         ----------
-        frame : int
-            Frame number for which to perform the conversion
+        frame : int or np.ndarray
+            Frame number(s) for which to perform the conversion. If an array,
+            must have the same length as loc and each element specifies the frame
+            for the corresponding location.
         loc : EarthLocation
             Astropy EarthLocation object(s) containing geodetic coordinates
 
@@ -269,16 +271,18 @@ class Sensor:
         empty = np.empty_like(loc.x.value)
         empty.fill(np.nan)
         return empty, empty.copy()
-    
-    
-    def pixel_to_geodetic(self, frame: int, rows: np.ndarray, columns: np.ndarray):
+
+
+    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray):
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 
         Parameters
         ----------
-        frame : int
-            Frame number for which to perform the conversion
+        frame : int or np.ndarray
+            Frame number(s) for which to perform the conversion. If an array,
+            must have the same length as rows/columns and each element specifies
+            the frame for the corresponding pixel coordinate.
         rows : np.ndarray
             Array of row pixel coordinates
         columns : np.ndarray

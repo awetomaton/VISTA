@@ -47,33 +47,14 @@ def map_geodetic_to_pixel(
     if len(latitudes) != len(longitudes) or len(latitudes) != len(altitudes) or len(latitudes) != len(frames):
         raise ValueError("Latitude, longitude, altitude, and frames arrays must have the same length")
 
-    rows = np.empty(len(latitudes), dtype=np.float64)
-    columns = np.empty(len(latitudes), dtype=np.float64)
+    # Build EarthLocation for all points at once
+    locations = EarthLocation(
+        lat=latitudes * u.deg,
+        lon=longitudes * u.deg,
+        height=altitudes * u.m
+    )
 
-    # Group by frame for efficiency
-    unique_frames = np.unique(frames)
-
-    for frame in unique_frames:
-        # Get indices for this frame
-        frame_mask = frames == frame
-        frame_indices = np.where(frame_mask)[0]
-
-        # Create EarthLocation objects for this frame
-        lats = latitudes[frame_mask]
-        lons = longitudes[frame_mask]
-        alts = altitudes[frame_mask]
-
-        locations = EarthLocation(
-            lat=lats * u.deg,
-            lon=lons * u.deg,
-            height=alts * u.m
-        )
-
-        # Convert to pixel coordinates using sensor
-        frame_rows, frame_cols = sensor.geodetic_to_pixel(frame, locations)
-
-        # Store results
-        rows[frame_indices] = frame_rows
-        columns[frame_indices] = frame_cols
+    # Single vectorized call — sensor handles frame grouping internally
+    rows, columns = sensor.geodetic_to_pixel(frames, locations)
 
     return rows, columns

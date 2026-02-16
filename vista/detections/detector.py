@@ -151,20 +151,10 @@ class Detector:
         if not self.sensor or not self.sensor.can_geolocate():
             return None
 
-        lons = np.empty(len(self.frames), dtype=np.float64)
-        lats = np.empty(len(self.frames), dtype=np.float64)
-
-        # Group by frame for efficient batched projection
-        for frame in np.unique(self.frames):
-            mask = self.frames == frame
-            locations = self.sensor.pixel_to_geodetic(
-                frame, self.rows[mask], self.columns[mask]
-            )
-            lons[mask] = locations.lon.deg
-            lats[mask] = locations.lat.deg
-
-        self._cached_lons = lons
-        self._cached_lats = lats
+        # Single vectorized call — sensor handles frame grouping internally
+        locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
+        self._cached_lons = np.asarray(locations.lon.deg, dtype=np.float64)
+        self._cached_lats = np.asarray(locations.lat.deg, dtype=np.float64)
         return self._cached_lons, self._cached_lats
 
     def invalidate_caches(self):

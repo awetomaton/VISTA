@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 🛠️ Updated track plot window to reset zoom view when axes are changed.
  - 🛠️ Updated projection cache default.
  - 🛠️ Updated data loader to allow loading a slice of imagery incrementally.
+ - 🛠️ Updated pixel-geodetic sensor conversions to handle converting either many rows / cols on a single frame or arrays of rows / cols / frames of equal length for sensor geolocation models that are expedited that way.
+ - 📙 Corrected some mistakes in the documentation.
 
 ### Bug Fixes
 

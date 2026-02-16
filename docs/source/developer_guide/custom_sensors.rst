@@ -51,10 +51,12 @@ your sensor needs.
      - Whether pixel ↔ geodetic conversion is supported
      - ``False``
    * - ``pixel_to_geodetic(frame, rows, columns)``
-     - Convert pixel coordinates to geodetic (``EarthLocation``)
+     - Convert pixel coordinates to geodetic (``EarthLocation``).
+       ``frame`` may be an int or an array of per-point frame numbers.
      - ``EarthLocation`` at (0, 0, 0)
    * - ``geodetic_to_pixel(frame, loc)``
-     - Convert ``EarthLocation`` to pixel (rows, columns)
+     - Convert ``EarthLocation`` to pixel (rows, columns).
+       ``frame`` may be an int or an array of per-point frame numbers.
      - ``NaN`` arrays
    * - ``model_psf(sigma, size)``
      - Return a 2D PSF kernel
@@ -198,6 +200,15 @@ Step 3: Implement Geolocation
 
 Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
+.. note::
+
+   ``pixel_to_geodetic`` and ``geodetic_to_pixel`` accept ``frame`` as either a single ``int``
+   (for converting many pixels at one frame) **or** a ``numpy`` array of per-point frame numbers
+   (for converting pixels that span multiple frames in a single call). If your sensor's geolocation
+   model is frame-invariant (like the pinhole example below, which ignores ``frame``), both cases
+   work automatically. For frame-dependent sensors, see ``SampledSensor`` for how to handle the
+   array case by grouping points by unique frame.
+
 .. code-block:: python
 
        def can_geolocate(self) -> bool:
@@ -205,14 +216,14 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
            return (self.position_ecef_km is not None and
                    self.rotation_matrix is not None)
 
-       def pixel_to_geodetic(self, frame: int, rows: np.ndarray,
+       def pixel_to_geodetic(self, frame, rows: np.ndarray,
                              columns: np.ndarray) -> EarthLocation:
            """Convert pixel coordinates to geodetic via ray-Earth intersection.
 
            Parameters
            ----------
-           frame : int
-               Frame number (unused for this static model).
+           frame : int or np.ndarray
+               Frame number(s). Unused for this static model.
            rows : np.ndarray
                Row pixel coordinates.
            columns : np.ndarray
@@ -250,14 +261,14 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
                z=intersections[2] * units.km,
            )
 
-       def geodetic_to_pixel(self, frame: int,
+       def geodetic_to_pixel(self, frame,
                              loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
            """Convert geodetic coordinates to pixel coordinates.
 
            Parameters
            ----------
-           frame : int
-               Frame number (unused for this static model).
+           frame : int or np.ndarray
+               Frame number(s). Unused for this static model.
            loc : EarthLocation
                Geodetic coordinates to project.
 

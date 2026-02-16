@@ -56,29 +56,49 @@ Polynomial Transforms
 Basic Usage
 -----------
 
-Coordinate Transformations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pixel ↔ Geodetic Conversion via Sensor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pixel-to-geodetic and geodetic-to-pixel conversions are performed through the
+sensor object associated with the imagery, not through standalone functions in
+this module. See :doc:`../developer_guide/custom_sensors` for the full sensor API.
 
 .. code-block:: python
 
-   from vista.transforms import pixel_to_geodetic, geodetic_to_pixel
+   import numpy as np
+   from astropy.coordinates import EarthLocation
+   import astropy.units as u
 
-   # Convert pixel coordinates to lat/lon
-   lat, lon = pixel_to_geodetic(x=100, y=200, imagery=img)
-
-   # Convert lat/lon to pixel coordinates
-   x, y = geodetic_to_pixel(lat=40.7128, lon=-74.0060, imagery=img)
-
-Using Sensor Transforms
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from vista.transforms import sensor_to_ground
-
-   # Transform from sensor coordinates to ground plane
-   ground_x, ground_y = sensor_to_ground(
-       sensor_x, sensor_y,
-       sensor=sensor,
-       altitude=1000.0
+   # Convert pixel coordinates to geodetic (lat/lon/alt)
+   # frame can be a single int or an array of per-point frame numbers
+   location = sensor.pixel_to_geodetic(
+       frame=0,
+       rows=np.array([100.0, 200.0]),
+       columns=np.array([300.0, 400.0]),
    )
+   print(location.lat.deg, location.lon.deg)
+
+   # Convert geodetic coordinates to pixel
+   loc = EarthLocation(lat=40.7128 * u.deg, lon=-74.0060 * u.deg, height=0 * u.m)
+   rows, columns = sensor.geodetic_to_pixel(frame=0, loc=loc)
+
+Low-Level Transforms
+~~~~~~~~~~~~~~~~~~~~~
+
+The ``vista.transforms`` module provides lower-level building blocks used
+internally by sensor geolocation pipelines:
+
+.. code-block:: python
+
+   from vista.transforms import (
+       spherical_to_cartesian,
+       cartesian_to_spherical,
+       los_to_earth,
+       get_arf_transform,
+   )
+
+   # Convert spherical angles to a Cartesian unit vector
+   vec = spherical_to_cartesian(azimuth=0.1, elevation=0.3)
+
+   # Find where a line-of-sight vector intersects the Earth (WGS-84)
+   distance, intersection = los_to_earth(position_ecef_km, pointing_unit_vec)

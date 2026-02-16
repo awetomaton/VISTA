@@ -444,29 +444,35 @@ Placemark Properties
 Coordinate Conversion
 ~~~~~~~~~~~~~~~~~~~~~
 
-When imagery has sensor and geolocation data, placemarks can convert between
-pixel and geodetic coordinates:
+When imagery has a sensor with geolocation data, you can convert between
+pixel and geodetic coordinates using the sensor's methods directly:
 
 .. code-block:: python
 
-   from vista.transforms import pixel_to_geodetic, geodetic_to_pixel
+   import numpy as np
+   from astropy.coordinates import EarthLocation
+   import astropy.units as u
+
+   sensor = imagery.sensor
 
    # Convert pixel coordinates to geodetic (if sensor data available)
-   lat, lon, alt = pixel_to_geodetic(
-       imagery,
-       frame_idx=0,
-       row=512.5,
-       col=1024.3
-   )
+   if sensor.can_geolocate():
+       location = sensor.pixel_to_geodetic(
+           frame=0,
+           rows=np.array([512.5]),
+           columns=np.array([1024.3]),
+       )
+       lat = location.lat.deg   # Latitude in degrees
+       lon = location.lon.deg   # Longitude in degrees
+       alt = location.height    # Altitude
 
-   # Convert geodetic coordinates to pixel
-   row, col = geodetic_to_pixel(
-       imagery,
-       frame_idx=0,
-       lat=28.5721,
-       lon=-80.6480,
-       alt=0.0
-   )
+       # Convert geodetic coordinates to pixel
+       loc = EarthLocation(
+           lat=28.5721 * u.deg,
+           lon=-80.6480 * u.deg,
+           height=0.0 * u.m,
+       )
+       rows, cols = sensor.geodetic_to_pixel(frame=0, loc=loc)
 
 Use Cases
 ~~~~~~~~~
@@ -570,19 +576,22 @@ transforms these to pixel coordinates using the imagery's geolocation data:
 
 .. code-block:: python
 
+   import numpy as np
+   from astropy.coordinates import EarthLocation
+   import astropy.units as u
+
    # Shapefile coordinates are in (lon, lat) format
    shapefile_lon = -80.6480
    shapefile_lat = 28.5721
 
-   # Transform to pixel coordinates using imagery sensor data
-   if imagery.sensor is not None:
-       row, col = geodetic_to_pixel(
-           imagery,
-           frame_idx=0,
-           lat=shapefile_lat,
-           lon=shapefile_lon,
-           alt=0.0
+   # Transform to pixel coordinates using the sensor's geolocation model
+   if imagery.sensor is not None and imagery.sensor.can_geolocate():
+       loc = EarthLocation(
+           lat=shapefile_lat * u.deg,
+           lon=shapefile_lon * u.deg,
+           height=0.0 * u.m,
        )
+       rows, cols = imagery.sensor.geodetic_to_pixel(frame=0, loc=loc)
 
 Shapefile Attributes
 ~~~~~~~~~~~~~~~~~~~~

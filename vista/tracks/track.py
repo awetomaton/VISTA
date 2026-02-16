@@ -261,20 +261,10 @@ class Track:
         if not self.sensor or not self.sensor.can_geolocate():
             return None
 
-        lons = np.empty(len(self.frames), dtype=np.float64)
-        lats = np.empty(len(self.frames), dtype=np.float64)
-
-        # Group by frame for efficient batched projection
-        for frame in np.unique(self.frames):
-            mask = self.frames == frame
-            locations = self.sensor.pixel_to_geodetic(
-                frame, self.rows[mask], self.columns[mask]
-            )
-            lons[mask] = locations.lon.deg
-            lats[mask] = locations.lat.deg
-
-        self._cached_lons = lons
-        self._cached_lats = lats
+        # Single vectorized call — sensor handles frame grouping internally
+        locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
+        self._cached_lons = np.asarray(locations.lon.deg, dtype=np.float64)
+        self._cached_lats = np.asarray(locations.lat.deg, dtype=np.float64)
         return self._cached_lons, self._cached_lats
 
     def invalidate_caches(self):
@@ -733,22 +723,16 @@ class Track:
             "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
         }
 
-        # Include geolocation if possible - use batched projection per frame
-        altitudes = np.empty(len(self.frames), dtype=np.float64)
+        # Include geolocation if possible
         geodetic = self.get_geodetic_coords()
 
         if geodetic is not None:
-            # Lat/lon come from the cache; only altitude needs frame-by-frame lookup
             data["Longitude (deg)"] = geodetic[0]
             data["Latitude (deg)"] = geodetic[1]
 
-            for frame in np.unique(self.frames):
-                mask = self.frames == frame
-                locations = self.sensor.pixel_to_geodetic(
-                    frame, self.rows[mask], self.columns[mask]
-                )
-                altitudes[mask] = locations.height.to('km').value
-            data["Altitude (km)"] = altitudes
+            # Single vectorized call for altitude
+            locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
+            data["Altitude (km)"] = np.asarray(locations.height.to('km').value)
         else:
             # Sensor cannot geolocate - fill with NaN
             data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
