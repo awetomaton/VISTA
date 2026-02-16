@@ -128,6 +128,8 @@ class Track:
     _cached_brush: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph brush
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
     _brush_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached brush
+    _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
+    _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
     uuid: str = field(init=None, default=None)
     
     def __post_init__(self):
@@ -162,6 +164,12 @@ class Track:
                 track_slice.covariance_01 = track_slice.covariance_01[s]
             if track_slice.covariance_11 is not None:
                 track_slice.covariance_11 = track_slice.covariance_11[s]
+
+            # Slice cached geodetic coords if present
+            if track_slice._cached_lons is not None:
+                track_slice._cached_lons = track_slice._cached_lons[s]
+            if track_slice._cached_lats is not None:
+                track_slice._cached_lats = track_slice._cached_lats[s]
 
             return track_slice
         else:
@@ -235,6 +243,40 @@ class Track:
         indices = np.where(mask)[0]
         return indices if len(indices) > 0 else None
 
+    def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
+        """Get geodetic coordinates for all track points, computing and caching if needed.
+
+        Projects each track point using its own frame's sensor geometry, so the
+        result represents the true geographic location at each time step. The result
+        is cached so subsequent calls return immediately.
+
+        Returns
+        -------
+        tuple[NDArray[np.float64], NDArray[np.float64]] or None
+            (longitudes, latitudes) in degrees, or None if the sensor cannot geolocate.
+        """
+        if self._cached_lons is not None and self._cached_lats is not None:
+            return self._cached_lons, self._cached_lats
+
+        if not self.sensor or not self.sensor.can_geolocate():
+            return None
+
+        lons = np.empty(len(self.frames), dtype=np.float64)
+        lats = np.empty(len(self.frames), dtype=np.float64)
+
+        # Group by frame for efficient batched projection
+        for frame in np.unique(self.frames):
+            mask = self.frames == frame
+            locations = self.sensor.pixel_to_geodetic(
+                frame, self.rows[mask], self.columns[mask]
+            )
+            lons[mask] = locations.lon.deg
+            lats[mask] = locations.lat.deg
+
+        self._cached_lons = lons
+        self._cached_lats = lats
+        return self._cached_lons, self._cached_lats
+
     def invalidate_caches(self):
         """Invalidate cached data structures when track data changes."""
         self._frame_index = None
@@ -243,6 +285,8 @@ class Track:
         self._pen_params = None
         self._brush_params = None
         self._length = None
+        self._cached_lons = None
+        self._cached_lats = None
 
     def get_pen(self, width=None, style=None):
         """
@@ -532,11 +576,20 @@ class Track:
                 kwargs["covariance_11"] = cov_11
 
         # Determine rows/columns - priority: Rows/Columns > geodetic-to-pixel mapping
+        has_geodetic = ("Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns
+                        and "Altitude (km)" in df.columns)
+        initial_lons = None
+        initial_lats = None
+
         if "Rows" in df.columns and "Columns" in df.columns:
             # Row/Column take precedence
             rows = df["Rows"].to_numpy()
             columns = df["Columns"].to_numpy()
-        elif "Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns and "Altitude (km)" in df.columns:
+            # Preserve geodetic coords if also present (avoids re-projection later)
+            if has_geodetic:
+                initial_lons = df["Longitude (deg)"].to_numpy(dtype=np.float64)
+                initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
+        elif has_geodetic:
             # Need geodetic-to-pixel conversion
             if sensor is None:
                 raise ValueError(
@@ -548,10 +601,12 @@ class Track:
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
                     "does not support geolocation."
                 )
+            initial_lons = df["Longitude (deg)"].to_numpy(dtype=np.float64)
+            initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
             # Map geodetic to pixel using sensor
             rows, columns = map_geodetic_to_pixel(
                 df["Latitude (deg)"].to_numpy(),
-                df["Longitude (deg)"].to_numpy(),
+                initial_lons,
                 df["Altitude (km)"].to_numpy(),
                 frames,
                 sensor
@@ -569,7 +624,7 @@ class Track:
             if 'show_uncertainty' not in kwargs:
                 kwargs['show_uncertainty'] = True
 
-        return cls(
+        track = cls(
             name = name,
             frames = frames,
             rows = rows,
@@ -577,6 +632,13 @@ class Track:
             sensor = sensor,
             **kwargs
         )
+
+        # Pre-populate geodetic cache if coords were available in the dataframe
+        if initial_lons is not None and initial_lats is not None:
+            track._cached_lons = initial_lons
+            track._cached_lats = initial_lats
+
+        return track
     
     @property
     def length(self):
@@ -617,7 +679,7 @@ class Track:
                 'noise_stds': self.extraction_metadata['noise_stds'].copy(),
             }
 
-        return self.__class__(
+        track_copy = self.__class__(
             name = self.name,
             frames = self.frames.copy(),
             rows = self.rows.copy(),
@@ -640,6 +702,12 @@ class Track:
             covariance_11 = self.covariance_11.copy() if self.covariance_11 is not None else None,
             show_uncertainty = self.show_uncertainty,
         )
+        # Preserve cached geodetic coords
+        if self._cached_lons is not None:
+            track_copy._cached_lons = self._cached_lons.copy()
+        if self._cached_lats is not None:
+            track_copy._cached_lats = self._cached_lats.copy()
+        return track_copy
     
     def to_dataframe(self) -> pd.DataFrame:
         """Convert track to DataFrame
@@ -665,23 +733,27 @@ class Track:
             "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
         }
 
-        # Include geolocation if possible
+        # Include geolocation if possible - use batched projection per frame
+        altitudes = np.empty(len(self.frames), dtype=np.float64)
+        geodetic = self.get_geodetic_coords()
 
-        # Convert pixel coordinates to geodetic for each frame
-        latitudes = []
-        longitudes = []
-        altitudes = []
+        if geodetic is not None:
+            # Lat/lon come from the cache; only altitude needs frame-by-frame lookup
+            data["Longitude (deg)"] = geodetic[0]
+            data["Latitude (deg)"] = geodetic[1]
 
-        for i, frame in enumerate(self.frames):
-            # Convert single point
-            locations = self.sensor.pixel_to_geodetic(frame, np.array([self.rows[i]]), np.array([self.columns[i]]))
-            latitudes.append(locations.lat.deg[0])
-            longitudes.append(locations.lon.deg[0])
-            altitudes.append(locations.height.to('km').value[0])
-
-        data["Latitude (deg)"] = latitudes
-        data["Longitude (deg)"] = longitudes
-        data["Altitude (km)"] = altitudes
+            for frame in np.unique(self.frames):
+                mask = self.frames == frame
+                locations = self.sensor.pixel_to_geodetic(
+                    frame, self.rows[mask], self.columns[mask]
+                )
+                altitudes[mask] = locations.height.to('km').value
+            data["Altitude (km)"] = altitudes
+        else:
+            # Sensor cannot geolocate - fill with NaN
+            data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
+            data["Longitude (deg)"] = np.full(len(self.frames), np.nan)
+            data["Altitude (km)"] = np.full(len(self.frames), np.nan)
 
         # Include times if possible
         track_times = self.get_times()

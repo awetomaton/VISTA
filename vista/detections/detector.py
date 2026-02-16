@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Optional, Union
 import pathlib
 import numpy as np
 from numpy.typing import NDArray
@@ -90,6 +90,8 @@ class Detector:
     _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
     _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
+    _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
+    _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
     uuid: str = field(init=None, default=None)
 
     def __post_init__(self):
@@ -131,11 +133,47 @@ class Detector:
             return self.rows[indices], self.columns[indices]
         return np.array([]), np.array([])
 
+    def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
+        """Get geodetic coordinates for all detection points, computing and caching if needed.
+
+        Projects each detection point using its own frame's sensor geometry, so the
+        result represents the true geographic location. The result is cached so
+        subsequent calls return immediately.
+
+        Returns
+        -------
+        tuple[NDArray[np.float64], NDArray[np.float64]] or None
+            (longitudes, latitudes) in degrees, or None if the sensor cannot geolocate.
+        """
+        if self._cached_lons is not None and self._cached_lats is not None:
+            return self._cached_lons, self._cached_lats
+
+        if not self.sensor or not self.sensor.can_geolocate():
+            return None
+
+        lons = np.empty(len(self.frames), dtype=np.float64)
+        lats = np.empty(len(self.frames), dtype=np.float64)
+
+        # Group by frame for efficient batched projection
+        for frame in np.unique(self.frames):
+            mask = self.frames == frame
+            locations = self.sensor.pixel_to_geodetic(
+                frame, self.rows[mask], self.columns[mask]
+            )
+            lons[mask] = locations.lon.deg
+            lats[mask] = locations.lat.deg
+
+        self._cached_lons = lons
+        self._cached_lats = lats
+        return self._cached_lons, self._cached_lats
+
     def invalidate_caches(self):
         """Invalidate cached data structures when detector data changes."""
         self._frame_index = None
         self._cached_pen = None
         self._pen_params = None
+        self._cached_lons = None
+        self._cached_lats = None
 
     def get_pen(self, width=None, **kwargs):
         """
@@ -174,6 +212,11 @@ class Detector:
                     detector_slice.labels = detector_slice.labels[s]
                 else:  # numpy array boolean mask or indices
                     detector_slice.labels = [detector_slice.labels[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labels[i] for i in s]
+            # Slice cached geodetic coords if present
+            if detector_slice._cached_lons is not None:
+                detector_slice._cached_lons = detector_slice._cached_lons[s]
+            if detector_slice._cached_lats is not None:
+                detector_slice._cached_lats = detector_slice._cached_lats[s]
             return detector_slice
         else:
             raise TypeError("Invalid index or slice type.")
@@ -241,7 +284,8 @@ class Detector:
                 else:
                     labels_list.append(set())
             kwargs["labels"] = labels_list
-        return cls(
+
+        detector = cls(
             name = name,
             frames = df["Frames"].to_numpy(),
             rows = df["Rows"].to_numpy(),
@@ -249,6 +293,13 @@ class Detector:
             sensor = sensor,
             **kwargs
         )
+
+        # Pre-populate geodetic cache if coords were available in the dataframe
+        if "Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns:
+            detector._cached_lons = df["Longitude (deg)"].to_numpy(dtype=np.float64)
+            detector._cached_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
+
+        return detector
 
     def copy(self):
         """
@@ -259,7 +310,7 @@ class Detector:
         Detector
             New Detector object with copied arrays and styling attributes
         """
-        return self.__class__(
+        detector_copy = self.__class__(
             name = self.name,
             frames = self.frames.copy(),
             rows = self.rows.copy(),
@@ -272,6 +323,12 @@ class Detector:
             visible = self.visible,
             labels = [label_set.copy() for label_set in self.labels],
         )
+        # Preserve cached geodetic coords
+        if self._cached_lons is not None:
+            detector_copy._cached_lons = self._cached_lons.copy()
+        if self._cached_lats is not None:
+            detector_copy._cached_lats = self._cached_lats.copy()
+        return detector_copy
     
     def to_csv(self, file: Union[str, pathlib.Path]):
         self.to_dataframe().to_csv(file, index=None)

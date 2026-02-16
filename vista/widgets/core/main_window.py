@@ -870,6 +870,7 @@ class VistaMainWindow(QMainWindow):
             self.settings.setValue("last_imagery_dir", str(Path(file_path).parent))
 
             # Create and start loader thread (no modal dialog - progress shown in imagery panel)
+            self.statusBar().showMessage("Loading imagery", 4000)
             self.loader_thread = DataLoaderThread(file_path, 'imagery')
             self.loader_thread.imagery_available.connect(self.on_imagery_available)
             self.loader_thread.imagery_block_loaded.connect(self.on_imagery_block_loaded)

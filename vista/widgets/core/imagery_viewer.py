@@ -601,47 +601,30 @@ class ImageryViewer(QWidget):
                 scatter.setData(x=[], y=[])  # Hide by setting empty data
                 continue
 
-            # Get detections - either all (complete mode) or just current frame
+            # Build a boolean mask over the full detector arrays for filtering
             if detector.complete:
-                # Show all detections across all frames
-                rows, cols = detector.rows.copy(), detector.columns.copy()
+                det_mask = np.ones(len(detector.frames), dtype=bool)
             else:
-                # Get detections at current frame using optimized O(1) lookup
-                rows, cols = detector.get_detections_at_frame(frame_num)
+                det_mask = detector.frames == frame_num
 
             # Apply label filter if detections panel has active filters
-            if len(rows) > 0:
+            if np.any(det_mask):
                 try:
                     if hasattr(self, 'data_manager') and self.data_manager is not None:
                         if hasattr(self.data_manager, 'detections_panel'):
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
-                            if detector.complete:
-                                # For complete mode, just apply label filter
-                                if np.any(label_mask):
-                                    rows = detector.rows[label_mask]
-                                    cols = detector.columns[label_mask]
-                                else:
-                                    rows, cols = np.array([]), np.array([])
-                            else:
-                                # For current frame mode, combine frame and label filters
-                                frame_mask = detector.frames == frame_num
-                                combined_mask = frame_mask & label_mask
-                                if np.any(combined_mask):
-                                    rows = detector.rows[combined_mask]
-                                    cols = detector.columns[combined_mask]
-                                else:
-                                    rows, cols = np.array([]), np.array([])
+                            det_mask &= label_mask
                 except AttributeError:
-                    pass  # Use unfiltered rows/cols
+                    pass  # Use unfiltered mask
 
-            if len(rows) > 0:
-                # In map view, project pixel coordinates to (lon, lat)
-                if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
-                    plot_x, plot_y = self._project_overlay_coords(
-                        detector.sensor, frame_num, rows, cols
-                    )
+            if np.any(det_mask):
+                # Use cached geodetic coords in map view
+                _det_map_mode = self.map_view_mode and detector.sensor and detector.sensor.can_geolocate()
+                geodetic = detector.get_geodetic_coords() if _det_map_mode else None
+                if geodetic is not None:
+                    plot_x, plot_y = geodetic[0][det_mask], geodetic[1][det_mask]
                 else:
-                    plot_x, plot_y = cols, rows
+                    plot_x, plot_y = detector.columns[det_mask], detector.rows[det_mask]
 
                 scatter.setData(
                     x=plot_x, y=plot_y,
@@ -705,21 +688,18 @@ class ImageryViewer(QWidget):
             line_width = track.line_width + 5 if is_selected else track.line_width
             marker_size = track.marker_size + 5 if is_selected else track.marker_size
 
-            # Helper to project track coordinates in map view
+            # Use cached geodetic coords in map view (avoids re-projecting every frame)
             _map_mode = self.map_view_mode and track.sensor and track.sensor.can_geolocate()
+            geodetic = track.get_geodetic_coords() if _map_mode else None
+            _map_mode = geodetic is not None  # Fall back if projection fails
 
             # If track is marked as complete, show entire track regardless of current frame
             if track.complete:
-                rows = track.rows
-                cols = track.columns
-
-                # Project for map view
+                # Get coordinates for the path
                 if _map_mode:
-                    path_x, path_y = self._project_overlay_coords(
-                        track.sensor, frame_num, rows, cols
-                    )
+                    path_x, path_y = geodetic
                 else:
-                    path_x, path_y = cols, rows
+                    path_x, path_y = track.columns, track.rows
 
                 # Update track path with entire track (only if show_line is True)
                 if track.show_line:
@@ -731,15 +711,13 @@ class ImageryViewer(QWidget):
                     path.setData(x=[], y=[])  # Hide line
 
                 # Update current position marker (show marker at current frame if it exists)
-                track_data = track.get_track_data_at_frame(frame_num)
-                if track_data is not None:
-                    row, col = track_data
+                track._build_frame_index()
+                idx = track._frame_index.get(frame_num)
+                if idx is not None:
                     if _map_mode:
-                        mx, my = self._project_overlay_coords(
-                            track.sensor, frame_num, np.array([row]), np.array([col])
-                        )
+                        mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
                     else:
-                        mx, my = [col], [row]
+                        mx, my = [track.columns[idx]], [track.rows[idx]]
                     marker.setData(
                         x=mx, y=my,
                         pen=track.get_pen(width=2),  # Use cached pen
@@ -754,16 +732,11 @@ class ImageryViewer(QWidget):
                 visible_indices = track.get_visible_indices(frame_num)
 
                 if visible_indices is not None and len(visible_indices) > 0:
-                    rows = track.rows[visible_indices]
-                    cols = track.columns[visible_indices]
-
-                    # Project for map view
+                    # Get coordinates for visible portion
                     if _map_mode:
-                        path_x, path_y = self._project_overlay_coords(
-                            track.sensor, frame_num, rows, cols
-                        )
+                        path_x, path_y = geodetic[0][visible_indices], geodetic[1][visible_indices]
                     else:
-                        path_x, path_y = cols, rows
+                        path_x, path_y = track.columns[visible_indices], track.rows[visible_indices]
 
                     # Update track path (only if show_line is True)
                     if track.show_line:
@@ -775,15 +748,13 @@ class ImageryViewer(QWidget):
                         path.setData(x=[], y=[])  # Hide line
 
                     # Update current position marker
-                    track_data = track.get_track_data_at_frame(frame_num)
-                    if track_data is not None:
-                        row, col = track_data
+                    track._build_frame_index()
+                    idx = track._frame_index.get(frame_num)
+                    if idx is not None:
                         if _map_mode:
-                            mx, my = self._project_overlay_coords(
-                                track.sensor, frame_num, np.array([row]), np.array([col])
-                            )
+                            mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
                         else:
-                            mx, my = [col], [row]
+                            mx, my = [track.columns[idx]], [track.rows[idx]]
                         marker.setData(
                             x=mx, y=my,
                             pen=track.get_pen(width=2),  # Use cached pen
@@ -1156,16 +1127,14 @@ class ImageryViewer(QWidget):
                 continue
 
             # Check if ALL visible points are contained
-            visible_rows = track.rows[visible_indices]
-            visible_cols = track.columns[visible_indices]
-
             if _map_mode and track.sensor and track.sensor.can_geolocate():
-                # Project to (lon, lat) — lasso polygon is in map coords
-                check_x, check_y = self._project_overlay_coords(
-                    track.sensor, self.current_frame_number, visible_rows, visible_cols
-                )
+                geodetic = track.get_geodetic_coords()
+                if geodetic is not None:
+                    check_x, check_y = geodetic[0][visible_indices], geodetic[1][visible_indices]
+                else:
+                    check_x, check_y = track.columns[visible_indices], track.rows[visible_indices]
             else:
-                check_x, check_y = visible_cols, visible_rows
+                check_x, check_y = track.columns[visible_indices], track.rows[visible_indices]
 
             all_contained = True
             for x, y in zip(check_x, check_y):
@@ -1225,9 +1194,11 @@ class ImageryViewer(QWidget):
                     pass  # Use unfiltered rows/cols/indices
 
             if _map_mode and detector.sensor and detector.sensor.can_geolocate():
-                check_x, check_y = self._project_overlay_coords(
-                    detector.sensor, self.current_frame_number, rows, cols
-                )
+                geodetic = detector.get_geodetic_coords()
+                if geodetic is not None:
+                    check_x, check_y = geodetic[0][indices], geodetic[1][indices]
+                else:
+                    check_x, check_y = cols, rows
             else:
                 check_x, check_y = cols, rows
 
@@ -2710,20 +2681,20 @@ class ImageryViewer(QWidget):
                         # Show all history up to current frame
                         frame_mask = track.frames <= self.current_frame_number
 
-                    # Get visible points
-                    visible_rows = track.rows[frame_mask]
-                    visible_cols = track.columns[frame_mask]
-
-                    if len(visible_rows) == 0:
+                    if not np.any(frame_mask):
                         continue
 
                     if self.map_view_mode:
-                        # Project track pixel coords to (lon, lat) for comparison
-                        track_x, track_y = self._project_overlay_coords(
-                            track.sensor, self.current_frame_number, visible_rows, visible_cols
-                        )
+                        geodetic = track.get_geodetic_coords()
+                        if geodetic is not None:
+                            track_x, track_y = geodetic[0][frame_mask], geodetic[1][frame_mask]
+                        else:
+                            track_x = track.columns[frame_mask]
+                            track_y = track.rows[frame_mask]
                         distances = np.sqrt((track_x - col)**2 + (track_y - row)**2)
                     else:
+                        visible_cols = track.columns[frame_mask]
+                        visible_rows = track.rows[frame_mask]
                         distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
 
                     valid = ~np.isnan(distances)
@@ -2802,10 +2773,11 @@ class ImageryViewer(QWidget):
 
                     # Calculate distances to all visible detections
                     if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
-                        # Project detection pixel coords to (lon, lat) for comparison
-                        det_x, det_y = self._project_overlay_coords(
-                            detector.sensor, self.current_frame_number, rows, cols
-                        )
+                        geodetic = detector.get_geodetic_coords()
+                        if geodetic is not None:
+                            det_x, det_y = geodetic[0][indices], geodetic[1][indices]
+                        else:
+                            det_x, det_y = cols, rows
                         distances = np.sqrt((det_x - col)**2 + (det_y - row)**2)
                     else:
                         distances = np.sqrt((cols - col)**2 + (rows - row)**2)
