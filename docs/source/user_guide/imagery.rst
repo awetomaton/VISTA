@@ -99,33 +99,6 @@ follows a circular path, along with noisy detections and a ground-truth track.
 
    python scripts/example_programmatic_loading.py
 
-create_test_shapefile.py
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Creates example shapefiles (polygons, polylines, points, and multipoints) for testing VISTA's shapefile overlay
-feature. Accepts an optional bounding box to control the geographic extent of the generated shapes.
-
-.. code-block:: bash
-
-   python scripts/create_test_shapefile.py
-   python scripts/create_test_shapefile.py --lon-min -105.3 --lat-min 39.95 --lon-max -105.2 --lat-max 40.05
-
-Output is saved to ``data/shapefiles/`` by default, or to a custom directory via ``--output-dir``.
-
-.. note::
-   This script requires the ``pyshp`` package (``pip install pyshp``).
-
-test_poly_roundtrip.py
-~~~~~~~~~~~~~~~~~~~~~~
-
-A diagnostic script that validates the accuracy of the 2D polynomial round-trip transformations used in
-geolocation. It fits forward (pixel to ARF angle) and reverse (ARF angle to pixel) polynomials and reports
-residuals and round-trip errors at sample points.
-
-.. code-block:: bash
-
-   python scripts/test_poly_roundtrip.py
-
 Loading Imagery
 ---------------
 

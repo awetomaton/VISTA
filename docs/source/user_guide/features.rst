@@ -496,6 +496,22 @@ on imagery.
    :alt: Shapefiles
    :align: center
 
+create_test_shapefile.py
+~~~~~~~~~~~~~~~~~~~~~~~~
+The ``scripts/`` directory includes a script to generate example shapefiles.
+
+Creates example shapefiles (polygons, polylines, points, and multipoints) for testing VISTA's shapefile overlay
+feature. Accepts an optional bounding box to control the geographic extent of the generated shapes.
+
+.. code-block:: bash
+
+   python scripts/create_test_shapefile.py
+   python scripts/create_test_shapefile.py --lon-min -105.3 --lat-min 39.95 --lon-max -105.2 --lat-max 40.05
+
+Output is saved to ``data/shapefiles/`` by default, or to a custom directory via ``--output-dir``.
+
+.. note::
+   This script requires the ``pyshp`` package (``pip install pyshp``).
 
 Importing Shapefiles
 ~~~~~~~~~~~~~~~~~~~~
