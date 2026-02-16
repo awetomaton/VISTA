@@ -563,11 +563,11 @@ class WMSSettingsTab(QVBoxLayout):
 
         self.projection_cache_spinbox = QSpinBox()
         self.projection_cache_spinbox.setRange(8, 262144)
-        self.projection_cache_spinbox.setValue(2048)
+        self.projection_cache_spinbox.setValue(16384)
         self.projection_cache_spinbox.setToolTip(
             "Maximum number of projected imagery frames to cache.\n"
             "Higher values use more memory but reduce recomputation.\n"
-            "Default: 64"
+            "Default: 16384"
         )
         cache_layout.addRow("Projection Cache Size:", self.projection_cache_spinbox)
 
@@ -685,7 +685,7 @@ class WMSSettingsTab(QVBoxLayout):
             self.settings.value("wms/tile_cache_size", 256, type=int)
         )
         self.projection_cache_spinbox.setValue(
-            self.settings.value("wms/projection_cache_size", 64, type=int)
+            self.settings.value("wms/projection_cache_size", 16384, type=int)
         )
 
         # Projection settings

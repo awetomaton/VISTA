@@ -378,12 +378,13 @@ class ImageryViewer(QWidget):
                     # Always set image without auto-levels to prevent flickering
                     self.image_item.setImage(self.imagery.images[image_index], autoLevels=False)
 
-                    if self.histogram_visible:
-                        # Get user histogram limits if set
-                        user_histogram_bounds = None
-                        if self.imagery.uuid in self.user_histogram_bounds:
-                            user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
+                    
+                    # Get user histogram limits if set
+                    user_histogram_bounds = None
+                    if self.imagery.uuid in self.user_histogram_bounds:
+                        user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
 
+                    if self.histogram_visible:
                         # Update histogram plot data
                         if self.imagery.has_cached_histograms():
                             # Use pre-computed histogram data
@@ -400,18 +401,18 @@ class ImageryViewer(QWidget):
                             # Signal already connected, ignore
                             pass
 
-                        # Restore user's histogram bounds if they were manually set
-                        if user_histogram_bounds is None:
-                            if (self.imagery.default_histogram_bounds is None):
-                                self.histogram.setLevels(
-                                    self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
-                                )
-                            else:
-                                self.histogram.setLevels(
-                                    *self.imagery.default_histogram_bounds[image_index]
-                                )
+                    # Restore user's histogram bounds if they were manually set
+                    if user_histogram_bounds is None:
+                        if (self.imagery.default_histogram_bounds is None):
+                            self.histogram.setLevels(
+                                self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
+                            )
                         else:
-                            self.histogram.setLevels(*user_histogram_bounds)
+                            self.histogram.setLevels(
+                                *self.imagery.default_histogram_bounds[image_index]
+                            )
+                    else:
+                        self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()

@@ -151,18 +151,20 @@ class ImageryProjector:
 
         # Determine coarse grid size — only use coarse grid when it saves significant work
         coarse_max = self.coarse_grid_size
-        use_coarse = coarse_max > 0 and (output_width > coarse_max or output_height > coarse_max)
-
-        if use_coarse:
+        if coarse_max > 0:
             # Maintain aspect ratio in the coarse grid
             aspect = output_width / max(1, output_height)
             if aspect >= 1:
-                coarse_w = coarse_max
-                coarse_h = max(4, int(round(coarse_max / aspect)))
+                coarse_w = min(coarse_max, output_width)
+                coarse_h = max(4, min(int(round(coarse_max / aspect)), output_height))
             else:
-                coarse_h = coarse_max
-                coarse_w = max(4, int(round(coarse_max * aspect)))
+                coarse_h = min(coarse_max, output_height)
+                coarse_w = max(4, min(int(round(coarse_max * aspect)), output_width))
+            use_coarse = coarse_w < output_width or coarse_h < output_height
+        else:
+            use_coarse = False
 
+        if use_coarse:
             coarse_lons = np.linspace(lon_min, lon_max, coarse_w)
             coarse_lats = np.linspace(lat_min, lat_max, coarse_h)
             coarse_lon_grid, coarse_lat_grid = np.meshgrid(coarse_lons, coarse_lats)
@@ -173,6 +175,13 @@ class ImageryProjector:
                 height=0 * units.m,
             )
             c_rows, c_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
+            c_rows = np.asarray(c_rows).ravel()
+            c_cols = np.asarray(c_cols).ravel()
+            expected_size = coarse_h * coarse_w
+            if c_rows.size != expected_size or c_cols.size != expected_size:
+                use_coarse = False
+
+        if use_coarse:
             c_rows = (c_rows - row_offset).reshape(coarse_h, coarse_w)
             c_cols = (c_cols - column_offset).reshape(coarse_h, coarse_w)
 
@@ -199,7 +208,7 @@ class ImageryProjector:
                 src_rows[invalid] = np.nan
                 src_cols[invalid] = np.nan
         else:
-            # Small output — compute directly at every pixel
+            # Output is small enough or coarse grid failed — compute directly at every pixel
             lons = np.linspace(lon_min, lon_max, output_width)
             lats = np.linspace(lat_min, lat_max, output_height)
             lon_grid, lat_grid = np.meshgrid(lons, lats)
@@ -210,8 +219,8 @@ class ImageryProjector:
                 height=0 * units.m,
             )
             src_rows, src_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
-            src_rows = src_rows - row_offset
-            src_cols = src_cols - column_offset
+            src_rows = np.asarray(src_rows).ravel() - row_offset
+            src_cols = np.asarray(src_cols).ravel() - column_offset
 
         return src_rows, src_cols
 

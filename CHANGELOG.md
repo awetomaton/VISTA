@@ -11,7 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - ✨ Added the ability to delete AOIs with the `delete` key
  - 🛠️ Updated track plot window to reset zoom view when axes are changed.
+ - 🛠️ Updated projection cache default.
  - 🛠️ Updated data loader to allow loading a slice of imagery incrementally.
+
+### Bug Fixes
+
+ - 🔧 Fixed edge-case bug where small images might not be able to project into the geographic view.
+ - 🔧 Corrected where preventing histogram plot updates takes effect when histogram is hidden.
 
 ## [1.10.0] - 2026-2-15
 
