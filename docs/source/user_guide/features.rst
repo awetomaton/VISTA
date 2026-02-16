@@ -40,7 +40,7 @@ Creating AOIs
 
 **Interactive Creation:**
 
-1. Open the **AOIs Panel** from the Data Panels
+1. Open the **AOIs** Panel from the Data Panels
 2. Click **Add AOI** button
 3. Draw a rectangle on the imagery viewer by clicking and dragging
 4. Adjust size and position by dragging the corner handles
@@ -144,7 +144,7 @@ The CSV file must contain the following columns (case-sensitive):
 
 **Loading AOIs via GUI:**
 
-1. Open the **AOIs Panel** from the Data Panels
+1. Open the **AOIs** panel from the Data Panels
 2. Click **File → Import → AOIs from CSV**
 3. Select your CSV file
 4. AOIs are automatically created and displayed on the imagery
@@ -282,7 +282,7 @@ Creating Placemarks
 
 **Interactive Creation:**
 
-1. Open the **Features Panel** from the Data Panels
+1. Open the **Features** tab from the Data Panels
 2. Click **Add Placemark** button
 3. Click on the imagery to place the placemark
 4. Enter a name and optional description
@@ -338,7 +338,7 @@ The CSV file must contain the following columns (case-sensitive):
 
 **Loading via GUI:**
 
-1. Open the **Features Panel** from the Data Panels
+1. Open the **Features** tab from the Data Panels
 2. Click **File → Import → Placemarks from CSV**
 3. Select your CSV file
 4. Placemarks are automatically created and displayed
@@ -518,7 +518,7 @@ Importing Shapefiles
 
 **Via GUI:**
 
-1. Open the **Features Panel**
+1. Open the **Features** tab
 2. Click **Import Shapefile** button
 3. Select a `.shp` file
 4. The shapefile is automatically converted to pixel coordinates if imagery has geolocation
@@ -635,7 +635,7 @@ Feature Management
 Managing Features in the GUI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The **Features Panel** provides centralized management of all features:
+The **Features** tab provides centralized management of all features:
 
 **Feature List**
    - Displays all placemarks, shapefiles, and custom features

@@ -91,6 +91,7 @@ Documentation Contents
    developer_guide/architecture
    developer_guide/extending
    developer_guide/custom_sensors
+   developer_guide/custom_loaders
 
 .. toctree::
    :maxdepth: 1

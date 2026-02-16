@@ -783,13 +783,14 @@ Tooltips
    :alt: Imagery tooltips
    :align: center
 
-Map View
-~~~~~~~~
+Geographic View
+~~~~~~~~~~~~~~~
 
 Users can view geolocated imagery in a geographic view or image space. You can tell if your imagery supports geolocation
-if there is a checkmark in the Geolocation column for the imagery's sensor in the **Sensors Panel**. This will also 
+if there is a checkmark in the Geolocation column for the imagery's sensor in the **Sensors** tab. This will also 
 show the imagery with reference imagery from a Web Map Tile Server (WMTS). The WMTS can be configured from the Settings
-menu. The opacity of the loaded imagery can also be adjusted on the imagery tab.
+menu. The opacity of the loaded imagery can also be adjusted on the imagery tab. Nearly all the same actions that 
+can be performed in image space are performable in the geographic view.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-map-view.gif
    :alt: Map view
@@ -865,7 +866,7 @@ Save Entire Dataset
 
 To save imagery with all metadata and calibration:
 
-1. Select imagery in the **Imagery Panel**
+1. Select imagery in the **Imagery** tab
 2. Click **File → Save**
 3. Choose output filename
 4. File is saved in 1.7 HDF5 format with all associated data
@@ -873,21 +874,6 @@ To save imagery with all metadata and calibration:
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_export.gif
    :alt: Imagery export
    :align: center
-
-Export Specific Frames
-~~~~~~~~~~~~~~~~~~~~~~~
-
-To export a subset of frames or processed imagery:
-
-1. Select imagery in the **Imagery Panel**
-2. Click **Export** button in the panel
-3. Configure export options:
-
-   - Frame range
-   - Output format (HDF5, TIFF sequence, etc.)
-   - Bit depth and scaling
-
-4. Click **Save**
 
 Programmatic Export
 ~~~~~~~~~~~~~~~~~~~

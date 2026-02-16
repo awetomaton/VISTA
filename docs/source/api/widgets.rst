@@ -32,7 +32,7 @@ Core Widgets
 Core widgets provide the main application interface:
 
 * **Data Manager**: Central widget for managing imagery, detections, and tracks
-* **Imagery Panel**: Display and control imagery data
+* **Imagery Viewer**: Display and control imagery data
 * **Playback Controls**: Frame navigation and playback
 * **Settings Dialog**: Application configuration
 

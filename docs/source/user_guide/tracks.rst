@@ -84,6 +84,9 @@ To load tracks from a CSV file:
 
 See :ref:`tracks-csv-format` for CSV format details.
 
+.. note::
+   Alternatively users can drag and drop a detections file onto the **Tracks** panel in the **Data Manager**.
+
 .. _tracking-algorithms:
 
 Tracking Algorithms
@@ -351,7 +354,7 @@ Algorithm Comparison
 
 Tracks Panel Overview
 ---------------------
-The **Tracks Panel** in the Data Manager provides tools for viewing, modifying, and analyzing tracks. The Tracks panel 
+The **Tracks** tab in the Data Manager provides tools for viewing, modifying, and analyzing tracks. The Tracks panel 
 displays all tracks for the selected Sensor in a table with columns:
 
 - **Visible**: Checkbox to show/hide track

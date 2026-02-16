@@ -324,7 +324,7 @@ Running Detection Algorithms
 Managing Detections
 -------------------
 
-The **Detections Panel** provides tools for viewing, filtering, and managing detection results.
+The **Detections** panel provides tools for viewing, filtering, and managing detection results.
 
 Detections Panel Overview
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
