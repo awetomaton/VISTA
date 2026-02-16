@@ -62,10 +62,15 @@ class FeaturesPanel(QWidget):
         layout.addWidget(self.features_table)
         self.setLayout(layout)
 
-        # Delete key shortcut (active when this panel or its children have focus)
+        # Delete key shortcuts (active when this panel or its children have focus)
         delete_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Delete), self)
         delete_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         delete_shortcut.activated.connect(self.delete_selected_features)
+
+        # Backspace shortcut for macOS (the Mac "Delete" key sends Key_Backspace)
+        backspace_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Backspace), self)
+        backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        backspace_shortcut.activated.connect(self.delete_selected_features)
 
     def refresh_features_table(self):
         """Refresh the features table"""

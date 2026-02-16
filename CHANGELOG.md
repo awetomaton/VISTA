@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-- ⚖️ Updated license to require modified version retain the page.
+- ⚖️ Updated license to require modified versions of VISTA retain the about page.
 - 🥳 Updated app to support GPU PyTorch tensors.
 - 🥳 Added PSTNN detector.
 - 🥳 Imagery now loads and displays in the viewer incrementally.
