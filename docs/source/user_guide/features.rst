@@ -799,10 +799,9 @@ Create placemarks with known geodetic coordinates for validation:
    # Compare detected positions with ground truth
    # Calculate position errors
 
-Controls
---------
-
-
+Keyboard Shortcuts
+------------------
+ - ``Delete``: Delete selected features
 
 Tips and Best Practices
 ------------------------

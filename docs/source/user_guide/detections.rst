@@ -27,6 +27,47 @@ Detections in VISTA are:
 **Exportable**
    Save detections to CSV or other formats for analysis or sharing
 
+Loading Detections
+------------------
+
+1. Click **File → Load Detections**
+2. Select an CSV file (``.csv``)
+
+.. note::
+   Alternatively users can drag and drop a detections file onto the **Detectors** panel in the **Data Manager**.
+
+CSV Format
+~~~~~~~~~~
+
+.. code-block:: text
+
+   Detector,Frame,Row,Column,Labels
+   Threshold Detections,0,512.5,1024.3,"bright, moving"
+   Threshold Detections,0,450.2,890.7,dim
+   Threshold Detections,1,600.0,800.0,bright
+   CFAR Detections,2,300.5,500.2,
+
+CSV Columns
+~~~~~~~~~~~
+
+:Detector: Name of the detector (string)
+:Frame: Frame number (integer)
+:Row: Row pixel coordinate (float)
+:Column: Column pixel coordinate (float)
+:Color: Detector marker color. PyQtGraph color string (e.g., 'r', 'g', 'b', '#FF0000') (string, optional)
+:Marker: Marker style ('o', 's', 't', 'd', '+', 'x', 'star') (string, optional)
+:Line Thickness: Detector marker line thickness (integer, optional)
+:Visible: Determines if detector should be visible by default or not (bool, optional)
+:Complete: Show detections regardless of current frame (bool, optional)
+:Labels: Comma-separated labels (string, optional)
+
+CSV Requirements
+~~~~~~~~~~~~~~~~
+
+- Must have columns: Detector (or use name parameter), Frame, Row, Column
+- Labels column is optional
+- Multiple detectors can be in same CSV (grouped by Detector column)
+
 .. _manual-detection_creation:
 
 Manually Create Detections
@@ -486,24 +527,13 @@ Labels enable:
 
 .. _exporting-detections:
 
-Exporting Detections
---------------------
+Programmatic Detection Usage
+----------------------------
 
 Save detections for analysis, sharing, or archival.
 
-Export to CSV
-~~~~~~~~~~~~~
-
-CSV format is ideal for spreadsheet analysis or external processing.
-
-**Export via GUI:**
-
-1. Select detector in Detections Panel
-2. Click **Export → CSV**
-3. Choose filename and location
-4. CSV file is created with all detection data
-
-**Export Programmatically:**
+Programmatically Export to CSV
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -514,31 +544,8 @@ CSV format is ideal for spreadsheet analysis or external processing.
    df = detector.to_dataframe()
    df.to_csv('detections.csv', index=False)
 
-**CSV Format:**
-
-.. code-block:: text
-
-   Detector,Frame,Row,Column,Labels
-   Threshold Detections,0,512.5,1024.3,"bright, moving"
-   Threshold Detections,0,450.2,890.7,dim
-   Threshold Detections,1,600.0,800.0,bright
-   CFAR Detections,2,300.5,500.2,
-
-**CSV Columns:**
-
-:Detector: Name of the detector (string)
-:Frame: Frame number (integer)
-:Row: Row pixel coordinate (float)
-:Column: Column pixel coordinate (float)
-:Color: Detector marker color. PyQtGraph color string (e.g., 'r', 'g', 'b', '#FF0000') (string, optional)
-:Marker: Marker style ('o', 's', 't', 'd', '+', 'x', 'star') (string, optional)
-:Line Thickness: Detector marker line thickness (integer, optional)
-:Visible: Determines if detector should be visible by default or not (bool, optional)
-:Complete: Show detections regardless of current frame (bool, optional)
-:Labels: Comma-separated labels (string, optional)
-
-Import from CSV
-~~~~~~~~~~~~~~~
+Programmatically Import from CSV
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Load previously exported detections:
 
@@ -557,38 +564,13 @@ Load previously exported detections:
        name="Imported Detections"
    )
 
-**CSV Requirements:**
-
-- Must have columns: Detector (or use name parameter), Frame, Row, Column
-- Labels column is optional
-- Multiple detectors can be in same CSV (grouped by Detector column)
-
-Export to HDF5
-~~~~~~~~~~~~~~
-
-Save detections with VISTA project files:
-
-.. code-block:: python
-
-   # Detections are automatically saved with project
-   # File → Save Project
-
-   # Or save imagery with detections
-   # File → Save Imagery (HDF5)
-
-HDF5 export includes:
-   - All detection coordinates
-   - Styling information
-   - Labels and metadata
-   - Association with sensor data
-
 .. _detection-workflows:
 
-Common Workflows
-----------------
+Common Programmatic Workflows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Workflow 1: Multi-Algorithm Detection
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''
 
 Run multiple algorithms and compare results:
 
@@ -610,7 +592,7 @@ Run multiple algorithms and compare results:
    print(f"CFAR: {len(cfar_rows)} detections")
 
 Workflow 2: Detection Validation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 Compare algorithm detections with ground truth:
 
@@ -639,7 +621,7 @@ Compare algorithm detections with ground truth:
    print(f"Detection rate: {detection_rate:.1%}")
 
 Workflow 3: Spatial Filtering
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 Focus detections in specific regions using AOIs:
 
@@ -664,7 +646,7 @@ Focus detections in specific regions using AOIs:
        print(f"{aoi.name}: {len(zone_detections.frames)} detections")
 
 Workflow 4: Temporal Analysis
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 Analyze detection patterns over time:
 
@@ -750,15 +732,7 @@ Tips and Best Practices
 
 Keyboard Shortcuts
 ------------------
-
-**Detection Management:**
-   - ``Ctrl+D``: Toggle detection visibility
-   - ``Delete``: Delete selected detector
-   - ``Ctrl+E``: Export detections to CSV
-
-**Navigation:**
-   - Click detection to center view
-   - Double-click to show detection properties
+ - ``Delete``: Delete selected detector
 
 See Also
 --------

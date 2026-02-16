@@ -110,13 +110,17 @@ From the GUI
 
 To load imagery in the VISTA GUI:
 
-1. Click **File → Open**
+1. Click **File → Load Imagery**
 2. Select an HDF5 file (``.h5`` or ``.hdf5``)
 3. VISTA will automatically detect the format and load all sensors and imagery
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_loading.gif
    :alt: Loading imagery
    :align: center
+
+.. note::
+   Alternatively users can drag and drop an imagery file onto the **Sensors** or **Imagery** panels in the 
+   **Data Manager**.
 
 The VISTA GUI includes an imagery simulator **File → Simulate** to help users get familiar with VISTA and to provided
 exmaples of VISTA inputs.
@@ -614,6 +618,17 @@ Polynomial terms are ordered by total degree, then by decreasing powers of the f
 - Order 1: ``c₁·x + c₂·y`` (3 coefficients total)
 - Order 2: ``c₃·x² + c₄·x·y + c₅·y²`` (6 coefficients total)
 - Order 3: ``c₆·x³ + c₇·x²·y + c₈·x·y² + c₉·y³`` (10 coefficients total)
+
+test_poly_roundtrip.py
+~~~~~~~~~~~~~~~~~~~~~~
+
+The ``scripts/`` directory includes a diagnostic script that validates the accuracy of the 2D polynomial round-trip 
+transformations used in geolocation. It fits forward (pixel to ARF angle) and reverse (ARF angle to pixel) polynomials 
+and reports residuals and round-trip errors at sample points.
+
+.. code-block:: bash
+
+   python scripts/test_poly_roundtrip.py
 
 Example: ARF Transform
 ~~~~~~~~~~~~~~~~~~~~~~

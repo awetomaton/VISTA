@@ -31,7 +31,6 @@ Navigation
 
 * **Pan**: Click and drag with left mouse button
 * **Zoom**: Mouse wheel or zoom controls
-* **Fit to Window**: Double-click or use View menu
 * **Reset View**: Press ``R`` or use View menu
 
 Display Controls
@@ -118,7 +117,6 @@ Controls
 
 * **Play/Pause**: Start/stop playback
 * **Step Forward/Backward**: Move one frame
-* **First/Last Frame**: Jump to beginning or end
 * **Frame Slider**: Scrub through frames
 * **Frame Rate Control**: Adjust playback speed
 * **Loop Toggle**: Enable/disable loop playback
@@ -128,7 +126,6 @@ Keyboard Shortcuts
 
 * ``Space``: Play/Pause
 * ``Left/Right Arrow``: Previous/Next frame
-* ``Home/End``: First/Last frame
 * ``Page Up/Down``: Skip forward/backward by 10 frames
 
 Menus
@@ -137,46 +134,68 @@ Menus
 File Menu
 ~~~~~~~~~
 
-* **Open**: Load imagery or data files
-* **Save**: Save current imagery
-* **Import**: Import detections, tracks, or other data
-* **Export**: Export data in various formats
-* **Recent Files**: Quick access to recently opened files
+* **Load Imagery (HDF5)**: Load imagery from an HDF5 file (``.h5`` or ``.hdf5``)
+* **Load Detections (CSV)**: Load detections from a CSV file
+* **Load Tracks (CSV)**: Load tracks from a CSV file
+* **Load AOIs (CSV)**: Load areas of interest from a CSV file
+* **Load Shapefiles**: Load shapefile overlays (``.shp``)
+* **Load Placemarks (CSV)**: Load placemark features from a CSV file
+* **Simulate**: Generate synthetic imagery, detections, and tracks using the built-in simulator
+* **Save Imagery (HDF5)**: Save the selected imagery to an HDF5 file in version 1.7 format
+* **Clear Overlays**: Remove all loaded detections, tracks, AOIs, and features from the viewer
+* **Settings**: Open the application settings dialog
 * **Exit**: Close the application
-
-Algorithms Menu
-~~~~~~~~~~~~~~~
-
-* **Detectors**: Run object detection algorithms
-* **Trackers**: Run multi-object tracking algorithms
-* **Enhancement**: Image enhancement operations
-* **Background Removal**: Background subtraction methods
-* **Treatments**: Radiometric corrections
-* **Tracks**: Track analysis and refinement
 
 View Menu
 ~~~~~~~~~
 
-* **Zoom In/Out**: Change magnification
-* **Fit to Window**: Auto-scale imagery to window
-* **Show/Hide Panels**: Toggle panel visibility
-* **Full Screen**: Enter/exit full screen mode
+* **Data Manager**: Toggle visibility of the Data Manager dock panel
+* **Point Selection Mode**: Toggle point selection mode for picking pixel coordinates
+* **Histogram**: Toggle the histogram widget in the imagery viewer
+* **Map View**: Toggle the WMS map view background (requires a sensor with geolocation data)
+* **Labels**: Open the label manager to create and manage labels for tracks and detections
 
-Tools Menu
-~~~~~~~~~~
+Image Processing Menu
+~~~~~~~~~~~~~~~~~~~~~
 
-* **Point Selection**: Pick points in imagery
-* **ROI Selection**: Define regions of interest
-* **Measurements**: Measure distances and areas
-* **Coordinate Conversion**: Convert between coordinate systems
+* **Subset Frames**: Crop imagery to a subset of frames
 
-Settings Menu
+* **Background Removal**
+
+  * **Temporal Median**: Subtract temporal median of surrounding frames
+  * **Robust PCA**: Separate low-rank background from sparse foreground
+  * **Sliding Subspace**: Sliding-window low-rank SVD background estimation
+  * **GoDec**: Go Decomposition via randomized SVD (requires PyTorch)
+
+* **Enhancement**
+
+  * **Coaddition**: Improve SNR by averaging multiple frames
+
+* **Detectors**
+
+  * **Simple Threshold**: Detect pixels above a fixed threshold
+  * **CFAR**: Constant False Alarm Rate detector
+  * **PSTNN**: Partial Sum of Tensor Nuclear Norm detector
+
+* **Tracking**
+
+  * **Simple Tracker**: Nearest-neighbor frame-to-frame association
+  * **Kalman Filter Tracker**: Kalman filter-based multi-object tracker
+  * **Network Flow Tracker**: Min-cost network flow tracking
+  * **Tracklet Tracker**: Tracklet-based association tracker
+
+* **Treatment**
+
+  * **Bias Removal**: Subtract dark current using sensor bias frames
+  * **Non-Uniformity Correction**: Apply flat-field correction using sensor gain images
+
+Filters Menu
 ~~~~~~~~~~~~~
 
-* **Preferences**: Application settings
-* **Display Options**: Visualization preferences
-* **Keyboard Shortcuts**: View and customize shortcuts
-* **Plugins**: Manage plugins and extensions
+* **Track Filters**
+
+  * **Track Interpolator**: Interpolate missing frames within tracks
+  * **Savitzky-Golay Filter**: Smooth track positions using Savitzky-Golay filtering
 
 Status Bar
 ----------
@@ -194,16 +213,13 @@ Customization
 
 The VISTA interface can be customized to suit your workflow:
 
-* **Panel Layout**: Dock panels in different configurations
-* **Themes**: Choose light or dark theme
-* **Font Size**: Adjust text size for readability
-* **Keyboard Shortcuts**: Customize shortcuts in Settings
+* **Panel Layout**: The **Data Manager** can be docked in different locations
+* **Themes**: Icons adjust to your systems light (purple) / dark (yellow) theme.
 
 Tips and Tricks
 ---------------
 
-* **Quick Frame Navigation**: Type a frame number and press Enter to jump to that frame
+* **Data Selection**: All data is selected by selecting table rows in the **Data Manager**.
 * **Multi-Select**: Hold Ctrl/Cmd while clicking to select multiple items
 * **Context Menus**: Right-click on items for context-specific options
-* **Drag and Drop**: Drag files from file explorer to load them
-* **Panel Zoom**: Hold Ctrl while scrolling to zoom in data panels
+* **Drag and Drop**: Drag files from file explorer to load them in their respective panels in the **Data Manager**
