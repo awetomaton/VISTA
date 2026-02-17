@@ -418,6 +418,76 @@ class GPUSettingsTab(QVBoxLayout):
         self.settings.setValue("gpu/device", self.device_combo.currentData())
 
 
+class ToolbarSettingsTab(QVBoxLayout):
+    """Tab for configuring toolbar button settings"""
+
+    def __init__(self, settings):
+        """
+        Initialize the Toolbar settings tab
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings
+        """
+        super().__init__()
+        self.settings = settings
+
+        # EWMA Background Filter settings group
+        ewma_group = QGroupBox("EWMA Background Filter")
+        ewma_layout = QFormLayout()
+
+        # Decay factor (alpha)
+        self.ewma_decay_spinbox = QDoubleSpinBox()
+        self.ewma_decay_spinbox.setRange(0.01, 0.99)
+        self.ewma_decay_spinbox.setValue(0.1)
+        self.ewma_decay_spinbox.setSingleStep(0.01)
+        self.ewma_decay_spinbox.setDecimals(2)
+        self.ewma_decay_spinbox.setToolTip(
+            "Exponential decay factor (alpha) for the EWMA background model.\n"
+            "Controls how quickly the background adapts to changes.\n"
+            "Lower values = slower adaptation (smoother background).\n"
+            "Higher values = faster adaptation (more responsive).\n"
+            "EWMA formula: bg = alpha * current_frame + (1 - alpha) * bg\n"
+            "Default: 0.1"
+        )
+        ewma_layout.addRow("Decay Factor (alpha):", self.ewma_decay_spinbox)
+
+        # Frame offset
+        self.ewma_frame_offset_spinbox = QSpinBox()
+        self.ewma_frame_offset_spinbox.setRange(0, 1000)
+        self.ewma_frame_offset_spinbox.setValue(5)
+        self.ewma_frame_offset_spinbox.setToolTip(
+            "Number of unique frames to view before the EWMA background\n"
+            "model begins forming. During this warmup period, frames are\n"
+            "displayed without background subtraction.\n"
+            "Default: 5"
+        )
+        ewma_layout.addRow("Frame Offset:", self.ewma_frame_offset_spinbox)
+
+        ewma_group.setLayout(ewma_layout)
+        self.addWidget(ewma_group)
+
+        self.addStretch()
+
+        # Load saved settings
+        self.load_settings()
+
+    def load_settings(self):
+        """Load settings from QSettings"""
+        self.ewma_decay_spinbox.setValue(
+            self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
+        )
+        self.ewma_frame_offset_spinbox.setValue(
+            self.settings.value("toolbar/ewma_frame_offset", 5, type=int)
+        )
+
+    def save_settings(self):
+        """Save settings to QSettings"""
+        self.settings.setValue("toolbar/ewma_decay_factor", self.ewma_decay_spinbox.value())
+        self.settings.setValue("toolbar/ewma_frame_offset", self.ewma_frame_offset_spinbox.value())
+
+
 class TileServerEditDialog(QDialog):
     """Dialog for creating or editing a tile server entry.
 
@@ -769,6 +839,16 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(data_manager_container, "Data Manager")
 
+        # Create Toolbar settings tab
+        self.toolbar_tab = ToolbarSettingsTab(self.settings)
+        toolbar_widget = QVBoxLayout()
+        toolbar_widget.addLayout(self.toolbar_tab)
+
+        toolbar_container = QWidget()
+        toolbar_container.setLayout(toolbar_widget)
+
+        self.tabs.addTab(toolbar_container, "Toolbar")
+
         # Create GPU settings tab
         self.gpu_tab = GPUSettingsTab(self.settings)
         gpu_widget = QVBoxLayout()
@@ -808,6 +888,7 @@ class SettingsDialog(QDialog):
         self.imagery_tab.save_settings()
         self.track_viz_tab.save_settings()
         self.data_manager_tab.save_settings()
+        self.toolbar_tab.save_settings()
         self.gpu_tab.save_settings()
         self.wms_tab.save_settings()
 

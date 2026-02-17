@@ -495,6 +495,17 @@ class VistaMainWindow(QMainWindow):
         self.toggle_histogram_action.toggled.connect(self.on_toggle_histogram)
         toolbar.addAction(self.toggle_histogram_action)
 
+        # EWMA Background Filter toggle
+        if darkdetect.isDark():
+            self.ewma_filter_action = QAction(self.icons.ewma_filter_light, "EWMA Background Filter", self)
+        else:
+            self.ewma_filter_action = QAction(self.icons.ewma_filter_dark, "EWMA Background Filter", self)
+        self.ewma_filter_action.setCheckable(True)
+        self.ewma_filter_action.setChecked(False)
+        self.ewma_filter_action.setToolTip("Toggle EWMA background subtraction filter")
+        self.ewma_filter_action.toggled.connect(self.on_ewma_filter_toggled)
+        toolbar.addAction(self.ewma_filter_action)
+
         # Map View toggle
         toolbar.addSeparator()
         if darkdetect.isDark():
@@ -1879,6 +1890,14 @@ class VistaMainWindow(QMainWindow):
         self.toggle_histogram_menu_action.blockSignals(True)
         self.toggle_histogram_menu_action.setChecked(checked)
         self.toggle_histogram_menu_action.blockSignals(False)
+
+    def on_ewma_filter_toggled(self, checked):
+        """Toggle EWMA background subtraction filter"""
+        self.viewer.set_ewma_filter_enabled(checked)
+        if checked:
+            self.statusBar().showMessage("EWMA background filter enabled", 3000)
+        else:
+            self.statusBar().showMessage("EWMA background filter disabled", 3000)
 
     def on_point_selection_dialog_created(self):
         """

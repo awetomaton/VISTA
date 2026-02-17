@@ -20,7 +20,7 @@ from vista.sensors.sensor import Sensor
 from vista.transforms import cartesian_to_spherical, evaluate_2d_polynomial, get_arf_transform, los_to_earth, spherical_to_cartesian
 
 
-@dataclass
+@dataclass(eq=False)
 class SampledSensor(Sensor):
     """
     Sensor implementation using sampled position data with interpolation/extrapolation.

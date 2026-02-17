@@ -195,6 +195,15 @@ class ImageryViewer(QWidget):
         self._imagery_footprint = None       # Cached imagery footprint bbox
         self._wms_total_tiles = 0            # Total tiles expected in current fetch
 
+        # Persistent settings (avoid constructing QSettings on every frame)
+        self.settings = QSettings("Vista", "VistaApp")
+
+        # EWMA background filter state
+        self.ewma_filter_enabled = False
+        self.ewma_background = None  # Running EWMA background estimate (float64 array)
+        self.ewma_frame_counter = 0  # Number of unique frames viewed since filter enabled
+        self.ewma_last_frame_number = None  # Last frame_number passed to set_frame_number
+
         # Performance monitoring
         self.perf_frame_times = []  # List of frame update times
         self.perf_last_print = time.time() if ENABLE_PERF_MONITORING else None
@@ -286,6 +295,11 @@ class ImageryViewer(QWidget):
         if imagery in self.imageries:
             self.imagery = imagery
 
+            # Reset EWMA state when switching imagery
+            self.ewma_background = None
+            self.ewma_frame_counter = 0
+            self.ewma_last_frame_number = None
+
             # Try to retain the current frame number if it exists in the new imagery
             if len(imagery.frames) > 0:
                 if self.current_frame_number in imagery.frames:
@@ -376,24 +390,59 @@ class ImageryViewer(QWidget):
                         # Signal not connected yet, ignore
                         pass
 
-                    # Always set image without auto-levels to prevent flickering
-                    self.image_item.setImage(self.imagery.images[image_index], autoLevels=False)
+                    # EWMA background filter logic
+                    current_image = self.imagery.images[image_index]
+                    ewma_active = False  # Whether we're displaying a filtered image
 
-                    
+                    if self.ewma_filter_enabled:
+                        ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
+                        ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 5, type=int)
+
+                        # Check if frame_number changed from last call
+                        if frame_number != self.ewma_last_frame_number:
+                            self.ewma_frame_counter += 1
+                            self.ewma_last_frame_number = frame_number
+
+                            # Update EWMA background model once past the offset
+                            if self.ewma_frame_counter > ewma_offset:
+                                if self.ewma_background is None:
+                                    self.ewma_background = current_image.copy()
+                                else:
+                                    self.ewma_background = (
+                                        ewma_alpha * current_image
+                                        + (1.0 - ewma_alpha) * self.ewma_background
+                                    )
+
+                        # Display filtered image if background model exists
+                        if self.ewma_background is not None:
+                            display_image = current_image - self.ewma_background
+                            self.image_item.setImage(display_image, autoLevels=False)
+                            ewma_active = True
+                        else:
+                            self.image_item.setImage(current_image, autoLevels=False)
+                    else:
+                        # Normal display
+                        self.image_item.setImage(current_image, autoLevels=False)
+
                     # Get user histogram limits if set
                     user_histogram_bounds = None
                     if self.imagery.uuid in self.user_histogram_bounds:
                         user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
 
                     if self.histogram_visible:
-                        # Update histogram plot data
-                        if self.imagery.has_cached_histograms():
-                            # Use pre-computed histogram data
-                            hist_y, hist_x = self.imagery.get_histogram(image_index)
-                            self.histogram.plot.setData(hist_x, hist_y)
+                        if ewma_active:
+                            # No cached histogram for filtered images; let pyqtgraph
+                            # recompute from the displayed image data
+                            self.histogram.imageChanged(autoLevel=True)
                         else:
-                            # Let HistogramLUTItem compute histogram from the current image
-                            self.histogram.imageChanged()
+                            # Update histogram plot data
+                            if self.imagery.has_cached_histograms():
+                                # Use pre-computed histogram data
+                                hist_y, hist_x = self.imagery.get_histogram(image_index)
+                                self.histogram.plot.setData(hist_x, hist_y)
+                            else:
+                                # Let HistogramLUTItem compute histogram from the current image
+                                self.histogram.imageChanged()
 
                         # Reconnect the histogram image changed signal
                         try:
@@ -402,9 +451,16 @@ class ImageryViewer(QWidget):
                             # Signal already connected, ignore
                             pass
 
-                    # Restore user's histogram bounds if they were manually set
-                    if user_histogram_bounds is None:
-                        if (self.imagery.default_histogram_bounds is None):
+                    # Restore user's histogram bounds
+                    if ewma_active:
+                        # For filtered images: only override auto-levels if user
+                        # has manually set bounds; otherwise let autoLevel stand
+                        if user_histogram_bounds is not None:
+                            self.histogram.setLevels(*user_histogram_bounds)
+                    else:
+                        if user_histogram_bounds is not None:
+                            self.histogram.setLevels(*user_histogram_bounds)
+                        elif self.imagery.default_histogram_bounds is None:
                             self.histogram.setLevels(
                                 self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
                             )
@@ -412,8 +468,6 @@ class ImageryViewer(QWidget):
                             self.histogram.setLevels(
                                 *self.imagery.default_histogram_bounds[image_index]
                             )
-                    else:
-                        self.histogram.setLevels(*user_histogram_bounds)
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
@@ -524,6 +578,36 @@ class ImageryViewer(QWidget):
         # Refresh histogram for the current frame when becoming visible
         if visible and self.imagery is not None:
             self.set_frame_number(self.current_frame_number)
+
+    def set_ewma_filter_enabled(self, enabled: bool):
+        """
+        Enable or disable the EWMA background subtraction filter.
+
+        When enabled, frames are displayed with the EWMA background estimate subtracted.
+        When disabled, the EWMA state is reset and normal display resumes.
+
+        Parameters
+        ----------
+        enabled : bool
+            True to enable the EWMA filter, False to disable it
+        """
+        self.ewma_filter_enabled = enabled
+        if not enabled:
+            # Reset EWMA state
+            self.ewma_background = None
+            self.ewma_frame_counter = 0
+            self.ewma_last_frame_number = None
+            # Refresh display to show original image
+            if self.imagery is not None:
+                self.set_frame_number(self.current_frame_number)
+        else:
+            # Reset EWMA state for fresh start
+            self.ewma_last_frame_number = None
+            self.ewma_background = None
+            self.ewma_frame_counter = 0
+            # Refresh to apply filter logic from the start
+            if self.imagery is not None:
+                self.set_frame_number(self.current_frame_number)
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
