@@ -456,12 +456,12 @@ class ToolbarSettingsTab(QVBoxLayout):
         # Frame offset
         self.ewma_frame_offset_spinbox = QSpinBox()
         self.ewma_frame_offset_spinbox.setRange(0, 1000)
-        self.ewma_frame_offset_spinbox.setValue(5)
+        self.ewma_frame_offset_spinbox.setValue(1)
         self.ewma_frame_offset_spinbox.setToolTip(
             "Number of unique frames to view before the EWMA background\n"
             "model begins forming. During this warmup period, frames are\n"
             "displayed without background subtraction.\n"
-            "Default: 5"
+            "Default: 1"
         )
         ewma_layout.addRow("Frame Offset:", self.ewma_frame_offset_spinbox)
 
@@ -479,7 +479,7 @@ class ToolbarSettingsTab(QVBoxLayout):
             self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
         )
         self.ewma_frame_offset_spinbox.setValue(
-            self.settings.value("toolbar/ewma_frame_offset", 5, type=int)
+            self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
         )
 
     def save_settings(self):

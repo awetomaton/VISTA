@@ -166,7 +166,6 @@ class ImageryViewer(QWidget):
 
         # Histogram visibility (toggled by toolbar button for performance)
         self.histogram_visible = True
-        self.histogram_auto_ranged = False
 
         # Temporarily disable triggering on histogram levels changed
         self.ignore_changing_histogram_levels = False
@@ -301,16 +300,17 @@ class ImageryViewer(QWidget):
             if len(self.imageries) == 1:
                 self.select_imagery(imagery)
 
-    def select_imagery(self, imagery: Imagery):
+    def select_imagery(self, imagery: Imagery, preserve_ewma: bool = False):
         """Select which imagery to display"""
         self.ignore_changing_histogram_levels = True
         if imagery in self.imageries:
             self.imagery = imagery
 
             # Reset EWMA state when switching imagery
-            self.ewma_background = None
-            self.ewma_frame_counter = 0
-            self.ewma_last_frame_number = None
+            if not preserve_ewma:
+                self.ewma_background = None
+                self.ewma_frame_counter = 0
+                self.ewma_last_frame_number = None
 
             # Try to retain the current frame number if it exists in the new imagery
             if len(imagery.frames) > 0:
@@ -343,7 +343,6 @@ class ImageryViewer(QWidget):
                         frame, img_shape[0], img_shape[1],
                         imagery.row_offset, imagery.column_offset,
                     )
-                self._update_projected_imagery()
                 # Apply opacity
                 if self.projected_image_item is not None:
                     opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
@@ -390,105 +389,108 @@ class ImageryViewer(QWidget):
                     image_index = max(0, self.imagery.loaded_frame_count - 1)
 
             if image_index is not None:
+                ewma_active = False  # Whether we're displaying a filtered image
+                current_image = self.imagery.images[image_index]
 
+                # EWMA background filter logic
+                if self.ewma_filter_enabled:
+                    ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
+                    ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
+
+                    # Check if frame_number changed from last call
+                    if frame_number != self.ewma_last_frame_number:
+                        self.ewma_frame_counter += 1
+                        self.ewma_last_frame_number = frame_number
+
+                        # Update EWMA background model once past the offset
+                        if self.ewma_background is None:
+                            self.ewma_background = current_image.copy()
+                        else:
+                            self.ewma_background = (
+                                ewma_alpha * current_image
+                                + (1.0 - ewma_alpha) * self.ewma_background
+                            )
+
+                    # Display filtered image if background model exists
+                    if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
+                        display_image = current_image - self.ewma_background
+                        ewma_active = True
+                
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
-                    self._update_projected_imagery()
+                    if ewma_active:
+                        self._update_projected_imagery(display_image)
+                    else:
+                        self._update_projected_imagery(current_image)
                 else:
-                    # EWMA background filter logic
-                    current_image = self.imagery.images[image_index]
-                    ewma_active = False  # Whether we're displaying a filtered image
-
-                    if self.ewma_filter_enabled:
-                        ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
-                        ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 5, type=int)
-
-                        # Check if frame_number changed from last call
-                        if frame_number != self.ewma_last_frame_number:
-                            self.ewma_frame_counter += 1
-                            self.ewma_last_frame_number = frame_number
-
-                            # Update EWMA background model once past the offset
-                            if self.ewma_background is None:
-                                self.ewma_background = current_image.copy()
-                            else:
-                                self.ewma_background = (
-                                    ewma_alpha * current_image
-                                    + (1.0 - ewma_alpha) * self.ewma_background
-                                )
-
-                        # Display filtered image if background model exists
-                        if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
-                            display_image = current_image - self.ewma_background
-                            self.image_item.setImage(display_image, autoLevels=False)
-                            ewma_active = True
-                        else:
-                            self.image_item.setImage(current_image, autoLevels=False)
+                    if ewma_active:
+                        # EWMA image
+                        self.image_item.setImage(display_image, autoLevels=False)
                     else:
                         # Normal display
                         self.image_item.setImage(current_image, autoLevels=False)
 
-                    # Get user histogram limits if set
-                    user_histogram_bounds = None
-                    if self.imagery.uuid in self.user_histogram_bounds:
-                        user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
-                    
-                    if ewma_active:
-                        min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
-                        max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
-                        settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
-                        settings_max_rowcol = self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
+                # Get user histogram limits if set
+                user_histogram_bounds = None
+                if self.imagery.uuid in self.user_histogram_bounds:
+                    user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
+                
+                if ewma_active:
+                    min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
+                    max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
+                    settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
+                    settings_max_rowcol = self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
 
-                        row_downsample = max(1, display_image.shape[0] // settings_max_rowcol)
-                        col_downsample = max(1, display_image.shape[1] // settings_max_rowcol)
-                        downsampled_display_image = display_image[::row_downsample, ::col_downsample]
+                    row_downsample = max(1, display_image.shape[0] // settings_max_rowcol)
+                    col_downsample = max(1, display_image.shape[1] // settings_max_rowcol)
+                    downsampled_display_image = display_image[::row_downsample, ::col_downsample]
 
-                        # Remove zero values since there are often many of these values
-                        nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
+                    # Remove zero values since there are often many of these values
+                    nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
 
-                        # Compute data range 
-                        if user_histogram_bounds is None:
-                            if nonzero_downsampled_display_image.size > 0:
-                                hist_min = np.percentile(nonzero_downsampled_display_image, min_percentile)
-                                hist_max = np.percentile(nonzero_downsampled_display_image, max_percentile)
-                            else:
-                                hist_min = -1.0
-                                hist_max = 1.0
-
-                        hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
-                        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-                        nonzero_hist = hist_y > 0
-
-                        # Compute histogram directly from the filtered image
-                        # and apply levels explicitly, bypassing pyqtgraph's
-                        # signal chain which can silently skip updates.
-                        if self.histogram_visible:
-                            self.histogram.plot.setData(bin_centers[nonzero_hist], hist_y[nonzero_hist])
-                            if not self.histogram_auto_ranged:
-                                self.histogram.vb.autoRange()
-                                self.histogram_auto_ranged = True
-                        if user_histogram_bounds is not None:
-                            mn, mx = user_histogram_bounds
+                    # Compute data range 
+                    if user_histogram_bounds is None:
+                        if nonzero_downsampled_display_image.size > 0:
+                            hist_min = np.percentile(nonzero_downsampled_display_image, min_percentile)
+                            hist_max = np.percentile(nonzero_downsampled_display_image, max_percentile)
                         else:
-                            mn, mx = hist_min, hist_max
-                        self.histogram.setLevels(mn, mx)
+                            hist_min = -1.0
+                            hist_max = 1.0
+
+                    hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
+                    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+                    nonzero_hist = hist_y > 0
+
+                    # Compute histogram directly from the filtered image
+                    # and apply levels explicitly, bypassing pyqtgraph's
+                    # signal chain which can silently skip updates.
+                    if self.histogram_visible:
+                        self.histogram.plot.setData(bin_centers[nonzero_hist], hist_y[nonzero_hist])
+                        if self.ewma_frame_counter < 10:
+                            # It takes some time for EWMA to settle, so auto range until it settles
+                            self.histogram.vb.autoRange()
+                    if user_histogram_bounds is not None:
+                        mn, mx = user_histogram_bounds
                     else:
-                        if self.histogram_visible:
-                            # Use or create pre-computed histogram data
-                            hist_y, hist_x = self.imagery.get_histogram(image_index)
-                            self.histogram.plot.setData(hist_x, hist_y)
+                        mn, mx = hist_min, hist_max
+                    self.histogram.setLevels(mn, mx)
+                else:
+                    if self.histogram_visible:
+                        # Use or create pre-computed histogram data
+                        hist_y, hist_x = self.imagery.get_histogram(image_index)
+                        self.histogram.plot.setData(hist_x, hist_y)
 
-                        # Apply histogram bounds
-                        if user_histogram_bounds is not None:
-                            self.histogram.setLevels(*user_histogram_bounds)
-                        elif self.imagery.default_histogram_bounds is None:
-                            self.histogram.setLevels(
-                                self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
-                            )
-                        else:
-                            self.histogram.setLevels(
-                                *self.imagery.default_histogram_bounds[image_index]
-                            )
+                    # Apply histogram bounds
+                    if user_histogram_bounds is not None:
+                        self.histogram.setLevels(*user_histogram_bounds)
+                    elif self.imagery.default_histogram_bounds is None:
+                        self.histogram.setLevels(
+                            self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
+                        )
+                    else:
+                        self.histogram.setLevels(
+                            *self.imagery.default_histogram_bounds[image_index]
+                        )
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
@@ -616,7 +618,8 @@ class ImageryViewer(QWidget):
         if self.imagery.uuid in self.user_histogram_bounds:
             del self.user_histogram_bounds[self.imagery.uuid]
         self.ewma_filter_enabled = enabled
-        self.histogram_auto_ranged = False
+        if self.projection_cache is not None:
+            self.projection_cache.invalidate_imagery(self.imagery.uuid)
         if not enabled:
             # Reset EWMA state
             self.ewma_background = None
@@ -633,7 +636,7 @@ class ImageryViewer(QWidget):
             self.ewma_frame_counter = 0
             # Refresh to apply filter logic from the start
             if self.imagery is not None:
-                self.set_frame_number(self.current_frame_number)         
+                self.set_frame_number(self.current_frame_number)
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
@@ -3197,6 +3200,13 @@ class ImageryViewer(QWidget):
             # Link histogram to projected imagery item
             self.histogram.setImageItem(self.projected_image_item)
 
+            # Block signals to prevent histogram recomputation
+            try:
+                self.projected_image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+            except TypeError:
+                # Signal not connected yet, ignore
+                pass
+
             # Disable extraction view if active
             if self.extraction_view_mode:
                 self.finish_extraction_viewing()
@@ -3265,7 +3275,16 @@ class ImageryViewer(QWidget):
                 self.projected_image_item = None
 
             # Restore histogram to original image item
+            self.ignore_changing_histogram_levels = True
             self.histogram.setImageItem(self.image_item)
+            self.ignore_changing_histogram_levels = False
+
+            # Block signals to prevent histogram recomputation
+            try:
+                self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+            except TypeError:
+                # Signal not connected yet, ignore
+                pass
 
             # Restore pixel coordinate axes
             self.plot_item.invertY(True)
@@ -3294,7 +3313,7 @@ class ImageryViewer(QWidget):
 
             # Re-select the current imagery to restore display
             if self.imagery is not None:
-                self.select_imagery(self.imagery)
+                self.select_imagery(self.imagery, preserve_ewma=True)
 
             # Reset view to fit imagery in pixel mode
             self.plot_item.vb.autoRange()
@@ -3305,6 +3324,7 @@ class ImageryViewer(QWidget):
         # Re-project selected detection highlights for the new coordinate system
         self._update_selected_detections_display()
 
+        self.set_frame_number(self.current_frame_number)
         return True
 
     def _on_map_view_range_changed(self) -> None:
@@ -3374,9 +3394,6 @@ class ImageryViewer(QWidget):
         self.wms_fetcher_thread.all_tiles_fetched.connect(self._on_all_wms_tiles_fetched)
         self.wms_fetcher_thread.error_occurred.connect(self._on_wms_error)
         self.wms_fetcher_thread.start()
-
-        # Also update projected imagery for new view extent
-        self._update_projected_imagery()
 
     def _on_wms_tile_fetched(self, tile) -> None:
         """Handle a single WMS tile being fetched.
@@ -3500,7 +3517,7 @@ class ImageryViewer(QWidget):
         # Log but don't interrupt the user
         print(f"[WMS] {message}")
 
-    def _update_projected_imagery(self) -> None:
+    def _update_projected_imagery(self, image=None) -> None:
         """Update the projected VISTA imagery display in map mode."""
         if not self.map_view_mode or self.imagery is None or self.imagery_projector is None:
             return
@@ -3579,8 +3596,8 @@ class ImageryViewer(QWidget):
             projected = cached
         else:
             # Project imagery
-            image = self.imagery.images[image_index]
-
+            if image is None:
+                image = self.imagery.images[image_index]
             # Always use CPU projection — the bottleneck is sensor.geodetic_to_pixel()
             # which runs on CPU regardless, so the GPU path only adds transfer overhead.
             projected = self.imagery_projector.project_frame_cpu(
