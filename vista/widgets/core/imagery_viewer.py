@@ -204,6 +204,7 @@ class ImageryViewer(QWidget):
         # EWMA background filter state
         self.ewma_filter_enabled = False
         self.ewma_background = None  # Running EWMA background estimate (float64 array)
+        self.ewma_image = None
         self.ewma_frame_counter = 0  # Number of unique frames viewed since filter enabled
         self.ewma_last_frame_number = None  # Last frame_number passed to set_frame_number
 
@@ -309,6 +310,7 @@ class ImageryViewer(QWidget):
             # Reset EWMA state when switching imagery
             if not preserve_ewma:
                 self.ewma_background = None
+                self.ewma_image = None
                 self.ewma_frame_counter = 0
                 self.ewma_last_frame_number = None
 
@@ -413,19 +415,19 @@ class ImageryViewer(QWidget):
 
                     # Display filtered image if background model exists
                     if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
-                        display_image = current_image - self.ewma_background
+                        self.ewma_image = current_image - self.ewma_background
                         ewma_active = True
                 
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
                     if ewma_active:
-                        self._update_projected_imagery(display_image)
+                        self._update_projected_imagery(self.ewma_image)
                     else:
                         self._update_projected_imagery(current_image)
                 else:
                     if ewma_active:
                         # EWMA image
-                        self.image_item.setImage(display_image, autoLevels=False)
+                        self.image_item.setImage(self.ewma_image, autoLevels=False)
                     else:
                         # Normal display
                         self.image_item.setImage(current_image, autoLevels=False)
@@ -441,9 +443,9 @@ class ImageryViewer(QWidget):
                     settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
                     settings_max_rowcol = self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
 
-                    row_downsample = max(1, display_image.shape[0] // settings_max_rowcol)
-                    col_downsample = max(1, display_image.shape[1] // settings_max_rowcol)
-                    downsampled_display_image = display_image[::row_downsample, ::col_downsample]
+                    row_downsample = max(1, self.ewma_image.shape[0] // settings_max_rowcol)
+                    col_downsample = max(1, self.ewma_image.shape[1] // settings_max_rowcol)
+                    downsampled_display_image = self.ewma_image[::row_downsample, ::col_downsample]
 
                     # Remove zero values since there are often many of these values
                     nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
@@ -620,20 +622,19 @@ class ImageryViewer(QWidget):
         self.ewma_filter_enabled = enabled
         if self.projection_cache is not None:
             self.projection_cache.invalidate_imagery(self.imagery.uuid)
+        
+        # Reset EWMA state
+        self.ewma_background = None
+        self.ewma_image = None
+        self.ewma_frame_counter = 0
+        self.ewma_last_frame_number = None
+
         if not enabled:
-            # Reset EWMA state
-            self.ewma_background = None
-            self.ewma_frame_counter = 0
-            self.ewma_last_frame_number = None
             # Refresh display to show original image
             if self.imagery is not None:
                 self.set_frame_number(self.current_frame_number)
                 self.histogram.vb.autoRange()
         else:
-            # Reset EWMA state for fresh start
-            self.ewma_last_frame_number = None
-            self.ewma_background = None
-            self.ewma_frame_counter = 0
             # Refresh to apply filter logic from the start
             if self.imagery is not None:
                 self.set_frame_number(self.current_frame_number)
@@ -3394,6 +3395,20 @@ class ImageryViewer(QWidget):
         self.wms_fetcher_thread.all_tiles_fetched.connect(self._on_all_wms_tiles_fetched)
         self.wms_fetcher_thread.error_occurred.connect(self._on_wms_error)
         self.wms_fetcher_thread.start()
+        
+        # Display filtered image if background model exists
+        if self.ewma_image is not None:
+            self._update_projected_imagery(image=self.ewma_image)
+        else:
+            # Get current frame
+            image_index = self.imagery.get_frame_index(self.current_frame_number)
+            if image_index is None:
+                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
+                if len(valid_indices) > 0:
+                    image_index = valid_indices[-1]
+                else:
+                    return
+            self._update_projected_imagery(self.imagery.images[image_index])
 
     def _on_wms_tile_fetched(self, tile) -> None:
         """Handle a single WMS tile being fetched.
