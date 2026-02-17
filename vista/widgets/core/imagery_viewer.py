@@ -166,6 +166,10 @@ class ImageryViewer(QWidget):
 
         # Histogram visibility (toggled by toolbar button for performance)
         self.histogram_visible = True
+        self.histogram_auto_ranged = False
+
+        # Temporarily disable triggering on histogram levels changed
+        self.ignore_changing_histogram_levels = False
 
         # Imagery selection
         self.setting_imagery = False
@@ -276,6 +280,13 @@ class ImageryViewer(QWidget):
         # Connect to gradient change signals to track gradient adjustments
         self.histogram.sigLookupTableChanged.connect(self.on_histogram_gradient_changed)
 
+        # Block signals to prevent histogram recomputation
+        try:
+            self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+        except TypeError:
+            # Signal not connected yet, ignore
+            pass
+        
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
         layout.addWidget(self.hist_widget)
@@ -292,6 +303,7 @@ class ImageryViewer(QWidget):
 
     def select_imagery(self, imagery: Imagery):
         """Select which imagery to display"""
+        self.ignore_changing_histogram_levels = True
         if imagery in self.imageries:
             self.imagery = imagery
 
@@ -337,9 +349,7 @@ class ImageryViewer(QWidget):
                     opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
                     self.projected_image_item.setOpacity(opacity)
             else:
-                self.setting_imagery = True
                 self.image_item.setImage(imagery.images[frame_index])
-                self.setting_imagery = False
 
                 # Apply imagery offsets for positioning
                 self.image_item.setPos(imagery.column_offset, imagery.row_offset)
@@ -347,6 +357,7 @@ class ImageryViewer(QWidget):
             # Refresh the current frame display
             self.set_frame_number(self.current_frame_number)
             self.histogram.vb.autoRange()
+        self.ignore_changing_histogram_levels = False
 
     def load_imagery(self, imagery: Imagery):
         """Load imagery data into the viewer (legacy method, now adds and selects)"""
@@ -356,6 +367,7 @@ class ImageryViewer(QWidget):
     def set_frame_number(self, frame_number: int):
         """Set the current frame to display by frame number"""
         perf_start = time.time() if ENABLE_PERF_MONITORING else None
+        self.ignore_changing_histogram_levels = True
 
         self.current_frame_number = frame_number
 
@@ -383,13 +395,6 @@ class ImageryViewer(QWidget):
                     # In map mode, update projected imagery instead of raw image
                     self._update_projected_imagery()
                 else:
-                    # Block signals to prevent histogram recomputation
-                    try:
-                        self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
-                    except TypeError:
-                        # Signal not connected yet, ignore
-                        pass
-
                     # EWMA background filter logic
                     current_image = self.imagery.images[image_index]
                     ewma_active = False  # Whether we're displaying a filtered image
@@ -404,17 +409,16 @@ class ImageryViewer(QWidget):
                             self.ewma_last_frame_number = frame_number
 
                             # Update EWMA background model once past the offset
-                            if self.ewma_frame_counter > ewma_offset:
-                                if self.ewma_background is None:
-                                    self.ewma_background = current_image.copy()
-                                else:
-                                    self.ewma_background = (
-                                        ewma_alpha * current_image
-                                        + (1.0 - ewma_alpha) * self.ewma_background
-                                    )
+                            if self.ewma_background is None:
+                                self.ewma_background = current_image.copy()
+                            else:
+                                self.ewma_background = (
+                                    ewma_alpha * current_image
+                                    + (1.0 - ewma_alpha) * self.ewma_background
+                                )
 
                         # Display filtered image if background model exists
-                        if self.ewma_background is not None:
+                        if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
                             display_image = current_image - self.ewma_background
                             self.image_item.setImage(display_image, autoLevels=False)
                             ewma_active = True
@@ -428,36 +432,53 @@ class ImageryViewer(QWidget):
                     user_histogram_bounds = None
                     if self.imagery.uuid in self.user_histogram_bounds:
                         user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
-
-                    if self.histogram_visible:
-                        if ewma_active:
-                            # No cached histogram for filtered images; let pyqtgraph
-                            # recompute from the displayed image data
-                            self.histogram.imageChanged(autoLevel=True)
-                        else:
-                            # Update histogram plot data
-                            if self.imagery.has_cached_histograms():
-                                # Use pre-computed histogram data
-                                hist_y, hist_x = self.imagery.get_histogram(image_index)
-                                self.histogram.plot.setData(hist_x, hist_y)
-                            else:
-                                # Let HistogramLUTItem compute histogram from the current image
-                                self.histogram.imageChanged()
-
-                        # Reconnect the histogram image changed signal
-                        try:
-                            self.image_item.sigImageChanged.connect(self.histogram.imageChanged)
-                        except TypeError:
-                            # Signal already connected, ignore
-                            pass
-
-                    # Restore user's histogram bounds
+                    
                     if ewma_active:
-                        # For filtered images: only override auto-levels if user
-                        # has manually set bounds; otherwise let autoLevel stand
+                        min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
+                        max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
+                        settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
+                        settings_max_rowcol = self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
+
+                        row_downsample = max(1, display_image.shape[0] // settings_max_rowcol)
+                        col_downsample = max(1, display_image.shape[1] // settings_max_rowcol)
+                        downsampled_display_image = display_image[::row_downsample, ::col_downsample]
+
+                        # Remove zero values since there are often many of these values
+                        nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
+
+                        # Compute data range 
+                        if user_histogram_bounds is None:
+                            if nonzero_downsampled_display_image.size > 0:
+                                hist_min = np.percentile(nonzero_downsampled_display_image, min_percentile)
+                                hist_max = np.percentile(nonzero_downsampled_display_image, max_percentile)
+                            else:
+                                hist_min = -1.0
+                                hist_max = 1.0
+
+                        hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
+                        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+                        nonzero_hist = hist_y > 0
+
+                        # Compute histogram directly from the filtered image
+                        # and apply levels explicitly, bypassing pyqtgraph's
+                        # signal chain which can silently skip updates.
+                        if self.histogram_visible:
+                            self.histogram.plot.setData(bin_centers[nonzero_hist], hist_y[nonzero_hist])
+                            if not self.histogram_auto_ranged:
+                                self.histogram.vb.autoRange()
+                                self.histogram_auto_ranged = True
                         if user_histogram_bounds is not None:
-                            self.histogram.setLevels(*user_histogram_bounds)
+                            mn, mx = user_histogram_bounds
+                        else:
+                            mn, mx = hist_min, hist_max
+                        self.histogram.setLevels(mn, mx)
                     else:
+                        if self.histogram_visible:
+                            # Use or create pre-computed histogram data
+                            hist_y, hist_x = self.imagery.get_histogram(image_index)
+                            self.histogram.plot.setData(hist_x, hist_y)
+
+                        # Apply histogram bounds
                         if user_histogram_bounds is not None:
                             self.histogram.setLevels(*user_histogram_bounds)
                         elif self.imagery.default_histogram_bounds is None:
@@ -502,6 +523,7 @@ class ImageryViewer(QWidget):
                 fps = 1.0 / avg_time if avg_time > 0 else 0
                 print(f"[PERF] Frame update: {avg_time*1000:.2f}ms avg, {fps:.1f} FPS (last 60 frames)")
                 self.perf_frame_times = []
+        self.ignore_changing_histogram_levels = False
 
     def get_current_time(self):
         """Get the current time for the displayed frame (if available)"""
@@ -548,7 +570,7 @@ class ImageryViewer(QWidget):
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
         # Store the user's selected bounds
-        if (self.setting_imagery) or (self.imagery is None):
+        if self.ignore_changing_histogram_levels or self.setting_imagery or (self.imagery is None):
             return
         self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
 
@@ -591,7 +613,10 @@ class ImageryViewer(QWidget):
         enabled : bool
             True to enable the EWMA filter, False to disable it
         """
+        if self.imagery.uuid in self.user_histogram_bounds:
+            del self.user_histogram_bounds[self.imagery.uuid]
         self.ewma_filter_enabled = enabled
+        self.histogram_auto_ranged = False
         if not enabled:
             # Reset EWMA state
             self.ewma_background = None
@@ -600,6 +625,7 @@ class ImageryViewer(QWidget):
             # Refresh display to show original image
             if self.imagery is not None:
                 self.set_frame_number(self.current_frame_number)
+                self.histogram.vb.autoRange()
         else:
             # Reset EWMA state for fresh start
             self.ewma_last_frame_number = None
@@ -607,7 +633,7 @@ class ImageryViewer(QWidget):
             self.ewma_frame_counter = 0
             # Refresh to apply filter logic from the start
             if self.imagery is not None:
-                self.set_frame_number(self.current_frame_number)
+                self.set_frame_number(self.current_frame_number)         
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""

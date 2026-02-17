@@ -446,7 +446,7 @@ class Imagery:
                 hist_max = 1.0
             self.default_histogram_bounds[frame_index] = (hist_min, hist_max)
 
-            hist_y, bin_edges = np.histogram(image, bins=bins)
+            hist_y, bin_edges = np.histogram(image, bins=bins_to_use)
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
             nonzero_hist = hist_y > 0
             self._histograms[frame_index] = (hist_y[nonzero_hist], bin_centers[nonzero_hist])
