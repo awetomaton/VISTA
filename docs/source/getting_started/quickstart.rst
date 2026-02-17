@@ -6,7 +6,7 @@ This guide will help you get started with VISTA quickly.
 .. figure:: /_static/images/vista_demo_thumbnail.png
    :alt: VISTA demo
    :align: center
-   :target: https://www.youtube.com/watch?v=9eRo5S4yLTs
+   :target: https://www.youtube.com/watch?v=oDnTdtyQ7xw
 
    Click to watch a demo of VISTA on YouTube
 
