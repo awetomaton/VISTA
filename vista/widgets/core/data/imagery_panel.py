@@ -229,6 +229,9 @@ class ImageryPanel(QWidget):
                 # Find the imagery by UUID
                 for imagery in self.viewer.imageries:
                     if imagery.uuid == imagery_uuid:
+                        # Skip if the viewer is already displaying this imagery
+                        if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
+                            break
                         self.viewer.select_imagery(imagery)
                         # Update frame range in main window
                         self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()

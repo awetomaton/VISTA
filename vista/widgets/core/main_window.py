@@ -917,6 +917,15 @@ class VistaMainWindow(QMainWindow):
         # Add imagery to viewer (will be selected if it's the first one)
         self.viewer.add_imagery(imagery)
 
+        # Block selection-change signals during refresh so the table rebuild doesn't
+        # cascade into redundant select_imagery/set_frame_number calls. The viewer
+        # state is updated explicitly below.
+        sensors_table = self.data_manager.sensors_panel.sensors_table
+        imagery_table = self.data_manager.imagery_panel.imagery_table
+        sensors_table.blockSignals(True)
+        imagery_table.blockSignals(True)
+        self.data_manager.sensors_panel.blockSignals(True)
+
         # Refresh data manager to show the new imagery with progress bar
         self.data_manager.refresh()
 
@@ -925,16 +934,28 @@ class VistaMainWindow(QMainWindow):
             for row, s in enumerate(self.viewer.sensors):
                 if s == sensor:
                     self.data_manager.sensors_panel.sensors_table.selectRow(row)
+                    self.data_manager.sensors_panel.selected_sensor = sensor
                     break
+
+        sensors_table.blockSignals(False)
+        imagery_table.blockSignals(False)
+        self.data_manager.sensors_panel.blockSignals(False)
+
+        # Now explicitly update viewer state (single source of truth)
+        if is_new_sensor:
+            self.data_manager.on_sensor_selected(sensor)
         elif self.viewer.selected_sensor is not None:
             self.viewer.filter_by_sensor(self.viewer.selected_sensor)
         else:
             self.viewer.select_imagery(imagery)
 
-        # Update playback controls with frame range
+        # Update playback controls with frame range (block slider signals to avoid
+        # a redundant set_frame_number call via on_frame_changed)
         min_frame, max_frame = self.viewer.get_frame_range()
         self.controls.set_frame_range(min_frame, max_frame)
+        self.controls.frame_slider.blockSignals(True)
         self.controls.set_frame(min_frame)
+        self.controls.frame_slider.blockSignals(False)
 
         # Disable algorithm actions while loading
         self._update_algorithm_actions_state()
@@ -1045,23 +1066,18 @@ class VistaMainWindow(QMainWindow):
         return len(self._loading_imageries) > 0
 
     def update_frame_range_from_imagery(self):
-        """Update frame range controls when imagery selection changes"""
+        """Update frame range controls to match the viewer's current state.
+
+        Syncs the slider range and position to the viewer without calling
+        set_frame_number again (the caller is expected to have already
+        updated the viewer via select_imagery or set_frame_number).
+        """
         min_frame, max_frame = self.viewer.get_frame_range()
         self.controls.set_frame_range(min_frame, max_frame)
-        # Try to retain current frame if it exists in the selected imagery
-        if self.viewer.imagery:
-            current_frame = self.viewer.current_frame_number
-            if len(self.viewer.imagery.frames) > 0:
-                if current_frame in self.viewer.imagery.frames:
-                    # Current frame exists, keep it
-                    frame_to_set = current_frame
-                else:
-                    # Current frame doesn't exist, use first frame
-                    frame_to_set = self.viewer.imagery.frames[0]
-            else:
-                frame_to_set = 0
-            self.controls.set_frame(frame_to_set)
-            self.viewer.set_frame_number(frame_to_set)
+        # Sync the slider to the viewer's current frame without triggering on_frame_changed
+        self.controls.frame_slider.blockSignals(True)
+        self.controls.set_frame(self.viewer.current_frame_number)
+        self.controls.frame_slider.blockSignals(False)
 
     def load_detections_file(self, file_paths=None):
         """Load detections from CSV file(s) using background thread
