@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
- - ✨ Reduced duplicative calls to `set_frame_number` when adding imagery or changing imagery selection.
+ - 🛠️ Reduced duplicative calls to `set_frame_number` when adding imagery or changing imagery selection.
+ - 🛠️ Fixed issue where user detections table selection was eliminated when a bulk action is applied.
 
 ### Bug Fixes
 
