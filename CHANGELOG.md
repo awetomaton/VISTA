@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.3] - 2026-3-21
+
+### Improvements
+
+ - 🛠️ Reduced duplicative calls to `set_frame_number` when adding imagery or changing imagery selection.
+ - 🛠️ Fixed issue where user detections table selection was eliminated when a bulk action is applied.
+
+### Bug Fixes
+
+ - 🔧 Fixed bug where imagery didn't always match histogram after changing imagery selection or creating new imagery.
+
 ## [1.10.2] - 2026-2-17
 
 ### Improvements
@@ -320,6 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[1.10.3]: https://github.com/awetomaton/VISTA/releases/tag/1.10.3
 [1.10.2]: https://github.com/awetomaton/VISTA/releases/tag/1.10.2
 [1.10.1]: https://github.com/awetomaton/VISTA/releases/tag/1.10.1
 [1.10.0]: https://github.com/awetomaton/VISTA/releases/tag/1.10.0

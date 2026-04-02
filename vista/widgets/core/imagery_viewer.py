@@ -350,7 +350,7 @@ class ImageryViewer(QWidget):
                     opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
                     self.projected_image_item.setOpacity(opacity)
             else:
-                self.image_item.setImage(imagery.images[frame_index])
+                self.image_item.setImage(imagery.images[frame_index], autoLevels=False)
 
                 # Apply imagery offsets for positioning
                 self.image_item.setPos(imagery.column_offset, imagery.row_offset)
@@ -493,6 +493,12 @@ class ImageryViewer(QWidget):
                         self.histogram.setLevels(
                             *self.imagery.default_histogram_bounds[image_index]
                         )
+
+                # Explicitly sync levels to the image item. histogram.setLevels() goes through
+                # LinearRegionItem.setRegion() which skips the signal if the region values haven't
+                # changed, leaving the image item with stale levels.
+                if self.histogram.imageItem() is not None:
+                    self.histogram.imageItem().setLevels(self.histogram.getLevels())
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
