@@ -4,7 +4,7 @@ import traceback
 import numpy as np
 import pandas as pd
 import pathlib
-from PyQt6.QtCore import QEvent, Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import QEvent, QItemSelectionModel, Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QBrush, QColor, QAction
 from PyQt6.QtWidgets import (
     QCheckBox, QColorDialog, QComboBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QMenu,
@@ -995,12 +995,18 @@ class DetectionsPanel(QWidget):
     def _select_detectors_by_uuid(self, detector_uuids):
         """Restore detector selection by their UUIDs"""
         self.detections_table.clearSelection()
+        selection_model = self.detections_table.selectionModel()
+        model = self.detections_table.model()
         for row in range(self.detections_table.rowCount()):
             name_item = self.detections_table.item(row, 1)
             if name_item:
                 detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
                 if detector_uuid in detector_uuids:
-                    self.detections_table.selectRow(row)
+                    index = model.index(row, 0)
+                    selection_model.select(
+                        index,
+                        QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                    )
 
     def toggle_selected_detections_visibility(self):
         """Toggle visibility of selected detections - if any are visible, hide all; otherwise show all"""
