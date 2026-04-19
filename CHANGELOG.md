@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-4-19
+
+### Improvements
+
+ - ✨ Added the ability to set the user's name in the Settings dialog. Label user name and label time is stored and saved to exported detections and tracks.
+
 ## [1.10.3] - 2026-3-21
 
 ### Improvements

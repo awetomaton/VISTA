@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 
+from vista.utils.labeler import LABELER_SETTINGS_KEY, get_system_user
 from vista.wms.wms_client import get_tile_servers, save_tile_servers
 
 try:
@@ -488,6 +489,50 @@ class ToolbarSettingsTab(QVBoxLayout):
         self.settings.setValue("toolbar/ewma_frame_offset", self.ewma_frame_offset_spinbox.value())
 
 
+class UserSettingsTab(QVBoxLayout):
+    """Tab for configuring user identity used when labeling data"""
+
+    def __init__(self, settings: QSettings):
+        """
+        Initialize the User settings tab.
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings.
+        """
+        super().__init__()
+        self.settings = settings
+
+        labeler_group = QGroupBox("Labeler Identity")
+        labeler_layout = QFormLayout()
+
+        self.labeler_name_edit = QLineEdit()
+        self.labeler_name_edit.setPlaceholderText(get_system_user())
+        self.labeler_name_edit.setToolTip(
+            "Name recorded as the 'Labeler' when applying labels to tracks or detections.\n"
+            "Leave blank to use the current operating-system user name."
+        )
+        labeler_layout.addRow("Labeler Name:", self.labeler_name_edit)
+
+        labeler_group.setLayout(labeler_layout)
+        self.addWidget(labeler_group)
+
+        self.addStretch()
+
+        self.load_settings()
+
+    def load_settings(self) -> None:
+        """Load settings from QSettings."""
+        self.labeler_name_edit.setText(
+            self.settings.value(LABELER_SETTINGS_KEY, "", type=str)
+        )
+
+    def save_settings(self) -> None:
+        """Save settings to QSettings."""
+        self.settings.setValue(LABELER_SETTINGS_KEY, self.labeler_name_edit.text().strip())
+
+
 class TileServerEditDialog(QDialog):
     """Dialog for creating or editing a tile server entry.
 
@@ -859,6 +904,16 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(gpu_container, "GPU")
 
+        # Create User settings tab
+        self.user_tab = UserSettingsTab(self.settings)
+        user_widget = QVBoxLayout()
+        user_widget.addLayout(self.user_tab)
+
+        user_container = QWidget()
+        user_container.setLayout(user_widget)
+
+        self.tabs.addTab(user_container, "User")
+
         # Create WMS (Map View) settings tab
         self.wms_tab = WMSSettingsTab(self.settings)
         wms_widget = QVBoxLayout()
@@ -890,6 +945,7 @@ class SettingsDialog(QDialog):
         self.data_manager_tab.save_settings()
         self.toolbar_tab.save_settings()
         self.gpu_tab.save_settings()
+        self.user_tab.save_settings()
         self.wms_tab.save_settings()
 
     def accept_settings(self):

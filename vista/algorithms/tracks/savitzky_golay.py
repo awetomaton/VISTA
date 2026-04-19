@@ -147,7 +147,9 @@ class SavitzkyGolayFilter:
             complete=self.track.complete,
             show_line=self.track.show_line,
             line_style=self.track.line_style,
-            labels=self.track.labels.copy()
+            labels=self.track.labels.copy(),
+            label_time=self.track.label_time,
+            labeler=self.track.labeler,
         )
 
         # Return results

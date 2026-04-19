@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QLis
 from vista.detections.detector import Detector
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
+from vista.utils.labeler import get_current_label_time, get_current_labeler
 from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
 from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
@@ -1537,6 +1538,8 @@ class TracksPanel(QWidget):
                 track.labels = set(label.strip() for label in labels_text.split(','))
             else:
                 track.labels = set()
+            track.label_time = get_current_label_time()
+            track.labeler = get_current_labeler()
         elif column == 5:  # Color
             item = self.tracks_table.item(row, column)
             color = item.background().color()
@@ -1776,6 +1779,8 @@ class TracksPanel(QWidget):
                 track.invalidate_caches()  # Marker size affects rendering
             elif property_name == "Labels":
                 track.labels = self.bulk_labels.copy()
+                track.label_time = get_current_label_time()
+                track.labeler = get_current_labeler()
             elif property_name == "Show Uncertainty":
                 # Only apply if track has uncertainty data
                 if track.has_uncertainty():
@@ -2904,8 +2909,12 @@ class TracksPanel(QWidget):
             selected_labels = dialog.get_selected_labels()
 
             # Replace labels for each selected track (empty set clears labels)
+            now = get_current_label_time()
+            labeler = get_current_labeler()
             for track in selected_tracks:
                 track.labels = selected_labels.copy()
+                track.label_time = now
+                track.labeler = labeler
 
             # Refresh the table and emit data changed
             self.refresh_tracks_table()
