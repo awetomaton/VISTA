@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.1] - 2026-4-30
+
+### Bug Fixes
+
+ - 🔧 Fixed bug where frame slider range didn't update when changing sensor selection ([#11](https://github.com/awetomaton/VISTA/issues/11)).
+
+### Contributors
+- @nolanking90 — reported issue #11, identified the root cause, provided code to reproduce the issue, and provided the fix!
+
 ## [1.11.0] - 2026-4-19
 
 ### Improvements
