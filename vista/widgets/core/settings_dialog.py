@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 
 from vista.utils.labeler import LABELER_SETTINGS_KEY, get_system_user
 from vista.wms.wms_client import get_tile_servers, save_tile_servers
+from vista.algorithms.imagery.prf import SUPPORTED_PIXEL_SHAPES, SUPPORTED_PRF_MODELS
 
 try:
     import torch
@@ -125,6 +126,71 @@ class ImagerySettingsTab(QVBoxLayout):
         tooltip_group.setLayout(tooltip_layout)
         self.addWidget(tooltip_group)
 
+        # Create PRF projection settings group
+        prf_group = QGroupBox("PRF Projection")
+        prf_layout = QFormLayout()
+
+        self.prf_model_combo = QComboBox()
+        self.prf_model_combo.addItems(SUPPORTED_PRF_MODELS)
+        self.prf_model_combo.setToolTip(
+            "Point response model used for PRF-aware projection.\n"
+            "None preserves the current VISTA projection behavior.\n"
+            "Other models fit a sensor-agnostic PRF from selected detections."
+        )
+        prf_layout.addRow("Model:", self.prf_model_combo)
+
+        self.prf_pixel_shape_combo = QComboBox()
+        self.prf_pixel_shape_combo.addItems(SUPPORTED_PIXEL_SHAPES)
+        self.prf_pixel_shape_combo.setToolTip(
+            "Pixel aperture used to discretize the PSF into a PRF.\n"
+            "Square is the default detector pixel shape."
+        )
+        prf_layout.addRow("Pixel Shape:", self.prf_pixel_shape_combo)
+
+        self.prf_tolerance_spinbox = QDoubleSpinBox()
+        self.prf_tolerance_spinbox.setRange(1e-6, 1.0)
+        self.prf_tolerance_spinbox.setValue(0.01)
+        self.prf_tolerance_spinbox.setSingleStep(0.001)
+        self.prf_tolerance_spinbox.setDecimals(6)
+        self.prf_tolerance_spinbox.setToolTip(
+            "Normalized RMS residual target for PRF fitting.\n"
+            "Lower values require a closer fit and may need more iterations.\n"
+            "Default: 0.01"
+        )
+        prf_layout.addRow("Tolerance:", self.prf_tolerance_spinbox)
+
+        self.prf_max_iterations_spinbox = QSpinBox()
+        self.prf_max_iterations_spinbox.setRange(1, 1000)
+        self.prf_max_iterations_spinbox.setValue(50)
+        self.prf_max_iterations_spinbox.setToolTip(
+            "Maximum number of optimizer evaluations for PRF fitting.\n"
+            "If the limit is reached, VISTA uses the best fit found so far.\n"
+            "Default: 50"
+        )
+        prf_layout.addRow("Max Iterations:", self.prf_max_iterations_spinbox)
+
+        self.prf_min_detections_spinbox = QSpinBox()
+        self.prf_min_detections_spinbox.setRange(1, 1000)
+        self.prf_min_detections_spinbox.setValue(5)
+        self.prf_min_detections_spinbox.setToolTip(
+            "Minimum number of selected detections required to fit a PRF.\n"
+            "Default: 5"
+        )
+        prf_layout.addRow("Min Detections:", self.prf_min_detections_spinbox)
+
+        self.prf_chip_size_spinbox = QSpinBox()
+        self.prf_chip_size_spinbox.setRange(5, 51)
+        self.prf_chip_size_spinbox.setSingleStep(2)
+        self.prf_chip_size_spinbox.setValue(11)
+        self.prf_chip_size_spinbox.setToolTip(
+            "Odd chip width and height extracted around each selected detection.\n"
+            "Default: 11"
+        )
+        prf_layout.addRow("Chip Size:", self.prf_chip_size_spinbox)
+
+        prf_group.setLayout(prf_layout)
+        self.addWidget(prf_group)
+
         self.addStretch()
 
         # Load saved settings
@@ -169,6 +235,26 @@ class ImagerySettingsTab(QVBoxLayout):
             self.settings.value("imagery/tooltip_font_weight", "Normal", type=str)
         )
 
+        prf_model = self.settings.value("imagery/prf_model", "None", type=str)
+        self.prf_model_combo.setCurrentText(prf_model if prf_model in SUPPORTED_PRF_MODELS else "None")
+        pixel_shape = self.settings.value("imagery/prf_pixel_shape", "Square", type=str)
+        self.prf_pixel_shape_combo.setCurrentText(
+            pixel_shape if pixel_shape in SUPPORTED_PIXEL_SHAPES else "Square"
+        )
+        self.prf_tolerance_spinbox.setValue(
+            self.settings.value("imagery/prf_tolerance", 0.01, type=float)
+        )
+        self.prf_max_iterations_spinbox.setValue(
+            self.settings.value("imagery/prf_max_iterations", 50, type=int)
+        )
+        self.prf_min_detections_spinbox.setValue(
+            self.settings.value("imagery/prf_min_detections", 5, type=int)
+        )
+        chip_size = self.settings.value("imagery/prf_chip_size", 11, type=int)
+        if chip_size % 2 == 0:
+            chip_size += 1
+        self.prf_chip_size_spinbox.setValue(chip_size)
+
     def save_settings(self):
         """Save settings to QSettings"""
         self.settings.setValue("imagery/histogram_bins", self.bins_spinbox.value())
@@ -189,6 +275,15 @@ class ImagerySettingsTab(QVBoxLayout):
         self.settings.setValue("imagery/tooltip_font_color", self._tooltip_color.name())
         self.settings.setValue("imagery/tooltip_font_size", self.tooltip_size_spinbox.value())
         self.settings.setValue("imagery/tooltip_font_weight", self.tooltip_weight_combo.currentText())
+        self.settings.setValue("imagery/prf_model", self.prf_model_combo.currentText())
+        self.settings.setValue("imagery/prf_pixel_shape", self.prf_pixel_shape_combo.currentText())
+        self.settings.setValue("imagery/prf_tolerance", self.prf_tolerance_spinbox.value())
+        self.settings.setValue("imagery/prf_max_iterations", self.prf_max_iterations_spinbox.value())
+        self.settings.setValue("imagery/prf_min_detections", self.prf_min_detections_spinbox.value())
+        chip_size = self.prf_chip_size_spinbox.value()
+        if chip_size % 2 == 0:
+            chip_size += 1
+        self.settings.setValue("imagery/prf_chip_size", chip_size)
 
 
 class TrackVisualizationSettingsTab(QVBoxLayout):

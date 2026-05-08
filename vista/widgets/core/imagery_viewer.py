@@ -16,6 +16,11 @@ from vista.features import PlacemarkFeature
 from vista.features import ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
+from vista.algorithms.imagery.prf import (
+    NO_PRF_MODEL,
+    chips_from_selected_detections,
+    fit_prf_model,
+)
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
@@ -197,6 +202,7 @@ class ImageryViewer(QWidget):
         self._pending_tile_bbox = None       # View bbox for the pending tile fetch
         self._imagery_footprint = None       # Cached imagery footprint bbox
         self._wms_total_tiles = 0            # Total tiles expected in current fetch
+        self._last_prf_status = ""           # Last non-modal PRF fitting status message
 
         # Persistent settings (avoid constructing QSettings on every frame)
         self.settings = QSettings("Vista", "VistaApp")
@@ -3171,7 +3177,12 @@ class ImageryViewer(QWidget):
             # Create projector for current sensor
             coarse_enabled = settings.value("wms/coarse_grid_enabled", True, type=bool)
             coarse_size = settings.value("wms/coarse_grid_size", 64, type=int) if coarse_enabled else 0
-            self.imagery_projector = ImageryProjector(self.selected_sensor, coarse_grid_size=coarse_size)
+            prf_model = self._fit_prf_model_for_projection(settings)
+            if prf_model is not None and self.projection_cache is not None:
+                self.projection_cache.invalidate_imagery(self.imagery.uuid)
+            self.imagery_projector = ImageryProjector(
+                self.selected_sensor, coarse_grid_size=coarse_size, prf_model=prf_model
+            )
 
             # Compute imagery footprint
             frame = self.imagery.frames[0]
@@ -3333,6 +3344,83 @@ class ImageryViewer(QWidget):
 
         self.set_frame_number(self.current_frame_number)
         return True
+
+    def _fit_prf_model_for_projection(self, settings: QSettings):
+        """Fit a PRF model from selected detections when PRF projection is enabled."""
+        if self.imagery is None:
+            return None
+
+        model = settings.value("imagery/prf_model", NO_PRF_MODEL, type=str)
+        if model == NO_PRF_MODEL:
+            self.imagery.fitted_prf_model = None
+            return None
+
+        min_detections = settings.value("imagery/prf_min_detections", 5, type=int)
+        chip_size = settings.value("imagery/prf_chip_size", 11, type=int)
+        if chip_size % 2 == 0:
+            chip_size += 1
+        pixel_shape = settings.value("imagery/prf_pixel_shape", "Square", type=str)
+        tolerance = settings.value("imagery/prf_tolerance", 0.01, type=float)
+        max_iterations = settings.value("imagery/prf_max_iterations", 50, type=int)
+
+        existing_model = self.imagery.fitted_prf_model
+        if existing_model is not None and existing_model.model == model:
+            self._emit_prf_status(
+                f"Using existing fitted PRF ({existing_model.model}, "
+                f"residual {existing_model.residual_ratio:.4g})."
+            )
+            return existing_model
+
+        chips = chips_from_selected_detections(self.imagery, self.selected_detections, chip_size)
+        if len(chips) < min_detections:
+            message = (
+                f"PRF projection requested {min_detections} selected detections; "
+                f"found {len(chips)} usable chips. Using existing projection."
+            )
+            self._emit_prf_status(message)
+            self.imagery.fitted_prf_model = None
+            return None
+
+        try:
+            prf_model = fit_prf_model(
+                chips=chips,
+                model=model,
+                pixel_shape=pixel_shape,
+                tolerance=tolerance,
+                max_iterations=max_iterations,
+                kernel_size=chip_size,
+            )
+        except Exception as exc:
+            self._emit_prf_status(f"PRF fitting failed: {exc}. Using existing projection.")
+            self.imagery.fitted_prf_model = None
+            return None
+
+        self.imagery.fitted_prf_model = prf_model
+        if self.projection_cache is not None:
+            self.projection_cache.invalidate_imagery(self.imagery.uuid)
+
+        if prf_model.converged:
+            self._emit_prf_status(
+                f"PRF fit complete using {prf_model.detections_used} detections "
+                f"(residual {prf_model.residual_ratio:.4g})."
+            )
+        elif prf_model.iterations >= prf_model.max_iterations or prf_model.optimizer_status == 0:
+            self._emit_prf_status(
+                f"PRF fit reached the iteration budget; using best fit "
+                f"(residual {prf_model.residual_ratio:.4g})."
+            )
+        else:
+            self._emit_prf_status(
+                f"PRF fit stopped above tolerance; using best fit "
+                f"(residual {prf_model.residual_ratio:.4g}, tolerance {prf_model.tolerance:.4g})."
+            )
+        return prf_model
+
+    def _emit_prf_status(self, message: str) -> None:
+        """Emit a non-modal PRF status message and keep a console breadcrumb."""
+        self._last_prf_status = message
+        print(f"[PRF] {message}")
+        self.wms_status_changed.emit(message)
 
     def _on_map_view_range_changed(self) -> None:
         """Handle view range changes in map mode (pan/zoom). Debounced."""

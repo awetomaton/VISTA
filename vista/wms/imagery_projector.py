@@ -13,6 +13,7 @@ except ImportError:
     HAS_TORCH = False
 
 from vista.sensors.sensor import Sensor
+from vista.algorithms.imagery.prf import PRFModel, apply_prf_prefilter
 
 
 class ImageryProjector:
@@ -32,9 +33,10 @@ class ImageryProjector:
         Default is 64.
     """
 
-    def __init__(self, sensor: Sensor, coarse_grid_size: int = 64):
+    def __init__(self, sensor: Sensor, coarse_grid_size: int = 64, prf_model: PRFModel | None = None):
         self.sensor = sensor
         self.coarse_grid_size = coarse_grid_size
+        self.prf_model = prf_model
 
     def compute_footprint(
         self,
@@ -267,6 +269,7 @@ class ImageryProjector:
             frame, output_bbox, output_width, output_height, row_offset, column_offset,
         )
 
+        image = apply_prf_prefilter(image, self.prf_model)
         img_h, img_w = image.shape
 
         # Determine downsampling factor if source resolution >> output resolution

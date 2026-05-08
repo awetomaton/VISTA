@@ -234,14 +234,14 @@ class VistaMainWindow(QMainWindow):
         file_menu.addSeparator()
 
         settings_action = QAction("Settings", self)
-        #settings_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
+        settings_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
         settings_action.triggered.connect(self.open_settings)
         file_menu.addAction(settings_action)
 
         file_menu.addSeparator()
 
         exit_action = QAction("Exit", self)
-        #exit_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
+        exit_action.setMenuRole(QAction.MenuRole.NoRole)  # Prevent macOS from moving to app menu
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
