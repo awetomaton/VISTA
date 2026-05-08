@@ -43,7 +43,7 @@ This document tracks the local PRF projection patch as it evolves.
 ## Non-Modal Failure Behavior
 
 - If PRF fitting cannot run, VISTA emits a status message and falls back to existing projection.
-- If fitting reaches the iteration budget, VISTA uses the best fit and emits a warning-style status message.
+- If fitting reaches the function-evaluation budget, VISTA uses the best fit and emits a warning-style status message.
 - If the optimizer stops before the iteration budget but the residual is still above tolerance, VISTA reports that separately as "stopped above tolerance."
 
 ## Implementation Notes
@@ -68,5 +68,5 @@ This document tracks the local PRF projection patch as it evolves.
 - `python -m compileall vista` passes.
 - A synthetic Gaussian PRF fit succeeds on five generated chips.
 - HDF5 export writes a `prf/` group containing fit attributes and the fitted kernel.
-- PRF metadata records both tolerance convergence and the underlying optimizer status.
+- PRF metadata records tolerance convergence, optimizer status, intuitive optimizer iterations, SciPy function evaluations, and SciPy Jacobian evaluations.
 - Automatic strongest-detections mode recovers the known synthetic distortion on the local NYC PRF dataset when enough usable chips are included.

@@ -41,6 +41,8 @@ class PRFModel:
     kernel: NDArray[np.float32]
     residual_ratio: float
     iterations: int
+    function_evaluations: int
+    jacobian_evaluations: int
     converged: bool
     detections_used: int
     optimizer_success: bool = False
@@ -58,6 +60,8 @@ class PRFModel:
             "max_iterations": self.max_iterations,
             "residual_ratio": self.residual_ratio,
             "iterations": self.iterations,
+            "function_evaluations": self.function_evaluations,
+            "jacobian_evaluations": self.jacobian_evaluations,
             "converged": self.converged,
             "detections_used": self.detections_used,
             "optimizer_success": self.optimizer_success,
@@ -370,6 +374,10 @@ def fit_prf_model(
     if model == "Moffat":
         params["beta"] = float(beta)
 
+    function_evaluations = int(result.nfev)
+    jacobian_evaluations = int(result.njev) if result.njev is not None else 0
+    optimizer_iterations = max(jacobian_evaluations - 1, 0) if jacobian_evaluations else function_evaluations
+
     return PRFModel(
         model=model,
         pixel_shape=pixel_shape,
@@ -380,7 +388,9 @@ def fit_prf_model(
         parameters=params,
         kernel=kernel,
         residual_ratio=residual_ratio,
-        iterations=int(result.nfev),
+        iterations=optimizer_iterations,
+        function_evaluations=function_evaluations,
+        jacobian_evaluations=jacobian_evaluations,
         converged=bool(result.success and residual_ratio <= tolerance),
         detections_used=len(chips),
         optimizer_success=bool(result.success),

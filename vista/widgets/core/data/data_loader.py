@@ -404,6 +404,11 @@ class DataLoaderThread(QThread):
                     kernel=prf_group['kernel'][:],
                     residual_ratio=float(attrs.get('residual_ratio', np.nan)),
                     iterations=int(attrs.get('iterations', 0)),
+                    function_evaluations=int(attrs.get(
+                        'function_evaluations',
+                        attrs.get('iterations', 0),
+                    )),
+                    jacobian_evaluations=int(attrs.get('jacobian_evaluations', 0)),
                     converged=bool(attrs.get('converged', False)),
                     detections_used=int(attrs.get('detections_used', 0)),
                     optimizer_success=bool(attrs.get('optimizer_success', False)),

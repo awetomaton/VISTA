@@ -3430,9 +3430,9 @@ class ImageryViewer(QWidget):
                 f"PRF fit complete using {prf_model.detections_used} detections from {detection_source} "
                 f"(residual {prf_model.residual_ratio:.4g})."
             )
-        elif prf_model.iterations >= prf_model.max_iterations or prf_model.optimizer_status == 0:
+        elif prf_model.function_evaluations >= prf_model.max_iterations or prf_model.optimizer_status == 0:
             self._emit_prf_status(
-                f"PRF fit reached the iteration budget using {prf_model.detections_used}/{raw_chip_count} "
+                f"PRF fit reached the evaluation budget using {prf_model.detections_used}/{raw_chip_count} "
                 f"usable detections from {detection_source}; using best fit "
                 f"(residual {prf_model.residual_ratio:.4g})."
             )
