@@ -18,8 +18,11 @@ from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.algorithms.imagery.prf import (
     NO_PRF_MODEL,
+    PRF_DETECTION_SOURCES,
+    chips_from_detections,
     chips_from_selected_detections,
     fit_prf_model,
+    strongest_prf_chips,
 )
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
@@ -3346,7 +3349,7 @@ class ImageryViewer(QWidget):
         return True
 
     def _fit_prf_model_for_projection(self, settings: QSettings):
-        """Fit a PRF model from selected detections when PRF projection is enabled."""
+        """Fit a PRF model from configured detection candidates when PRF projection is enabled."""
         if self.imagery is None:
             return None
 
@@ -3362,6 +3365,12 @@ class ImageryViewer(QWidget):
         pixel_shape = settings.value("imagery/prf_pixel_shape", "Square", type=str)
         tolerance = settings.value("imagery/prf_tolerance", 0.01, type=float)
         max_iterations = settings.value("imagery/prf_max_iterations", 50, type=int)
+        detection_source = settings.value(
+            "imagery/prf_detection_source", "Selected detections only", type=str
+        )
+        if detection_source not in PRF_DETECTION_SOURCES:
+            detection_source = "Selected detections only"
+        auto_max_detections = settings.value("imagery/prf_auto_max_detections", 150, type=int)
 
         existing_model = self.imagery.fitted_prf_model
         if existing_model is not None and existing_model.model == model:
@@ -3371,11 +3380,28 @@ class ImageryViewer(QWidget):
             )
             return existing_model
 
-        chips = chips_from_selected_detections(self.imagery, self.selected_detections, chip_size)
+        candidates = self._prf_detection_candidates(detection_source)
+        source_count = len(candidates)
+        raw_chip_count = source_count
+        if detection_source == "Selected detections only":
+            chips = chips_from_selected_detections(self.imagery, candidates, chip_size)
+            raw_chip_count = len(chips)
+        elif detection_source == "All visible detections":
+            chips = chips_from_detections(self.imagery, candidates, chip_size)
+            raw_chip_count = len(chips)
+        else:
+            chips, raw_chip_count = strongest_prf_chips(
+                self.imagery,
+                candidates,
+                chip_size,
+                max_chips=auto_max_detections,
+            )
+
         if len(chips) < min_detections:
             message = (
-                f"PRF projection requested {min_detections} selected detections; "
-                f"found {len(chips)} usable chips. Using existing projection."
+                f"PRF projection requested {min_detections} detections from {detection_source}; "
+                f"found {len(chips)} usable chips from {source_count} candidates. "
+                f"Using existing projection."
             )
             self._emit_prf_status(message)
             self.imagery.fitted_prf_model = None
@@ -3401,20 +3427,42 @@ class ImageryViewer(QWidget):
 
         if prf_model.converged:
             self._emit_prf_status(
-                f"PRF fit complete using {prf_model.detections_used} detections "
+                f"PRF fit complete using {prf_model.detections_used} detections from {detection_source} "
                 f"(residual {prf_model.residual_ratio:.4g})."
             )
         elif prf_model.iterations >= prf_model.max_iterations or prf_model.optimizer_status == 0:
             self._emit_prf_status(
-                f"PRF fit reached the iteration budget; using best fit "
+                f"PRF fit reached the iteration budget using {prf_model.detections_used}/{raw_chip_count} "
+                f"usable detections from {detection_source}; using best fit "
                 f"(residual {prf_model.residual_ratio:.4g})."
             )
         else:
             self._emit_prf_status(
-                f"PRF fit stopped above tolerance; using best fit "
+                f"PRF fit stopped above tolerance using {prf_model.detections_used}/{raw_chip_count} "
+                f"usable detections from {detection_source}; using best fit "
                 f"(residual {prf_model.residual_ratio:.4g}, tolerance {prf_model.tolerance:.4g})."
             )
         return prf_model
+
+    def _prf_detection_candidates(self, detection_source: str) -> list[tuple]:
+        """Return detection tuples available to the chosen PRF fitting source."""
+        if detection_source == "Selected detections only":
+            return list(self.selected_detections)
+
+        if self.imagery is None:
+            return []
+
+        imagery_frames = {int(frame) for frame in self.imagery.frames}
+        candidates = []
+        for detector in self.detectors:
+            if not detector.visible:
+                continue
+            if detector.sensor != self.imagery.sensor:
+                continue
+            for index, frame in enumerate(detector.frames):
+                if int(frame) in imagery_frames:
+                    candidates.append((detector, frame, index))
+        return candidates
 
     def _emit_prf_status(self, message: str) -> None:
         """Emit a non-modal PRF status message and keep a console breadcrumb."""

@@ -7,8 +7,11 @@ This document tracks the local PRF projection patch as it evolves.
 - PRF projection is opt-in from **File -> Settings -> Imagery**.
 - On macOS, Settings is forced to remain in the **File** menu instead of being moved to the application menu by Qt's menu-role heuristic.
 - The default model is **None**, which preserves VISTA's existing projection behavior.
-- When a PRF model is selected, VISTA attempts to fit a sensor-agnostic PRF from user-selected detections before entering Map View.
-- A minimum of 5 selected detections is required.
+- When a PRF model is selected, VISTA attempts to fit a sensor-agnostic PRF from the configured detection source before entering Map View.
+- PRF fitting can use selected detections, all visible detections, or an automatic strongest-detections subset.
+- The automatic subset ranks visible detections by robust local contrast and caps the fit set to reduce noise and runtime.
+- Automatic down-selection preserves original detection order after ranking to keep nonlinear fitting stable.
+- A minimum of 5 usable detection chips is required.
 - The default fitting chip is 11x11 pixels.
 - The fitted PRF is generated from a continuous PSF model plus a configurable pixel aperture.
 - Projection uses the fitted PRF as a conservative source-image prefilter before VISTA's existing geodetic resampling path.
@@ -32,6 +35,8 @@ This document tracks the local PRF projection patch as it evolves.
 - Pixel shape: Square
 - Minimum detections: 5
 - Chip size: 11
+- Detection source: Selected detections only
+- Auto max detections: 150
 - Tolerance: 0.01 normalized RMS residual
 - Max iterations: 50
 
@@ -46,6 +51,7 @@ This document tracks the local PRF projection patch as it evolves.
 - Settings live in `vista/widgets/core/settings_dialog.py`.
 - PRF model generation and fitting live in `vista/algorithms/imagery/prf.py`.
 - Map View fitting is initiated by `vista/widgets/core/imagery_viewer.py`.
+- Automatic PRF fitting considers only detections from the current imagery sensor and imagery frame range.
 - Projection prefiltering is applied in `vista/wms/imagery_projector.py`.
 - HDF5 metadata is written from `vista/imagery/imagery.py`.
 - HDF5 metadata is loaded from `vista/widgets/core/data/data_loader.py`.
@@ -63,3 +69,4 @@ This document tracks the local PRF projection patch as it evolves.
 - A synthetic Gaussian PRF fit succeeds on five generated chips.
 - HDF5 export writes a `prf/` group containing fit attributes and the fitted kernel.
 - PRF metadata records both tolerance convergence and the underlying optimizer status.
+- Automatic strongest-detections mode recovers the known synthetic distortion on the local NYC PRF dataset when enough usable chips are included.

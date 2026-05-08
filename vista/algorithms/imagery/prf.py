@@ -20,6 +20,11 @@ from scipy.signal import fftconvolve
 NO_PRF_MODEL = "None"
 SUPPORTED_PRF_MODELS = ("None", "Gaussian", "Elliptical Gaussian", "Airy Disk", "Moffat")
 SUPPORTED_PIXEL_SHAPES = ("Square", "Circular")
+PRF_DETECTION_SOURCES = (
+    "Selected detections only",
+    "All visible detections",
+    "Auto-select strongest detections",
+)
 
 
 @dataclass
@@ -170,11 +175,35 @@ def _extract_chip(image: NDArray[np.float32], row: float, col: float, chip_size:
     return chip.astype(np.float32)
 
 
+def score_prf_chip(chip: NDArray[np.float32]) -> float:
+    """Score a chip for point-source PRF fitting using robust local contrast."""
+    chip64 = chip.astype(np.float64)
+    background = float(np.median(chip64))
+    mad = float(np.median(np.abs(chip64 - background)))
+    noise = max(1.4826 * mad, 1e-6)
+    peak = float(np.max(chip64) - background)
+    if peak <= 0 or not np.isfinite(peak):
+        return 0.0
+
+    peak_row, peak_col = np.unravel_index(np.argmax(chip64), chip64.shape)
+    center = (chip64.shape[0] - 1) / 2.0
+    center_distance = math.hypot(peak_row - center, peak_col - center)
+    if center_distance > max(2.0, chip64.shape[0] * 0.25):
+        return 0.0
+
+    return peak / noise
+
+
 def chips_from_selected_detections(imagery, selected_detections: Iterable[tuple], chip_size: int) -> list[NDArray[np.float32]]:
     """Extract fitting chips from VISTA selected detections."""
+    return chips_from_detections(imagery, selected_detections, chip_size)
+
+
+def chips_from_detections(imagery, detections: Iterable[tuple], chip_size: int) -> list[NDArray[np.float32]]:
+    """Extract fitting chips from VISTA detection tuples."""
     frame_to_index = {int(frame): i for i, frame in enumerate(imagery.frames)}
     chips: list[NDArray[np.float32]] = []
-    for detector, frame, index in selected_detections:
+    for detector, frame, index in detections:
         if detector.sensor != imagery.sensor:
             continue
         image_index = frame_to_index.get(int(frame))
@@ -189,6 +218,26 @@ def chips_from_selected_detections(imagery, selected_detections: Iterable[tuple]
         if chip is not None:
             chips.append(chip)
     return chips
+
+
+def strongest_prf_chips(
+    imagery,
+    detections: Iterable[tuple],
+    chip_size: int,
+    max_chips: int,
+    min_score: float = 0.0,
+) -> tuple[list[NDArray[np.float32]], int]:
+    """Return high-contrast point-source chips ranked for PRF fitting."""
+    chips = chips_from_detections(imagery, detections, chip_size)
+    scored = [
+        (index, score_prf_chip(chip), chip)
+        for index, chip in enumerate(chips)
+    ]
+    scored = [(index, score, chip) for index, score, chip in scored if score >= min_score]
+    if len(scored) > max_chips:
+        scored = sorted(scored, key=lambda item: item[1], reverse=True)[:max_chips]
+    scored.sort(key=lambda item: item[0])
+    return [chip for _, _, chip in scored], len(chips)
 
 
 def fit_prf_model(

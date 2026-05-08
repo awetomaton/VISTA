@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 
 from vista.utils.labeler import LABELER_SETTINGS_KEY, get_system_user
 from vista.wms.wms_client import get_tile_servers, save_tile_servers
-from vista.algorithms.imagery.prf import SUPPORTED_PIXEL_SHAPES, SUPPORTED_PRF_MODELS
+from vista.algorithms.imagery.prf import PRF_DETECTION_SOURCES, SUPPORTED_PIXEL_SHAPES, SUPPORTED_PRF_MODELS
 
 try:
     import torch
@@ -135,7 +135,7 @@ class ImagerySettingsTab(QVBoxLayout):
         self.prf_model_combo.setToolTip(
             "Point response model used for PRF-aware projection.\n"
             "None preserves the current VISTA projection behavior.\n"
-            "Other models fit a sensor-agnostic PRF from selected detections."
+            "Other models fit a sensor-agnostic PRF from the configured detection source."
         )
         prf_layout.addRow("Model:", self.prf_model_combo)
 
@@ -146,6 +146,25 @@ class ImagerySettingsTab(QVBoxLayout):
             "Square is the default detector pixel shape."
         )
         prf_layout.addRow("Pixel Shape:", self.prf_pixel_shape_combo)
+
+        self.prf_detection_source_combo = QComboBox()
+        self.prf_detection_source_combo.addItems(PRF_DETECTION_SOURCES)
+        self.prf_detection_source_combo.setToolTip(
+            "Detection source used for PRF fitting.\n"
+            "Selected detections only is the safest manual option.\n"
+            "Auto-select strongest detections ranks visible detections by local contrast."
+        )
+        prf_layout.addRow("Detection Source:", self.prf_detection_source_combo)
+
+        self.prf_auto_max_detections_spinbox = QSpinBox()
+        self.prf_auto_max_detections_spinbox.setRange(1, 1000)
+        self.prf_auto_max_detections_spinbox.setValue(150)
+        self.prf_auto_max_detections_spinbox.setToolTip(
+            "Maximum number of detections used by automatic PRF fitting.\n"
+            "This limits runtime and reduces the impact of weak/noisy detections.\n"
+            "Default: 150"
+        )
+        prf_layout.addRow("Auto Max Detections:", self.prf_auto_max_detections_spinbox)
 
         self.prf_tolerance_spinbox = QDoubleSpinBox()
         self.prf_tolerance_spinbox.setRange(1e-6, 1.0)
@@ -173,7 +192,7 @@ class ImagerySettingsTab(QVBoxLayout):
         self.prf_min_detections_spinbox.setRange(1, 1000)
         self.prf_min_detections_spinbox.setValue(5)
         self.prf_min_detections_spinbox.setToolTip(
-            "Minimum number of selected detections required to fit a PRF.\n"
+            "Minimum number of usable detection chips required to fit a PRF.\n"
             "Default: 5"
         )
         prf_layout.addRow("Min Detections:", self.prf_min_detections_spinbox)
@@ -241,6 +260,15 @@ class ImagerySettingsTab(QVBoxLayout):
         self.prf_pixel_shape_combo.setCurrentText(
             pixel_shape if pixel_shape in SUPPORTED_PIXEL_SHAPES else "Square"
         )
+        detection_source = self.settings.value(
+            "imagery/prf_detection_source", "Selected detections only", type=str
+        )
+        self.prf_detection_source_combo.setCurrentText(
+            detection_source if detection_source in PRF_DETECTION_SOURCES else "Selected detections only"
+        )
+        self.prf_auto_max_detections_spinbox.setValue(
+            self.settings.value("imagery/prf_auto_max_detections", 150, type=int)
+        )
         self.prf_tolerance_spinbox.setValue(
             self.settings.value("imagery/prf_tolerance", 0.01, type=float)
         )
@@ -277,6 +305,10 @@ class ImagerySettingsTab(QVBoxLayout):
         self.settings.setValue("imagery/tooltip_font_weight", self.tooltip_weight_combo.currentText())
         self.settings.setValue("imagery/prf_model", self.prf_model_combo.currentText())
         self.settings.setValue("imagery/prf_pixel_shape", self.prf_pixel_shape_combo.currentText())
+        self.settings.setValue("imagery/prf_detection_source", self.prf_detection_source_combo.currentText())
+        self.settings.setValue(
+            "imagery/prf_auto_max_detections", self.prf_auto_max_detections_spinbox.value()
+        )
         self.settings.setValue("imagery/prf_tolerance", self.prf_tolerance_spinbox.value())
         self.settings.setValue("imagery/prf_max_iterations", self.prf_max_iterations_spinbox.value())
         self.settings.setValue("imagery/prf_min_detections", self.prf_min_detections_spinbox.value())
