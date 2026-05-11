@@ -107,7 +107,7 @@ def _pixel_aperture(size: int, pixel_shape: str, oversample: int) -> NDArray[np.
     return normalize_kernel(aperture).astype(np.float64)
 
 
-def generate_prf_kernel(
+def _generate_prf_fine(
     model: str,
     pixel_shape: str = "Square",
     kernel_size: int = 11,
@@ -117,12 +117,13 @@ def generate_prf_kernel(
     beta: float = 4.765,
     airy_radius: float = 1.5,
     oversample: int = 7,
-) -> NDArray[np.float32]:
-    """Generate a discrete PRF from a continuous PSF model and pixel aperture."""
+) -> NDArray[np.float64]:
+    """Generate an oversampled PRF surface from a PSF model and pixel aperture."""
     if model == NO_PRF_MODEL:
-        kernel = np.zeros((kernel_size, kernel_size), dtype=np.float64)
-        kernel[kernel_size // 2, kernel_size // 2] = 1.0
-        return kernel.astype(np.float32)
+        fine_size = int(kernel_size) * max(1, int(oversample))
+        prf_fine = np.zeros((fine_size, fine_size), dtype=np.float64)
+        prf_fine[fine_size // 2, fine_size // 2] = 1.0
+        return prf_fine
 
     kernel_size = int(kernel_size)
     if kernel_size % 2 == 0:
@@ -157,10 +158,122 @@ def generate_prf_kernel(
 
     psf = normalize_kernel(psf).astype(np.float64)
     aperture = _pixel_aperture(fine_size, pixel_shape, oversample)
-    prf_fine = fftconvolve(psf, aperture, mode="same")
+    return fftconvolve(psf, aperture, mode="same")
 
-    prf = prf_fine.reshape(kernel_size, oversample, kernel_size, oversample).mean(axis=(1, 3))
+
+def generate_oversampled_prf(
+    model: str,
+    pixel_shape: str = "Square",
+    kernel_size: int = 11,
+    sigma_x: float = 1.0,
+    sigma_y: float | None = None,
+    theta: float = 0.0,
+    beta: float = 4.765,
+    airy_radius: float = 1.5,
+    oversample: int = 7,
+) -> NDArray[np.float32]:
+    """
+    Generate an oversampled sensor PRF table from a PSF model and detector aperture.
+
+    The returned table is normalized for VISTA's ``Sensor.get_prf`` convention:
+    sampling the table at detector-pixel-spaced locations for a centered point
+    source sums to one unit of point-source flux.
+    """
+    kernel_size = int(kernel_size)
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    oversample = max(3, int(oversample))
+    if oversample % 2 == 0:
+        oversample += 1
+
+    prf_fine = _generate_prf_fine(
+        model,
+        pixel_shape,
+        kernel_size,
+        sigma_x,
+        sigma_y,
+        theta,
+        beta,
+        airy_radius,
+        oversample,
+    )
+    center = (prf_fine.shape[0] - 1) // 2
+    half = kernel_size // 2
+    lattice = prf_fine[
+        center - half * oversample:center + half * oversample + 1:oversample,
+        center - half * oversample:center + half * oversample + 1:oversample,
+    ]
+    total = np.sum(lattice)
+    if not np.isfinite(total) or total <= 0:
+        prf_fine = np.zeros_like(prf_fine, dtype=np.float64)
+        prf_fine[center, center] = 1.0
+        return prf_fine.astype(np.float32)
+    return (prf_fine / total).astype(np.float32)
+
+
+def generate_prf_kernel(
+    model: str,
+    pixel_shape: str = "Square",
+    kernel_size: int = 11,
+    sigma_x: float = 1.0,
+    sigma_y: float | None = None,
+    theta: float = 0.0,
+    beta: float = 4.765,
+    airy_radius: float = 1.5,
+    oversample: int = 7,
+) -> NDArray[np.float32]:
+    """Generate a detector-sampled PRF kernel from a continuous PSF model and pixel aperture."""
+    if model == NO_PRF_MODEL:
+        kernel = np.zeros((kernel_size, kernel_size), dtype=np.float64)
+        kernel[kernel_size // 2, kernel_size // 2] = 1.0
+        return kernel.astype(np.float32)
+
+    kernel_size = int(kernel_size)
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    oversample = max(3, int(oversample))
+    if oversample % 2 == 0:
+        oversample += 1
+
+    prf_fine = generate_oversampled_prf(
+        model,
+        pixel_shape,
+        kernel_size,
+        sigma_x,
+        sigma_y,
+        theta,
+        beta,
+        airy_radius,
+        oversample,
+    ).astype(np.float64)
+    center = (prf_fine.shape[0] - 1) // 2
+    half = kernel_size // 2
+    prf = prf_fine[
+        center - half * oversample:center + half * oversample + 1:oversample,
+        center - half * oversample:center + half * oversample + 1:oversample,
+    ]
     return normalize_kernel(prf)
+
+
+def oversampled_prf_from_model(prf_model: PRFModel, oversample: int = 7) -> NDArray[np.float32]:
+    """Generate a sensor-level oversampled PRF table from a fitted PRFModel."""
+    params = prf_model.parameters
+    sigma_x = params.get("sigma_x", params.get("sigma", params.get("airy_radius", 1.0)))
+    sigma_y = params.get("sigma_y", params.get("sigma", sigma_x))
+    theta = params.get("theta", 0.0)
+    beta = params.get("beta", 4.765)
+    airy_radius = params.get("airy_radius", sigma_x)
+    return generate_oversampled_prf(
+        prf_model.model,
+        prf_model.pixel_shape,
+        prf_model.kernel_size,
+        sigma_x=sigma_x,
+        sigma_y=sigma_y,
+        theta=theta,
+        beta=beta,
+        airy_radius=airy_radius,
+        oversample=oversample,
+    )
 
 
 def _extract_chip(image: NDArray[np.float32], row: float, col: float, chip_size: int) -> NDArray[np.float32] | None:

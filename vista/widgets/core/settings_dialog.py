@@ -126,16 +126,15 @@ class ImagerySettingsTab(QVBoxLayout):
         tooltip_group.setLayout(tooltip_layout)
         self.addWidget(tooltip_group)
 
-        # Create PRF projection settings group
-        prf_group = QGroupBox("PRF Projection")
+        # Create sensor PRF fitting settings group
+        prf_group = QGroupBox("Sensor PRF Fitting")
         prf_layout = QFormLayout()
 
         self.prf_model_combo = QComboBox()
         self.prf_model_combo.addItems(SUPPORTED_PRF_MODELS)
         self.prf_model_combo.setToolTip(
-            "Point response model used for PRF-aware projection.\n"
-            "None preserves the current VISTA projection behavior.\n"
-            "Other models fit a sensor-agnostic PRF from the configured detection source."
+            "Point response model used when fitting a sensor PRF from detections.\n"
+            "If None is selected, the Sensors tab fit action uses Elliptical Gaussian as the default model."
         )
         prf_layout.addRow("Model:", self.prf_model_combo)
 
@@ -206,6 +205,17 @@ class ImagerySettingsTab(QVBoxLayout):
             "Default: 11"
         )
         prf_layout.addRow("Chip Size:", self.prf_chip_size_spinbox)
+
+        self.prf_oversampling_spinbox = QSpinBox()
+        self.prf_oversampling_spinbox.setRange(3, 31)
+        self.prf_oversampling_spinbox.setSingleStep(2)
+        self.prf_oversampling_spinbox.setValue(7)
+        self.prf_oversampling_spinbox.setToolTip(
+            "Oversampling factor used for the stored sensor PRF table.\n"
+            "Higher values preserve more sub-pixel structure but increase HDF5 size.\n"
+            "Default: 7"
+        )
+        prf_layout.addRow("Oversampling:", self.prf_oversampling_spinbox)
 
         prf_group.setLayout(prf_layout)
         self.addWidget(prf_group)
@@ -282,6 +292,10 @@ class ImagerySettingsTab(QVBoxLayout):
         if chip_size % 2 == 0:
             chip_size += 1
         self.prf_chip_size_spinbox.setValue(chip_size)
+        oversampling = self.settings.value("imagery/prf_oversampling", 7, type=int)
+        if oversampling % 2 == 0:
+            oversampling += 1
+        self.prf_oversampling_spinbox.setValue(oversampling)
 
     def save_settings(self):
         """Save settings to QSettings"""
@@ -316,6 +330,10 @@ class ImagerySettingsTab(QVBoxLayout):
         if chip_size % 2 == 0:
             chip_size += 1
         self.settings.setValue("imagery/prf_chip_size", chip_size)
+        oversampling = self.prf_oversampling_spinbox.value()
+        if oversampling % 2 == 0:
+            oversampling += 1
+        self.settings.setValue("imagery/prf_oversampling", oversampling)
 
 
 class TrackVisualizationSettingsTab(QVBoxLayout):

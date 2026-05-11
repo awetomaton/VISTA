@@ -1,5 +1,5 @@
 """Sensors panel for data manager"""
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout, QHeaderView, QMessageBox, QPushButton, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget
@@ -30,6 +30,12 @@ class SensorsPanel(QWidget):
         self.delete_sensor_btn = QPushButton("Delete Selected")
         self.delete_sensor_btn.clicked.connect(self.delete_selected_sensor)
         button_layout.addWidget(self.delete_sensor_btn)
+        self.fit_prf_btn = QPushButton("Fit PRF from Detections")
+        self.fit_prf_btn.setToolTip(
+            "Fit a sensor-agnostic PRF model from detections in loaded imagery and attach it to the selected sensor."
+        )
+        self.fit_prf_btn.clicked.connect(self.fit_prf_from_detections)
+        button_layout.addWidget(self.fit_prf_btn)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -211,6 +217,38 @@ class SensorsPanel(QWidget):
                 "Sensor Deleted",
                 f"Sensor '{sensor.name}' and all associated data have been deleted."
             )
+
+    def fit_prf_from_detections(self):
+        """Fit and store a PRF on the selected sensor using current PRF fitting settings."""
+        selected_rows = [index.row() for index in self.sensors_table.selectedIndexes()]
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select a sensor to fit a PRF.")
+            return
+
+        row = selected_rows[0]
+        if row >= len(self.viewer.sensors):
+            return
+
+        sensor = self.viewer.sensors[row]
+        try:
+            prf_model = self.viewer.fit_prf_for_sensor(sensor, QSettings("Vista", "VistaApp"))
+        except Exception as exc:
+            QMessageBox.warning(self, "PRF Fit Failed", str(exc))
+            return
+
+        self.refresh_sensors_table()
+        self.data_changed.emit()
+        if prf_model.converged:
+            status = "converged"
+        else:
+            status = "used the best fit above tolerance"
+        QMessageBox.information(
+            self,
+            "PRF Fit Complete",
+            f"Stored a {prf_model.model} PRF on sensor '{sensor.name}'.\n\n"
+            f"Fit {status} with residual {prf_model.residual_ratio:.4g} "
+            f"using {prf_model.detections_used} detections."
+        )
 
     def dragEnterEvent(self, event):
         """Accept drag events containing HDF5 files."""

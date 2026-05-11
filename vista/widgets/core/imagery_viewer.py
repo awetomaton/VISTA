@@ -22,6 +22,7 @@ from vista.algorithms.imagery.prf import (
     chips_from_detections,
     chips_from_selected_detections,
     fit_prf_model,
+    oversampled_prf_from_model,
     strongest_prf_chips,
 )
 from vista.utils.point_refinement import refine_point
@@ -3180,11 +3181,8 @@ class ImageryViewer(QWidget):
             # Create projector for current sensor
             coarse_enabled = settings.value("wms/coarse_grid_enabled", True, type=bool)
             coarse_size = settings.value("wms/coarse_grid_size", 64, type=int) if coarse_enabled else 0
-            prf_model = self._fit_prf_model_for_projection(settings)
-            if prf_model is not None and self.projection_cache is not None:
-                self.projection_cache.invalidate_imagery(self.imagery.uuid)
             self.imagery_projector = ImageryProjector(
-                self.selected_sensor, coarse_grid_size=coarse_size, prf_model=prf_model
+                self.selected_sensor, coarse_grid_size=coarse_size, prf_model=None
             )
 
             # Compute imagery footprint
@@ -3469,6 +3467,133 @@ class ImageryViewer(QWidget):
         self._last_prf_status = message
         print(f"[PRF] {message}")
         self.wms_status_changed.emit(message)
+
+    def fit_prf_for_sensor(self, sensor=None, settings: QSettings | None = None):
+        """Fit a sensor-agnostic PRF from detections and attach it to the selected sensor."""
+        sensor = sensor or self.selected_sensor
+        if sensor is None:
+            raise ValueError("No sensor is selected.")
+        if not hasattr(sensor, "oversampled_prf"):
+            raise TypeError("The selected sensor type cannot store an oversampled PRF.")
+
+        imagery = self.imagery if self.imagery is not None and self.imagery.sensor == sensor else None
+        if imagery is None:
+            imagery = next((candidate for candidate in self.imageries if candidate.sensor == sensor), None)
+        if imagery is None:
+            raise ValueError("No imagery is loaded for the selected sensor.")
+
+        settings = settings or QSettings("Vista", "VistaApp")
+        model = settings.value("imagery/prf_model", "Elliptical Gaussian", type=str)
+        if model == NO_PRF_MODEL:
+            model = "Elliptical Gaussian"
+
+        min_detections = settings.value("imagery/prf_min_detections", 5, type=int)
+        chip_size = settings.value("imagery/prf_chip_size", 11, type=int)
+        if chip_size % 2 == 0:
+            chip_size += 1
+        pixel_shape = settings.value("imagery/prf_pixel_shape", "Square", type=str)
+        tolerance = settings.value("imagery/prf_tolerance", 0.01, type=float)
+        max_iterations = settings.value("imagery/prf_max_iterations", 50, type=int)
+        oversampling = settings.value("imagery/prf_oversampling", 7, type=int)
+        if oversampling % 2 == 0:
+            oversampling += 1
+        detection_source = settings.value(
+            "imagery/prf_detection_source", "Selected detections only", type=str
+        )
+        if detection_source not in PRF_DETECTION_SOURCES:
+            detection_source = "Selected detections only"
+        auto_max_detections = settings.value("imagery/prf_auto_max_detections", 150, type=int)
+
+        candidates = self._prf_detection_candidates_for_imagery(imagery, detection_source)
+        source_count = len(candidates)
+        raw_chip_count = source_count
+        if detection_source == "Selected detections only":
+            chips = chips_from_selected_detections(imagery, candidates, chip_size)
+            raw_chip_count = len(chips)
+        elif detection_source == "All visible detections":
+            chips = chips_from_detections(imagery, candidates, chip_size)
+            raw_chip_count = len(chips)
+        else:
+            chips, raw_chip_count = strongest_prf_chips(
+                imagery,
+                candidates,
+                chip_size,
+                max_chips=auto_max_detections,
+            )
+
+        if len(chips) < min_detections:
+            raise ValueError(
+                f"PRF fitting requires {min_detections} usable detection chips from {detection_source}; "
+                f"found {len(chips)} from {source_count} candidates."
+            )
+
+        prf_model = fit_prf_model(
+            chips=chips,
+            model=model,
+            pixel_shape=pixel_shape,
+            tolerance=tolerance,
+            max_iterations=max_iterations,
+            kernel_size=chip_size,
+        )
+        oversampled_prf = oversampled_prf_from_model(prf_model, oversample=oversampling)
+        sensor.oversampled_prf = oversampled_prf
+        sensor.prf_oversampling = oversampling
+        sensor.prf_center = (
+            (oversampled_prf.shape[0] - 1) / 2.0,
+            (oversampled_prf.shape[1] - 1) / 2.0,
+        )
+        sensor.prf_metadata = {
+            "metadata_version": "1.0",
+            "construction": "fitted_from_image_detections",
+            "model_scope": "constant_per_sensor",
+            "coordinate_convention": "corner-origin; pixel centers at row+0.5, column+0.5",
+            "normalization": "fraction_of_point_source_flux_per_detector_pixel",
+            "source_imagery_uuid": str(imagery.uuid),
+            "source_imagery_name": imagery.name,
+            "detection_source": detection_source,
+            "source_candidates": int(source_count),
+            "usable_chips_before_auto_limit": int(raw_chip_count),
+            "oversampling": int(oversampling),
+            **prf_model.to_metadata(),
+        }
+        if self.projection_cache is not None:
+            self.projection_cache.clear()
+
+        if prf_model.converged:
+            message = (
+                f"Fitted {model} sensor PRF using {prf_model.detections_used} detections "
+                f"(residual {prf_model.residual_ratio:.4g})."
+            )
+        else:
+            message = (
+                f"Fitted {model} sensor PRF above tolerance using {prf_model.detections_used}/{raw_chip_count} "
+                f"usable detections (residual {prf_model.residual_ratio:.4g}, "
+                f"tolerance {prf_model.tolerance:.4g})."
+            )
+        self._emit_prf_status(message)
+        return prf_model
+
+    def _prf_detection_candidates_for_imagery(self, imagery, detection_source: str) -> list[tuple]:
+        """Return detection tuples available to a PRF fit for the given imagery."""
+        if detection_source == "Selected detections only":
+            imagery_frames = {int(f) for f in imagery.frames}
+            return [
+                (detector, frame, index)
+                for detector, frame, index in self.selected_detections
+                if detector.sensor == imagery.sensor and int(frame) in imagery_frames
+            ]
+
+        imagery_frames = {int(frame) for frame in imagery.frames}
+        candidates = []
+        for detector in self.detectors:
+            if not detector.visible:
+                continue
+            if detector.sensor != imagery.sensor:
+                continue
+            for index, frame in enumerate(detector.frames):
+                if int(frame) in imagery_frames:
+                    candidates.append((detector, frame, index))
+        return candidates
 
     def _on_map_view_range_changed(self) -> None:
         """Handle view range changes in map mode (pan/zoom). Debounced."""
