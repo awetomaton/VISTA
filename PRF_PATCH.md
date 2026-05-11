@@ -1,6 +1,25 @@
-# PRF Projection Patch
+# PRF Patch
 
-This document tracks the local PRF projection patch as it evolves.
+This document tracks the local PRF patch as it evolves.
+
+## Sensor-Level PRF API
+
+- `Sensor.get_prf(source_row, source_column, chip_size=None)` is now part of the base sensor API.
+- The base `Sensor` implementation raises `NotImplementedError`.
+- `SampledSensor.get_prf(...)` implements a constant per-sensor PRF for v1.
+- The API returns a local chip: `(rows, columns, prf_values)`.
+- `rows` and `columns` are integer detector-pixel index grids; `prf_values` contains the point-source flux fraction assigned to each returned detector pixel.
+- Source locations use VISTA detector pixel coordinates with integer pixel edges and pixel centers at `row + 0.5`, `column + 0.5`.
+- `SampledSensor` samples the stored oversampled PRF by bilinear interpolation at detector pixel centers.
+- Full-frame PRF output and field-dependent PRFs are deferred extensions.
+
+## Sensor HDF5 PRF Storage
+
+- Sensors with PRF data save a `prf/` group in their HDF5 sensor group.
+- `prf/oversampled_prf` stores the oversampled PRF table.
+- PRF attributes include oversampling, PRF center row/column, coordinate convention, model scope, normalization convention, and JSON construction metadata.
+- HDF5 loading restores the oversampled PRF and metadata into `SampledSensor`.
+- The Data Manager **Sensors** tab shows a per-sensor **PRF** capability column.
 
 ## Current Behavior
 

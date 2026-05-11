@@ -35,8 +35,8 @@ class SensorsPanel(QWidget):
 
         # Sensors table
         self.sensors_table = QTableWidget()
-        self.sensors_table.setColumnCount(5)
-        self.sensors_table.setHorizontalHeaderLabels(["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask"])
+        self.sensors_table.setColumnCount(6)
+        self.sensors_table.setHorizontalHeaderLabels(["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "PRF"])
 
         # Enable row selection (single selection only)
         self.sensors_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -49,6 +49,7 @@ class SensorsPanel(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Uniformity Gain
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # PRF
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
@@ -95,6 +96,12 @@ class SensorsPanel(QWidget):
             bad_pixel_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             bad_pixel_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.sensors_table.setItem(row, 4, bad_pixel_item)
+
+            # Point response function capability (checkmark or empty)
+            prf_item = QTableWidgetItem("✓" if sensor.can_model_prf() else "")
+            prf_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            prf_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.sensors_table.setItem(row, 5, prf_item)
 
         self.sensors_table.blockSignals(False)
 

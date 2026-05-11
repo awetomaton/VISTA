@@ -1,4 +1,5 @@
 """Background data loading using QThread to prevent UI blocking"""
+import json
 from pathlib import Path
 
 import h5py
@@ -233,6 +234,10 @@ class DataLoaderThread(QThread):
         bad_pixel_mask_frames = None
         radiometric_gain = None
         radiometric_gain_frames = None
+        oversampled_prf = None
+        prf_oversampling = None
+        prf_center = None
+        prf_metadata = None
 
         if 'radiometric' in sensor_group:
             rad_group = sensor_group['radiometric']
@@ -248,6 +253,22 @@ class DataLoaderThread(QThread):
             if 'radiometric_gain' in rad_group:
                 radiometric_gain = rad_group['radiometric_gain'][:]
                 radiometric_gain_frames = rad_group['radiometric_gain_frames'][:]
+
+        if 'prf' in sensor_group:
+            prf_group = sensor_group['prf']
+            if 'oversampled_prf' in prf_group:
+                oversampled_prf = prf_group['oversampled_prf'][:]
+                prf_oversampling = int(prf_group.attrs.get('oversampling', 1))
+                prf_center = (
+                    float(prf_group.attrs.get('center_row', (oversampled_prf.shape[0] - 1) / 2.0)),
+                    float(prf_group.attrs.get('center_column', (oversampled_prf.shape[1] - 1) / 2.0)),
+                )
+                metadata_json = prf_group.attrs.get('construction_metadata_json', None)
+                if metadata_json is not None:
+                    try:
+                        prf_metadata = json.loads(metadata_json)
+                    except (TypeError, json.JSONDecodeError):
+                        prf_metadata = {'raw_construction_metadata_json': str(metadata_json)}
 
         if sensor_type == 'SampledSensor':
             # Load position data
@@ -317,6 +338,10 @@ class DataLoaderThread(QThread):
                 uniformity_gain_image_frames=uniformity_gain_image_frames,
                 bad_pixel_masks=bad_pixel_masks,
                 bad_pixel_mask_frames=bad_pixel_mask_frames,
+                oversampled_prf=oversampled_prf,
+                prf_oversampling=prf_oversampling,
+                prf_center=prf_center,
+                prf_metadata=prf_metadata,
             )
         else:
             # Base Sensor class

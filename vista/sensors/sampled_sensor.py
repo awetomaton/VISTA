@@ -8,6 +8,7 @@ radiometric gain calibration.
 """
 
 import h5py
+import json
 from astropy.coordinates import EarthLocation
 from astropy import units
 from dataclasses import dataclass
@@ -110,6 +111,10 @@ class SampledSensor(Sensor):
     poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]] = None
     poly_arf_to_row: Optional[NDArray[np.float64]] = None
     poly_arf_to_col: Optional[NDArray[np.float64]] = None
+    oversampled_prf: Optional[NDArray[np.float64]] = None
+    prf_oversampling: Optional[int] = None
+    prf_center: Optional[Tuple[float, float]] = None
+    prf_metadata: Optional[dict] = None
 
     def __post_init__(self):
         """
@@ -152,6 +157,27 @@ class SampledSensor(Sensor):
             self.times = unique_times
             self.positions = self.positions[:, unique_indices]
 
+        if self.oversampled_prf is not None:
+            self.oversampled_prf = np.asarray(self.oversampled_prf, dtype=np.float64)
+            if self.oversampled_prf.ndim != 2:
+                raise ValueError(f"oversampled_prf must be a 2D array, got shape {self.oversampled_prf.shape}")
+
+            if self.prf_oversampling is None:
+                self.prf_oversampling = 1
+            if self.prf_oversampling < 1:
+                raise ValueError("prf_oversampling must be at least 1")
+
+            if self.prf_center is None:
+                self.prf_center = (
+                    (self.oversampled_prf.shape[0] - 1) / 2.0,
+                    (self.oversampled_prf.shape[1] - 1) / 2.0,
+                )
+            if len(self.prf_center) != 2:
+                raise ValueError("prf_center must contain (row, column) coordinates")
+
+            if self.prf_metadata is None:
+                self.prf_metadata = {}
+
     def can_geolocate(self) -> bool:
         """
         Check if sensor can convert pixels to geodetic coordinates and vice versa.
@@ -167,6 +193,122 @@ class SampledSensor(Sensor):
                 self.poly_pixel_to_arf_elevation is not None and
                 self.poly_arf_to_row is not None and
                 self.poly_arf_to_col is not None)
+
+    def can_model_prf(self) -> bool:
+        """
+        Check if this sensor has an oversampled point response function.
+
+        Returns
+        -------
+        bool
+            True if an oversampled PRF is available for local-chip sampling.
+        """
+        return self.oversampled_prf is not None
+
+    def _default_prf_chip_size(self) -> int:
+        """Return an odd detector-chip size covering the stored oversampled PRF support."""
+        support_rows = int(np.ceil(self.oversampled_prf.shape[0] / self.prf_oversampling))
+        support_cols = int(np.ceil(self.oversampled_prf.shape[1] / self.prf_oversampling))
+        chip_size = max(support_rows, support_cols)
+        if chip_size % 2 == 0:
+            chip_size += 1
+        return max(chip_size, 1)
+
+    def _sample_oversampled_prf(self, prf_rows: np.ndarray, prf_cols: np.ndarray) -> np.ndarray:
+        """
+        Bilinearly sample the stored oversampled PRF at fractional PRF-grid indices.
+
+        Coordinates outside the stored PRF support return zero.
+        """
+        prf = self.oversampled_prf
+        height, width = prf.shape
+
+        r0 = np.floor(prf_rows).astype(np.int64)
+        c0 = np.floor(prf_cols).astype(np.int64)
+        r1 = r0 + 1
+        c1 = c0 + 1
+
+        row_frac = prf_rows - r0
+        col_frac = prf_cols - c0
+
+        valid = (r0 >= 0) & (c0 >= 0) & (r1 < height) & (c1 < width)
+        samples = np.zeros(prf_rows.shape, dtype=np.float64)
+        if not np.any(valid):
+            return samples
+
+        v00 = prf[r0[valid], c0[valid]]
+        v01 = prf[r0[valid], c1[valid]]
+        v10 = prf[r1[valid], c0[valid]]
+        v11 = prf[r1[valid], c1[valid]]
+
+        rf = row_frac[valid]
+        cf = col_frac[valid]
+        samples[valid] = (
+            v00 * (1.0 - rf) * (1.0 - cf) +
+            v01 * (1.0 - rf) * cf +
+            v10 * rf * (1.0 - cf) +
+            v11 * rf * cf
+        )
+        return samples
+
+    def get_prf(
+        self,
+        source_row: float,
+        source_column: float,
+        chip_size: Optional[int] = None,
+    ) -> Tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
+        """
+        Return a local detector chip of PRF values for a point source location.
+
+        Parameters
+        ----------
+        source_row : float
+            Point source row coordinate in detector pixel coordinates. Pixel centers
+            are at row + 0.5.
+        source_column : float
+            Point source column coordinate in detector pixel coordinates. Pixel centers
+            are at column + 0.5.
+        chip_size : int, optional
+            Odd detector-chip size to return. Defaults to the stored PRF support.
+
+        Returns
+        -------
+        rows, columns, prf_values : tuple of NDArray
+            Local-chip detector row indices, detector column indices, and PRF values.
+
+        Notes
+        -----
+        The stored PRF is assumed constant across the sensor for this first version.
+        The point-source location shifts the sampling phase relative to detector
+        pixel centers.
+        """
+        if not self.can_model_prf():
+            raise ValueError("SampledSensor has no oversampled PRF data.")
+
+        if chip_size is None:
+            chip_size = self._default_prf_chip_size()
+        if chip_size < 1:
+            raise ValueError("chip_size must be at least 1")
+        if chip_size % 2 == 0:
+            raise ValueError("chip_size must be odd so the local chip has a center pixel")
+
+        center_row = int(np.round(source_row - 0.5))
+        center_col = int(np.round(source_column - 0.5))
+        half_chip = chip_size // 2
+
+        row_indices = np.arange(center_row - half_chip, center_row + half_chip + 1, dtype=np.int64)
+        col_indices = np.arange(center_col - half_chip, center_col + half_chip + 1, dtype=np.int64)
+        columns, rows = np.meshgrid(col_indices, row_indices)
+
+        pixel_center_rows = rows.astype(np.float64) + 0.5
+        pixel_center_cols = columns.astype(np.float64) + 0.5
+
+        prf_center_row, prf_center_col = self.prf_center
+        prf_rows = prf_center_row + (pixel_center_rows - source_row) * self.prf_oversampling
+        prf_cols = prf_center_col + (pixel_center_cols - source_column) * self.prf_oversampling
+        prf_values = self._sample_oversampled_prf(prf_rows, prf_cols)
+
+        return rows, columns, prf_values
     
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
@@ -524,3 +666,16 @@ class SampledSensor(Sensor):
 
             radiometric_group.create_dataset('radiometric_gain', data=self.radiometric_gain)
             radiometric_group.create_dataset('radiometric_gain_frames', data=self.frames)
+
+        # Save constant per-sensor PRF data
+        if self.can_model_prf():
+            prf_group = group.create_group('prf')
+            prf_group.create_dataset('oversampled_prf', data=self.oversampled_prf)
+            prf_group.attrs['oversampling'] = int(self.prf_oversampling)
+            prf_group.attrs['center_row'] = float(self.prf_center[0])
+            prf_group.attrs['center_column'] = float(self.prf_center[1])
+            prf_group.attrs['coordinate_convention'] = 'corner-origin; pixel centers at row+0.5, column+0.5'
+            prf_group.attrs['model_scope'] = 'constant_per_sensor'
+            prf_group.attrs['normalization'] = 'fraction_of_point_source_flux_per_detector_pixel'
+            if self.prf_metadata is not None:
+                prf_group.attrs['construction_metadata_json'] = json.dumps(self.prf_metadata, default=str)

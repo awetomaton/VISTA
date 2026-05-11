@@ -194,6 +194,51 @@ class Sensor:
         """
         return None
 
+    def get_prf(
+        self,
+        source_row: float,
+        source_column: float,
+        chip_size: Optional[int] = None,
+    ) -> Tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
+        """
+        Return detector-pixel PRF samples for a point source location.
+
+        Parameters
+        ----------
+        source_row : float
+            Point source row coordinate in detector pixel coordinates. Pixel edges are
+            integer-valued and pixel centers are at row + 0.5.
+        source_column : float
+            Point source column coordinate in detector pixel coordinates. Pixel edges are
+            integer-valued and pixel centers are at column + 0.5.
+        chip_size : int, optional
+            Odd local detector chip size to sample. Subclasses may choose a default
+            from their stored PRF support when omitted.
+
+        Returns
+        -------
+        rows, columns, prf_values : tuple of NDArray
+            Integer detector row indices, integer detector column indices, and PRF
+            values for those pixels. All arrays have the same 2D local-chip shape.
+
+        Notes
+        -----
+        The base Sensor class does not define a PRF. Subclasses that own detector
+        response data should implement this method.
+        """
+        raise NotImplementedError("Sensor.get_prf() must be implemented by subclasses with PRF data.")
+
+    def can_model_prf(self) -> bool:
+        """
+        Check if this sensor has point response function data.
+
+        Returns
+        -------
+        bool
+            True if the sensor can return detector-pixel PRF samples.
+        """
+        return False
+
     def can_geolocate(self) -> bool:
         """
         Check if sensor can convert pixels to geodetic coordiantes and vice versa. 
