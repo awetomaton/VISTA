@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QScr
 from vista.widgets.core.data.delegates import LabelsSelectionDialog
 from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.algorithms.imagery.prf_photometry import estimate_detector_flux_counts, summarize_flux_counts
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
@@ -22,6 +23,13 @@ from vista.widgets.core.data.undo_manager import UndoStack
 
 
 _CSV_EXTENSIONS = ('.csv',)
+_FLUX_ARRAY_ATTRS = (
+    "flux_counts",
+    "flux_uncertainty_counts",
+    "flux_snr",
+    "flux_background_counts",
+    "flux_residual_ratio",
+)
 
 
 class DetectionsPanel(QWidget):
@@ -126,8 +134,15 @@ class DetectionsPanel(QWidget):
         self.delete_selected_detections_btn = QPushButton("Delete Selected")
         self.delete_selected_detections_btn.setEnabled(False)  # Disabled until detectors selected
         self.delete_selected_detections_btn.clicked.connect(self.delete_selected_detections)
+        self.estimate_prf_flux_btn = QPushButton("Estimate PRF Flux")
+        self.estimate_prf_flux_btn.setEnabled(False)
+        self.estimate_prf_flux_btn.setToolTip(
+            "Estimate per-detection integrated point-source flux in raw image counts using the selected sensor PRF."
+        )
+        self.estimate_prf_flux_btn.clicked.connect(self.estimate_prf_flux_for_selected_detectors)
         button_layout.addWidget(self.export_detections_btn)
         button_layout.addWidget(self.delete_selected_detections_btn)
+        button_layout.addWidget(self.estimate_prf_flux_btn)
 
         # Add merge detections button
         self.merge_detections_btn = QPushButton("Merge Detections")
@@ -1190,12 +1205,137 @@ class DetectionsPanel(QWidget):
         self.delete_selected_detections_btn.setEnabled(num_selected >= 1)
         self.merge_detections_btn.setEnabled(num_selected >= 2)
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
+        self.estimate_prf_flux_btn.setEnabled(num_selected >= 1)
 
         # Enable Edit Detector button only if exactly one detector is selected
         self.edit_detector_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
         if self.edit_detector_btn.isChecked() and num_selected != 1:
             self.edit_detector_btn.setChecked(False)
+
+    def estimate_prf_flux_for_selected_detectors(self):
+        """Estimate per-detection PRF flux in raw image counts for selected detectors."""
+        selected_rows = sorted(set(index.row() for index in self.detections_table.selectedIndexes()))
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more detectors.")
+            return
+
+        selected_detectors = []
+        for row in selected_rows:
+            name_item = self.detections_table.item(row, 1)
+            if not name_item:
+                continue
+            detector_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+            detector = next((d for d in self.viewer.detectors if d.uuid == detector_uuid), None)
+            if detector is not None:
+                selected_detectors.append(detector)
+
+        if not selected_detectors:
+            QMessageBox.warning(self, "No Detections", "Could not find the selected detectors.")
+            return
+
+        missing_prf = [detector.sensor.name for detector in selected_detectors if not detector.sensor.can_model_prf()]
+        if missing_prf:
+            QMessageBox.warning(
+                self,
+                "No Sensor PRF",
+                "PRF flux estimation requires a fitted/stored PRF on each detector's sensor.\n\n"
+                f"Missing PRF for: {', '.join(sorted(set(missing_prf)))}"
+            )
+            return
+
+        self.save_undo_state(f"Estimate PRF flux for {len(selected_detectors)} detector(s)")
+
+        summaries = []
+        total_ok = 0
+        total_low_confidence = 0
+        total_rejected = 0
+
+        for detector in selected_detectors:
+            imagery = self._imagery_for_detector(detector)
+            if imagery is None:
+                detector.flux_counts = np.full(len(detector), np.nan, dtype=np.float64)
+                detector.flux_uncertainty_counts = np.full(len(detector), np.nan, dtype=np.float64)
+                detector.flux_snr = np.full(len(detector), np.nan, dtype=np.float64)
+                detector.flux_background_counts = np.full(len(detector), np.nan, dtype=np.float64)
+                detector.flux_residual_ratio = np.full(len(detector), np.nan, dtype=np.float64)
+                detector.flux_status = ["rejected:no_loaded_imagery_for_sensor"] * len(detector)
+                total_rejected += len(detector)
+                continue
+
+            results = estimate_detector_flux_counts(imagery, detector)
+            detector.flux_counts = np.asarray([result.flux_counts for result in results], dtype=np.float64)
+            detector.flux_uncertainty_counts = np.asarray(
+                [result.flux_uncertainty_counts for result in results], dtype=np.float64
+            )
+            detector.flux_snr = np.asarray([result.snr for result in results], dtype=np.float64)
+            detector.flux_background_counts = np.asarray(
+                [result.background_counts for result in results], dtype=np.float64
+            )
+            detector.flux_residual_ratio = np.asarray(
+                [result.residual_ratio for result in results], dtype=np.float64
+            )
+            detector.flux_status = [result.status for result in results]
+
+            ok = sum(result.status == "ok" for result in results)
+            low_confidence = sum(result.status.startswith("low_confidence") for result in results)
+            rejected = sum(result.status.startswith("rejected") for result in results)
+            total_ok += ok
+            total_low_confidence += low_confidence
+            total_rejected += rejected
+
+            summary = summarize_flux_counts(detector.flux_counts)
+            summaries.append(
+                f"{detector.name}: {summary['count']}/{len(detector)} estimated, "
+                f"mean {summary['mean']:.4g} raw counts, peak {summary['peak']:.4g}"
+            )
+
+        self.refresh_detections_table()
+        self.data_changed.emit()
+
+        message = (
+            "Estimated integrated point-source flux in raw image counts.\n\n"
+            f"OK: {total_ok}\n"
+            f"Low confidence: {total_low_confidence}\n"
+            f"Rejected: {total_rejected}\n\n"
+            + "\n".join(summaries[:8])
+        )
+        if len(summaries) > 8:
+            message += f"\n...and {len(summaries) - 8} more detector(s)."
+        QMessageBox.information(self, "PRF Flux Complete", message)
+
+    def _imagery_for_detector(self, detector):
+        """Find loaded imagery for a detector's sensor, preferring the current imagery."""
+        detector_frames = {int(frame) for frame in detector.frames}
+        if self.viewer.imagery is not None and self.viewer.imagery.sensor == detector.sensor:
+            current_frames = {int(frame) for frame in self.viewer.imagery.frames}
+            if detector_frames & current_frames:
+                return self.viewer.imagery
+
+        best_imagery = None
+        best_overlap = -1
+        for imagery in self.viewer.imageries:
+            if imagery.sensor != detector.sensor:
+                continue
+            imagery_frames = {int(frame) for frame in imagery.frames}
+            overlap = len(detector_frames & imagery_frames)
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_imagery = imagery
+        return best_imagery
+
+    @staticmethod
+    def _optional_detection_value(detector, attr: str, index: int) -> float:
+        values = getattr(detector, attr, None)
+        if values is None or index >= len(values):
+            return np.nan
+        return float(values[index])
+
+    @staticmethod
+    def _optional_detection_status(detector, index: int) -> str:
+        if not detector.flux_status or index >= len(detector.flux_status):
+            return ""
+        return detector.flux_status[index]
 
     def on_edit_detector_clicked(self, checked):
         """Handle Edit Detector button click"""
@@ -1550,6 +1690,15 @@ class DetectionsPanel(QWidget):
             detector.frames = detector.frames[keep_mask]
             detector.rows = detector.rows[keep_mask]
             detector.columns = detector.columns[keep_mask]
+            for attr in _FLUX_ARRAY_ATTRS:
+                values = getattr(detector, attr, None)
+                if values is not None:
+                    setattr(detector, attr, values[keep_mask])
+            if detector.flux_status:
+                detector.flux_status = [
+                    status for i, status in enumerate(detector.flux_status)
+                    if i < len(keep_mask) and keep_mask[i]
+                ]
 
             # Update labels if they exist
             if detector.labels and len(detector.labels) > 0:
@@ -1610,6 +1759,8 @@ class DetectionsPanel(QWidget):
         frames_list = []
         rows_list = []
         columns_list = []
+        flux_values = {attr: [] for attr in _FLUX_ARRAY_ATTRS}
+        flux_status = []
         sensor = None
 
         for detector, frame, index in self.selected_detections:
@@ -1625,12 +1776,26 @@ class DetectionsPanel(QWidget):
             frames_list.append(frame)
             rows_list.append(detector.rows[index])
             columns_list.append(detector.columns[index])
+            for attr in _FLUX_ARRAY_ATTRS:
+                flux_values[attr].append(self._optional_detection_value(detector, attr, index))
+            flux_status.append(self._optional_detection_status(detector, index))
 
         # Sort by frame
         sorted_indices = np.argsort(frames_list)
         frames = np.array(frames_list)[sorted_indices].astype(np.int_)
         rows = np.array(rows_list)[sorted_indices]
         columns = np.array(columns_list)[sorted_indices]
+        sorted_flux_values = {
+            attr: np.asarray(values, dtype=np.float64)[sorted_indices]
+            for attr, values in flux_values.items()
+        }
+        sorted_flux_status = [flux_status[i] for i in sorted_indices]
+
+        track_kwargs = {}
+        if any(np.any(np.isfinite(values)) for values in sorted_flux_values.values()):
+            track_kwargs.update(sorted_flux_values)
+        if any(status for status in sorted_flux_status):
+            track_kwargs["flux_status"] = sorted_flux_status
 
         # Create track with tracker attribute set
         track_name = f"Track from Detections {len(self.viewer.tracks) + 1}"
@@ -1640,7 +1805,8 @@ class DetectionsPanel(QWidget):
             rows=rows,
             columns=columns,
             sensor=sensor,
-            tracker="Manual Tracks from Detections"
+            tracker="Manual Tracks from Detections",
+            **track_kwargs,
         )
 
         # Add track to viewer
@@ -1767,23 +1933,44 @@ class DetectionsPanel(QWidget):
             frames_list = list(track.frames)
             rows_list = list(track.rows)
             columns_list = list(track.columns)
+            flux_values = {
+                attr: list(getattr(track, attr)) if getattr(track, attr, None) is not None else [np.nan] * len(track.frames)
+                for attr in _FLUX_ARRAY_ATTRS
+            }
+            flux_status = list(track.flux_status) if track.flux_status else [""] * len(track.frames)
 
             for detector, frame, index in self.selected_detections:
                 frames_list.append(frame)
                 rows_list.append(detector.rows[index])
                 columns_list.append(detector.columns[index])
+                for attr in _FLUX_ARRAY_ATTRS:
+                    flux_values[attr].append(self._optional_detection_value(detector, attr, index))
+                flux_status.append(self._optional_detection_status(detector, index))
 
             # Sort by frame and remove duplicates
             sorted_indices = np.argsort(frames_list)
             frames = np.array(frames_list)[sorted_indices].astype(np.int_)
             rows = np.array(rows_list)[sorted_indices]
             columns = np.array(columns_list)[sorted_indices]
+            sorted_flux_values = {
+                attr: np.asarray(values, dtype=np.float64)[sorted_indices]
+                for attr, values in flux_values.items()
+            }
+            sorted_flux_status = [flux_status[i] for i in sorted_indices]
 
             # Remove duplicate frames (keep first occurrence)
             unique_mask = np.concatenate(([True], frames[1:] != frames[:-1]))
             frames = frames[unique_mask]
             rows = rows[unique_mask]
             columns = columns[unique_mask]
+            for attr, values in sorted_flux_values.items():
+                values = values[unique_mask]
+                setattr(track, attr, values if np.any(np.isfinite(values)) else None)
+            sorted_flux_status = [
+                status for i, status in enumerate(sorted_flux_status)
+                if i < len(unique_mask) and unique_mask[i]
+            ]
+            track.flux_status = sorted_flux_status if any(sorted_flux_status) else []
 
             # Update track
             track.frames = frames
@@ -1876,6 +2063,8 @@ class DetectionsPanel(QWidget):
         all_labels = []
         all_label_times = []
         all_labelers = []
+        all_flux_values = {attr: [] for attr in _FLUX_ARRAY_ATTRS}
+        all_flux_status = []
 
         for detector in detectors_to_merge:
             all_frames.extend(detector.frames.tolist())
@@ -1895,6 +2084,9 @@ class DetectionsPanel(QWidget):
                     all_labelers.append(detector.labelers[i])
                 else:
                     all_labelers.append(None)
+                for attr in _FLUX_ARRAY_ATTRS:
+                    all_flux_values[attr].append(self._optional_detection_value(detector, attr, i))
+                all_flux_status.append(self._optional_detection_status(detector, i))
 
         # Create merged detector
         merged_name = f"Merged_{first_detector.name}"
@@ -1922,6 +2114,12 @@ class DetectionsPanel(QWidget):
             labels=all_labels,
             label_times=all_label_times,
             labelers=all_labelers,
+            **{
+                attr: np.asarray(values, dtype=np.float64)
+                for attr, values in all_flux_values.items()
+                if np.any(np.isfinite(values))
+            },
+            flux_status=all_flux_status if any(all_flux_status) else [],
         )
 
         # Add merged detector to viewer

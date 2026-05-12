@@ -71,6 +71,38 @@ class PRFModel:
         metadata.update({f"parameter_{key}": value for key, value in self.parameters.items()})
         return metadata
 
+    def parameter_summary(self) -> str:
+        """Return a compact human-readable summary of model-defining parameters."""
+        if not self.parameters:
+            return f"pixel_shape={self.pixel_shape}"
+
+        labels = {
+            "sigma": "sigma",
+            "sigma_x": "sigma_x",
+            "sigma_y": "sigma_y",
+            "theta": "theta",
+            "airy_radius": "airy_radius",
+            "beta": "beta",
+        }
+        ordered_keys = ("sigma", "sigma_x", "sigma_y", "theta", "airy_radius", "beta")
+        parts = [f"pixel_shape={self.pixel_shape}"]
+        for key in ordered_keys:
+            if key not in self.parameters:
+                continue
+            value = self.parameters[key]
+            if key == "theta":
+                parts.append(f"{labels[key]}={value:.4g} rad ({math.degrees(value):.4g} deg)")
+            elif key == "beta":
+                parts.append(f"{labels[key]}={value:.4g}")
+            else:
+                parts.append(f"{labels[key]}={value:.4g} px")
+
+        for key, value in self.parameters.items():
+            if key in ordered_keys:
+                continue
+            parts.append(f"{key}={value:.4g}")
+        return ", ".join(parts)
+
 
 def normalize_kernel(kernel: NDArray[np.float64]) -> NDArray[np.float32]:
     """Normalize a PRF kernel so it preserves flux."""
@@ -357,6 +389,47 @@ def strongest_prf_chips(
     return [chip for _, _, chip in scored], len(chips)
 
 
+def _estimate_elliptical_moments(chips_arr: NDArray[np.float64]) -> tuple[float, float, float]:
+    """Estimate an elliptical Gaussian seed from positive chip moments."""
+    signal_sum = None
+    for chip in chips_arr:
+        background = float(np.median(chip))
+        signal = np.clip(chip - background, 0.0, None)
+        if not np.any(signal > 0):
+            continue
+        signal_sum = signal if signal_sum is None else signal_sum + signal
+
+    if signal_sum is None or not np.any(signal_sum > 0):
+        return 1.2, 1.0, 0.0
+
+    yy, xx = np.indices(signal_sum.shape, dtype=np.float64)
+    center = (signal_sum.shape[0] - 1) / 2.0
+    x = xx - center
+    y = yy - center
+    weights = signal_sum / np.sum(signal_sum)
+    mean_x = float(np.sum(weights * x))
+    mean_y = float(np.sum(weights * y))
+    x = x - mean_x
+    y = y - mean_y
+    cov_xx = float(np.sum(weights * x * x))
+    cov_xy = float(np.sum(weights * x * y))
+    cov_yy = float(np.sum(weights * y * y))
+    covariance = np.array([[cov_xx, cov_xy], [cov_xy, cov_yy]], dtype=np.float64)
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+    order = np.argsort(eigenvalues)[::-1]
+    eigenvalues = np.maximum(eigenvalues[order], 0.01)
+    eigenvectors = eigenvectors[:, order]
+    sigma_x = float(np.clip(math.sqrt(eigenvalues[0]), 0.1, 10.0))
+    sigma_y = float(np.clip(math.sqrt(eigenvalues[1]), 0.1, 10.0))
+    theta = _canonicalize_theta(float(math.atan2(eigenvectors[1, 0], eigenvectors[0, 0])))
+    return sigma_x, sigma_y, theta
+
+
+def _canonicalize_theta(theta: float) -> float:
+    """Map an ellipse orientation to the equivalent [-pi/2, pi/2) interval."""
+    return float((theta + math.pi / 2.0) % math.pi - math.pi / 2.0)
+
+
 def fit_prf_model(
     chips: list[NDArray[np.float32]],
     model: str,
@@ -385,7 +458,8 @@ def fit_prf_model(
         lower = [0.1]
         upper = [10.0]
     else:
-        p0 = [1.2, 1.2, 0.0]  # sigma_x, sigma_y, theta
+        sigma_x0, sigma_y0, theta0 = _estimate_elliptical_moments(chips_arr)
+        p0 = [sigma_x0, sigma_y0, theta0]  # sigma_x, sigma_y, theta
         lower = [0.1, 0.1, -math.pi]
         upper = [10.0, 10.0, math.pi]
 
@@ -399,7 +473,7 @@ def fit_prf_model(
         upper = [10.0]
     for chip in chips_arr:
         bg = float(np.median(chip))
-        amp = float(np.max(chip) - bg)
+        amp = float(np.sum(np.clip(chip - bg, 0.0, None)))
         p0.extend([max(amp, 1e-6), bg, 0.0, 0.0])
         lower.extend([0.0, -np.inf, -2.0, -2.0])
         upper.extend([np.inf, np.inf, 2.0, 2.0])
@@ -470,6 +544,7 @@ def fit_prf_model(
         gtol=tolerance,
     )
     sigma_x, sigma_y, theta, beta, airy_radius, _ = unpack(result.x)
+    theta = _canonicalize_theta(theta)
     kernel = generate_prf_kernel(
         model, pixel_shape, kernel_size, sigma_x, sigma_y, theta, beta, airy_radius
     )

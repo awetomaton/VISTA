@@ -3468,7 +3468,7 @@ class ImageryViewer(QWidget):
         print(f"[PRF] {message}")
         self.wms_status_changed.emit(message)
 
-    def fit_prf_for_sensor(self, sensor=None, settings: QSettings | None = None):
+    def fit_prf_for_sensor(self, sensor=None, settings: QSettings | dict | None = None):
         """Fit a sensor-agnostic PRF from detections and attach it to the selected sensor."""
         sensor = sensor or self.selected_sensor
         if sensor is None:
@@ -3483,26 +3483,26 @@ class ImageryViewer(QWidget):
             raise ValueError("No imagery is loaded for the selected sensor.")
 
         settings = settings or QSettings("Vista", "VistaApp")
-        model = settings.value("imagery/prf_model", "Elliptical Gaussian", type=str)
+        model = self._prf_setting(settings, "imagery/prf_model", "Elliptical Gaussian", str)
         if model == NO_PRF_MODEL:
             model = "Elliptical Gaussian"
 
-        min_detections = settings.value("imagery/prf_min_detections", 5, type=int)
-        chip_size = settings.value("imagery/prf_chip_size", 11, type=int)
+        min_detections = self._prf_setting(settings, "imagery/prf_min_detections", 5, int)
+        chip_size = self._prf_setting(settings, "imagery/prf_chip_size", 11, int)
         if chip_size % 2 == 0:
             chip_size += 1
-        pixel_shape = settings.value("imagery/prf_pixel_shape", "Square", type=str)
-        tolerance = settings.value("imagery/prf_tolerance", 0.01, type=float)
-        max_iterations = settings.value("imagery/prf_max_iterations", 50, type=int)
-        oversampling = settings.value("imagery/prf_oversampling", 7, type=int)
+        pixel_shape = self._prf_setting(settings, "imagery/prf_pixel_shape", "Square", str)
+        tolerance = self._prf_setting(settings, "imagery/prf_tolerance", 0.01, float)
+        max_iterations = self._prf_setting(settings, "imagery/prf_max_iterations", 50, int)
+        oversampling = self._prf_setting(settings, "imagery/prf_oversampling", 7, int)
         if oversampling % 2 == 0:
             oversampling += 1
-        detection_source = settings.value(
-            "imagery/prf_detection_source", "Selected detections only", type=str
+        detection_source = self._prf_setting(
+            settings, "imagery/prf_detection_source", "Selected detections only", str
         )
         if detection_source not in PRF_DETECTION_SOURCES:
             detection_source = "Selected detections only"
-        auto_max_detections = settings.value("imagery/prf_auto_max_detections", 150, type=int)
+        auto_max_detections = self._prf_setting(settings, "imagery/prf_auto_max_detections", 150, int)
 
         candidates = self._prf_detection_candidates_for_imagery(imagery, detection_source)
         source_count = len(candidates)
@@ -3562,16 +3562,25 @@ class ImageryViewer(QWidget):
         if prf_model.converged:
             message = (
                 f"Fitted {model} sensor PRF using {prf_model.detections_used} detections "
-                f"(residual {prf_model.residual_ratio:.4g})."
+                f"(residual {prf_model.residual_ratio:.4g}; "
+                f"{prf_model.parameter_summary()})."
             )
         else:
             message = (
                 f"Fitted {model} sensor PRF above tolerance using {prf_model.detections_used}/{raw_chip_count} "
                 f"usable detections (residual {prf_model.residual_ratio:.4g}, "
-                f"tolerance {prf_model.tolerance:.4g})."
+                f"tolerance {prf_model.tolerance:.4g}; "
+                f"{prf_model.parameter_summary()})."
             )
         self._emit_prf_status(message)
         return prf_model
+
+    @staticmethod
+    def _prf_setting(settings, key: str, default, value_type):
+        """Read PRF fit settings from either QSettings or a plain dict."""
+        if isinstance(settings, dict):
+            return value_type(settings.get(key, default))
+        return settings.value(key, default, type=value_type)
 
     def _prf_detection_candidates_for_imagery(self, imagery, detection_source: str) -> list[tuple]:
         """Return detection tuples available to a PRF fit for the given imagery."""

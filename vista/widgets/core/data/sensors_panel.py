@@ -1,11 +1,151 @@
 """Sensors panel for data manager"""
 from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QMessageBox, QPushButton, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget
+    QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
+    QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton, QSpinBox,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+)
+
+from vista.algorithms.imagery.prf import (
+    PRF_DETECTION_SOURCES,
+    SUPPORTED_PIXEL_SHAPES,
+    SUPPORTED_PRF_MODELS,
 )
 
 _HDF5_EXTENSIONS = ('.h5', '.hdf5')
+
+
+class SensorPRFFitDialog(QDialog):
+    """Dialog for fitting a PRF onto one selected sensor."""
+
+    def __init__(self, sensor, parent=None):
+        super().__init__(parent)
+        self.sensor = sensor
+        self.settings = QSettings("Vista", "VistaApp")
+        self.setWindowTitle(f"Fit PRF - {sensor.name}")
+        self.init_ui()
+        self.load_settings()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel(f"Sensor: {self.sensor.name}"))
+
+        form = QFormLayout()
+
+        self.model_combo = QComboBox()
+        model_options = [model for model in SUPPORTED_PRF_MODELS if model != "None"]
+        self.model_combo.addItems(model_options)
+        self.model_combo.setToolTip("Sensor-agnostic PSF model to fit from detections.")
+        form.addRow("Model:", self.model_combo)
+
+        self.pixel_shape_combo = QComboBox()
+        self.pixel_shape_combo.addItems(SUPPORTED_PIXEL_SHAPES)
+        self.pixel_shape_combo.setToolTip("Detector pixel aperture used to convert the PSF model into a PRF.")
+        form.addRow("Pixel Shape:", self.pixel_shape_combo)
+
+        self.detection_source_combo = QComboBox()
+        self.detection_source_combo.addItems(PRF_DETECTION_SOURCES)
+        self.detection_source_combo.setToolTip("Which detections to use for fitting this sensor's PRF.")
+        form.addRow("Detection Source:", self.detection_source_combo)
+
+        self.auto_max_detections_spinbox = QSpinBox()
+        self.auto_max_detections_spinbox.setRange(1, 1000)
+        self.auto_max_detections_spinbox.setValue(150)
+        form.addRow("Auto Max Detections:", self.auto_max_detections_spinbox)
+
+        self.tolerance_spinbox = QDoubleSpinBox()
+        self.tolerance_spinbox.setRange(1e-6, 1.0)
+        self.tolerance_spinbox.setValue(0.01)
+        self.tolerance_spinbox.setSingleStep(0.001)
+        self.tolerance_spinbox.setDecimals(6)
+        form.addRow("Tolerance:", self.tolerance_spinbox)
+
+        self.max_iterations_spinbox = QSpinBox()
+        self.max_iterations_spinbox.setRange(1, 1000)
+        self.max_iterations_spinbox.setValue(50)
+        form.addRow("Max Iterations:", self.max_iterations_spinbox)
+
+        self.min_detections_spinbox = QSpinBox()
+        self.min_detections_spinbox.setRange(1, 1000)
+        self.min_detections_spinbox.setValue(5)
+        form.addRow("Min Detections:", self.min_detections_spinbox)
+
+        self.chip_size_spinbox = QSpinBox()
+        self.chip_size_spinbox.setRange(5, 51)
+        self.chip_size_spinbox.setSingleStep(2)
+        self.chip_size_spinbox.setValue(11)
+        form.addRow("Chip Size:", self.chip_size_spinbox)
+
+        self.oversampling_spinbox = QSpinBox()
+        self.oversampling_spinbox.setRange(3, 31)
+        self.oversampling_spinbox.setSingleStep(2)
+        self.oversampling_spinbox.setValue(7)
+        form.addRow("Oversampling:", self.oversampling_spinbox)
+
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def load_settings(self):
+        model = self.settings.value("imagery/prf_model", "Elliptical Gaussian", type=str)
+        if model == "None" or model not in [self.model_combo.itemText(i) for i in range(self.model_combo.count())]:
+            model = "Elliptical Gaussian"
+        self.model_combo.setCurrentText(model)
+
+        pixel_shape = self.settings.value("imagery/prf_pixel_shape", "Square", type=str)
+        self.pixel_shape_combo.setCurrentText(
+            pixel_shape if pixel_shape in SUPPORTED_PIXEL_SHAPES else "Square"
+        )
+        detection_source = self.settings.value(
+            "imagery/prf_detection_source", "Selected detections only", type=str
+        )
+        self.detection_source_combo.setCurrentText(
+            detection_source if detection_source in PRF_DETECTION_SOURCES else "Selected detections only"
+        )
+        self.auto_max_detections_spinbox.setValue(
+            self.settings.value("imagery/prf_auto_max_detections", 150, type=int)
+        )
+        self.tolerance_spinbox.setValue(
+            self.settings.value("imagery/prf_tolerance", 0.01, type=float)
+        )
+        self.max_iterations_spinbox.setValue(
+            self.settings.value("imagery/prf_max_iterations", 50, type=int)
+        )
+        self.min_detections_spinbox.setValue(
+            self.settings.value("imagery/prf_min_detections", 5, type=int)
+        )
+        self.chip_size_spinbox.setValue(self._ensure_odd(
+            self.settings.value("imagery/prf_chip_size", 11, type=int)
+        ))
+        self.oversampling_spinbox.setValue(self._ensure_odd(
+            self.settings.value("imagery/prf_oversampling", 7, type=int)
+        ))
+
+    def fit_settings(self) -> dict:
+        chip_size = self._ensure_odd(self.chip_size_spinbox.value())
+        oversampling = self._ensure_odd(self.oversampling_spinbox.value())
+        config = {
+            "imagery/prf_model": self.model_combo.currentText(),
+            "imagery/prf_pixel_shape": self.pixel_shape_combo.currentText(),
+            "imagery/prf_detection_source": self.detection_source_combo.currentText(),
+            "imagery/prf_auto_max_detections": self.auto_max_detections_spinbox.value(),
+            "imagery/prf_tolerance": self.tolerance_spinbox.value(),
+            "imagery/prf_max_iterations": self.max_iterations_spinbox.value(),
+            "imagery/prf_min_detections": self.min_detections_spinbox.value(),
+            "imagery/prf_chip_size": chip_size,
+            "imagery/prf_oversampling": oversampling,
+        }
+        for key, value in config.items():
+            self.settings.setValue(key, value)
+        return config
+
+    @staticmethod
+    def _ensure_odd(value: int) -> int:
+        value = int(value)
+        return value + 1 if value % 2 == 0 else value
 
 
 class SensorsPanel(QWidget):
@@ -230,8 +370,12 @@ class SensorsPanel(QWidget):
             return
 
         sensor = self.viewer.sensors[row]
+        dialog = SensorPRFFitDialog(sensor, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
         try:
-            prf_model = self.viewer.fit_prf_for_sensor(sensor, QSettings("Vista", "VistaApp"))
+            prf_model = self.viewer.fit_prf_for_sensor(sensor, dialog.fit_settings())
         except Exception as exc:
             QMessageBox.warning(self, "PRF Fit Failed", str(exc))
             return
@@ -247,7 +391,8 @@ class SensorsPanel(QWidget):
             "PRF Fit Complete",
             f"Stored a {prf_model.model} PRF on sensor '{sensor.name}'.\n\n"
             f"Fit {status} with residual {prf_model.residual_ratio:.4g} "
-            f"using {prf_model.detections_used} detections."
+            f"using {prf_model.detections_used} detections.\n\n"
+            f"Parameters: {prf_model.parameter_summary()}"
         )
 
     def dragEnterEvent(self, event):

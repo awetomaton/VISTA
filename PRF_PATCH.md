@@ -25,8 +25,9 @@ This document tracks the local PRF patch as it evolves.
 
 - PRF fitting is initiated from **Data Manager -> Sensors -> Fit PRF from Detections**.
 - On macOS, Settings is forced to remain in the **File** menu instead of being moved to the application menu by Qt's menu-role heuristic.
-- **File -> Settings -> Imagery -> Sensor PRF Fitting** configures the model, pixel shape, detection source, fit tolerance, iteration/evaluation budget, chip size, and stored PRF oversampling.
-- If the configured model is **None**, the Sensors-tab fit action uses **Elliptical Gaussian** as the practical default.
+- Clicking the Sensors-tab fit button opens a sensor-specific PRF fitting dialog for the selected sensor.
+- The dialog configures the model, pixel shape, detection source, fit tolerance, iteration/evaluation budget, chip size, and stored PRF oversampling.
+- The dialog persists the last-used values as convenience defaults, but fitting remains an explicit per-sensor operation.
 - VISTA fits a sensor-agnostic PRF model from image detections, then stores the resulting oversampled PRF on the selected sensor.
 - PRF fitting can use selected detections, all visible detections, or an automatic strongest-detections subset.
 - The automatic subset ranks visible detections by robust local contrast and caps the fit set to reduce noise and runtime.
@@ -51,7 +52,7 @@ This document tracks the local PRF patch as it evolves.
 
 ## Current Defaults
 
-- Model: None
+- Model: Elliptical Gaussian
 - Pixel shape: Square
 - Minimum detections: 5
 - Chip size: 11
@@ -69,9 +70,8 @@ This document tracks the local PRF patch as it evolves.
 
 ## Implementation Notes
 
-- Settings live in `vista/widgets/core/settings_dialog.py`.
 - PRF model generation and fitting live in `vista/algorithms/imagery/prf.py`.
-- Sensors-tab fitting is initiated by `vista/widgets/core/data/sensors_panel.py`.
+- The sensor-specific PRF fitting dialog lives in `vista/widgets/core/data/sensors_panel.py`.
 - The fit-and-attach workflow lives in `vista/widgets/core/imagery_viewer.py`.
 - Automatic PRF fitting considers only detections from the current imagery sensor and imagery frame range.
 - Sensor PRF HDF5 metadata is written from `vista/sensors/sampled_sensor.py`.
@@ -90,6 +90,10 @@ This document tracks the local PRF patch as it evolves.
 - `python -m compileall vista` passes.
 - A synthetic Gaussian PRF fit succeeds on five generated chips.
 - A synthetic viewer-level fit attaches an oversampled PRF to the selected sensor and `sensor.get_prf(...)` returns a local chip normalized to unit flux.
+- The viewer-level fit path accepts dialog-provided per-sensor fit settings without relying on the global Settings dialog.
 - HDF5 export writes the fitted oversampled PRF under the sensor `prf/` group.
 - PRF metadata records tolerance convergence, optimizer status, intuitive optimizer iterations, SciPy function evaluations, and SciPy Jacobian evaluations.
 - Automatic strongest-detections mode recovers the known synthetic distortion on the local NYC PRF dataset when enough usable chips are included.
+- The Detections tab can estimate per-detection integrated point-source flux in **raw image counts** from a stored sensor PRF.
+- PRF flux estimation rejects edge-clipped chips, estimates local background from outer-ring pixels with a sigma-clipped median, ignores sparse bad pixels/NaNs, and marks low-confidence measurements for high residuals, low SNR, or possible saturation.
+- Detection and track CSV export include PRF flux columns when estimates are present: `Flux (raw counts)`, `Flux Uncertainty (raw counts)`, `Flux SNR`, `Flux Background (raw counts)`, `Flux Residual Ratio`, and `Flux Status`.

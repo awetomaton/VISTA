@@ -122,6 +122,12 @@ class Track:
     covariance_01: Optional[NDArray[np.float64]] = None  # Row-column covariance (C_row_col)
     covariance_11: Optional[NDArray[np.float64]] = None  # Column variance (C_col_col)
     show_uncertainty: bool = False  # Whether to display uncertainty ellipses
+    flux_counts: Optional[NDArray[np.float64]] = None  # Integrated point-source flux in raw image counts
+    flux_uncertainty_counts: Optional[NDArray[np.float64]] = None  # 1-sigma raw-count flux uncertainty
+    flux_snr: Optional[NDArray[np.float64]] = None  # Flux estimate divided by uncertainty
+    flux_background_counts: Optional[NDArray[np.float64]] = None  # Local background estimate in raw counts
+    flux_residual_ratio: Optional[NDArray[np.float64]] = None  # Normalized PRF fit residual
+    flux_status: list[str] = field(default_factory=list)  # Per-point PRF flux quality/status
     # Private attributes
     _length: int = field(init=False, default=None)
 
@@ -167,6 +173,21 @@ class Track:
                 track_slice.covariance_01 = track_slice.covariance_01[s]
             if track_slice.covariance_11 is not None:
                 track_slice.covariance_11 = track_slice.covariance_11[s]
+            if track_slice.flux_counts is not None:
+                track_slice.flux_counts = track_slice.flux_counts[s]
+            if track_slice.flux_uncertainty_counts is not None:
+                track_slice.flux_uncertainty_counts = track_slice.flux_uncertainty_counts[s]
+            if track_slice.flux_snr is not None:
+                track_slice.flux_snr = track_slice.flux_snr[s]
+            if track_slice.flux_background_counts is not None:
+                track_slice.flux_background_counts = track_slice.flux_background_counts[s]
+            if track_slice.flux_residual_ratio is not None:
+                track_slice.flux_residual_ratio = track_slice.flux_residual_ratio[s]
+            if len(track_slice.flux_status) > 0:
+                if isinstance(s, slice):
+                    track_slice.flux_status = track_slice.flux_status[s]
+                else:
+                    track_slice.flux_status = [track_slice.flux_status[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [track_slice.flux_status[i] for i in s]
 
             # Slice cached geodetic coords if present
             if track_slice._cached_lons is not None:
@@ -588,6 +609,21 @@ class Track:
                 kwargs["covariance_00"] = cov_00
                 kwargs["covariance_01"] = cov_01
                 kwargs["covariance_11"] = cov_11
+        if "Flux (raw counts)" in df.columns:
+            kwargs["flux_counts"] = df["Flux (raw counts)"].to_numpy(dtype=np.float64)
+        if "Flux Uncertainty (raw counts)" in df.columns:
+            kwargs["flux_uncertainty_counts"] = df["Flux Uncertainty (raw counts)"].to_numpy(dtype=np.float64)
+        if "Flux SNR" in df.columns:
+            kwargs["flux_snr"] = df["Flux SNR"].to_numpy(dtype=np.float64)
+        if "Flux Background (raw counts)" in df.columns:
+            kwargs["flux_background_counts"] = df["Flux Background (raw counts)"].to_numpy(dtype=np.float64)
+        if "Flux Residual Ratio" in df.columns:
+            kwargs["flux_residual_ratio"] = df["Flux Residual Ratio"].to_numpy(dtype=np.float64)
+        if "Flux Status" in df.columns:
+            kwargs["flux_status"] = [
+                str(status) if pd.notna(status) and status != "" else ""
+                for status in df["Flux Status"]
+            ]
 
         # Determine rows/columns - priority: Rows/Columns > geodetic-to-pixel mapping
         has_geodetic = ("Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns
@@ -717,6 +753,12 @@ class Track:
             covariance_01 = self.covariance_01.copy() if self.covariance_01 is not None else None,
             covariance_11 = self.covariance_11.copy() if self.covariance_11 is not None else None,
             show_uncertainty = self.show_uncertainty,
+            flux_counts = self.flux_counts.copy() if self.flux_counts is not None else None,
+            flux_uncertainty_counts = self.flux_uncertainty_counts.copy() if self.flux_uncertainty_counts is not None else None,
+            flux_snr = self.flux_snr.copy() if self.flux_snr is not None else None,
+            flux_background_counts = self.flux_background_counts.copy() if self.flux_background_counts is not None else None,
+            flux_residual_ratio = self.flux_residual_ratio.copy() if self.flux_residual_ratio is not None else None,
+            flux_status = list(self.flux_status),
         )
         # Preserve cached geodetic coords
         if self._cached_lons is not None:
@@ -789,6 +831,48 @@ class Track:
             data["Covariance 00"] = self.covariance_00
             data["Covariance 01"] = self.covariance_01
             data["Covariance 11"] = self.covariance_11
+        if self.flux_counts is not None:
+            data["Flux (raw counts)"] = self.flux_counts
+        if self.flux_uncertainty_counts is not None:
+            data["Flux Uncertainty (raw counts)"] = self.flux_uncertainty_counts
+        if self.flux_snr is not None:
+            data["Flux SNR"] = self.flux_snr
+        if self.flux_background_counts is not None:
+            data["Flux Background (raw counts)"] = self.flux_background_counts
+        if self.flux_residual_ratio is not None:
+            data["Flux Residual Ratio"] = self.flux_residual_ratio
+        if self.flux_status:
+            status = list(self.flux_status)
+            if len(status) < len(self):
+                status.extend([""] * (len(self) - len(status)))
+            data["Flux Status"] = status[:len(self)]
 
         return pd.DataFrame(data)
-    
+
+    def get_flux_summary(self) -> dict[str, float | int]:
+        """Summarize finite per-point PRF flux estimates in raw image counts."""
+        if self.flux_counts is None:
+            return {
+                "count": 0,
+                "mean": np.nan,
+                "median": np.nan,
+                "peak": np.nan,
+                "std": np.nan,
+            }
+        flux = np.asarray(self.flux_counts, dtype=np.float64)
+        finite = flux[np.isfinite(flux)]
+        if finite.size == 0:
+            return {
+                "count": 0,
+                "mean": np.nan,
+                "median": np.nan,
+                "peak": np.nan,
+                "std": np.nan,
+            }
+        return {
+            "count": int(finite.size),
+            "mean": float(np.mean(finite)),
+            "median": float(np.median(finite)),
+            "peak": float(np.max(finite)),
+            "std": float(np.std(finite)),
+        }

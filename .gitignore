@@ -165,6 +165,13 @@ _cache
 tests/data/*
 data/**
 
+# Generated PRF verification datasets
+prf_eastern_us_airy_truth_and_distorted/
+prf_eastern_us_moffat_truth_and_distorted/
+prf_golden_gate_truth_and_distorted/
+prf_nyc_aligned_truth_and_distorted/
+prf_single_frame_known_flux/
+
 # Mac nonsense
 .DS_Store
 
