@@ -115,6 +115,11 @@ class SampledSensor(Sensor):
     prf_oversampling: Optional[int] = None
     prf_center: Optional[Tuple[float, float]] = None
     prf_metadata: Optional[dict] = None
+    fitted_oversampled_prf: Optional[NDArray[np.float64]] = None
+    fitted_prf_oversampling: Optional[int] = None
+    fitted_prf_center: Optional[Tuple[float, float]] = None
+    fitted_prf_metadata: Optional[dict] = None
+    active_prf_source: Optional[str] = None
 
     def __post_init__(self):
         """
@@ -157,26 +162,60 @@ class SampledSensor(Sensor):
             self.times = unique_times
             self.positions = self.positions[:, unique_indices]
 
-        if self.oversampled_prf is not None:
-            self.oversampled_prf = np.asarray(self.oversampled_prf, dtype=np.float64)
-            if self.oversampled_prf.ndim != 2:
-                raise ValueError(f"oversampled_prf must be a 2D array, got shape {self.oversampled_prf.shape}")
+        self._validate_prf_payload("associated")
+        self._validate_prf_payload("fitted")
+        if self.active_prf_source not in {"associated", "fitted"}:
+            if self.has_associated_prf():
+                self.active_prf_source = "associated"
+            elif self.has_fitted_prf():
+                self.active_prf_source = "fitted"
+            else:
+                self.active_prf_source = None
+        elif self.active_prf_source == "associated" and not self.has_associated_prf():
+            self.active_prf_source = "fitted" if self.has_fitted_prf() else None
+        elif self.active_prf_source == "fitted" and not self.has_fitted_prf():
+            self.active_prf_source = "associated" if self.has_associated_prf() else None
 
-            if self.prf_oversampling is None:
-                self.prf_oversampling = 1
-            if self.prf_oversampling < 1:
-                raise ValueError("prf_oversampling must be at least 1")
+    def _validate_prf_payload(self, source: str) -> None:
+        """Normalize and validate one stored PRF payload."""
+        if source == "associated":
+            prf_attr = "oversampled_prf"
+            oversampling_attr = "prf_oversampling"
+            center_attr = "prf_center"
+            metadata_attr = "prf_metadata"
+        elif source == "fitted":
+            prf_attr = "fitted_oversampled_prf"
+            oversampling_attr = "fitted_prf_oversampling"
+            center_attr = "fitted_prf_center"
+            metadata_attr = "fitted_prf_metadata"
+        else:
+            raise ValueError(f"Unknown PRF source: {source}")
 
-            if self.prf_center is None:
-                self.prf_center = (
-                    (self.oversampled_prf.shape[0] - 1) / 2.0,
-                    (self.oversampled_prf.shape[1] - 1) / 2.0,
-                )
-            if len(self.prf_center) != 2:
-                raise ValueError("prf_center must contain (row, column) coordinates")
+        prf = getattr(self, prf_attr)
+        if prf is None:
+            return
 
-            if self.prf_metadata is None:
-                self.prf_metadata = {}
+        prf = np.asarray(prf, dtype=np.float64)
+        if prf.ndim != 2:
+            raise ValueError(f"{prf_attr} must be a 2D array, got shape {prf.shape}")
+        setattr(self, prf_attr, prf)
+
+        oversampling = getattr(self, oversampling_attr)
+        if oversampling is None:
+            oversampling = 1
+        if oversampling < 1:
+            raise ValueError(f"{oversampling_attr} must be at least 1")
+        setattr(self, oversampling_attr, int(oversampling))
+
+        center = getattr(self, center_attr)
+        if center is None:
+            center = ((prf.shape[0] - 1) / 2.0, (prf.shape[1] - 1) / 2.0)
+        if len(center) != 2:
+            raise ValueError(f"{center_attr} must contain (row, column) coordinates")
+        setattr(self, center_attr, (float(center[0]), float(center[1])))
+
+        if getattr(self, metadata_attr) is None:
+            setattr(self, metadata_attr, {})
 
     def can_geolocate(self) -> bool:
         """
@@ -203,12 +242,72 @@ class SampledSensor(Sensor):
         bool
             True if an oversampled PRF is available for local-chip sampling.
         """
+        return self.has_associated_prf() or self.has_fitted_prf()
+
+    def has_associated_prf(self) -> bool:
+        """Return True when a stored/external sensor PRF is available."""
         return self.oversampled_prf is not None
+
+    def has_fitted_prf(self) -> bool:
+        """Return True when a detection-fit sensor PRF is available."""
+        return self.fitted_oversampled_prf is not None
+
+    def get_available_prf_sources(self) -> list[str]:
+        """Return available PRF source names in UI-friendly order."""
+        sources = []
+        if self.has_associated_prf():
+            sources.append("associated")
+        if self.has_fitted_prf():
+            sources.append("fitted")
+        return sources
+
+    def get_active_prf_source_label(self) -> str:
+        """Return a concise display label for the active PRF source."""
+        labels = {"associated": "Associated", "fitted": "Fitted"}
+        return labels.get(self.active_prf_source, "")
+
+    def set_active_prf_source(self, source: str) -> None:
+        """Select which stored PRF payload is used by get_prf()."""
+        if source not in {"associated", "fitted"}:
+            raise ValueError(f"Unknown PRF source: {source}")
+        if source == "associated" and not self.has_associated_prf():
+            raise ValueError("No associated PRF is available on this sensor.")
+        if source == "fitted" and not self.has_fitted_prf():
+            raise ValueError("No fitted PRF is available on this sensor.")
+        self.active_prf_source = source
+
+    def store_fitted_prf(
+        self,
+        oversampled_prf: NDArray[np.float64],
+        oversampling: int,
+        center: Tuple[float, float],
+        metadata: Optional[dict] = None,
+        make_active: bool = True,
+    ) -> None:
+        """Store or replace the fitted PRF without modifying the associated PRF."""
+        self.fitted_oversampled_prf = oversampled_prf
+        self.fitted_prf_oversampling = oversampling
+        self.fitted_prf_center = center
+        self.fitted_prf_metadata = metadata or {}
+        self._validate_prf_payload("fitted")
+        if make_active:
+            self.active_prf_source = "fitted"
+
+    def _active_prf_payload(self) -> tuple[NDArray[np.float64], int, Tuple[float, float]]:
+        """Return oversampled PRF, oversampling, and center for the active source."""
+        if self.active_prf_source == "fitted" and self.has_fitted_prf():
+            return self.fitted_oversampled_prf, self.fitted_prf_oversampling, self.fitted_prf_center
+        if self.has_associated_prf():
+            return self.oversampled_prf, self.prf_oversampling, self.prf_center
+        if self.has_fitted_prf():
+            return self.fitted_oversampled_prf, self.fitted_prf_oversampling, self.fitted_prf_center
+        raise ValueError("SampledSensor has no oversampled PRF data.")
 
     def _default_prf_chip_size(self) -> int:
         """Return an odd detector-chip size covering the stored oversampled PRF support."""
-        support_rows = int(np.ceil(self.oversampled_prf.shape[0] / self.prf_oversampling))
-        support_cols = int(np.ceil(self.oversampled_prf.shape[1] / self.prf_oversampling))
+        oversampled_prf, oversampling, _ = self._active_prf_payload()
+        support_rows = int(np.ceil(oversampled_prf.shape[0] / oversampling))
+        support_cols = int(np.ceil(oversampled_prf.shape[1] / oversampling))
         chip_size = max(support_rows, support_cols)
         if chip_size % 2 == 0:
             chip_size += 1
@@ -220,7 +319,7 @@ class SampledSensor(Sensor):
 
         Coordinates outside the stored PRF support return zero.
         """
-        prf = self.oversampled_prf
+        prf, _, _ = self._active_prf_payload()
         height, width = prf.shape
 
         r0 = np.floor(prf_rows).astype(np.int64)
@@ -303,9 +402,10 @@ class SampledSensor(Sensor):
         pixel_center_rows = rows.astype(np.float64) + 0.5
         pixel_center_cols = columns.astype(np.float64) + 0.5
 
-        prf_center_row, prf_center_col = self.prf_center
-        prf_rows = prf_center_row + (pixel_center_rows - source_row) * self.prf_oversampling
-        prf_cols = prf_center_col + (pixel_center_cols - source_column) * self.prf_oversampling
+        _, prf_oversampling, prf_center = self._active_prf_payload()
+        prf_center_row, prf_center_col = prf_center
+        prf_rows = prf_center_row + (pixel_center_rows - source_row) * prf_oversampling
+        prf_cols = prf_center_col + (pixel_center_cols - source_column) * prf_oversampling
         prf_values = self._sample_oversampled_prf(prf_rows, prf_cols)
 
         return rows, columns, prf_values
@@ -667,15 +767,42 @@ class SampledSensor(Sensor):
             radiometric_group.create_dataset('radiometric_gain', data=self.radiometric_gain)
             radiometric_group.create_dataset('radiometric_gain_frames', data=self.frames)
 
-        # Save constant per-sensor PRF data
+        # Save constant per-sensor PRF data. The root payload preserves the
+        # legacy single-PRF layout, while child groups preserve provenance when
+        # both associated and fitted PRFs are available.
         if self.can_model_prf():
             prf_group = group.create_group('prf')
-            prf_group.create_dataset('oversampled_prf', data=self.oversampled_prf)
-            prf_group.attrs['oversampling'] = int(self.prf_oversampling)
-            prf_group.attrs['center_row'] = float(self.prf_center[0])
-            prf_group.attrs['center_column'] = float(self.prf_center[1])
+            active_prf, active_oversampling, active_center = self._active_prf_payload()
+            prf_group.create_dataset('oversampled_prf', data=active_prf)
+            prf_group.attrs['oversampling'] = int(active_oversampling)
+            prf_group.attrs['center_row'] = float(active_center[0])
+            prf_group.attrs['center_column'] = float(active_center[1])
             prf_group.attrs['coordinate_convention'] = 'corner-origin; pixel centers at row+0.5, column+0.5'
             prf_group.attrs['model_scope'] = 'constant_per_sensor'
             prf_group.attrs['normalization'] = 'fraction_of_point_source_flux_per_detector_pixel'
-            if self.prf_metadata is not None:
-                prf_group.attrs['construction_metadata_json'] = json.dumps(self.prf_metadata, default=str)
+            prf_group.attrs['active_source'] = self.active_prf_source or ''
+            active_metadata = (
+                self.fitted_prf_metadata
+                if self.active_prf_source == "fitted" and self.has_fitted_prf()
+                else self.prf_metadata
+            )
+            if active_metadata is not None:
+                prf_group.attrs['construction_metadata_json'] = json.dumps(active_metadata, default=str)
+
+            if self.has_associated_prf():
+                associated_group = prf_group.create_group('associated')
+                associated_group.create_dataset('oversampled_prf', data=self.oversampled_prf)
+                associated_group.attrs['oversampling'] = int(self.prf_oversampling)
+                associated_group.attrs['center_row'] = float(self.prf_center[0])
+                associated_group.attrs['center_column'] = float(self.prf_center[1])
+                associated_group.attrs['construction_metadata_json'] = json.dumps(self.prf_metadata or {}, default=str)
+
+            if self.has_fitted_prf():
+                fitted_group = prf_group.create_group('fitted')
+                fitted_group.create_dataset('oversampled_prf', data=self.fitted_oversampled_prf)
+                fitted_group.attrs['oversampling'] = int(self.fitted_prf_oversampling)
+                fitted_group.attrs['center_row'] = float(self.fitted_prf_center[0])
+                fitted_group.attrs['center_column'] = float(self.fitted_prf_center[1])
+                fitted_group.attrs['construction_metadata_json'] = json.dumps(
+                    self.fitted_prf_metadata or {}, default=str
+                )

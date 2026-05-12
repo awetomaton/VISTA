@@ -238,6 +238,11 @@ class DataLoaderThread(QThread):
         prf_oversampling = None
         prf_center = None
         prf_metadata = None
+        fitted_oversampled_prf = None
+        fitted_prf_oversampling = None
+        fitted_prf_center = None
+        fitted_prf_metadata = None
+        active_prf_source = None
 
         if 'radiometric' in sensor_group:
             rad_group = sensor_group['radiometric']
@@ -256,6 +261,11 @@ class DataLoaderThread(QThread):
 
         if 'prf' in sensor_group:
             prf_group = sensor_group['prf']
+            active_prf_source = prf_group.attrs.get('active_source', None)
+            if isinstance(active_prf_source, bytes):
+                active_prf_source = active_prf_source.decode()
+            if not active_prf_source:
+                active_prf_source = None
             if 'oversampled_prf' in prf_group:
                 oversampled_prf = prf_group['oversampled_prf'][:]
                 prf_oversampling = int(prf_group.attrs.get('oversampling', 1))
@@ -269,6 +279,42 @@ class DataLoaderThread(QThread):
                         prf_metadata = json.loads(metadata_json)
                     except (TypeError, json.JSONDecodeError):
                         prf_metadata = {'raw_construction_metadata_json': str(metadata_json)}
+            if 'associated' in prf_group:
+                associated_group = prf_group['associated']
+                if 'oversampled_prf' in associated_group:
+                    oversampled_prf = associated_group['oversampled_prf'][:]
+                    prf_oversampling = int(associated_group.attrs.get('oversampling', 1))
+                    prf_center = (
+                        float(associated_group.attrs.get('center_row', (oversampled_prf.shape[0] - 1) / 2.0)),
+                        float(associated_group.attrs.get('center_column', (oversampled_prf.shape[1] - 1) / 2.0)),
+                    )
+                    metadata_json = associated_group.attrs.get('construction_metadata_json', None)
+                    if metadata_json is not None:
+                        try:
+                            prf_metadata = json.loads(metadata_json)
+                        except (TypeError, json.JSONDecodeError):
+                            prf_metadata = {'raw_construction_metadata_json': str(metadata_json)}
+            if 'fitted' in prf_group:
+                fitted_group = prf_group['fitted']
+                if 'oversampled_prf' in fitted_group:
+                    fitted_oversampled_prf = fitted_group['oversampled_prf'][:]
+                    fitted_prf_oversampling = int(fitted_group.attrs.get('oversampling', 1))
+                    fitted_prf_center = (
+                        float(fitted_group.attrs.get(
+                            'center_row',
+                            (fitted_oversampled_prf.shape[0] - 1) / 2.0,
+                        )),
+                        float(fitted_group.attrs.get(
+                            'center_column',
+                            (fitted_oversampled_prf.shape[1] - 1) / 2.0,
+                        )),
+                    )
+                    metadata_json = fitted_group.attrs.get('construction_metadata_json', None)
+                    if metadata_json is not None:
+                        try:
+                            fitted_prf_metadata = json.loads(metadata_json)
+                        except (TypeError, json.JSONDecodeError):
+                            fitted_prf_metadata = {'raw_construction_metadata_json': str(metadata_json)}
 
         if sensor_type == 'SampledSensor':
             # Load position data
@@ -342,6 +388,11 @@ class DataLoaderThread(QThread):
                 prf_oversampling=prf_oversampling,
                 prf_center=prf_center,
                 prf_metadata=prf_metadata,
+                fitted_oversampled_prf=fitted_oversampled_prf,
+                fitted_prf_oversampling=fitted_prf_oversampling,
+                fitted_prf_center=fitted_prf_center,
+                fitted_prf_metadata=fitted_prf_metadata,
+                active_prf_source=active_prf_source,
             )
         else:
             # Base Sensor class

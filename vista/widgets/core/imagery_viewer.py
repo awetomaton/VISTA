@@ -3473,7 +3473,7 @@ class ImageryViewer(QWidget):
         sensor = sensor or self.selected_sensor
         if sensor is None:
             raise ValueError("No sensor is selected.")
-        if not hasattr(sensor, "oversampled_prf"):
+        if not hasattr(sensor, "store_fitted_prf"):
             raise TypeError("The selected sensor type cannot store an oversampled PRF.")
 
         imagery = self.imagery if self.imagery is not None and self.imagery.sensor == sensor else None
@@ -3536,13 +3536,7 @@ class ImageryViewer(QWidget):
             kernel_size=chip_size,
         )
         oversampled_prf = oversampled_prf_from_model(prf_model, oversample=oversampling)
-        sensor.oversampled_prf = oversampled_prf
-        sensor.prf_oversampling = oversampling
-        sensor.prf_center = (
-            (oversampled_prf.shape[0] - 1) / 2.0,
-            (oversampled_prf.shape[1] - 1) / 2.0,
-        )
-        sensor.prf_metadata = {
+        fitted_prf_metadata = {
             "metadata_version": "1.0",
             "construction": "fitted_from_image_detections",
             "model_scope": "constant_per_sensor",
@@ -3556,6 +3550,16 @@ class ImageryViewer(QWidget):
             "oversampling": int(oversampling),
             **prf_model.to_metadata(),
         }
+        sensor.store_fitted_prf(
+            oversampled_prf=oversampled_prf,
+            oversampling=oversampling,
+            center=(
+                (oversampled_prf.shape[0] - 1) / 2.0,
+                (oversampled_prf.shape[1] - 1) / 2.0,
+            ),
+            metadata=fitted_prf_metadata,
+            make_active=True,
+        )
         if self.projection_cache is not None:
             self.projection_cache.clear()
 
