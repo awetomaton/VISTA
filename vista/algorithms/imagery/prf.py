@@ -287,6 +287,72 @@ def generate_prf_kernel(
     return normalize_kernel(prf)
 
 
+def _bilinear_sample_prf(prf: NDArray[np.float64], rows: NDArray[np.float64], cols: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Bilinearly sample an oversampled PRF table at fractional row/column locations."""
+    height, width = prf.shape
+    r0 = np.floor(rows).astype(np.int64)
+    c0 = np.floor(cols).astype(np.int64)
+    r1 = r0 + 1
+    c1 = c0 + 1
+    row_frac = rows - r0
+    col_frac = cols - c0
+    valid = (r0 >= 0) & (c0 >= 0) & (r1 < height) & (c1 < width)
+    samples = np.zeros(rows.shape, dtype=np.float64)
+    if not np.any(valid):
+        return samples
+
+    v00 = prf[r0[valid], c0[valid]]
+    v01 = prf[r0[valid], c1[valid]]
+    v10 = prf[r1[valid], c0[valid]]
+    v11 = prf[r1[valid], c1[valid]]
+    rf = row_frac[valid]
+    cf = col_frac[valid]
+    samples[valid] = (
+        v00 * (1.0 - rf) * (1.0 - cf) +
+        v01 * (1.0 - rf) * cf +
+        v10 * rf * (1.0 - cf) +
+        v11 * rf * cf
+    )
+    return samples
+
+
+def _shifted_prf_kernel(
+    model: str,
+    pixel_shape: str,
+    kernel_size: int,
+    sigma_x: float,
+    sigma_y: float,
+    theta: float,
+    beta: float,
+    airy_radius: float,
+    drow: float,
+    dcol: float,
+    oversample: int = 7,
+) -> NDArray[np.float64]:
+    """Generate a detector-sampled PRF chip for a sub-pixel source offset."""
+    prf_fine = generate_oversampled_prf(
+        model,
+        pixel_shape,
+        kernel_size,
+        sigma_x=sigma_x,
+        sigma_y=sigma_y,
+        theta=theta,
+        beta=beta,
+        airy_radius=airy_radius,
+        oversample=oversample,
+    ).astype(np.float64)
+    center = (prf_fine.shape[0] - 1) / 2.0
+    pixel_rows, pixel_cols = np.indices((kernel_size, kernel_size), dtype=np.float64)
+    chip_center = (kernel_size - 1) / 2.0
+    prf_rows = center + (pixel_rows - chip_center - drow) * oversample
+    prf_cols = center + (pixel_cols - chip_center - dcol) * oversample
+    kernel = _bilinear_sample_prf(prf_fine, prf_rows, prf_cols)
+    total = np.sum(kernel)
+    if not np.isfinite(total) or total <= 0:
+        return normalize_kernel(kernel).astype(np.float64)
+    return kernel / total
+
+
 def oversampled_prf_from_model(prf_model: PRFModel, oversample: int = 7) -> NDArray[np.float32]:
     """Generate a sensor-level oversampled PRF table from a fitted PRFModel."""
     params = prf_model.parameters
@@ -425,6 +491,22 @@ def _estimate_elliptical_moments(chips_arr: NDArray[np.float64]) -> tuple[float,
     return sigma_x, sigma_y, theta
 
 
+def _estimate_chip_fit_seed(chip: NDArray[np.float64]) -> tuple[float, float, float, float]:
+    """Estimate amplitude, background, and sub-pixel offset seeds for one chip."""
+    background = float(np.median(chip))
+    signal = np.clip(chip - background, 0.0, None)
+    amplitude = float(np.sum(signal))
+    if amplitude <= 0 or not np.isfinite(amplitude):
+        return 1e-6, background, 0.0, 0.0
+
+    yy, xx = np.indices(chip.shape, dtype=np.float64)
+    center = (chip.shape[0] - 1) / 2.0
+    weights = signal / amplitude
+    drow = float(np.sum(weights * (yy - center)))
+    dcol = float(np.sum(weights * (xx - center)))
+    return amplitude, background, float(np.clip(drow, -2.0, 2.0)), float(np.clip(dcol, -2.0, 2.0))
+
+
 def _canonicalize_theta(theta: float) -> float:
     """Map an ellipse orientation to the equivalent [-pi/2, pi/2) interval."""
     return float((theta + math.pi / 2.0) % math.pi - math.pi / 2.0)
@@ -472,9 +554,8 @@ def fit_prf_model(
         lower = [0.1]
         upper = [10.0]
     for chip in chips_arr:
-        bg = float(np.median(chip))
-        amp = float(np.sum(np.clip(chip - bg, 0.0, None)))
-        p0.extend([max(amp, 1e-6), bg, 0.0, 0.0])
+        amp, bg, drow, dcol = _estimate_chip_fit_seed(chip)
+        p0.extend([max(amp, 1e-6), bg, drow, dcol])
         lower.extend([0.0, -np.inf, -2.0, -2.0])
         upper.extend([np.inf, np.inf, 2.0, 2.0])
 
@@ -506,44 +587,58 @@ def fit_prf_model(
 
     def residuals(params):
         sigma_x, sigma_y, theta, beta, airy_radius, per_chip = unpack(params)
-        kernel = generate_prf_kernel(
-            model, pixel_shape, chip_size, sigma_x, sigma_y, theta, beta, airy_radius, oversample=5
-        ).astype(np.float64)
         residual = []
         for chip, (amp, bg, drow, dcol) in zip(chips_arr, per_chip):
-            shifted_x = x - dcol
-            shifted_y = y - drow
-            # Re-evaluate a shifted Gaussian-like surface for fitting speed. The final
-            # persisted kernel is still generated through generate_prf_kernel().
-            cos_t = math.cos(theta)
-            sin_t = math.sin(theta)
-            xr = cos_t * shifted_x + sin_t * shifted_y
-            yr = -sin_t * shifted_x + cos_t * shifted_y
-            if model == "Moffat":
-                shape = (1.0 + (xr / sigma_x) ** 2 + (yr / sigma_y) ** 2) ** (-beta)
-            elif model == "Airy Disk":
-                r = np.sqrt(xr ** 2 + yr ** 2) / max(airy_radius, 1e-3)
-                shape = np.sinc(r) ** 2
-            else:
-                shape = np.exp(-0.5 * ((xr / sigma_x) ** 2 + (yr / sigma_y) ** 2))
-            shape_sum = np.sum(shape)
-            if shape_sum > 0:
-                shape = shape / shape_sum * np.sum(kernel)
+            shape = _shifted_prf_kernel(
+                model,
+                pixel_shape,
+                chip_size,
+                sigma_x,
+                sigma_y,
+                theta,
+                beta,
+                airy_radius,
+                drow,
+                dcol,
+                oversample=9,
+            )
             model_chip = bg + amp * shape
             denom = max(np.linalg.norm(chip - np.median(chip)), 1e-6)
             residual.append(((model_chip - chip) / denom).ravel())
         return np.concatenate(residual)
 
-    result = least_squares(
-        residuals,
-        np.asarray(p0, dtype=np.float64),
-        bounds=(np.asarray(lower, dtype=np.float64), np.asarray(upper, dtype=np.float64)),
-        max_nfev=max_iterations,
-        xtol=tolerance,
-        ftol=tolerance,
-        gtol=tolerance,
-    )
+    optimizer_tolerance = min(1e-8, max(float(tolerance) * 1e-4, 1e-12))
+    lower_arr = np.asarray(lower, dtype=np.float64)
+    upper_arr = np.asarray(upper, dtype=np.float64)
+    starts = [np.asarray(p0, dtype=np.float64)]
+    if model == "Moffat":
+        base = starts[0]
+        for sigma_scale, beta_seed in ((1.5, 3.5), (1.7, 3.5), (2.0, 3.5), (1.7, 5.0)):
+            candidate = base.copy()
+            candidate[0] = np.clip(candidate[0] * sigma_scale, lower_arr[0], upper_arr[0])
+            candidate[1] = np.clip(candidate[1] * sigma_scale, lower_arr[1], upper_arr[1])
+            candidate[3] = np.clip(beta_seed, lower_arr[3], upper_arr[3])
+            starts.append(candidate)
+
+    result = None
+    best_cost = np.inf
+    for start in starts:
+        candidate_result = least_squares(
+            residuals,
+            start,
+            bounds=(lower_arr, upper_arr),
+            max_nfev=max_iterations,
+            xtol=optimizer_tolerance,
+            ftol=optimizer_tolerance,
+            gtol=optimizer_tolerance,
+        )
+        if candidate_result.cost < best_cost:
+            result = candidate_result
+            best_cost = candidate_result.cost
     sigma_x, sigma_y, theta, beta, airy_radius, _ = unpack(result.x)
+    if model in ("Elliptical Gaussian", "Moffat") and sigma_y > sigma_x:
+        sigma_x, sigma_y = sigma_y, sigma_x
+        theta += math.pi / 2.0
     theta = _canonicalize_theta(theta)
     kernel = generate_prf_kernel(
         model, pixel_shape, kernel_size, sigma_x, sigma_y, theta, beta, airy_radius
