@@ -608,6 +608,7 @@ def fit_prf_model(
     max_iterations: int,
     kernel_size: int = 11,
     fit_max_chips: int | None = None,
+    oversampling: int = 9,
 ) -> PRFModel:
     """Fit a shared PRF shape to point-source image chips."""
     if model == NO_PRF_MODEL:
@@ -683,7 +684,9 @@ def fit_prf_model(
         per_chip = params[extra_idx:].reshape(n, 2)
         return sigma_x, sigma_y, theta, beta, airy_radius, per_chip
 
-    oversample = 9
+    oversample = max(3, int(oversampling))
+    if oversample % 2 == 0:
+        oversample += 1
     prf_fine_cache: dict[tuple[float, float, float, float, float], NDArray[np.float64]] = {}
 
     def cached_prf_fine(

@@ -88,7 +88,7 @@ class SensorPRFFitDialog(QDialog):
         self.oversampling_spinbox = QSpinBox()
         self.oversampling_spinbox.setRange(3, 31)
         self.oversampling_spinbox.setSingleStep(2)
-        self.oversampling_spinbox.setValue(7)
+        self.oversampling_spinbox.setValue(9)
         form.addRow("Oversampling:", self.oversampling_spinbox)
 
         layout.addLayout(form)
@@ -133,7 +133,7 @@ class SensorPRFFitDialog(QDialog):
             self.settings.value("imagery/prf_chip_size", 11, type=int)
         ))
         self.oversampling_spinbox.setValue(self._ensure_odd(
-            self.settings.value("imagery/prf_oversampling", 7, type=int)
+            self.settings.value("imagery/prf_oversampling", 9, type=int)
         ))
 
     def fit_settings(self) -> dict:

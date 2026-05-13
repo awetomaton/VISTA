@@ -3365,6 +3365,9 @@ class ImageryViewer(QWidget):
         max_iterations = settings.value("imagery/prf_max_iterations", 50, type=int)
         fit_max_detections = settings.value("imagery/prf_fit_max_detections", 40, type=int)
         fit_max_detections = max(int(fit_max_detections), int(min_detections))
+        oversampling = settings.value("imagery/prf_oversampling", 9, type=int)
+        if oversampling % 2 == 0:
+            oversampling += 1
         detection_source = settings.value(
             "imagery/prf_detection_source", "Selected detections only", type=str
         )
@@ -3416,6 +3419,7 @@ class ImageryViewer(QWidget):
                 max_iterations=max_iterations,
                 kernel_size=chip_size,
                 fit_max_chips=fit_max_detections,
+                oversampling=oversampling,
             )
         except Exception as exc:
             self._emit_prf_status(f"PRF fitting failed: {exc}. Using existing projection.")
@@ -3502,7 +3506,7 @@ class ImageryViewer(QWidget):
         max_iterations = self._prf_setting(settings, "imagery/prf_max_iterations", 50, int)
         fit_max_detections = self._prf_setting(settings, "imagery/prf_fit_max_detections", 40, int)
         fit_max_detections = max(int(fit_max_detections), int(min_detections))
-        oversampling = self._prf_setting(settings, "imagery/prf_oversampling", 7, int)
+        oversampling = self._prf_setting(settings, "imagery/prf_oversampling", 9, int)
         if oversampling % 2 == 0:
             oversampling += 1
         detection_source = self._prf_setting(
@@ -3543,6 +3547,7 @@ class ImageryViewer(QWidget):
             max_iterations=max_iterations,
             kernel_size=chip_size,
             fit_max_chips=fit_max_detections,
+            oversampling=oversampling,
         )
         oversampled_prf = oversampled_prf_from_model(prf_model, oversample=oversampling)
         fitted_prf_metadata = {
@@ -3558,6 +3563,8 @@ class ImageryViewer(QWidget):
             "usable_chips_before_auto_limit": int(raw_chip_count),
             "fit_max_detections": int(fit_max_detections),
             "oversampling": int(oversampling),
+            "fit_oversampling": int(oversampling),
+            "stored_prf_oversampling": int(oversampling),
             **prf_model.to_metadata(),
         }
         sensor.store_fitted_prf(
