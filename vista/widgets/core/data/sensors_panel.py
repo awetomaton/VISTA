@@ -54,6 +54,14 @@ class SensorPRFFitDialog(QDialog):
         self.auto_max_detections_spinbox.setValue(150)
         form.addRow("Auto Max Detections:", self.auto_max_detections_spinbox)
 
+        self.fit_max_detections_spinbox = QSpinBox()
+        self.fit_max_detections_spinbox.setRange(1, 1000)
+        self.fit_max_detections_spinbox.setValue(40)
+        self.fit_max_detections_spinbox.setToolTip(
+            "Stage 1 fits the PRF on this many strongest usable chips, then validates against all usable chips."
+        )
+        form.addRow("Fit Max Detections:", self.fit_max_detections_spinbox)
+
         self.tolerance_spinbox = QDoubleSpinBox()
         self.tolerance_spinbox.setRange(1e-6, 1.0)
         self.tolerance_spinbox.setValue(0.01)
@@ -109,6 +117,9 @@ class SensorPRFFitDialog(QDialog):
         self.auto_max_detections_spinbox.setValue(
             self.settings.value("imagery/prf_auto_max_detections", 150, type=int)
         )
+        self.fit_max_detections_spinbox.setValue(
+            self.settings.value("imagery/prf_fit_max_detections", 40, type=int)
+        )
         self.tolerance_spinbox.setValue(
             self.settings.value("imagery/prf_tolerance", 0.01, type=float)
         )
@@ -133,6 +144,7 @@ class SensorPRFFitDialog(QDialog):
             "imagery/prf_pixel_shape": self.pixel_shape_combo.currentText(),
             "imagery/prf_detection_source": self.detection_source_combo.currentText(),
             "imagery/prf_auto_max_detections": self.auto_max_detections_spinbox.value(),
+            "imagery/prf_fit_max_detections": self.fit_max_detections_spinbox.value(),
             "imagery/prf_tolerance": self.tolerance_spinbox.value(),
             "imagery/prf_max_iterations": self.max_iterations_spinbox.value(),
             "imagery/prf_min_detections": self.min_detections_spinbox.value(),
@@ -422,8 +434,9 @@ class SensorsPanel(QWidget):
             self,
             "PRF Fit Complete",
             f"Stored a {prf_model.model} PRF on sensor '{sensor.name}'.\n\n"
-            f"Fit {status} with residual {prf_model.residual_ratio:.4g} "
-            f"using {prf_model.detections_used} detections.\n\n"
+            f"Fit {status} with validation residual {prf_model.residual_ratio:.4g}.\n"
+            f"Stage 1 fit detections: {prf_model.detections_used}; "
+            f"validated detections: {prf_model.validation_detections_used or prf_model.detections_used}.\n\n"
             f"Parameters: {prf_model.parameter_summary()}"
         )
 

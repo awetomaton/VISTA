@@ -490,6 +490,26 @@ class DataLoaderThread(QThread):
                     optimizer_success=bool(attrs.get('optimizer_success', False)),
                     optimizer_status=int(attrs.get('optimizer_status', 0)),
                     optimizer_message=attrs.get('optimizer_message', ''),
+                    fit_residual_ratio=(
+                        float(attrs['fit_residual_ratio'])
+                        if 'fit_residual_ratio' in attrs else None
+                    ),
+                    validation_residual_ratio=(
+                        float(attrs['validation_residual_ratio'])
+                        if 'validation_residual_ratio' in attrs else None
+                    ),
+                    validation_detections_used=(
+                        int(attrs['validation_detections_used'])
+                        if 'validation_detections_used' in attrs else None
+                    ),
+                    validation_ratio=(
+                        float(attrs['validation_ratio'])
+                        if 'validation_ratio' in attrs else None
+                    ),
+                    validated=(
+                        bool(attrs['validated'])
+                        if 'validated' in attrs else None
+                    ),
                 )
             except Exception:
                 imagery.fitted_prf_model = None

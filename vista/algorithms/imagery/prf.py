@@ -48,6 +48,11 @@ class PRFModel:
     optimizer_success: bool = False
     optimizer_status: int = 0
     optimizer_message: str = ""
+    fit_residual_ratio: float | None = None
+    validation_residual_ratio: float | None = None
+    validation_detections_used: int | None = None
+    validation_ratio: float | None = None
+    validated: bool | None = None
 
     def to_metadata(self) -> dict[str, object]:
         """Return HDF5-friendly metadata for this fit."""
@@ -68,6 +73,14 @@ class PRFModel:
             "optimizer_status": self.optimizer_status,
             "optimizer_message": self.optimizer_message,
         }
+        optional_fields = {
+            "fit_residual_ratio": self.fit_residual_ratio,
+            "validation_residual_ratio": self.validation_residual_ratio,
+            "validation_detections_used": self.validation_detections_used,
+            "validation_ratio": self.validation_ratio,
+            "validated": self.validated,
+        }
+        metadata.update({key: value for key, value in optional_fields.items() if value is not None})
         metadata.update({f"parameter_{key}": value for key, value in self.parameters.items()})
         return metadata
 
@@ -497,6 +510,39 @@ def strongest_prf_chips(
     return [chip for _, _, chip in scored], len(chips)
 
 
+def select_strongest_prf_chips(
+    chips: list[NDArray[np.float32]],
+    max_chips: int,
+) -> list[NDArray[np.float32]]:
+    """Return up to max_chips high-contrast chips while preserving source order."""
+    return [chips[index] for index in select_strongest_prf_chip_indices(chips, max_chips)]
+
+
+def select_strongest_prf_chip_indices(
+    chips: list[NDArray[np.float32]],
+    max_chips: int,
+) -> list[int]:
+    """Return indices for up to max_chips high-contrast chips while preserving source order."""
+    if max_chips <= 0 or len(chips) <= max_chips:
+        return list(range(len(chips)))
+    scored = [
+        (index, score_prf_chip(chip))
+        for index, chip in enumerate(chips)
+    ]
+    selected = sorted(scored, key=lambda item: item[1], reverse=True)[:max_chips]
+    return sorted(index for index, _ in selected)
+
+
+def _select_chips_by_index(
+    chips: list[NDArray[np.float32]],
+    indices: list[int],
+) -> list[NDArray[np.float32]]:
+    """Return chips for the supplied indices."""
+    if not indices:
+        return list(chips)
+    return [chips[index] for index in indices]
+
+
 def _estimate_elliptical_moments(chips_arr: NDArray[np.float64]) -> tuple[float, float, float]:
     """Estimate an elliptical Gaussian seed from positive chip moments."""
     signal_sum = None
@@ -561,6 +607,7 @@ def fit_prf_model(
     tolerance: float,
     max_iterations: int,
     kernel_size: int = 11,
+    fit_max_chips: int | None = None,
 ) -> PRFModel:
     """Fit a shared PRF shape to point-source image chips."""
     if model == NO_PRF_MODEL:
@@ -568,8 +615,15 @@ def fit_prf_model(
     if not chips:
         raise ValueError("At least one chip is required to fit a PRF model")
 
-    chips_arr = np.asarray(chips, dtype=np.float64)
-    chip_size = chips_arr.shape[1]
+    validation_chips_arr = np.asarray(chips, dtype=np.float64)
+    fit_indices = (
+        select_strongest_prf_chip_indices(chips, int(fit_max_chips))
+        if fit_max_chips
+        else list(range(len(chips)))
+    )
+    fit_chips = _select_chips_by_index(chips, fit_indices)
+    chips_arr = np.asarray(fit_chips, dtype=np.float64)
+    chip_size = validation_chips_arr.shape[1]
     pixel_rows, pixel_cols = np.indices((chip_size, chip_size), dtype=np.float64)
     chip_norms = np.asarray(
         [max(np.linalg.norm(chip - np.median(chip)), 1e-6) for chip in chips_arr],
@@ -659,8 +713,17 @@ def fit_prf_model(
         prf_fine_cache[key] = prf_fine
         return prf_fine
 
-    def residuals(params):
-        sigma_x, sigma_y, theta, beta, airy_radius, per_chip = unpack(params)
+    def residuals_for_shape_and_offsets(
+        chips_to_score: NDArray[np.float64],
+        norms_to_score: NDArray[np.float64],
+        sigma_x: float,
+        sigma_y: float,
+        theta: float,
+        beta: float,
+        airy_radius: float,
+        per_chip: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        chip_count = chips_to_score.shape[0]
         prf_fine = cached_prf_fine(sigma_x, sigma_y, theta, beta, airy_radius)
         shapes = _sample_shifted_prf_kernels(
             prf_fine,
@@ -670,8 +733,8 @@ def fit_prf_model(
             pixel_rows,
             pixel_cols,
         )
-        chip_flat = chips_arr.reshape(n, -1)
-        shape_flat = shapes.reshape(n, -1)
+        chip_flat = chips_to_score.reshape(chip_count, -1)
+        shape_flat = shapes.reshape(chip_count, -1)
         chip_means = np.mean(chip_flat, axis=1)
         shape_means = np.mean(shape_flat, axis=1)
         centered_chips = chip_flat - chip_means[:, np.newaxis]
@@ -680,13 +743,66 @@ def fit_prf_model(
         amplitudes = np.divide(
             np.sum(centered_shapes * centered_chips, axis=1),
             denominators,
-            out=np.zeros(n, dtype=np.float64),
+            out=np.zeros(chip_count, dtype=np.float64),
             where=np.isfinite(denominators) & (denominators > 0),
         )
         amplitudes = np.where(np.isfinite(amplitudes) & (amplitudes > 0), amplitudes, 0.0)
         backgrounds = chip_means - amplitudes * shape_means
         model_chips = backgrounds[:, np.newaxis] + amplitudes[:, np.newaxis] * shape_flat
-        return ((model_chips - chip_flat) / chip_norms[:, np.newaxis]).ravel()
+        return ((model_chips - chip_flat) / norms_to_score[:, np.newaxis]).ravel()
+
+    def residuals(params):
+        sigma_x, sigma_y, theta, beta, airy_radius, per_chip = unpack(params)
+        return residuals_for_shape_and_offsets(
+            chips_arr,
+            chip_norms,
+            sigma_x,
+            sigma_y,
+            theta,
+            beta,
+            airy_radius,
+            per_chip,
+        )
+
+    def refine_offsets_for_fixed_shape(
+        chips_to_score: NDArray[np.float64],
+        norms_to_score: NDArray[np.float64],
+        sigma_x: float,
+        sigma_y: float,
+        theta: float,
+        beta: float,
+        airy_radius: float,
+        initial_offsets: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        """Refine per-chip sub-pixel offsets without changing the shared PRF shape."""
+        offsets = np.asarray(initial_offsets, dtype=np.float64).copy()
+        search_grid = np.array(
+            [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1)],
+            dtype=np.float64,
+        )
+        for step in (0.25, 0.10):
+            candidate_offsets = (
+                offsets[:, np.newaxis, :] + search_grid[np.newaxis, :, :] * step
+            ).reshape(-1, 2)
+            candidate_offsets = np.clip(candidate_offsets, -2.0, 2.0)
+            repeated_chips = np.repeat(chips_to_score, len(search_grid), axis=0)
+            repeated_norms = np.repeat(norms_to_score, len(search_grid), axis=0)
+            candidate_residuals = residuals_for_shape_and_offsets(
+                repeated_chips,
+                repeated_norms,
+                sigma_x,
+                sigma_y,
+                theta,
+                beta,
+                airy_radius,
+                candidate_offsets,
+            ).reshape(chips_to_score.shape[0], len(search_grid), -1)
+            candidate_scores = np.linalg.norm(candidate_residuals, axis=2)
+            best_indices = np.argmin(candidate_scores, axis=1)
+            offsets = candidate_offsets.reshape(chips_to_score.shape[0], len(search_grid), 2)[
+                np.arange(chips_to_score.shape[0]), best_indices
+            ]
+        return offsets
 
     optimizer_tolerance = min(1e-8, max(float(tolerance) * 1e-4, 1e-12))
     lower_arr = np.asarray(lower, dtype=np.float64)
@@ -716,7 +832,7 @@ def fit_prf_model(
         if candidate_result.cost < best_cost:
             result = candidate_result
             best_cost = candidate_result.cost
-    sigma_x, sigma_y, theta, beta, airy_radius, _ = unpack(result.x)
+    sigma_x, sigma_y, theta, beta, airy_radius, fit_offsets = unpack(result.x)
     if model in ("Elliptical Gaussian", "Moffat") and sigma_y > sigma_x:
         sigma_x, sigma_y = sigma_y, sigma_x
         theta += math.pi / 2.0
@@ -724,7 +840,39 @@ def fit_prf_model(
     kernel = generate_prf_kernel(
         model, pixel_shape, kernel_size, sigma_x, sigma_y, theta, beta, airy_radius
     )
-    residual_ratio = float(np.linalg.norm(residuals(result.x)) / math.sqrt(chips_arr.size))
+    fit_residual_ratio = float(np.linalg.norm(residuals(result.x)) / math.sqrt(chips_arr.size))
+    validation_offsets = np.asarray(
+        [(_estimate_chip_fit_seed(chip)[2], _estimate_chip_fit_seed(chip)[3]) for chip in validation_chips_arr],
+        dtype=np.float64,
+    )
+    validation_norms = np.asarray(
+        [max(np.linalg.norm(chip - np.median(chip)), 1e-6) for chip in validation_chips_arr],
+        dtype=np.float64,
+    )
+    validation_offsets = refine_offsets_for_fixed_shape(
+        validation_chips_arr,
+        validation_norms,
+        sigma_x,
+        sigma_y,
+        theta,
+        beta,
+        airy_radius,
+        validation_offsets,
+    )
+    validation_offsets[np.asarray(fit_indices, dtype=np.int64)] = fit_offsets
+    validation_residuals = residuals_for_shape_and_offsets(
+        validation_chips_arr,
+        validation_norms,
+        sigma_x,
+        sigma_y,
+        theta,
+        beta,
+        airy_radius,
+        validation_offsets,
+    )
+    residual_ratio = float(np.linalg.norm(validation_residuals) / math.sqrt(validation_chips_arr.size))
+    validation_ratio = float(residual_ratio / max(fit_residual_ratio, 1e-12))
+    validated = bool(residual_ratio <= max(float(tolerance), fit_residual_ratio * 3.0))
     if model == "Gaussian":
         params = {"sigma": float(sigma_x)}
     elif model == "Airy Disk":
@@ -755,11 +903,16 @@ def fit_prf_model(
         iterations=optimizer_iterations,
         function_evaluations=function_evaluations,
         jacobian_evaluations=jacobian_evaluations,
-        converged=bool(result.success and residual_ratio <= tolerance),
-        detections_used=len(chips),
+        converged=bool(validated and residual_ratio <= tolerance),
+        detections_used=len(fit_chips),
         optimizer_success=bool(result.success),
         optimizer_status=int(result.status),
         optimizer_message=str(result.message),
+        fit_residual_ratio=fit_residual_ratio,
+        validation_residual_ratio=residual_ratio,
+        validation_detections_used=len(chips),
+        validation_ratio=validation_ratio,
+        validated=validated,
     )
 
 
