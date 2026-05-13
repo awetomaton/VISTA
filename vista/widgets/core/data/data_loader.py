@@ -510,6 +510,30 @@ class DataLoaderThread(QThread):
                         bool(attrs['validated'])
                         if 'validated' in attrs else None
                     ),
+                    adaptive_fit_enabled=(
+                        bool(attrs['adaptive_fit_enabled'])
+                        if 'adaptive_fit_enabled' in attrs else None
+                    ),
+                    adaptive_fit_attempts=(
+                        int(attrs['adaptive_fit_attempts'])
+                        if 'adaptive_fit_attempts' in attrs else None
+                    ),
+                    adaptive_fit_sequence=(
+                        str(attrs['adaptive_fit_sequence'])
+                        if 'adaptive_fit_sequence' in attrs else None
+                    ),
+                    adaptive_fit_residuals=(
+                        str(attrs['adaptive_fit_residuals'])
+                        if 'adaptive_fit_residuals' in attrs else None
+                    ),
+                    selected_fit_detections=(
+                        int(attrs['selected_fit_detections'])
+                        if 'selected_fit_detections' in attrs else None
+                    ),
+                    adaptive_fit_stopped_early=(
+                        bool(attrs['adaptive_fit_stopped_early'])
+                        if 'adaptive_fit_stopped_early' in attrs else None
+                    ),
                 )
             except Exception:
                 imagery.fitted_prf_model = None

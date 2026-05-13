@@ -21,7 +21,7 @@ from vista.algorithms.imagery.prf import (
     PRF_DETECTION_SOURCES,
     chips_from_detections,
     chips_from_selected_detections,
-    fit_prf_model,
+    fit_prf_model_adaptive,
     oversampled_prf_from_model,
     strongest_prf_chips,
 )
@@ -3365,6 +3365,7 @@ class ImageryViewer(QWidget):
         max_iterations = settings.value("imagery/prf_max_iterations", 50, type=int)
         fit_max_detections = settings.value("imagery/prf_fit_max_detections", 40, type=int)
         fit_max_detections = max(int(fit_max_detections), int(min_detections))
+        adaptive_fit = settings.value("imagery/prf_adaptive_fit", True, type=bool)
         oversampling = settings.value("imagery/prf_oversampling", 9, type=int)
         if oversampling % 2 == 0:
             oversampling += 1
@@ -3411,7 +3412,7 @@ class ImageryViewer(QWidget):
             return None
 
         try:
-            prf_model = fit_prf_model(
+            prf_model = fit_prf_model_adaptive(
                 chips=chips,
                 model=model,
                 pixel_shape=pixel_shape,
@@ -3420,6 +3421,7 @@ class ImageryViewer(QWidget):
                 kernel_size=chip_size,
                 fit_max_chips=fit_max_detections,
                 oversampling=oversampling,
+                adaptive_fit=adaptive_fit,
             )
         except Exception as exc:
             self._emit_prf_status(f"PRF fitting failed: {exc}. Using existing projection.")
@@ -3434,21 +3436,32 @@ class ImageryViewer(QWidget):
             self._emit_prf_status(
                 f"PRF fit complete using {prf_model.detections_used} detections from {detection_source} "
                 f"and validating on {prf_model.validation_detections_used or prf_model.detections_used} "
-                f"(validation residual {prf_model.residual_ratio:.4g})."
+                f"(validation residual {prf_model.residual_ratio:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
+            )
+        elif prf_model.validated is False:
+            self._emit_prf_status(
+                f"PRF adaptive validation did not pass using {prf_model.detections_used}/{raw_chip_count} "
+                f"usable detections from {detection_source}; validated on "
+                f"{prf_model.validation_detections_used or prf_model.detections_used}; using lowest-residual fit "
+                f"(validation residual {prf_model.residual_ratio:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
             )
         elif prf_model.function_evaluations >= prf_model.max_iterations or prf_model.optimizer_status == 0:
             self._emit_prf_status(
                 f"PRF fit reached the evaluation budget using {prf_model.detections_used}/{raw_chip_count} "
                 f"usable detections from {detection_source}; validated on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used}; using best fit "
-                f"(validation residual {prf_model.residual_ratio:.4g})."
+                f"(validation residual {prf_model.residual_ratio:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
             )
         else:
             self._emit_prf_status(
                 f"PRF fit stopped above tolerance using {prf_model.detections_used}/{raw_chip_count} "
                 f"usable detections from {detection_source}; validated on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used}; using best fit "
-                f"(validation residual {prf_model.residual_ratio:.4g}, tolerance {prf_model.tolerance:.4g})."
+                f"(validation residual {prf_model.residual_ratio:.4g}, tolerance {prf_model.tolerance:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
             )
         return prf_model
 
@@ -3506,6 +3519,7 @@ class ImageryViewer(QWidget):
         max_iterations = self._prf_setting(settings, "imagery/prf_max_iterations", 50, int)
         fit_max_detections = self._prf_setting(settings, "imagery/prf_fit_max_detections", 40, int)
         fit_max_detections = max(int(fit_max_detections), int(min_detections))
+        adaptive_fit = self._prf_setting(settings, "imagery/prf_adaptive_fit", True, bool)
         oversampling = self._prf_setting(settings, "imagery/prf_oversampling", 9, int)
         if oversampling % 2 == 0:
             oversampling += 1
@@ -3539,7 +3553,7 @@ class ImageryViewer(QWidget):
                 f"found {len(chips)} from {source_count} candidates."
             )
 
-        prf_model = fit_prf_model(
+        prf_model = fit_prf_model_adaptive(
             chips=chips,
             model=model,
             pixel_shape=pixel_shape,
@@ -3548,6 +3562,7 @@ class ImageryViewer(QWidget):
             kernel_size=chip_size,
             fit_max_chips=fit_max_detections,
             oversampling=oversampling,
+            adaptive_fit=adaptive_fit,
         )
         oversampled_prf = oversampled_prf_from_model(prf_model, oversample=oversampling)
         fitted_prf_metadata = {
@@ -3562,6 +3577,7 @@ class ImageryViewer(QWidget):
             "source_candidates": int(source_count),
             "usable_chips_before_auto_limit": int(raw_chip_count),
             "fit_max_detections": int(fit_max_detections),
+            "adaptive_fit": bool(adaptive_fit),
             "oversampling": int(oversampling),
             "fit_oversampling": int(oversampling),
             "stored_prf_oversampling": int(oversampling),
@@ -3585,6 +3601,16 @@ class ImageryViewer(QWidget):
                 f"Fitted {model} sensor PRF using {prf_model.detections_used} detections and "
                 f"validated on {prf_model.validation_detections_used or prf_model.detections_used} "
                 f"(validation residual {prf_model.residual_ratio:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1}; "
+                f"{prf_model.parameter_summary()})."
+            )
+        elif prf_model.validated is False:
+            message = (
+                f"Fitted {model} sensor PRF did not validate using {prf_model.detections_used}/{raw_chip_count} "
+                f"usable detections; validated on "
+                f"{prf_model.validation_detections_used or prf_model.detections_used}; stored the lowest-residual fit "
+                f"(validation residual {prf_model.residual_ratio:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1}; "
                 f"{prf_model.parameter_summary()})."
             )
         else:
@@ -3594,6 +3620,7 @@ class ImageryViewer(QWidget):
                 f"{prf_model.validation_detections_used or prf_model.detections_used} "
                 f"(validation residual {prf_model.residual_ratio:.4g}, "
                 f"tolerance {prf_model.tolerance:.4g}; "
+                f"adaptive attempts {prf_model.adaptive_fit_attempts or 1}; "
                 f"{prf_model.parameter_summary()})."
             )
         self._emit_prf_status(message)

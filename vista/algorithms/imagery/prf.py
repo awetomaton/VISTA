@@ -53,6 +53,12 @@ class PRFModel:
     validation_detections_used: int | None = None
     validation_ratio: float | None = None
     validated: bool | None = None
+    adaptive_fit_enabled: bool | None = None
+    adaptive_fit_attempts: int | None = None
+    adaptive_fit_sequence: str | None = None
+    adaptive_fit_residuals: str | None = None
+    selected_fit_detections: int | None = None
+    adaptive_fit_stopped_early: bool | None = None
 
     def to_metadata(self) -> dict[str, object]:
         """Return HDF5-friendly metadata for this fit."""
@@ -79,6 +85,12 @@ class PRFModel:
             "validation_detections_used": self.validation_detections_used,
             "validation_ratio": self.validation_ratio,
             "validated": self.validated,
+            "adaptive_fit_enabled": self.adaptive_fit_enabled,
+            "adaptive_fit_attempts": self.adaptive_fit_attempts,
+            "adaptive_fit_sequence": self.adaptive_fit_sequence,
+            "adaptive_fit_residuals": self.adaptive_fit_residuals,
+            "selected_fit_detections": self.selected_fit_detections,
+            "adaptive_fit_stopped_early": self.adaptive_fit_stopped_early,
         }
         metadata.update({key: value for key, value in optional_fields.items() if value is not None})
         metadata.update({f"parameter_{key}": value for key, value in self.parameters.items()})
@@ -917,6 +929,81 @@ def fit_prf_model(
         validation_ratio=validation_ratio,
         validated=validated,
     )
+
+
+def fit_prf_model_adaptive(
+    chips: list[NDArray[np.float32]],
+    model: str,
+    pixel_shape: str,
+    tolerance: float,
+    max_iterations: int,
+    kernel_size: int = 11,
+    fit_max_chips: int | None = None,
+    oversampling: int = 9,
+    adaptive_fit: bool = True,
+    adaptive_sequence: tuple[int, ...] = (20, 40, 75),
+) -> PRFModel:
+    """Fit a PRF with a bounded adaptive strongest-chip sequence and full-set validation."""
+    if not adaptive_fit:
+        prf_model = fit_prf_model(
+            chips=chips,
+            model=model,
+            pixel_shape=pixel_shape,
+            tolerance=tolerance,
+            max_iterations=max_iterations,
+            kernel_size=kernel_size,
+            fit_max_chips=fit_max_chips,
+            oversampling=oversampling,
+        )
+        prf_model.adaptive_fit_enabled = False
+        prf_model.selected_fit_detections = prf_model.detections_used
+        return prf_model
+
+    usable_count = len(chips)
+    sequence_cap = max(adaptive_sequence) if adaptive_sequence else usable_count
+    fit_cap = max(1, min(int(sequence_cap), usable_count))
+    attempts = sorted({
+        max(1, min(int(candidate), fit_cap, usable_count))
+        for candidate in adaptive_sequence
+        if int(candidate) > 0
+    })
+    if not attempts or usable_count <= fit_cap:
+        attempts = [usable_count]
+    elif attempts[-1] < min(fit_cap, usable_count):
+        attempts.append(min(fit_cap, usable_count))
+
+    best_model: PRFModel | None = None
+    attempt_residuals: list[str] = []
+    stopped_early = False
+    for attempt in attempts:
+        candidate = fit_prf_model(
+            chips=chips,
+            model=model,
+            pixel_shape=pixel_shape,
+            tolerance=tolerance,
+            max_iterations=max_iterations,
+            kernel_size=kernel_size,
+            fit_max_chips=attempt,
+            oversampling=oversampling,
+        )
+        attempt_residuals.append(f"{candidate.detections_used}:{candidate.residual_ratio:.8g}")
+        if best_model is None or candidate.residual_ratio < best_model.residual_ratio:
+            best_model = candidate
+        if candidate.validated:
+            best_model = candidate
+            stopped_early = attempt != attempts[-1]
+            break
+
+    if best_model is None:
+        raise ValueError("Adaptive PRF fitting did not produce a fit.")
+
+    best_model.adaptive_fit_enabled = True
+    best_model.adaptive_fit_attempts = len(attempt_residuals)
+    best_model.adaptive_fit_sequence = ",".join(str(attempt) for attempt in attempts)
+    best_model.adaptive_fit_residuals = ",".join(attempt_residuals)
+    best_model.selected_fit_detections = best_model.detections_used
+    best_model.adaptive_fit_stopped_early = stopped_early
+    return best_model
 
 
 def apply_prf_prefilter(image: NDArray[np.float32], prf_model: PRFModel | None) -> NDArray[np.float32]:

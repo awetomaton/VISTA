@@ -1,7 +1,7 @@
 """Sensors panel for data manager"""
 from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
+    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton, QSpinBox,
     QInputDialog,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
@@ -58,9 +58,16 @@ class SensorPRFFitDialog(QDialog):
         self.fit_max_detections_spinbox.setRange(1, 1000)
         self.fit_max_detections_spinbox.setValue(40)
         self.fit_max_detections_spinbox.setToolTip(
-            "Stage 1 fits the PRF on this many strongest usable chips, then validates against all usable chips."
+            "Manual-mode Stage 1 fits this many strongest usable chips, then validates against all usable chips."
         )
         form.addRow("Fit Max Detections:", self.fit_max_detections_spinbox)
+
+        self.adaptive_fit_checkbox = QCheckBox()
+        self.adaptive_fit_checkbox.setChecked(True)
+        self.adaptive_fit_checkbox.setToolTip(
+            "Try 20, 40, then 75 strongest chips and stop when the PRF validates against all usable chips."
+        )
+        form.addRow("Adaptive Fit:", self.adaptive_fit_checkbox)
 
         self.tolerance_spinbox = QDoubleSpinBox()
         self.tolerance_spinbox.setRange(1e-6, 1.0)
@@ -120,6 +127,9 @@ class SensorPRFFitDialog(QDialog):
         self.fit_max_detections_spinbox.setValue(
             self.settings.value("imagery/prf_fit_max_detections", 40, type=int)
         )
+        self.adaptive_fit_checkbox.setChecked(
+            self.settings.value("imagery/prf_adaptive_fit", True, type=bool)
+        )
         self.tolerance_spinbox.setValue(
             self.settings.value("imagery/prf_tolerance", 0.01, type=float)
         )
@@ -145,6 +155,7 @@ class SensorPRFFitDialog(QDialog):
             "imagery/prf_detection_source": self.detection_source_combo.currentText(),
             "imagery/prf_auto_max_detections": self.auto_max_detections_spinbox.value(),
             "imagery/prf_fit_max_detections": self.fit_max_detections_spinbox.value(),
+            "imagery/prf_adaptive_fit": self.adaptive_fit_checkbox.isChecked(),
             "imagery/prf_tolerance": self.tolerance_spinbox.value(),
             "imagery/prf_max_iterations": self.max_iterations_spinbox.value(),
             "imagery/prf_min_detections": self.min_detections_spinbox.value(),
@@ -428,6 +439,8 @@ class SensorsPanel(QWidget):
         self.data_changed.emit()
         if prf_model.converged:
             status = "converged"
+        elif prf_model.validated is False:
+            status = "did not validate; stored the lowest-residual fit"
         else:
             status = "used the best fit above tolerance"
         QMessageBox.information(
@@ -436,7 +449,8 @@ class SensorsPanel(QWidget):
             f"Stored a {prf_model.model} PRF on sensor '{sensor.name}'.\n\n"
             f"Fit {status} with validation residual {prf_model.residual_ratio:.4g}.\n"
             f"Stage 1 fit detections: {prf_model.detections_used}; "
-            f"validated detections: {prf_model.validation_detections_used or prf_model.detections_used}.\n\n"
+            f"validated detections: {prf_model.validation_detections_used or prf_model.detections_used}; "
+            f"adaptive attempts: {prf_model.adaptive_fit_attempts or 1}.\n\n"
             f"Parameters: {prf_model.parameter_summary()}"
         )
 
