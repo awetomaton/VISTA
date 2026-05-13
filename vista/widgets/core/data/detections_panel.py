@@ -1285,10 +1285,38 @@ class DetectionsPanel(QWidget):
             total_rejected += rejected
 
             summary = summarize_flux_counts(detector.flux_counts)
-            summaries.append(
-                f"{detector.name}: {summary['count']}/{len(detector)} estimated, "
-                f"mean {summary['mean']:.4g} raw counts, peak {summary['peak']:.4g}"
-            )
+            status_counts = {}
+            for status in detector.flux_status:
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            if summary["count"] == 0:
+                if status_counts:
+                    reasons = ", ".join(
+                        f"{status} ({count})"
+                        for status, count in sorted(status_counts.items(), key=lambda item: item[0])
+                    )
+                    summaries.append(
+                        f"{detector.name}: 0/{len(detector)} estimated; all rejected: {reasons}"
+                    )
+                else:
+                    summaries.append(f"{detector.name}: 0/{len(detector)} estimated; all rejected")
+            else:
+                rejected_reasons = {
+                    status: count
+                    for status, count in status_counts.items()
+                    if status.startswith("rejected")
+                }
+                suffix = ""
+                if rejected_reasons:
+                    reasons = ", ".join(
+                        f"{status} ({count})"
+                        for status, count in sorted(rejected_reasons.items(), key=lambda item: item[0])
+                    )
+                    suffix = f"; rejected: {reasons}"
+                summaries.append(
+                    f"{detector.name}: {summary['count']}/{len(detector)} estimated, "
+                    f"mean {summary['mean']:.4g} raw counts, peak {summary['peak']:.4g}{suffix}"
+                )
 
         self.refresh_detections_table()
         self.data_changed.emit()

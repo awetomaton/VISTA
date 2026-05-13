@@ -164,7 +164,7 @@ class SampledSensor(Sensor):
 
         self._validate_prf_payload("associated")
         self._validate_prf_payload("fitted")
-        if self.active_prf_source not in {"associated", "fitted"}:
+        if self.active_prf_source not in {"none", "associated", "fitted"}:
             if self.has_associated_prf():
                 self.active_prf_source = "associated"
             elif self.has_fitted_prf():
@@ -240,9 +240,9 @@ class SampledSensor(Sensor):
         Returns
         -------
         bool
-            True if an oversampled PRF is available for local-chip sampling.
+            True if an active oversampled PRF is available for local-chip sampling.
         """
-        return self.has_associated_prf() or self.has_fitted_prf()
+        return self.active_prf_source in self.get_available_prf_sources()
 
     def has_associated_prf(self) -> bool:
         """Return True when a stored/external sensor PRF is available."""
@@ -263,13 +263,18 @@ class SampledSensor(Sensor):
 
     def get_active_prf_source_label(self) -> str:
         """Return a concise display label for the active PRF source."""
-        labels = {"associated": "Associated", "fitted": "Fitted"}
-        return labels.get(self.active_prf_source, "")
+        labels = {"none": "None", "associated": "Associated", "fitted": "Fitted"}
+        return labels.get(self.active_prf_source, "None")
 
-    def set_active_prf_source(self, source: str) -> None:
+    def set_active_prf_source(self, source: str | None) -> None:
         """Select which stored PRF payload is used by get_prf()."""
-        if source not in {"associated", "fitted"}:
+        if source is None:
+            source = "none"
+        if source not in {"none", "associated", "fitted"}:
             raise ValueError(f"Unknown PRF source: {source}")
+        if source == "none":
+            self.active_prf_source = "none"
+            return
         if source == "associated" and not self.has_associated_prf():
             raise ValueError("No associated PRF is available on this sensor.")
         if source == "fitted" and not self.has_fitted_prf():
@@ -295,12 +300,12 @@ class SampledSensor(Sensor):
 
     def _active_prf_payload(self) -> tuple[NDArray[np.float64], int, Tuple[float, float]]:
         """Return oversampled PRF, oversampling, and center for the active source."""
+        if self.active_prf_source == "none":
+            raise ValueError("SampledSensor has PRF data, but no active PRF is selected.")
         if self.active_prf_source == "fitted" and self.has_fitted_prf():
             return self.fitted_oversampled_prf, self.fitted_prf_oversampling, self.fitted_prf_center
-        if self.has_associated_prf():
+        if self.active_prf_source == "associated" and self.has_associated_prf():
             return self.oversampled_prf, self.prf_oversampling, self.prf_center
-        if self.has_fitted_prf():
-            return self.fitted_oversampled_prf, self.fitted_prf_oversampling, self.fitted_prf_center
         raise ValueError("SampledSensor has no oversampled PRF data.")
 
     def _default_prf_chip_size(self) -> int:
@@ -770,9 +775,22 @@ class SampledSensor(Sensor):
         # Save constant per-sensor PRF data. The root payload preserves the
         # legacy single-PRF layout, while child groups preserve provenance when
         # both associated and fitted PRFs are available.
-        if self.can_model_prf():
+        if self.has_associated_prf() or self.has_fitted_prf():
             prf_group = group.create_group('prf')
-            active_prf, active_oversampling, active_center = self._active_prf_payload()
+            if self.can_model_prf():
+                active_prf, active_oversampling, active_center = self._active_prf_payload()
+            elif self.has_associated_prf():
+                active_prf, active_oversampling, active_center = (
+                    self.oversampled_prf,
+                    self.prf_oversampling,
+                    self.prf_center,
+                )
+            else:
+                active_prf, active_oversampling, active_center = (
+                    self.fitted_oversampled_prf,
+                    self.fitted_prf_oversampling,
+                    self.fitted_prf_center,
+                )
             prf_group.create_dataset('oversampled_prf', data=active_prf)
             prf_group.attrs['oversampling'] = int(active_oversampling)
             prf_group.attrs['center_row'] = float(active_center[0])

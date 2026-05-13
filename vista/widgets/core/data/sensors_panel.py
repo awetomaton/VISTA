@@ -3,7 +3,6 @@ from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton, QSpinBox,
-    QInputDialog,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 )
 
@@ -200,20 +199,14 @@ class SensorsPanel(QWidget):
         )
         self.fit_prf_btn.clicked.connect(self.fit_prf_from_detections)
         button_layout.addWidget(self.fit_prf_btn)
-        self.select_prf_btn = QPushButton("Select Active PRF")
-        self.select_prf_btn.setToolTip(
-            "Choose whether sensor operations use the associated PRF or the fitted PRF when both exist."
-        )
-        self.select_prf_btn.clicked.connect(self.select_active_prf)
-        button_layout.addWidget(self.select_prf_btn)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
         # Sensors table
         self.sensors_table = QTableWidget()
-        self.sensors_table.setColumnCount(7)
+        self.sensors_table.setColumnCount(6)
         self.sensors_table.setHorizontalHeaderLabels(
-            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "PRF", "Active PRF"]
+            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "Active PRF"]
         )
 
         # Enable row selection (single selection only)
@@ -227,8 +220,7 @@ class SensorsPanel(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Uniformity Gain
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # PRF
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Active PRF
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Active PRF
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
@@ -276,18 +268,7 @@ class SensorsPanel(QWidget):
             bad_pixel_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.sensors_table.setItem(row, 4, bad_pixel_item)
 
-            # Point response function capability (checkmark or empty)
-            prf_item = QTableWidgetItem("✓" if sensor.can_model_prf() else "")
-            prf_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            prf_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 5, prf_item)
-
-            active_prf_item = QTableWidgetItem(
-                sensor.get_active_prf_source_label() if hasattr(sensor, "get_active_prf_source_label") else ""
-            )
-            active_prf_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            active_prf_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 6, active_prf_item)
+            self._set_active_prf_cell(row, sensor)
 
         self.sensors_table.blockSignals(False)
 
@@ -303,6 +284,46 @@ class SensorsPanel(QWidget):
             self.selected_sensor = self.viewer.sensors[0]
             # Explicitly emit signal to ensure viewer is filtered
             self.sensor_selected.emit(self.selected_sensor)
+
+    def _set_active_prf_cell(self, row: int, sensor) -> None:
+        """Install the Active PRF selector for one sensor row."""
+        combo = QComboBox()
+        combo.addItem("None", "none")
+
+        if hasattr(sensor, "has_associated_prf") and sensor.has_associated_prf():
+            combo.addItem("Associated", "associated")
+        if hasattr(sensor, "has_fitted_prf") and sensor.has_fitted_prf():
+            combo.addItem("Fitted", "fitted")
+
+        active_source = getattr(sensor, "active_prf_source", None) or "none"
+        active_index = combo.findData(active_source)
+        combo.setCurrentIndex(active_index if active_index >= 0 else 0)
+        combo.setEnabled(combo.count() > 1)
+        combo.setToolTip(
+            "Select which PRF this sensor uses. None disables PRF-based operations for this sensor."
+        )
+        combo.currentIndexChanged.connect(
+            lambda _index, sensor_uuid=sensor.uuid, selector=combo: self.on_active_prf_changed(sensor_uuid, selector)
+        )
+
+        self.sensors_table.setCellWidget(row, 5, combo)
+
+    def on_active_prf_changed(self, sensor_uuid, selector: QComboBox) -> None:
+        """Apply an Active PRF selection from the sensors table."""
+        sensor = next((candidate for candidate in self.viewer.sensors if candidate.uuid == sensor_uuid), None)
+        if sensor is None:
+            return
+        if not hasattr(sensor, "set_active_prf_source"):
+            return
+
+        try:
+            sensor.set_active_prf_source(selector.currentData())
+        except Exception as exc:
+            QMessageBox.warning(self, "Active PRF Failed", str(exc))
+            self.refresh_sensors_table()
+            return
+
+        self.data_changed.emit()
 
     def on_sensor_selection_changed(self):
         """Handle sensor selection changes from table"""
@@ -452,60 +473,6 @@ class SensorsPanel(QWidget):
             f"validated detections: {prf_model.validation_detections_used or prf_model.detections_used}; "
             f"adaptive attempts: {prf_model.adaptive_fit_attempts or 1}.\n\n"
             f"Parameters: {prf_model.parameter_summary()}"
-        )
-
-    def select_active_prf(self):
-        """Select which stored PRF payload is active on the chosen sensor."""
-        selected_rows = [index.row() for index in self.sensors_table.selectedIndexes()]
-        if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select a sensor first.")
-            return
-
-        row = selected_rows[0]
-        if row >= len(self.viewer.sensors):
-            return
-        sensor = self.viewer.sensors[row]
-        if not hasattr(sensor, "get_available_prf_sources"):
-            QMessageBox.information(self, "No PRF Selection", "This sensor type does not support selectable PRFs.")
-            return
-
-        sources = sensor.get_available_prf_sources()
-        if not sources:
-            QMessageBox.information(self, "No PRF Selection", "This sensor does not have a PRF.")
-            return
-        if len(sources) == 1:
-            sensor.set_active_prf_source(sources[0])
-            self.refresh_sensors_table()
-            self.data_changed.emit()
-            QMessageBox.information(
-                self,
-                "Active PRF",
-                f"Only the {sensor.get_active_prf_source_label()} PRF is available, and it is active."
-            )
-            return
-
-        label_map = {"associated": "Associated PRF", "fitted": "Fitted PRF"}
-        labels = [label_map[source] for source in sources]
-        current_label = label_map.get(sensor.active_prf_source, labels[0])
-        choice, accepted = QInputDialog.getItem(
-            self,
-            "Select Active PRF",
-            f"Choose the PRF used for sensor '{sensor.name}':",
-            labels,
-            labels.index(current_label) if current_label in labels else 0,
-            False,
-        )
-        if not accepted:
-            return
-
-        chosen_source = next(source for source, label in label_map.items() if label == choice)
-        sensor.set_active_prf_source(chosen_source)
-        self.refresh_sensors_table()
-        self.data_changed.emit()
-        QMessageBox.information(
-            self,
-            "Active PRF Updated",
-            f"Sensor '{sensor.name}' now uses the {sensor.get_active_prf_source_label()} PRF."
         )
 
     def dragEnterEvent(self, event):
