@@ -316,6 +316,48 @@ def _bilinear_sample_prf(prf: NDArray[np.float64], rows: NDArray[np.float64], co
     return samples
 
 
+def _sample_shifted_prf_kernel(
+    prf_fine: NDArray[np.float64],
+    kernel_size: int,
+    drow: float,
+    dcol: float,
+    oversample: int,
+    pixel_rows: NDArray[np.float64],
+    pixel_cols: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Sample a detector PRF chip from an already-generated oversampled PRF table."""
+    center = (prf_fine.shape[0] - 1) / 2.0
+    chip_center = (kernel_size - 1) / 2.0
+    prf_rows = center + (pixel_rows - chip_center - drow) * oversample
+    prf_cols = center + (pixel_cols - chip_center - dcol) * oversample
+    kernel = _bilinear_sample_prf(prf_fine, prf_rows, prf_cols)
+    total = np.sum(kernel)
+    if not np.isfinite(total) or total <= 0:
+        return normalize_kernel(kernel).astype(np.float64)
+    return kernel / total
+
+
+def _sample_shifted_prf_kernels(
+    prf_fine: NDArray[np.float64],
+    kernel_size: int,
+    offsets: NDArray[np.float64],
+    oversample: int,
+    pixel_rows: NDArray[np.float64],
+    pixel_cols: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Sample detector PRF chips for many sub-pixel source offsets at once."""
+    center = (prf_fine.shape[0] - 1) / 2.0
+    chip_center = (kernel_size - 1) / 2.0
+    drows = offsets[:, 0, np.newaxis, np.newaxis]
+    dcols = offsets[:, 1, np.newaxis, np.newaxis]
+    prf_rows = center + (pixel_rows[np.newaxis, :, :] - chip_center - drows) * oversample
+    prf_cols = center + (pixel_cols[np.newaxis, :, :] - chip_center - dcols) * oversample
+    kernels = _bilinear_sample_prf(prf_fine, prf_rows, prf_cols)
+    totals = np.sum(kernels, axis=(1, 2), keepdims=True)
+    valid = np.isfinite(totals) & (totals > 0)
+    return np.divide(kernels, totals, out=np.zeros_like(kernels), where=valid)
+
+
 def _shifted_prf_kernel(
     model: str,
     pixel_shape: str,
@@ -341,16 +383,16 @@ def _shifted_prf_kernel(
         airy_radius=airy_radius,
         oversample=oversample,
     ).astype(np.float64)
-    center = (prf_fine.shape[0] - 1) / 2.0
     pixel_rows, pixel_cols = np.indices((kernel_size, kernel_size), dtype=np.float64)
-    chip_center = (kernel_size - 1) / 2.0
-    prf_rows = center + (pixel_rows - chip_center - drow) * oversample
-    prf_cols = center + (pixel_cols - chip_center - dcol) * oversample
-    kernel = _bilinear_sample_prf(prf_fine, prf_rows, prf_cols)
-    total = np.sum(kernel)
-    if not np.isfinite(total) or total <= 0:
-        return normalize_kernel(kernel).astype(np.float64)
-    return kernel / total
+    return _sample_shifted_prf_kernel(
+        prf_fine,
+        kernel_size,
+        drow,
+        dcol,
+        oversample,
+        pixel_rows,
+        pixel_cols,
+    )
 
 
 def oversampled_prf_from_model(prf_model: PRFModel, oversample: int = 7) -> NDArray[np.float32]:
@@ -528,12 +570,14 @@ def fit_prf_model(
 
     chips_arr = np.asarray(chips, dtype=np.float64)
     chip_size = chips_arr.shape[1]
-    yy, xx = np.indices((chip_size, chip_size), dtype=np.float64)
-    center = (chip_size - 1) / 2.0
-    x = xx - center
-    y = yy - center
+    pixel_rows, pixel_cols = np.indices((chip_size, chip_size), dtype=np.float64)
+    chip_norms = np.asarray(
+        [max(np.linalg.norm(chip - np.median(chip)), 1e-6) for chip in chips_arr],
+        dtype=np.float64,
+    )
 
-    # Each chip gets amplitude, background, and sub-pixel center offsets.
+    # Each chip gets only sub-pixel center offsets in the nonlinear optimizer.
+    # Amplitude and background are solved analytically for each trial PRF shape.
     n = chips_arr.shape[0]
     if model == "Gaussian":
         p0 = [1.2]  # circular sigma
@@ -554,10 +598,10 @@ def fit_prf_model(
         lower = [0.1]
         upper = [10.0]
     for chip in chips_arr:
-        amp, bg, drow, dcol = _estimate_chip_fit_seed(chip)
-        p0.extend([max(amp, 1e-6), bg, drow, dcol])
-        lower.extend([0.0, -np.inf, -2.0, -2.0])
-        upper.extend([np.inf, np.inf, 2.0, 2.0])
+        _, _, drow, dcol = _estimate_chip_fit_seed(chip)
+        p0.extend([drow, dcol])
+        lower.extend([-2.0, -2.0])
+        upper.extend([2.0, 2.0])
 
     def unpack(params):
         if model == "Gaussian":
@@ -582,30 +626,67 @@ def fit_prf_model(
             extra_idx += 1
         elif model == "Airy Disk":
             airy_radius = sigma_x
-        per_chip = params[extra_idx:].reshape(n, 4)
+        per_chip = params[extra_idx:].reshape(n, 2)
         return sigma_x, sigma_y, theta, beta, airy_radius, per_chip
+
+    oversample = 9
+    prf_fine_cache: dict[tuple[float, float, float, float, float], NDArray[np.float64]] = {}
+
+    def cached_prf_fine(
+        sigma_x: float,
+        sigma_y: float,
+        theta: float,
+        beta: float,
+        airy_radius: float,
+    ) -> NDArray[np.float64]:
+        key = (float(sigma_x), float(sigma_y), float(theta), float(beta), float(airy_radius))
+        cached = prf_fine_cache.get(key)
+        if cached is not None:
+            return cached
+        prf_fine = generate_oversampled_prf(
+            model,
+            pixel_shape,
+            chip_size,
+            sigma_x=sigma_x,
+            sigma_y=sigma_y,
+            theta=theta,
+            beta=beta,
+            airy_radius=airy_radius,
+            oversample=oversample,
+        ).astype(np.float64)
+        if len(prf_fine_cache) > 32:
+            prf_fine_cache.clear()
+        prf_fine_cache[key] = prf_fine
+        return prf_fine
 
     def residuals(params):
         sigma_x, sigma_y, theta, beta, airy_radius, per_chip = unpack(params)
-        residual = []
-        for chip, (amp, bg, drow, dcol) in zip(chips_arr, per_chip):
-            shape = _shifted_prf_kernel(
-                model,
-                pixel_shape,
-                chip_size,
-                sigma_x,
-                sigma_y,
-                theta,
-                beta,
-                airy_radius,
-                drow,
-                dcol,
-                oversample=9,
-            )
-            model_chip = bg + amp * shape
-            denom = max(np.linalg.norm(chip - np.median(chip)), 1e-6)
-            residual.append(((model_chip - chip) / denom).ravel())
-        return np.concatenate(residual)
+        prf_fine = cached_prf_fine(sigma_x, sigma_y, theta, beta, airy_radius)
+        shapes = _sample_shifted_prf_kernels(
+            prf_fine,
+            chip_size,
+            per_chip,
+            oversample,
+            pixel_rows,
+            pixel_cols,
+        )
+        chip_flat = chips_arr.reshape(n, -1)
+        shape_flat = shapes.reshape(n, -1)
+        chip_means = np.mean(chip_flat, axis=1)
+        shape_means = np.mean(shape_flat, axis=1)
+        centered_chips = chip_flat - chip_means[:, np.newaxis]
+        centered_shapes = shape_flat - shape_means[:, np.newaxis]
+        denominators = np.sum(centered_shapes * centered_shapes, axis=1)
+        amplitudes = np.divide(
+            np.sum(centered_shapes * centered_chips, axis=1),
+            denominators,
+            out=np.zeros(n, dtype=np.float64),
+            where=np.isfinite(denominators) & (denominators > 0),
+        )
+        amplitudes = np.where(np.isfinite(amplitudes) & (amplitudes > 0), amplitudes, 0.0)
+        backgrounds = chip_means - amplitudes * shape_means
+        model_chips = backgrounds[:, np.newaxis] + amplitudes[:, np.newaxis] * shape_flat
+        return ((model_chips - chip_flat) / chip_norms[:, np.newaxis]).ravel()
 
     optimizer_tolerance = min(1e-8, max(float(tolerance) * 1e-4, 1e-12))
     lower_arr = np.asarray(lower, dtype=np.float64)
