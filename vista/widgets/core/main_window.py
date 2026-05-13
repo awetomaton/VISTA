@@ -2,9 +2,12 @@
 from astropy.coordinates import EarthLocation
 from astropy import units
 import darkdetect
+import json
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import tempfile
+import zipfile
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
@@ -16,7 +19,7 @@ import vista
 from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.icons import VistaIcons
-from vista.imagery.imagery import HAS_TORCH, Imagery
+from vista.imagery.imagery import HAS_TORCH, Imagery, save_imagery_hdf5
 from vista.sensors.sensor import Sensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
@@ -188,6 +191,16 @@ class VistaMainWindow(QMainWindow):
 
         # File menu
         file_menu = menubar.addMenu("File")
+
+        self.load_project_action = QAction("Load Project", self)
+        self.load_project_action.triggered.connect(self.load_project_file)
+        file_menu.addAction(self.load_project_action)
+
+        self.save_project_action = QAction("Save Project", self)
+        self.save_project_action.triggered.connect(self.save_project_file)
+        file_menu.addAction(self.save_project_action)
+
+        file_menu.addSeparator()
 
         self.load_imagery_action = QAction("Load Imagery (HDF5)", self)
         self.load_imagery_action.triggered.connect(self.load_imagery_file)
@@ -859,6 +872,377 @@ class VistaMainWindow(QMainWindow):
         # Refresh the data manager to show updated AOIs
         self.data_manager.refresh_aois_table()
 
+    def save_project_file(self):
+        """Save the current VISTA workspace as a single project bundle."""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(
+                self,
+                "Loading In Progress",
+                "Please wait for all imagery to finish loading before saving a project.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        if not self.viewer.imageries:
+            QMessageBox.warning(
+                self,
+                "No Imagery",
+                "A VISTA project requires at least one loaded imagery product.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        last_project_dir = self.settings.value("last_project_dir", "")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save VISTA Project",
+            str(Path(last_project_dir) / "project.vistaproj") if last_project_dir else "project.vistaproj",
+            "VISTA Project Files (*.vistaproj);;Zip Files (*.zip);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        project_path = self._normalize_project_path(file_path)
+        self.settings.setValue("last_project_dir", str(project_path.parent))
+
+        try:
+            manifest = self._write_project_bundle(project_path)
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                "Save Project Failed",
+                f"Failed to save project:\n\n{exc}",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            "Project Saved",
+            (
+                f"Saved VISTA project to:\n{project_path}\n\n"
+                f"Imagery: {manifest['counts']['imagery']}\n"
+                f"Detections: {manifest['counts']['detections']}\n"
+                f"Tracks: {manifest['counts']['tracks']}\n"
+                f"AOIs: {manifest['counts']['aois']}"
+            ),
+            QMessageBox.StandardButton.Ok
+        )
+
+    def load_project_file(self):
+        """Load a VISTA project bundle, replacing the current workspace."""
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(
+                self,
+                "Loading In Progress",
+                "Please wait for current imagery loading to finish before loading a project.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        last_project_dir = self.settings.value("last_project_dir", "")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load VISTA Project",
+            last_project_dir,
+            "VISTA Project Files (*.vistaproj);;Zip Files (*.zip);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        project_path = Path(file_path)
+        self.settings.setValue("last_project_dir", str(project_path.parent))
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="vista_project_") as temp_dir:
+                project_dir = Path(temp_dir)
+                self._extract_project_bundle(project_path, project_dir)
+                manifest = self._read_project_manifest(project_dir)
+
+                if self._has_loaded_project_data():
+                    reply = QMessageBox.question(
+                        self,
+                        "Replace Current Project",
+                        (
+                            "Loading a VISTA project will replace the currently loaded imagery, "
+                            "detections, tracks, and AOIs.\n\nContinue?"
+                        ),
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No
+                    )
+                    if reply != QMessageBox.StandardButton.Yes:
+                        return
+
+                self._clear_project_data()
+                self._load_project_from_directory(project_dir, manifest)
+
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                "Load Project Failed",
+                f"Failed to load project:\n\n{exc}",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        self.data_manager.refresh()
+        self._update_map_view_action_state()
+        self.statusBar().showMessage(
+            (
+                f"Loaded project: {manifest['counts']['imagery']} imagery, "
+                f"{manifest['counts']['detections']} detections, "
+                f"{manifest['counts']['tracks']} tracks, "
+                f"{manifest['counts']['aois']} AOIs"
+            ),
+            5000
+        )
+
+    def _normalize_project_path(self, file_path) -> Path:
+        """Return a project path with a project-like suffix."""
+        path = Path(file_path)
+        if path.suffix.lower() not in {".vistaproj", ".zip"}:
+            path = path.with_suffix(".vistaproj")
+        return path
+
+    def _write_project_bundle(self, project_path: Path) -> dict:
+        """Write imagery, overlays, and manifest into a .vistaproj zip bundle."""
+        with tempfile.TemporaryDirectory(prefix="vista_project_save_") as temp_dir:
+            project_dir = Path(temp_dir)
+            imagery_path = project_dir / "imagery.h5"
+
+            sensor_imagery_map = {}
+            for imagery in self.viewer.imageries:
+                sensor = imagery.sensor
+                sensor_imagery_map.setdefault(str(sensor.uuid), []).append(imagery)
+            save_imagery_hdf5(imagery_path, sensor_imagery_map)
+
+            saved_sensor_uuids = {
+                str(imagery.sensor.uuid)
+                for imagery in self.viewer.imageries
+                if imagery.sensor is not None
+            }
+            detections_assets = self._write_project_sensor_csvs(
+                project_dir,
+                "detections",
+                self.viewer.detectors,
+                saved_sensor_uuids,
+            )
+            tracks_assets = self._write_project_sensor_csvs(
+                project_dir,
+                "tracks",
+                self.viewer.tracks,
+                saved_sensor_uuids,
+            )
+            aois_asset = self._write_project_aois_csv(project_dir)
+
+            manifest = {
+                "format": "vista_project",
+                "format_version": "1.0",
+                "created": str(np.datetime64("now").astype(str)),
+                "application": "VISTA",
+                "application_version": vista.__version__,
+                "assets": {
+                    "imagery": "imagery.h5",
+                    "detections": detections_assets,
+                    "tracks": tracks_assets,
+                    "aois": aois_asset,
+                },
+                "counts": {
+                    "sensors": len(saved_sensor_uuids),
+                    "imagery": len(self.viewer.imageries),
+                    "detections": sum(len(detector.frames) for detector in self.viewer.detectors),
+                    "tracks": len(self.viewer.tracks),
+                    "aois": len(self.viewer.aois),
+                },
+            }
+            (project_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
+
+            project_path.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(project_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for path in sorted(project_dir.rglob("*")):
+                    if path.is_file():
+                        archive.write(path, path.relative_to(project_dir).as_posix())
+            return manifest
+
+    def _write_project_sensor_csvs(self, project_dir: Path, data_type: str, objects: list, saved_sensor_uuids: set[str]) -> list[dict]:
+        """Write one CSV per sensor for tracks or detections."""
+        output_dir = project_dir / data_type
+        output_dir.mkdir(parents=True, exist_ok=True)
+        grouped = {}
+        skipped = 0
+        for obj in objects:
+            sensor = getattr(obj, "sensor", None)
+            sensor_uuid = str(sensor.uuid) if sensor is not None else ""
+            if sensor_uuid not in saved_sensor_uuids:
+                skipped += 1
+                continue
+            grouped.setdefault(sensor_uuid, {"sensor": sensor, "objects": []})["objects"].append(obj)
+
+        assets = []
+        for sensor_uuid, entry in sorted(grouped.items()):
+            frames = [obj.to_dataframe() for obj in entry["objects"]]
+            if not frames:
+                continue
+            dataframe = pd.concat(frames, ignore_index=True)
+            relative_path = Path(data_type) / f"{sensor_uuid}.csv"
+            dataframe.to_csv(project_dir / relative_path, index=False)
+            assets.append(
+                {
+                    "file": relative_path.as_posix(),
+                    "sensor_uuid": sensor_uuid,
+                    "sensor_name": entry["sensor"].name,
+                    "object_count": len(entry["objects"]),
+                    "row_count": int(len(dataframe)),
+                }
+            )
+
+        if skipped:
+            assets.append({"skipped_without_saved_sensor": skipped})
+        return assets
+
+    def _write_project_aois_csv(self, project_dir: Path) -> str | None:
+        """Write AOIs into the project bundle."""
+        if not self.viewer.aois:
+            return None
+        dataframe = pd.concat([aoi.to_dataframe() for aoi in self.viewer.aois], ignore_index=True)
+        relative_path = Path("aois") / "aois.csv"
+        (project_dir / relative_path.parent).mkdir(parents=True, exist_ok=True)
+        dataframe.to_csv(project_dir / relative_path, index=False)
+        return relative_path.as_posix()
+
+    def _extract_project_bundle(self, project_path: Path, project_dir: Path) -> None:
+        """Safely extract a VISTA project zip file."""
+        try:
+            with zipfile.ZipFile(project_path, "r") as archive:
+                for member in archive.infolist():
+                    member_path = Path(member.filename)
+                    if member_path.is_absolute() or ".." in member_path.parts:
+                        raise ValueError(f"Unsafe path in project archive: {member.filename}")
+                archive.extractall(project_dir)
+        except zipfile.BadZipFile as exc:
+            raise ValueError("Project file is not a valid VISTA project bundle.") from exc
+
+    def _read_project_manifest(self, project_dir: Path) -> dict:
+        """Read and validate a project manifest."""
+        manifest_path = project_dir / "manifest.json"
+        if not manifest_path.exists():
+            raise ValueError("Project bundle is missing manifest.json.")
+        manifest = json.loads(manifest_path.read_text())
+        if manifest.get("format") != "vista_project":
+            raise ValueError("Project manifest is not a VISTA project.")
+        assets = manifest.get("assets", {})
+        imagery_asset = assets.get("imagery")
+        if not imagery_asset or not (project_dir / imagery_asset).exists():
+            raise ValueError("Project bundle is missing its imagery HDF5 asset.")
+        return manifest
+
+    def _has_loaded_project_data(self) -> bool:
+        """Return True if the workspace currently contains project data."""
+        return bool(
+            self.viewer.imageries
+            or self.viewer.sensors
+            or self.viewer.detectors
+            or self.viewer.tracks
+            or self.viewer.aois
+        )
+
+    def _clear_project_data(self) -> None:
+        """Clear imagery and project-scoped overlays before loading a project."""
+        for imagery_uuid, thread in list(self._loading_imageries.items()):
+            thread.cancel()
+            self._loading_imageries.pop(imagery_uuid, None)
+
+        self.viewer.clear_overlays()
+        for aoi in list(self.viewer.aois):
+            self.viewer.remove_aoi(aoi)
+        for feature in list(self.viewer.features):
+            self.viewer.remove_feature(feature)
+
+        self.viewer.imageries = []
+        self.viewer.sensors = []
+        self.viewer.imagery = None
+        self.viewer.selected_sensor = None
+        self.data_manager.selected_sensor = None
+        if hasattr(self.data_manager.sensors_panel, "selected_sensor"):
+            self.data_manager.sensors_panel.selected_sensor = None
+        self.viewer.image_item.clear()
+        try:
+            self.viewer.histogram.plot.setData([], [])
+        except Exception:
+            pass
+        self.data_manager.refresh()
+
+    def _load_project_from_directory(self, project_dir: Path, manifest: dict) -> None:
+        """Load project assets from an extracted bundle directory."""
+        assets = manifest.get("assets", {})
+        errors = []
+        warnings = []
+
+        imagery_path = project_dir / assets["imagery"]
+        imagery_loader = DataLoaderThread(str(imagery_path), "imagery")
+        imagery_loader.imagery_available.connect(self.on_imagery_available)
+        imagery_loader.imagery_block_loaded.connect(self.on_imagery_block_loaded)
+        imagery_loader.imagery_load_complete.connect(self.on_imagery_load_complete)
+        imagery_loader.error_occurred.connect(errors.append)
+        imagery_loader.warning_occurred.connect(lambda title, message: warnings.append(f"{title}: {message}"))
+        self.loader_thread = imagery_loader
+        imagery_loader.run()
+        self.loader_thread = None
+        if errors:
+            raise ValueError("\n".join(errors))
+
+        sensor_by_uuid = {str(sensor.uuid): sensor for sensor in self.viewer.sensors}
+        imagery_by_sensor_uuid = {}
+        for imagery in self.viewer.imageries:
+            imagery_by_sensor_uuid.setdefault(str(imagery.sensor.uuid), imagery)
+
+        for asset in assets.get("detections", []):
+            if "file" not in asset:
+                continue
+            sensor = sensor_by_uuid.get(asset.get("sensor_uuid"))
+            if sensor is None:
+                raise ValueError(f"Project detection asset references a missing sensor: {asset.get('sensor_name')}")
+            self._run_project_csv_loader(project_dir / asset["file"], "detections", sensor=sensor)
+
+        for asset in assets.get("tracks", []):
+            if "file" not in asset:
+                continue
+            sensor = sensor_by_uuid.get(asset.get("sensor_uuid"))
+            if sensor is None:
+                raise ValueError(f"Project track asset references a missing sensor: {asset.get('sensor_name')}")
+            imagery = imagery_by_sensor_uuid.get(str(sensor.uuid))
+            self._run_project_csv_loader(project_dir / asset["file"], "tracks", sensor=sensor, imagery=imagery)
+
+        aois_asset = assets.get("aois")
+        if aois_asset:
+            self._run_project_csv_loader(project_dir / aois_asset, "aois")
+
+        if self.viewer.imageries and self.viewer.imagery is None:
+            self.viewer.select_imagery(self.viewer.imageries[0])
+        if self.viewer.sensors:
+            self.data_manager.sensors_panel.selected_sensor = self.viewer.sensors[0]
+            self.data_manager.selected_sensor = self.viewer.sensors[0]
+        min_frame, max_frame = self.viewer.get_frame_range()
+        self.controls.set_frame_range(min_frame, max_frame)
+        self._update_algorithm_actions_state()
+
+    def _run_project_csv_loader(self, file_path: Path, data_type: str, sensor=None, imagery=None) -> None:
+        """Run an existing CSV loader synchronously for project restore."""
+        errors = []
+        loader = DataLoaderThread(str(file_path), data_type, "csv", sensor=sensor, imagery=imagery)
+        loader.error_occurred.connect(errors.append)
+        if data_type == "detections":
+            loader.detectors_loaded.connect(self.on_detectors_loaded)
+        elif data_type == "tracks":
+            loader.tracks_loaded.connect(self.on_tracks_loaded)
+        elif data_type == "aois":
+            loader.aois_loaded.connect(self.on_aois_loaded)
+        else:
+            raise ValueError(f"Unsupported project CSV asset type: {data_type}")
+        loader.run()
+        if errors:
+            raise ValueError("\n".join(errors))
+
     def load_imagery_file(self, file_paths=None):
         """Load imagery from HDF5 file(s) using background thread with incremental loading
 
@@ -1060,6 +1444,8 @@ class VistaMainWindow(QMainWindow):
         self.load_detections_action.setEnabled(not any_loading)
         self.load_tracks_action.setEnabled(not any_loading)
         self.load_aois_action.setEnabled(not any_loading)
+        self.load_project_action.setEnabled(not any_loading)
+        self.save_project_action.setEnabled(not any_loading)
 
     def _is_any_imagery_loading(self):
         """Check if any imagery is currently loading"""
