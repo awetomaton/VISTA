@@ -78,7 +78,9 @@ class PRFModel:
         """Return HDF5-friendly metadata for this fit."""
         metadata = {
             "model": self.model,
+            "fit_model": self.model,
             "pixel_shape": self.pixel_shape,
+            "pixel_aperture": self.pixel_shape,
             "chip_size": self.chip_size,
             "kernel_size": self.kernel_size,
             "tolerance": self.tolerance,
@@ -113,7 +115,7 @@ class PRFModel:
     def parameter_summary(self) -> str:
         """Return a compact human-readable summary of model-defining parameters."""
         if not self.parameters:
-            return f"pixel_shape={self.pixel_shape}"
+            return f"pixel_aperture={self.pixel_shape}"
 
         labels = {
             "sigma": "sigma",
@@ -124,7 +126,7 @@ class PRFModel:
             "beta": "beta",
         }
         ordered_keys = ("sigma", "sigma_x", "sigma_y", "theta", "airy_radius", "beta")
-        parts = [f"pixel_shape={self.pixel_shape}"]
+        parts = [f"pixel_aperture={self.pixel_shape}"]
         for key in ordered_keys:
             if key not in self.parameters:
                 continue

@@ -9,7 +9,6 @@ from PyQt6.QtCore import QThread, pyqtSignal
 import uuid
 
 from vista.aoi.aoi import AOI
-from vista.algorithms.imagery.prf import PRFModel
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
@@ -459,84 +458,6 @@ class DataLoaderThread(QThread):
             description=description,
         )
         imagery.loaded_frame_count = 0
-
-        if 'prf' in img_group:
-            prf_group = img_group['prf']
-            attrs = prf_group.attrs
-            parameters = {
-                key.replace('parameter_', ''): float(value)
-                for key, value in attrs.items()
-                if key.startswith('parameter_')
-            }
-            try:
-                imagery.fitted_prf_model = PRFModel(
-                    model=attrs.get('model', 'None'),
-                    pixel_shape=attrs.get('pixel_shape', 'Square'),
-                    chip_size=int(attrs.get('chip_size', 11)),
-                    kernel_size=int(attrs.get('kernel_size', 11)),
-                    tolerance=float(attrs.get('tolerance', 0.01)),
-                    max_iterations=int(attrs.get('max_iterations', 50)),
-                    parameters=parameters,
-                    kernel=prf_group['kernel'][:],
-                    residual_ratio=float(attrs.get('residual_ratio', np.nan)),
-                    iterations=int(attrs.get('iterations', 0)),
-                    function_evaluations=int(attrs.get(
-                        'function_evaluations',
-                        attrs.get('iterations', 0),
-                    )),
-                    jacobian_evaluations=int(attrs.get('jacobian_evaluations', 0)),
-                    converged=bool(attrs.get('converged', False)),
-                    detections_used=int(attrs.get('detections_used', 0)),
-                    optimizer_success=bool(attrs.get('optimizer_success', False)),
-                    optimizer_status=int(attrs.get('optimizer_status', 0)),
-                    optimizer_message=attrs.get('optimizer_message', ''),
-                    fit_residual_ratio=(
-                        float(attrs['fit_residual_ratio'])
-                        if 'fit_residual_ratio' in attrs else None
-                    ),
-                    validation_residual_ratio=(
-                        float(attrs['validation_residual_ratio'])
-                        if 'validation_residual_ratio' in attrs else None
-                    ),
-                    validation_detections_used=(
-                        int(attrs['validation_detections_used'])
-                        if 'validation_detections_used' in attrs else None
-                    ),
-                    validation_ratio=(
-                        float(attrs['validation_ratio'])
-                        if 'validation_ratio' in attrs else None
-                    ),
-                    validated=(
-                        bool(attrs['validated'])
-                        if 'validated' in attrs else None
-                    ),
-                    adaptive_fit_enabled=(
-                        bool(attrs['adaptive_fit_enabled'])
-                        if 'adaptive_fit_enabled' in attrs else None
-                    ),
-                    adaptive_fit_attempts=(
-                        int(attrs['adaptive_fit_attempts'])
-                        if 'adaptive_fit_attempts' in attrs else None
-                    ),
-                    adaptive_fit_sequence=(
-                        str(attrs['adaptive_fit_sequence'])
-                        if 'adaptive_fit_sequence' in attrs else None
-                    ),
-                    adaptive_fit_residuals=(
-                        str(attrs['adaptive_fit_residuals'])
-                        if 'adaptive_fit_residuals' in attrs else None
-                    ),
-                    selected_fit_detections=(
-                        int(attrs['selected_fit_detections'])
-                        if 'selected_fit_detections' in attrs else None
-                    ),
-                    adaptive_fit_stopped_early=(
-                        bool(attrs['adaptive_fit_stopped_early'])
-                        if 'adaptive_fit_stopped_early' in attrs else None
-                    ),
-                )
-            except Exception:
-                imagery.fitted_prf_model = None
 
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if imagery_uuid is not None:

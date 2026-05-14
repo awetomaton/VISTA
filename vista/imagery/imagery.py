@@ -126,7 +126,6 @@ class Imagery:
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
     default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
-    fitted_prf_model: Optional[object] = None  # Sensor-agnostic PRF fit used for projection
     uuid: str = field(init=None, default=None)
 
     # Incremental loading support: tracks how many frames have valid image data.
@@ -521,15 +520,6 @@ class Imagery:
             # Convert datetime64 to unix nanoseconds
             unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
             group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
-
-        # Save fitted PRF metadata if present. The model is intentionally stored
-        # with imagery because it is fit from selected detections in image data.
-        if self.fitted_prf_model is not None:
-            prf_group = group.create_group('prf')
-            prf_group.attrs['metadata_version'] = '1.0'
-            for key, value in self.fitted_prf_model.to_metadata().items():
-                prf_group.attrs[key] = value
-            prf_group.create_dataset('kernel', data=self.fitted_prf_model.kernel)
 
 
 def save_imagery_hdf5(
