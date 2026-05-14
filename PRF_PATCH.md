@@ -19,24 +19,28 @@ This document tracks the local PRF patch as it evolves.
 - `prf/oversampled_prf` stores the oversampled PRF table.
 - PRF attributes include oversampling, PRF center row/column, coordinate convention, model scope, normalization convention, and JSON construction metadata.
 - HDF5 loading restores the oversampled PRF and metadata into `SampledSensor`.
-- The Data Manager **Sensors** tab shows a per-sensor **PRF** capability column.
+- The Data Manager **Sensors** tab shows a per-sensor **PRF Source** selector.
+- Sensor PRF storage supports both an **Associated** PRF loaded from file and a **Fitted** PRF generated inside VISTA.
+- The selected PRF Source controls which stored PRF `Sensor.get_prf(...)` uses for PRF-based measurements.
 
 ## Current Behavior
 
 - PRF fitting is initiated from **Data Manager -> Sensors -> Fit PRF from Detections**.
 - On macOS, Settings is forced to remain in the **File** menu instead of being moved to the application menu by Qt's menu-role heuristic.
 - Clicking the Sensors-tab fit button opens a sensor-specific PRF fitting dialog for the selected sensor.
-- The dialog configures the model, pixel shape, detection source, fit tolerance, iteration/evaluation budget, chip size, and stored PRF oversampling.
+- The dialog configures the PSF model, pixel aperture, detection source, fit tolerance, iteration/evaluation budget, chip size, and stored PRF oversampling.
 - The dialog persists the last-used values as convenience defaults, but fitting remains an explicit per-sensor operation.
 - VISTA fits a sensor-agnostic PRF model from image detections, then stores the resulting oversampled PRF on the selected sensor.
-- PRF fitting can use selected detections, all visible detections, or an automatic strongest-detections subset.
+- PRF fitting can use selected detection chips, visible detection chips, or an automatic strongest-detection-chip subset.
 - The automatic subset ranks visible detections by robust local contrast and caps the fit set to reduce noise and runtime.
 - Automatic down-selection preserves original detection order after ranking to keep nonlinear fitting stable.
 - A minimum of 5 usable detection chips is required.
 - The default fitting chip is 11x11 pixels.
 - The fitted PRF is generated from a continuous PSF model plus a configurable detector pixel aperture.
 - The generated oversampled PRF is normalized for `Sensor.get_prf(...)` so centered detector-pixel samples sum to one unit of source flux.
-- The Data Manager **Sensors** PRF column updates after a fit succeeds.
+- The Data Manager **Sensors** PRF Source column updates after a fit succeeds.
+- If a sensor already has an associated PRF, VISTA preserves it and stores the fitted PRF separately.
+- Fitting a PRF makes the fitted PRF active by default, while the user can switch back to Associated or None in the PRF Source selector.
 - The fitted sensor PRF and construction metadata are saved in sensor HDF5 exports.
 
 ## Supported Models
@@ -53,20 +57,21 @@ This document tracks the local PRF patch as it evolves.
 ## Current Defaults
 
 - Model: Elliptical Gaussian
-- Pixel shape: Square
+- Pixel aperture: Square
 - Minimum detections: 5
 - Chip size: 11
-- Detection source: Selected detections only
+- Detection source: Selected detection chips
 - Auto max detections: 150
 - Tolerance: 0.01 normalized RMS residual
 - Max iterations: 50
-- Stored PRF oversampling: 7
+- Stored PRF oversampling: 9
 
 ## Non-Modal Failure Behavior
 
 - If PRF fitting cannot run, VISTA shows a warning dialog and leaves the selected sensor unchanged.
 - If fitting reaches the function-evaluation budget, VISTA uses the best fit and emits a warning-style status message.
 - If the optimizer stops before the iteration budget but the residual is still above tolerance, VISTA reports that separately as "stopped above tolerance."
+- For multi-start models such as Moffat, metadata records total optimizer evaluations, best-start evaluations, and the number of optimizer starts.
 
 ## Implementation Notes
 
@@ -91,7 +96,10 @@ This document tracks the local PRF patch as it evolves.
 - A synthetic Gaussian PRF fit succeeds on five generated chips.
 - A synthetic viewer-level fit attaches an oversampled PRF to the selected sensor and `sensor.get_prf(...)` returns a local chip normalized to unit flux.
 - The viewer-level fit path accepts dialog-provided per-sensor fit settings without relying on the global Settings dialog.
-- HDF5 export writes the fitted oversampled PRF under the sensor `prf/` group.
+- HDF5 export writes sensor PRFs under the sensor `prf/` group.
+- The root `prf/oversampled_prf` preserves legacy single-PRF compatibility for the active source.
+- The `prf/associated/` and `prf/fitted/` child groups preserve separate associated/fitted PRF provenance when available.
+- Imagery-level fitted PRF storage has been removed; PRFs are sensor-level data.
 - PRF metadata records tolerance convergence, optimizer status, intuitive optimizer iterations, SciPy function evaluations, and SciPy Jacobian evaluations.
 - Automatic strongest-detections mode recovers the known synthetic distortion on the local NYC PRF dataset when enough usable chips are included.
 - The Detections tab can estimate per-detection integrated point-source flux in **raw image counts** from a stored sensor PRF.

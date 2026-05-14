@@ -294,7 +294,7 @@ class Detector:
         Labels should be comma-separated strings in the "Labels" column.
         """
         if name is None:
-            name = df["Detector"][0]
+            name = df["Detector"].iloc[0]
         kwargs = {}
         if "Color" in df.columns:
             kwargs["color"] = df["Color"].iloc[0]

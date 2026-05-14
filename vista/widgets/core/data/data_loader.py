@@ -542,14 +542,21 @@ class DataLoaderThread(QThread):
 
         detectors = []
 
-        # Group by detector name if column exists
-        if 'Detector' in df.columns:
-            detector_groups = df.groupby('Detector')
+        # Project bundles include a private stable object id so same-named
+        # detectors remain distinct on reload. Regular CSVs keep name grouping.
+        group_column = '__vista_project_object_uuid' if '__vista_project_object_uuid' in df.columns else 'Detector'
+        if group_column in df.columns:
+            detector_groups = df.groupby(group_column, sort=False)
             self.progress_updated.emit("Loading detections...", 0, len(detector_groups))
 
-            for idx, (detector_name, group_df) in enumerate(detector_groups):
+            for idx, (_group_key, group_df) in enumerate(detector_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
+                detector_name = (
+                    str(group_df['Detector'].iloc[0])
+                    if 'Detector' in group_df.columns
+                    else Path(self.file_path).stem
+                )
                 detector = Detector.from_dataframe(group_df, sensor=self.sensor, name=detector_name)
                 detectors.append(detector)
                 self.progress_updated.emit("Loading detections...", idx + 1, len(detector_groups))
@@ -573,13 +580,21 @@ class DataLoaderThread(QThread):
 
         tracks = []
 
-        if 'Track' in df.columns:
-            track_groups = df.groupby('Track')
+        # Project bundles include a private stable object id so same-named
+        # tracks remain distinct on reload. Regular CSVs keep name grouping.
+        group_column = '__vista_project_object_uuid' if '__vista_project_object_uuid' in df.columns else 'Track'
+        if group_column in df.columns:
+            track_groups = df.groupby(group_column, sort=False)
             self.progress_updated.emit("Loading tracks...", 0, len(track_groups))
 
-            for idx, (track_name, track_df) in enumerate(track_groups):
+            for idx, (_group_key, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
+                track_name = (
+                    str(track_df['Track'].iloc[0])
+                    if 'Track' in track_df.columns
+                    else f"Track {idx + 1}"
+                )
                 track = Track.from_dataframe(track_df, sensor=self.sensor, name=str(track_name))
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))

@@ -310,13 +310,16 @@ class SampledSensor(Sensor):
 
     def _default_prf_chip_size(self) -> int:
         """Return an odd detector-chip size covering the stored oversampled PRF support."""
-        oversampled_prf, oversampling, _ = self._active_prf_payload()
-        support_rows = int(np.ceil(oversampled_prf.shape[0] / oversampling))
-        support_cols = int(np.ceil(oversampled_prf.shape[1] / oversampling))
-        chip_size = max(support_rows, support_cols)
-        if chip_size % 2 == 0:
-            chip_size += 1
-        return max(chip_size, 1)
+        oversampled_prf, oversampling, prf_center = self._active_prf_payload()
+        center_row, center_col = prf_center
+        max_detector_distance = max(
+            center_row / oversampling,
+            (oversampled_prf.shape[0] - 1 - center_row) / oversampling,
+            center_col / oversampling,
+            (oversampled_prf.shape[1] - 1 - center_col) / oversampling,
+        )
+        half_chip = int(np.ceil(max_detector_distance))
+        return max(2 * half_chip + 1, 1)
 
     def _sample_oversampled_prf(self, prf_rows: np.ndarray, prf_cols: np.ndarray) -> np.ndarray:
         """

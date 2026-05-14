@@ -62,6 +62,9 @@ class PRFModel:
     optimizer_success: bool = False
     optimizer_status: int = 0
     optimizer_message: str = ""
+    optimizer_starts: int = 1
+    best_start_function_evaluations: int | None = None
+    best_start_jacobian_evaluations: int | None = None
     fit_residual_ratio: float | None = None
     validation_residual_ratio: float | None = None
     validation_detections_used: int | None = None
@@ -94,8 +97,11 @@ class PRFModel:
             "optimizer_success": self.optimizer_success,
             "optimizer_status": self.optimizer_status,
             "optimizer_message": self.optimizer_message,
+            "optimizer_starts": self.optimizer_starts,
         }
         optional_fields = {
+            "best_start_function_evaluations": self.best_start_function_evaluations,
+            "best_start_jacobian_evaluations": self.best_start_jacobian_evaluations,
             "fit_residual_ratio": self.fit_residual_ratio,
             "validation_residual_ratio": self.validation_residual_ratio,
             "validation_detections_used": self.validation_detections_used,
@@ -850,7 +856,11 @@ def fit_prf_model(
 
     result = None
     best_cost = np.inf
+    optimizer_starts_attempted = 0
+    total_function_evaluations = 0
+    total_jacobian_evaluations = 0
     for start in starts:
+        optimizer_starts_attempted += 1
         candidate_result = least_squares(
             residuals,
             start,
@@ -860,6 +870,9 @@ def fit_prf_model(
             ftol=optimizer_tolerance,
             gtol=optimizer_tolerance,
         )
+        total_function_evaluations += int(candidate_result.nfev)
+        if candidate_result.njev is not None:
+            total_jacobian_evaluations += int(candidate_result.njev)
         if candidate_result.cost < best_cost:
             result = candidate_result
             best_cost = candidate_result.cost
@@ -869,7 +882,15 @@ def fit_prf_model(
         theta += math.pi / 2.0
     theta = _canonicalize_theta(theta)
     kernel = generate_prf_kernel(
-        model, pixel_shape, kernel_size, sigma_x, sigma_y, theta, beta, airy_radius
+        model,
+        pixel_shape,
+        kernel_size,
+        sigma_x,
+        sigma_y,
+        theta,
+        beta,
+        airy_radius,
+        oversample=oversample,
     )
     fit_residual_ratio = float(np.linalg.norm(residuals(result.x)) / math.sqrt(chips_arr.size))
     validation_offsets = np.asarray(
@@ -917,9 +938,15 @@ def fit_prf_model(
     if model == "Moffat":
         params["beta"] = float(beta)
 
-    function_evaluations = int(result.nfev)
-    jacobian_evaluations = int(result.njev) if result.njev is not None else 0
-    optimizer_iterations = max(jacobian_evaluations - 1, 0) if jacobian_evaluations else function_evaluations
+    best_start_function_evaluations = int(result.nfev)
+    best_start_jacobian_evaluations = int(result.njev) if result.njev is not None else 0
+    function_evaluations = total_function_evaluations
+    jacobian_evaluations = total_jacobian_evaluations
+    optimizer_iterations = (
+        max(jacobian_evaluations - optimizer_starts_attempted, 0)
+        if jacobian_evaluations
+        else function_evaluations
+    )
 
     return PRFModel(
         model=model,
@@ -939,6 +966,9 @@ def fit_prf_model(
         optimizer_success=bool(result.success),
         optimizer_status=int(result.status),
         optimizer_message=str(result.message),
+        optimizer_starts=optimizer_starts_attempted,
+        best_start_function_evaluations=best_start_function_evaluations,
+        best_start_jacobian_evaluations=best_start_jacobian_evaluations,
         fit_residual_ratio=fit_residual_ratio,
         validation_residual_ratio=residual_ratio,
         validation_detections_used=len(chips),

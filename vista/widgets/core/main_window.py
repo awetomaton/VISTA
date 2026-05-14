@@ -1080,7 +1080,11 @@ class VistaMainWindow(QMainWindow):
 
         assets = []
         for sensor_uuid, entry in sorted(grouped.items()):
-            frames = [obj.to_dataframe() for obj in entry["objects"]]
+            frames = []
+            for obj in entry["objects"]:
+                dataframe = obj.to_dataframe()
+                dataframe.insert(0, "__vista_project_object_uuid", str(obj.uuid))
+                frames.append(dataframe)
             if not frames:
                 continue
             dataframe = pd.concat(frames, ignore_index=True)

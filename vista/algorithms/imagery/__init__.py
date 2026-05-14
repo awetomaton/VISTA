@@ -1,2 +1,1 @@
 """Imagery algorithms."""
-
