@@ -18,13 +18,27 @@ from scipy.signal import fftconvolve
 
 
 NO_PRF_MODEL = "None"
-SUPPORTED_PRF_MODELS = ("None", "Gaussian", "Elliptical Gaussian", "Airy Disk", "Moffat")
-SUPPORTED_PIXEL_SHAPES = ("Square", "Circular")
-PRF_DETECTION_SOURCES = (
-    "Selected detections only",
-    "All visible detections",
-    "Auto-select strongest detections",
+PRF_FIT_PSF_MODELS = ("None", "Gaussian", "Elliptical Gaussian", "Airy Disk", "Moffat")
+PRF_FIT_PIXEL_APERTURES = ("Square", "Circular")
+PRF_FIT_DETECTION_CHIP_SOURCES = (
+    "Selected detection chips",
+    "Visible detection chips",
+    "Strongest visible detection chips",
 )
+
+_LEGACY_PRF_FIT_DETECTION_CHIP_SOURCES = {
+    "Selected detections only": "Selected detection chips",
+    "All visible detections": "Visible detection chips",
+    "Auto-select strongest detections": "Strongest visible detection chips",
+}
+
+
+def normalize_prf_fit_detection_source(source: str) -> str:
+    """Return the current display label for a PRF fitting detection-chip source."""
+    source = _LEGACY_PRF_FIT_DETECTION_CHIP_SOURCES.get(source, source)
+    if source not in PRF_FIT_DETECTION_CHIP_SOURCES:
+        return PRF_FIT_DETECTION_CHIP_SOURCES[0]
+    return source
 
 
 @dataclass

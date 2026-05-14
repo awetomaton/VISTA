@@ -7,9 +7,10 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.algorithms.imagery.prf import (
-    PRF_DETECTION_SOURCES,
-    SUPPORTED_PIXEL_SHAPES,
-    SUPPORTED_PRF_MODELS,
+    PRF_FIT_DETECTION_CHIP_SOURCES,
+    PRF_FIT_PIXEL_APERTURES,
+    PRF_FIT_PSF_MODELS,
+    normalize_prf_fit_detection_source,
 )
 
 _HDF5_EXTENSIONS = ('.h5', '.hdf5')
@@ -22,7 +23,7 @@ class SensorPRFFitDialog(QDialog):
         super().__init__(parent)
         self.sensor = sensor
         self.settings = QSettings("Vista", "VistaApp")
-        self.setWindowTitle(f"Fit PRF - {sensor.name}")
+        self.setWindowTitle(f"Fit Sensor PRF - {sensor.name}")
         self.init_ui()
         self.load_settings()
 
@@ -33,19 +34,19 @@ class SensorPRFFitDialog(QDialog):
         form = QFormLayout()
 
         self.model_combo = QComboBox()
-        model_options = [model for model in SUPPORTED_PRF_MODELS if model != "None"]
+        model_options = [model for model in PRF_FIT_PSF_MODELS if model != "None"]
         self.model_combo.addItems(model_options)
         self.model_combo.setToolTip("Sensor-agnostic PSF model to fit from detections.")
-        form.addRow("Model:", self.model_combo)
+        form.addRow("PSF Model:", self.model_combo)
 
         self.pixel_shape_combo = QComboBox()
-        self.pixel_shape_combo.addItems(SUPPORTED_PIXEL_SHAPES)
+        self.pixel_shape_combo.addItems(PRF_FIT_PIXEL_APERTURES)
         self.pixel_shape_combo.setToolTip("Detector pixel aperture used to convert the PSF model into a PRF.")
-        form.addRow("Pixel Shape:", self.pixel_shape_combo)
+        form.addRow("Pixel Aperture:", self.pixel_shape_combo)
 
         self.detection_source_combo = QComboBox()
-        self.detection_source_combo.addItems(PRF_DETECTION_SOURCES)
-        self.detection_source_combo.setToolTip("Which detections to use for fitting this sensor's PRF.")
+        self.detection_source_combo.addItems(PRF_FIT_DETECTION_CHIP_SOURCES)
+        self.detection_source_combo.setToolTip("Which detection-centered image chips to use for fitting this sensor's PRF.")
         form.addRow("Detection Source:", self.detection_source_combo)
 
         self.auto_max_detections_spinbox = QSpinBox()
@@ -112,14 +113,12 @@ class SensorPRFFitDialog(QDialog):
 
         pixel_shape = self.settings.value("imagery/prf_pixel_shape", "Square", type=str)
         self.pixel_shape_combo.setCurrentText(
-            pixel_shape if pixel_shape in SUPPORTED_PIXEL_SHAPES else "Square"
+            pixel_shape if pixel_shape in PRF_FIT_PIXEL_APERTURES else "Square"
         )
-        detection_source = self.settings.value(
-            "imagery/prf_detection_source", "Selected detections only", type=str
+        detection_source = normalize_prf_fit_detection_source(
+            self.settings.value("imagery/prf_detection_source", "Selected detection chips", type=str)
         )
-        self.detection_source_combo.setCurrentText(
-            detection_source if detection_source in PRF_DETECTION_SOURCES else "Selected detections only"
-        )
+        self.detection_source_combo.setCurrentText(detection_source)
         self.auto_max_detections_spinbox.setValue(
             self.settings.value("imagery/prf_auto_max_detections", 150, type=int)
         )
@@ -206,7 +205,7 @@ class SensorsPanel(QWidget):
         self.sensors_table = QTableWidget()
         self.sensors_table.setColumnCount(6)
         self.sensors_table.setHorizontalHeaderLabels(
-            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "Active PRF"]
+            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "PRF Source"]
         )
 
         # Enable row selection (single selection only)
@@ -220,7 +219,7 @@ class SensorsPanel(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Uniformity Gain
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Active PRF
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # PRF Source
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
@@ -286,7 +285,7 @@ class SensorsPanel(QWidget):
             self.sensor_selected.emit(self.selected_sensor)
 
     def _set_active_prf_cell(self, row: int, sensor) -> None:
-        """Install the Active PRF selector for one sensor row."""
+        """Install the PRF source selector for one sensor row."""
         combo = QComboBox()
         combo.addItem("None", "none")
 
@@ -300,7 +299,8 @@ class SensorsPanel(QWidget):
         combo.setCurrentIndex(active_index if active_index >= 0 else 0)
         combo.setEnabled(combo.count() > 1)
         combo.setToolTip(
-            "Select which PRF this sensor uses. None disables PRF-based operations for this sensor."
+            "Select which PRF source this sensor uses for PRF-based measurements. "
+            "None disables PRF-based operations for this sensor."
         )
         combo.currentIndexChanged.connect(
             lambda _index, sensor_uuid=sensor.uuid, selector=combo: self.on_active_prf_changed(sensor_uuid, selector)
@@ -309,7 +309,7 @@ class SensorsPanel(QWidget):
         self.sensors_table.setCellWidget(row, 5, combo)
 
     def on_active_prf_changed(self, sensor_uuid, selector: QComboBox) -> None:
-        """Apply an Active PRF selection from the sensors table."""
+        """Apply a PRF source selection from the sensors table."""
         sensor = next((candidate for candidate in self.viewer.sensors if candidate.uuid == sensor_uuid), None)
         if sensor is None:
             return
@@ -319,7 +319,7 @@ class SensorsPanel(QWidget):
         try:
             sensor.set_active_prf_source(selector.currentData())
         except Exception as exc:
-            QMessageBox.warning(self, "Active PRF Failed", str(exc))
+            QMessageBox.warning(self, "PRF Source Failed", str(exc))
             self.refresh_sensors_table()
             return
 

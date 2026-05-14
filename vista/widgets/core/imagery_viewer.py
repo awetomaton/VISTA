@@ -18,10 +18,10 @@ from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.algorithms.imagery.prf import (
     NO_PRF_MODEL,
-    PRF_DETECTION_SOURCES,
     chips_from_detections,
     chips_from_selected_detections,
     fit_prf_model_adaptive,
+    normalize_prf_fit_detection_source,
     oversampled_prf_from_model,
     strongest_prf_chips,
 )
@@ -3369,11 +3369,9 @@ class ImageryViewer(QWidget):
         oversampling = settings.value("imagery/prf_oversampling", 9, type=int)
         if oversampling % 2 == 0:
             oversampling += 1
-        detection_source = settings.value(
-            "imagery/prf_detection_source", "Selected detections only", type=str
+        detection_source = normalize_prf_fit_detection_source(
+            settings.value("imagery/prf_detection_source", "Selected detection chips", type=str)
         )
-        if detection_source not in PRF_DETECTION_SOURCES:
-            detection_source = "Selected detections only"
         auto_max_detections = settings.value("imagery/prf_auto_max_detections", 150, type=int)
 
         existing_model = self.imagery.fitted_prf_model
@@ -3387,10 +3385,10 @@ class ImageryViewer(QWidget):
         candidates = self._prf_detection_candidates(detection_source)
         source_count = len(candidates)
         raw_chip_count = source_count
-        if detection_source == "Selected detections only":
+        if detection_source == "Selected detection chips":
             chips = chips_from_selected_detections(self.imagery, candidates, chip_size)
             raw_chip_count = len(chips)
-        elif detection_source == "All visible detections":
+        elif detection_source == "Visible detection chips":
             chips = chips_from_detections(self.imagery, candidates, chip_size)
             raw_chip_count = len(chips)
         else:
@@ -3403,8 +3401,8 @@ class ImageryViewer(QWidget):
 
         if len(chips) < min_detections:
             message = (
-                f"PRF projection requested {min_detections} detections from {detection_source}; "
-                f"found {len(chips)} usable chips from {source_count} candidates. "
+                f"PRF projection requested {min_detections} usable detection chips from {detection_source}; "
+                f"found {len(chips)} from {source_count} candidates. "
                 f"Using existing projection."
             )
             self._emit_prf_status(message)
@@ -3434,7 +3432,7 @@ class ImageryViewer(QWidget):
 
         if prf_model.converged:
             self._emit_prf_status(
-                f"PRF fit complete using {prf_model.detections_used} detections from {detection_source} "
+                f"PRF fit complete using {prf_model.detections_used} detection chips from {detection_source} "
                 f"and validating on {prf_model.validation_detections_used or prf_model.detections_used} "
                 f"(validation residual {prf_model.residual_ratio:.4g}; "
                 f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
@@ -3442,7 +3440,7 @@ class ImageryViewer(QWidget):
         elif prf_model.validated is False:
             self._emit_prf_status(
                 f"PRF adaptive validation did not pass using {prf_model.detections_used}/{raw_chip_count} "
-                f"usable detections from {detection_source}; validated on "
+                f"usable detection chips from {detection_source}; validated on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used}; using lowest-residual fit "
                 f"(validation residual {prf_model.residual_ratio:.4g}; "
                 f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
@@ -3450,7 +3448,7 @@ class ImageryViewer(QWidget):
         elif prf_model.function_evaluations >= prf_model.max_iterations or prf_model.optimizer_status == 0:
             self._emit_prf_status(
                 f"PRF fit reached the evaluation budget using {prf_model.detections_used}/{raw_chip_count} "
-                f"usable detections from {detection_source}; validated on "
+                f"usable detection chips from {detection_source}; validated on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used}; using best fit "
                 f"(validation residual {prf_model.residual_ratio:.4g}; "
                 f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
@@ -3458,7 +3456,7 @@ class ImageryViewer(QWidget):
         else:
             self._emit_prf_status(
                 f"PRF fit stopped above tolerance using {prf_model.detections_used}/{raw_chip_count} "
-                f"usable detections from {detection_source}; validated on "
+                f"usable detection chips from {detection_source}; validated on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used}; using best fit "
                 f"(validation residual {prf_model.residual_ratio:.4g}, tolerance {prf_model.tolerance:.4g}; "
                 f"adaptive attempts {prf_model.adaptive_fit_attempts or 1})."
@@ -3467,7 +3465,7 @@ class ImageryViewer(QWidget):
 
     def _prf_detection_candidates(self, detection_source: str) -> list[tuple]:
         """Return detection tuples available to the chosen PRF fitting source."""
-        if detection_source == "Selected detections only":
+        if detection_source == "Selected detection chips":
             return list(self.selected_detections)
 
         if self.imagery is None:
@@ -3523,20 +3521,18 @@ class ImageryViewer(QWidget):
         oversampling = self._prf_setting(settings, "imagery/prf_oversampling", 9, int)
         if oversampling % 2 == 0:
             oversampling += 1
-        detection_source = self._prf_setting(
-            settings, "imagery/prf_detection_source", "Selected detections only", str
+        detection_source = normalize_prf_fit_detection_source(
+            self._prf_setting(settings, "imagery/prf_detection_source", "Selected detection chips", str)
         )
-        if detection_source not in PRF_DETECTION_SOURCES:
-            detection_source = "Selected detections only"
         auto_max_detections = self._prf_setting(settings, "imagery/prf_auto_max_detections", 150, int)
 
         candidates = self._prf_detection_candidates_for_imagery(imagery, detection_source)
         source_count = len(candidates)
         raw_chip_count = source_count
-        if detection_source == "Selected detections only":
+        if detection_source == "Selected detection chips":
             chips = chips_from_selected_detections(imagery, candidates, chip_size)
             raw_chip_count = len(chips)
-        elif detection_source == "All visible detections":
+        elif detection_source == "Visible detection chips":
             chips = chips_from_detections(imagery, candidates, chip_size)
             raw_chip_count = len(chips)
         else:
@@ -3598,7 +3594,7 @@ class ImageryViewer(QWidget):
 
         if prf_model.converged:
             message = (
-                f"Fitted {model} sensor PRF using {prf_model.detections_used} detections and "
+                f"Fitted {model} sensor PRF using {prf_model.detections_used} detection chips and "
                 f"validated on {prf_model.validation_detections_used or prf_model.detections_used} "
                 f"(validation residual {prf_model.residual_ratio:.4g}; "
                 f"adaptive attempts {prf_model.adaptive_fit_attempts or 1}; "
@@ -3607,7 +3603,7 @@ class ImageryViewer(QWidget):
         elif prf_model.validated is False:
             message = (
                 f"Fitted {model} sensor PRF did not validate using {prf_model.detections_used}/{raw_chip_count} "
-                f"usable detections; validated on "
+                f"usable detection chips; validated on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used}; stored the lowest-residual fit "
                 f"(validation residual {prf_model.residual_ratio:.4g}; "
                 f"adaptive attempts {prf_model.adaptive_fit_attempts or 1}; "
@@ -3616,7 +3612,7 @@ class ImageryViewer(QWidget):
         else:
             message = (
                 f"Fitted {model} sensor PRF above tolerance using {prf_model.detections_used}/{raw_chip_count} "
-                f"usable detections and validating on "
+                f"usable detection chips and validating on "
                 f"{prf_model.validation_detections_used or prf_model.detections_used} "
                 f"(validation residual {prf_model.residual_ratio:.4g}, "
                 f"tolerance {prf_model.tolerance:.4g}; "
@@ -3635,7 +3631,7 @@ class ImageryViewer(QWidget):
 
     def _prf_detection_candidates_for_imagery(self, imagery, detection_source: str) -> list[tuple]:
         """Return detection tuples available to a PRF fit for the given imagery."""
-        if detection_source == "Selected detections only":
+        if detection_source == "Selected detection chips":
             imagery_frames = {int(f) for f in imagery.frames}
             return [
                 (detector, frame, index)
