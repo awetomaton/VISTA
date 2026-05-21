@@ -1648,14 +1648,17 @@ class VistaMainWindow(QMainWindow):
                 missing_requirements = []
 
                 if overall_needs_time_mapping:
-                    preamble.append(f"Track data is missing frames, but has times. Times must be mapped to frames.")
+                    preamble.append("Track data is missing frames, but has times. Times must be mapped to frames.")
                     if selected_imagery:
                         mapping_info.append(f"• Time mapping: {selected_imagery.name}")
                     else:
                         missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
 
                 if overall_needs_geodetic_mapping:
-                    preamble.append(f"Track data is missing row / column, but has geospatial coordinates. Geospatial coordinates must be mapped to pixels.")
+                    preamble.append(
+                        "Track data is missing row / column, but has geospatial coordinates. "
+                        "Geospatial coordinates must be mapped to pixels."
+                    )
                     if selected_sensor and hasattr(selected_sensor, 'can_geolocate') and selected_sensor.can_geolocate():
                         mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
                     else:
