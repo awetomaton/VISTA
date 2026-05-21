@@ -1157,6 +1157,13 @@ class VistaMainWindow(QMainWindow):
             self._loading_imageries.pop(imagery_uuid, None)
 
         self.viewer.clear_overlays()
+        detections_panel = getattr(self.data_manager, "detections_panel", None)
+        if detections_panel is not None and hasattr(detections_panel, "clear_detection_selection"):
+            detections_panel.waiting_for_track_selection = False
+            detections_panel.clear_detection_selection()
+        else:
+            self.viewer.selected_detections = []
+            self.viewer._update_selected_detections_display()
         for aoi in list(self.viewer.aois):
             self.viewer.remove_aoi(aoi)
         for feature in list(self.viewer.features):
