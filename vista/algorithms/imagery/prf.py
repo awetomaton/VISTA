@@ -32,6 +32,7 @@ _LEGACY_PRF_FIT_DETECTION_CHIP_SOURCES = {
     "All visible detections": "Visible detection chips",
     "Auto-select strongest detections": "Strongest visible detection chips",
 }
+_AIRY_FIRST_ZERO = 3.8317059702075125
 
 
 def normalize_prf_fit_detection_source(source: str) -> str:

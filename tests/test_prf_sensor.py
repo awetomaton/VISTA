@@ -150,3 +150,17 @@ def test_moffat_model_reports_alpha_parameters():
     assert "parameter_sigma_x" not in metadata
     assert "alpha_x=2.2 px" in summary
     assert "sigma_x" not in summary
+
+
+def test_airy_disk_prf_generation_is_finite_and_nonnegative():
+    prf = generate_oversampled_prf(
+        "Airy Disk",
+        pixel_shape="Square",
+        kernel_size=25,
+        airy_radius=1.7,
+        oversample=9,
+    )
+
+    assert np.isfinite(prf).all()
+    assert float(np.min(prf)) >= -1e-12
+    assert np.sum(prf) > 0.0
