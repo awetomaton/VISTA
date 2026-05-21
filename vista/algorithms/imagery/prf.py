@@ -1072,11 +1072,3 @@ def fit_prf_model_adaptive(
     best_model.selected_fit_detections = best_model.detections_used
     best_model.adaptive_fit_stopped_early = stopped_early
     return best_model
-
-
-def apply_prf_prefilter(image: NDArray[np.float32], prf_model: PRFModel | None) -> NDArray[np.float32]:
-    """Apply a fitted PRF as a conservative prefilter before projection."""
-    if prf_model is None or prf_model.model == NO_PRF_MODEL:
-        return image
-    filtered = fftconvolve(image.astype(np.float32), prf_model.kernel.astype(np.float32), mode="same")
-    return filtered.astype(np.float32)

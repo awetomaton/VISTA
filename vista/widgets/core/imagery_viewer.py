@@ -3181,9 +3181,7 @@ class ImageryViewer(QWidget):
             # Create projector for current sensor
             coarse_enabled = settings.value("wms/coarse_grid_enabled", True, type=bool)
             coarse_size = settings.value("wms/coarse_grid_size", 64, type=int) if coarse_enabled else 0
-            self.imagery_projector = ImageryProjector(
-                self.selected_sensor, coarse_grid_size=coarse_size, prf_model=None
-            )
+            self.imagery_projector = ImageryProjector(self.selected_sensor, coarse_grid_size=coarse_size)
 
             # Compute imagery footprint
             frame = self.imagery.frames[0]
