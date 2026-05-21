@@ -128,11 +128,22 @@ class PRFModel:
             "sigma": "sigma",
             "sigma_x": "sigma_x",
             "sigma_y": "sigma_y",
+            "alpha_x": "alpha_x",
+            "alpha_y": "alpha_y",
             "theta": "theta",
             "airy_radius": "airy_radius",
             "beta": "beta",
         }
-        ordered_keys = ("sigma", "sigma_x", "sigma_y", "theta", "airy_radius", "beta")
+        ordered_keys = (
+            "sigma",
+            "sigma_x",
+            "sigma_y",
+            "alpha_x",
+            "alpha_y",
+            "theta",
+            "airy_radius",
+            "beta",
+        )
         parts = [f"pixel_aperture={self.pixel_shape}"]
         for key in ordered_keys:
             if key not in self.parameters:
@@ -451,8 +462,8 @@ def _shifted_prf_kernel(
 def oversampled_prf_from_model(prf_model: PRFModel, oversample: int = 7) -> NDArray[np.float32]:
     """Generate a sensor-level oversampled PRF table from a fitted PRFModel."""
     params = prf_model.parameters
-    sigma_x = params.get("sigma_x", params.get("sigma", params.get("airy_radius", 1.0)))
-    sigma_y = params.get("sigma_y", params.get("sigma", sigma_x))
+    sigma_x = params.get("sigma_x", params.get("alpha_x", params.get("sigma", params.get("airy_radius", 1.0))))
+    sigma_y = params.get("sigma_y", params.get("alpha_y", params.get("sigma", sigma_x)))
     theta = params.get("theta", 0.0)
     beta = params.get("beta", 4.765)
     airy_radius = params.get("airy_radius", sigma_x)
@@ -680,7 +691,7 @@ def fit_prf_model(
         upper = [10.0]
     else:
         sigma_x0, sigma_y0, theta0 = _estimate_elliptical_moments(chips_arr)
-        p0 = [sigma_x0, sigma_y0, theta0]  # sigma_x, sigma_y, theta
+        p0 = [sigma_x0, sigma_y0, theta0]
         lower = [0.1, 0.1, -math.pi]
         upper = [10.0, 10.0, math.pi]
 
@@ -935,14 +946,19 @@ def fit_prf_model(
         params = {"sigma": float(sigma_x)}
     elif model == "Airy Disk":
         params = {"airy_radius": float(airy_radius)}
+    elif model == "Moffat":
+        params = {
+            "alpha_x": float(sigma_x),
+            "alpha_y": float(sigma_y),
+            "theta": float(theta),
+            "beta": float(beta),
+        }
     else:
         params = {
             "sigma_x": float(sigma_x),
             "sigma_y": float(sigma_y),
             "theta": float(theta),
         }
-    if model == "Moffat":
-        params["beta"] = float(beta)
 
     best_start_function_evaluations = int(result.nfev)
     best_start_jacobian_evaluations = int(result.njev) if result.njev is not None else 0

@@ -110,10 +110,10 @@ STANDARD_CASES: dict[str, dict[str, Any]] = {
     "moffat": {
         "name": "moffat",
         "model": "Moffat",
-        "parameters": {"sigma_x": 2.2, "sigma_y": 1.1, "theta": np.deg2rad(22.5), "beta": 3.5},
+        "parameters": {"alpha_x": 2.2, "alpha_y": 1.1, "theta": np.deg2rad(22.5), "beta": 3.5},
         "readme_parameters": {
-            "sigma_x_pixels": 2.2,
-            "sigma_y_pixels": 1.1,
+            "alpha_x_pixels": 2.2,
+            "alpha_y_pixels": 1.1,
             "theta_degrees": 22.5,
             "beta": 3.5,
         },
@@ -416,20 +416,20 @@ def custom_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
                 cases.append(
                     {
                         "name": (
-                            f"{slug}_sx_{sigma_x:g}_sy_{sigma_y:g}_"
+                            f"{slug}_ax_{sigma_x:g}_ay_{sigma_y:g}_"
                             f"theta_{theta_deg:g}_beta_{beta:g}_flux_{flux:g}"
                         ),
                         "model": model,
                         "parameters": {
-                            "sigma_x": sigma_x,
-                            "sigma_y": sigma_y,
+                            "alpha_x": sigma_x,
+                            "alpha_y": sigma_y,
                             "theta": np.deg2rad(theta_deg),
                             "beta": beta,
                             "flux_counts": flux,
                         },
                         "readme_parameters": {
-                            "sigma_x_pixels": sigma_x,
-                            "sigma_y_pixels": sigma_y,
+                            "alpha_x_pixels": sigma_x,
+                            "alpha_y_pixels": sigma_y,
                             "theta_degrees": theta_deg,
                             "beta": beta,
                             "flux_counts": flux,
@@ -508,6 +508,8 @@ def create_sensor(config: DatasetConfig, oversampled_prf: np.ndarray) -> Sampled
             "column_rate_pixels_per_frame": config.column_rate,
             "sigma_x_pixels": float(parameters.get("sigma_x", parameters.get("airy_radius", np.nan))),
             "sigma_y_pixels": float(parameters.get("sigma_y", parameters.get("airy_radius", np.nan))),
+            "alpha_x_pixels": float(parameters.get("alpha_x", np.nan)),
+            "alpha_y_pixels": float(parameters.get("alpha_y", np.nan)),
             "theta_degrees": theta_degrees,
             "airy_radius_pixels": float(parameters.get("airy_radius", np.nan)),
             "beta": float(parameters.get("beta", np.nan)),
@@ -648,6 +650,8 @@ def truth_payload(config: DatasetConfig, truths: list[SourceTruth]) -> dict[str,
         "parameters": {
             "sigma_x": optional_float(parameters.get("sigma_x")),
             "sigma_y": optional_float(parameters.get("sigma_y")),
+            "alpha_x": optional_float(parameters.get("alpha_x")),
+            "alpha_y": optional_float(parameters.get("alpha_y")),
             "theta_degrees": float(np.rad2deg(parameters.get("theta", 0.0))),
             "airy_radius": optional_float(parameters.get("airy_radius")),
             "beta": optional_float(parameters.get("beta")),
@@ -675,6 +679,19 @@ def write_readme(output_dir: Path, config: DatasetConfig, truths: list[SourceTru
     """Write human-readable truth metadata."""
     parameters = config.case["parameters"]
     theta_degrees = float(np.rad2deg(parameters.get("theta", 0.0)))
+    parameter_lines = ["Model parameters:"]
+    if "sigma_x" in parameters or "sigma_y" in parameters:
+        parameter_lines.insert(1, f"sigma_x_pixels: {float(parameters.get('sigma_x', np.nan)):.6f}")
+        parameter_lines.insert(2, f"sigma_y_pixels: {float(parameters.get('sigma_y', np.nan)):.6f}")
+    if "alpha_x" in parameters or "alpha_y" in parameters:
+        parameter_lines.insert(1, f"alpha_x_pixels: {float(parameters.get('alpha_x', np.nan)):.6f}")
+        parameter_lines.insert(2, f"alpha_y_pixels: {float(parameters.get('alpha_y', np.nan)):.6f}")
+    if "airy_radius" in parameters:
+        parameter_lines.append(f"airy_radius_pixels: {float(parameters.get('airy_radius', np.nan)):.6f}")
+    parameter_lines.append(f"theta_degrees: {theta_degrees:.6f}")
+    if "beta" in parameters:
+        parameter_lines.append(f"beta: {float(parameters.get('beta', np.nan)):.6f}")
+
     lines = [
         "Known-flux PRF verification dataset",
         f"Imagery: {output_dir / 'imagery.h5'}",
@@ -694,12 +711,7 @@ def write_readme(output_dir: Path, config: DatasetConfig, truths: list[SourceTru
         f"row_rate_pixels_per_frame: {config.row_rate}",
         f"column_rate_pixels_per_frame: {config.column_rate}",
         "",
-        "Model parameters:",
-        f"sigma_x_pixels: {float(parameters.get('sigma_x', np.nan)):.6f}",
-        f"sigma_y_pixels: {float(parameters.get('sigma_y', np.nan)):.6f}",
-        f"theta_degrees: {theta_degrees:.6f}",
-        f"airy_radius_pixels: {float(parameters.get('airy_radius', np.nan)):.6f}",
-        f"beta: {float(parameters.get('beta', np.nan)):.6f}",
+        *parameter_lines,
         "",
         "Source truth:",
     ]
@@ -734,8 +746,20 @@ def generate_oversampled_case_prf(config: DatasetConfig) -> np.ndarray:
         config.case["model"],
         pixel_shape=config.pixel_shape,
         kernel_size=config.chip_size,
-        sigma_x=parameters.get("sigma_x", parameters.get("airy_radius", 1.0)),
-        sigma_y=parameters.get("sigma_y", parameters.get("sigma_x", parameters.get("airy_radius", 1.0))),
+        sigma_x=parameters.get(
+            "sigma_x",
+            parameters.get("alpha_x", parameters.get("airy_radius", 1.0)),
+        ),
+        sigma_y=parameters.get(
+            "sigma_y",
+            parameters.get(
+                "alpha_y",
+                parameters.get(
+                    "sigma_x",
+                    parameters.get("alpha_x", parameters.get("airy_radius", 1.0)),
+                ),
+            ),
+        ),
         theta=parameters.get("theta", 0.0),
         beta=parameters.get("beta", 4.765),
         airy_radius=parameters.get("airy_radius", parameters.get("sigma_x", 1.0)),
