@@ -7,7 +7,7 @@ save/load, and edge cases.
 Run commands from the VISTA repository root unless noted otherwise.
 
 ```bash
-cd /Users/dbourguignon/VISTA
+cd /path/to/VISTA
 source .venv/bin/activate
 ```
 
@@ -16,8 +16,8 @@ source .venv/bin/activate
 Run the automated checks first so manual testing starts from a known baseline.
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python -m pytest /Users/dbourguignon/VISTA/tests -q
-/Users/dbourguignon/VISTA/.venv/bin/python -m compileall /Users/dbourguignon/VISTA/vista /Users/dbourguignon/VISTA/scripts/generate_single_frame.py /Users/dbourguignon/VISTA/tests
+python -m pytest tests -q
+python -m compileall vista scripts/generate_single_frame.py tests
 ```
 
 Expected result:
@@ -27,13 +27,13 @@ Expected result:
 - The VISTA branch has no unintentional local changes before manual testing.
 
 ```bash
-git -C /Users/dbourguignon/VISTA status --short --branch
+git status --short --branch
 ```
 
 ## 2. Launch VISTA
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python -m vista
+python -m vista
 ```
 
 Expected result:
@@ -57,7 +57,7 @@ Manual checks:
 Generate the standard PRF suite.
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python -m scripts.generate_single_frame
+python -m scripts.generate_single_frame
 ```
 
 Expected output:
@@ -65,7 +65,7 @@ Expected output:
 - Datasets are written under:
 
 ```text
-/Users/dbourguignon/VISTA/testing_auxiliaries/prf_single_frame_known_flux
+testing_auxiliaries/prf_single_frame_known_flux
 ```
 
 - Standard cases include Gaussian, Elliptical Gaussian, Airy Disk, and Moffat.
@@ -79,18 +79,18 @@ Expected output:
 Optional targeted edge cases:
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python -m scripts.generate_single_frame \
+python -m scripts.generate_single_frame \
   --suite custom \
   --model elliptical_gaussian \
   --pixel-shape square \
   --source-row 2.25 \
   --source-col 3.75 \
   --chip-size 25 \
-  --out-dir /Users/dbourguignon/VISTA/testing_auxiliaries/prf_edge_case_tests
+  --out-dir testing_auxiliaries/prf_edge_case_tests
 ```
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python -m scripts.generate_single_frame \
+python -m scripts.generate_single_frame \
   --suite custom \
   --model moffat \
   --pixel-shape circular \
@@ -99,13 +99,13 @@ Optional targeted edge cases:
   --theta-deg 22.5 \
   --beta 3.5 \
   --noise-std 5 \
-  --out-dir /Users/dbourguignon/VISTA/testing_auxiliaries/prf_noisy_cases
+  --out-dir testing_auxiliaries/prf_noisy_cases
 ```
 
 If a command fails because an option is not supported, inspect the current script help:
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python -m scripts.generate_single_frame --help
+python -m scripts.generate_single_frame --help
 ```
 
 ## 4. Load Imagery and Detections
@@ -116,7 +116,7 @@ In VISTA:
 2. Select one generated `imagery.h5`, for example:
 
 ```text
-/Users/dbourguignon/VISTA/testing_auxiliaries/prf_single_frame_known_flux/elliptical_gaussian_square_pixel/imagery.h5
+testing_auxiliaries/prf_single_frame_known_flux/elliptical_gaussian_square_pixel/imagery.h5
 ```
 
 3. Open `File -> Load Detections (CSV)`.
@@ -142,12 +142,12 @@ Manual checks:
 Use this script to inspect a generated VISTA-compatible HDF5 file.
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python - <<'PY'
+python - <<'PY'
 from pathlib import Path
 import h5py
 import numpy as np
 
-path = Path("/Users/dbourguignon/VISTA/testing_auxiliaries/prf_single_frame_known_flux/elliptical_gaussian_square_pixel/imagery.h5")
+path = Path("testing_auxiliaries/prf_single_frame_known_flux/elliptical_gaussian_square_pixel/imagery.h5")
 
 with h5py.File(path, "r") as h5:
     print("file:", path)
@@ -228,11 +228,11 @@ Expected result for standard noise-free known-flux datasets:
 Manual HDF5/truth check:
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python - <<'PY'
+python - <<'PY'
 from pathlib import Path
 import json
 
-truth = Path("/Users/dbourguignon/VISTA/testing_auxiliaries/prf_single_frame_known_flux/elliptical_gaussian_square_pixel/truth.json")
+truth = Path("testing_auxiliaries/prf_single_frame_known_flux/elliptical_gaussian_square_pixel/truth.json")
 print(json.loads(truth.read_text())["expected_integrated_source_flux_counts"])
 PY
 ```
@@ -400,7 +400,7 @@ Manual edge checks:
 Use a current IFOV-generated HDF5 file that includes sensor PRF data, for example:
 
 ```text
-/Users/dbourguignon/ifov/examples/output/simple_scenario_output.h5
+/path/to/ifov/examples/output/simple_scenario_output.h5
 ```
 
 Manual test:
@@ -421,12 +421,13 @@ Expected result:
 Optional Python check:
 
 ```bash
-/Users/dbourguignon/VISTA/.venv/bin/python - <<'PY'
+IFOV_OUTPUT_H5=/path/to/ifov/examples/output/simple_scenario_output.h5 python - <<'PY'
+import os
 from pathlib import Path
 import h5py
 import numpy as np
 
-path = Path("/Users/dbourguignon/ifov/examples/output/simple_scenario_output.h5")
+path = Path(os.environ["IFOV_OUTPUT_H5"])
 with h5py.File(path, "r") as h5:
     for sensor_id, sensor_group in h5["sensors"].items():
         print("sensor:", sensor_id)
