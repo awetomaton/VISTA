@@ -15,6 +15,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import least_squares
 from scipy.signal import fftconvolve
+from scipy.singal import j1
 
 
 NO_PRF_MODEL = "None"
