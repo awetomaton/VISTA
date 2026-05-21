@@ -226,9 +226,14 @@ def _generate_prf_fine(
     yr = -sin_t * x + cos_t * y
 
     if model == "Airy Disk":
-        # A stable Airy-like approximation without a scipy.special dependency.
-        r = np.sqrt(xr ** 2 + yr ** 2) / max(float(airy_radius), 1e-3)
-        psf = np.sinc(r) ** 2
+        radius = max(float(airy_radius), 1e-3)
+        radial_distance = np.sqrt(xr ** 2 + yr ** 2)
+
+        z = _AIRY_FIRST_ZERO * radial_distance / radius
+
+        psf = np.ones_like(z, dtype=np.float64)
+        nonzero = z != 0.0
+        psf[nonzero] = (2.0 * j1(z[nonzero]) / z[nonzero]) ** 2
     elif model == "Moffat":
         alpha_x = sigma_x
         alpha_y = sigma_y
