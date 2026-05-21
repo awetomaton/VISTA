@@ -69,7 +69,7 @@ from vista.imagery.imagery import Imagery, save_imagery_hdf5
 from vista.sensors.sampled_sensor import SampledSensor
 
 
-DEFAULT_OUT_DIR = Path("~/VISTA/prf_single_frame_known_flux").expanduser()
+DEFAULT_OUT_DIR = Path("~/VISTA/testing_auxiliaries/prf_single_frame_known_flux").expanduser()
 
 DEFAULT_HEIGHT = 128
 DEFAULT_WIDTH = 128
