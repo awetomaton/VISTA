@@ -198,12 +198,20 @@ class SampledSensor(Sensor):
         prf = np.asarray(prf, dtype=np.float64)
         if prf.ndim != 2:
             raise ValueError(f"{prf_attr} must be a 2D array, got shape {prf.shape}")
+        if not np.isfinite(prf).all():
+            raise ValueError(f"{prf_attr} must contain only finite values")
+        negative_tolerance = 1e-12 * max(float(np.max(np.abs(prf))), 1.0)
+        if float(np.min(prf)) < -negative_tolerance:
+            raise ValueError(f"{prf_attr} must be nonnegative")
+        prf = np.maximum(prf, 0.0)
+        if float(np.sum(prf)) <= 0.0:
+            raise ValueError(f"{prf_attr} must contain nonzero PRF energy")
         setattr(self, prf_attr, prf)
 
         oversampling = getattr(self, oversampling_attr)
         if oversampling is None:
             oversampling = 1
-        if oversampling < 1:
+        if not np.isfinite(oversampling) or oversampling < 1:
             raise ValueError(f"{oversampling_attr} must be at least 1")
         setattr(self, oversampling_attr, int(oversampling))
 
@@ -212,7 +220,12 @@ class SampledSensor(Sensor):
             center = ((prf.shape[0] - 1) / 2.0, (prf.shape[1] - 1) / 2.0)
         if len(center) != 2:
             raise ValueError(f"{center_attr} must contain (row, column) coordinates")
-        setattr(self, center_attr, (float(center[0]), float(center[1])))
+        center = (float(center[0]), float(center[1]))
+        if not np.isfinite(center).all():
+            raise ValueError(f"{center_attr} must contain finite coordinates")
+        if not (0.0 <= center[0] <= prf.shape[0] - 1 and 0.0 <= center[1] <= prf.shape[1] - 1):
+            raise ValueError(f"{center_attr} must lie within the {prf_attr} array bounds")
+        setattr(self, center_attr, center)
 
         if getattr(self, metadata_attr) is None:
             setattr(self, metadata_attr, {})
