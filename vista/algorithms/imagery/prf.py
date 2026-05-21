@@ -32,6 +32,7 @@ _LEGACY_PRF_FIT_DETECTION_CHIP_SOURCES = {
     "All visible detections": "Visible detection chips",
     "Auto-select strongest detections": "Strongest visible detection chips",
 }
+# First positive zero fo J1(z), used for Airy disk radius normalization. 
 _AIRY_FIRST_ZERO = 3.8317059702075125
 
 
@@ -247,6 +248,9 @@ def _generate_prf_fine(
         nonzero = z != 0.0
         psf[nonzero] = (2.0 * j1(z[nonzero]) / z[nonzero]) ** 2
     elif model == "Moffat":
+        # Moffat uses alpha_x/y scale radii, not Gaussian standard deviations.
+        # The local variable names are intentionally left as sigma_x/y for
+        # compatibility with the shared PRF-generation path.
         alpha_x = sigma_x
         alpha_y = sigma_y
         psf = (1.0 + (xr / alpha_x) ** 2 + (yr / alpha_y) ** 2) ** (-max(float(beta), 1.01))
