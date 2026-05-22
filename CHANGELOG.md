@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
  - 🔧 Fixed bug where static median / subspace were not disabled while loading imagery.
+ - 🛠️ Improved AOI creation logic so that it creates AOI based on user's view rather than image extent preventing issues where users couldn't see AOIs they cerate when zoomed in.
 
 ## [1.12.0] - 2026-5-21
 

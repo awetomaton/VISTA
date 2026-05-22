@@ -1613,13 +1613,10 @@ class ImageryViewer(QWidget):
         if self.imagery is None or self.map_view_mode:
             return
 
-        # Get image dimensions for default size
-        img_shape = self.imagery.images[0].shape if len(self.imagery.images) > 0 else (100, 100)
-        default_width = int(img_shape[1] * 0.2)  # 20% of image width
-        default_height = int(img_shape[0] * 0.2)  # 20% of image height
-
-        # Get center of current view
+        # Size and center the AOI relative to the user's current view.
         view_rect = self.plot_item.viewRect()
+        default_width = max(1, int(round(abs(view_rect.width()) * 0.2)))
+        default_height = max(1, int(round(abs(view_rect.height()) * 0.2)))
         center_x = int(view_rect.center().x())
         center_y = int(view_rect.center().y())
 
