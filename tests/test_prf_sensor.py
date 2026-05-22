@@ -56,6 +56,18 @@ def test_sampled_sensor_clips_tiny_negative_roundoff():
     assert np.all(sensor.oversampled_prf >= 0.0)
 
 
+def test_sampled_sensor_prf_sampling_keeps_exact_boundary_samples():
+    prf = np.arange(1, 10, dtype=np.float64).reshape(3, 3)
+    sensor = make_sensor(prf, oversampling=1)
+
+    samples = sensor._sample_oversampled_prf(
+        np.array([[2.0]], dtype=np.float64),
+        np.array([[1.0]], dtype=np.float64),
+    )
+
+    assert samples[0, 0] == prf[2, 1]
+
+
 def test_prf_fitting_chip_extraction_uses_pixel_center_convention():
     image = np.arange(30 * 30, dtype=np.float32).reshape(30, 30)
 

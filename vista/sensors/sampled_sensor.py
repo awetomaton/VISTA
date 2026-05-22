@@ -380,24 +380,25 @@ class SampledSensor(Sensor):
         row_frac = prf_rows - r0
         col_frac = prf_cols - c0
 
-        valid = (r0 >= 0) & (c0 >= 0) & (r1 < height) & (c1 < width)
         samples = np.zeros(prf_rows.shape, dtype=np.float64)
-        if not np.any(valid):
-            return samples
 
-        v00 = prf[r0[valid], c0[valid]]
-        v01 = prf[r0[valid], c1[valid]]
-        v10 = prf[r1[valid], c0[valid]]
-        v11 = prf[r1[valid], c1[valid]]
+        def add_neighbor(row_index, col_index, weight):
+            valid = (
+                (row_index >= 0)
+                & (row_index < height)
+                & (col_index >= 0)
+                & (col_index < width)
+                & (weight != 0.0)
+            )
+            if np.any(valid):
+                samples[valid] += prf[row_index[valid], col_index[valid]] * weight[
+                    valid
+                ]
 
-        rf = row_frac[valid]
-        cf = col_frac[valid]
-        samples[valid] = (
-            v00 * (1.0 - rf) * (1.0 - cf)
-            + v01 * (1.0 - rf) * cf
-            + v10 * rf * (1.0 - cf)
-            + v11 * rf * cf
-        )
+        add_neighbor(r0, c0, (1.0 - row_frac) * (1.0 - col_frac))
+        add_neighbor(r0, c1, (1.0 - row_frac) * col_frac)
+        add_neighbor(r1, c0, row_frac * (1.0 - col_frac))
+        add_neighbor(r1, c1, row_frac * col_frac)
         return samples
 
     def get_prf(
