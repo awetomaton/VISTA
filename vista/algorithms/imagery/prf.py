@@ -512,8 +512,8 @@ def _extract_chip(
     image: NDArray[np.float32], row: float, col: float, chip_size: int
 ) -> NDArray[np.float32] | None:
     half = chip_size // 2
-    row_center = int(round(row))
-    col_center = int(round(col))
+    row_center = int(round(row - 0.5))
+    col_center = int(round(col - 0.5))
     r0 = row_center - half
     r1 = row_center + half + 1
     c0 = col_center - half

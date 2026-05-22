@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 
-from vista.algorithms.imagery.prf import PRFModel, generate_oversampled_prf
+from vista.algorithms.imagery.prf import (
+    PRFModel,
+    _extract_chip,
+    generate_oversampled_prf,
+)
 from vista.algorithms.imagery.prf_photometry import estimate_detector_flux_counts
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
@@ -50,6 +54,15 @@ def test_sampled_sensor_clips_tiny_negative_roundoff():
 
     assert sensor.oversampled_prf[0, 0] == 0.0
     assert np.all(sensor.oversampled_prf >= 0.0)
+
+
+def test_prf_fitting_chip_extraction_uses_pixel_center_convention():
+    image = np.arange(30 * 30, dtype=np.float32).reshape(30, 30)
+
+    chip = _extract_chip(image, row=10.75, col=20.75, chip_size=5)
+
+    assert chip is not None
+    assert chip[2, 2] == image[10, 20]
 
 
 def test_known_flux_photometry_recovers_injected_flux():
