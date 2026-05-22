@@ -1,7 +1,7 @@
 """PRF-based point-source photometry in raw image counts."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -213,6 +213,28 @@ def estimate_detection_flux_counts(
     return result
 
 
+def _result_for_missing_imagery(detector, index: int) -> PRFPhotometryResult:
+    """Return a rejected result when no loaded imagery contains a detection frame."""
+    return PRFPhotometryResult(
+        index=index,
+        frame=int(detector.frames[index]),
+        row=float(detector.rows[index]),
+        column=float(detector.columns[index]),
+        status="rejected:no_loaded_imagery_for_frame",
+    )
+
+
+def _imagery_for_detection_frame(imageries: Sequence, detector, index: int):
+    """Find sensor-matched imagery containing one detection frame."""
+    frame = int(detector.frames[index])
+    for imagery in imageries:
+        if imagery.sensor != detector.sensor:
+            continue
+        if frame in _frame_to_image_index(imagery):
+            return imagery
+    return None
+
+
 def estimate_detector_flux_counts(
     imagery,
     detector,
@@ -220,7 +242,34 @@ def estimate_detector_flux_counts(
     max_invalid_fraction: float = 0.1,
     background_inner_radius: Optional[float] = None,
 ) -> list[PRFPhotometryResult]:
-    """Estimate raw-count PRF flux for every detection in a detector."""
+    """Estimate raw-count PRF flux for every detection in a detector.
+
+    ``imagery`` may be one imagery object or a sequence of imagery objects. When
+    multiple products are supplied, each detection is measured against the
+    sensor-matched imagery product that contains that detection's frame.
+    """
+    if isinstance(imagery, Sequence) and not isinstance(imagery, (str, bytes)):
+        imageries = list(imagery)
+        results = []
+        for index in range(len(detector.frames)):
+            detection_imagery = _imagery_for_detection_frame(
+                imageries, detector, index
+            )
+            if detection_imagery is None:
+                results.append(_result_for_missing_imagery(detector, index))
+                continue
+            results.append(
+                estimate_detection_flux_counts(
+                    detection_imagery,
+                    detector,
+                    index,
+                    chip_size=chip_size,
+                    max_invalid_fraction=max_invalid_fraction,
+                    background_inner_radius=background_inner_radius,
+                )
+            )
+        return results
+
     return [
         estimate_detection_flux_counts(
             imagery,

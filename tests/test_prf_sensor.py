@@ -108,6 +108,57 @@ def test_known_flux_photometry_recovers_injected_flux():
     assert result.flux_counts == pytest.approx(flux, rel=1e-5)
 
 
+def test_photometry_uses_multiple_imagery_products_for_split_detector():
+    chip_size = 25
+    oversampling = 9
+    source_row = 32.25
+    source_col = 31.75
+    background = 100.0
+    flux = 1000.0
+    image_shape = (64, 64)
+
+    oversampled_prf = generate_oversampled_prf(
+        "Gaussian",
+        pixel_shape="Square",
+        kernel_size=chip_size,
+        sigma_x=1.6,
+        oversample=oversampling,
+    )
+    sensor = make_sensor(oversampled_prf, oversampling=oversampling)
+
+    imageries = []
+    for frame in (0, 1):
+        image = np.full(image_shape, background, dtype=np.float64)
+        rows, cols, prf_chip = sensor.get_prf(
+            source_row, source_col, chip_size=chip_size
+        )
+        prf_chip = prf_chip / np.sum(prf_chip)
+        image[rows, cols] += flux * prf_chip
+        imageries.append(
+            Imagery(
+                name=f"Known Flux {frame}",
+                images=image[np.newaxis, :, :].astype(np.float32),
+                frames=np.array([frame], dtype=np.int64),
+                sensor=sensor,
+            )
+        )
+
+    detector = Detector(
+        name="Split Imagery Source",
+        frames=np.array([0, 1], dtype=np.int64),
+        rows=np.array([source_row, source_row], dtype=np.float64),
+        columns=np.array([source_col, source_col], dtype=np.float64),
+        sensor=sensor,
+    )
+
+    results = estimate_detector_flux_counts(imageries, detector, chip_size=chip_size)
+
+    assert [result.status for result in results] == ["ok", "ok"]
+    assert [result.flux_counts for result in results] == pytest.approx(
+        [flux, flux], rel=1e-5
+    )
+
+
 def test_edge_clipped_photometry_is_rejected():
     chip_size = 25
     oversampling = 9

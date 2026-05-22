@@ -1524,8 +1524,8 @@ class DetectionsPanel(QWidget):
         total_rejected = 0
 
         for detector in selected_detectors:
-            imagery = self._imagery_for_detector(detector)
-            if imagery is None:
+            imageries = self._imageries_for_detector(detector)
+            if not imageries:
                 detector.flux_counts = np.full(len(detector), np.nan, dtype=np.float64)
                 detector.flux_uncertainty_counts = np.full(
                     len(detector), np.nan, dtype=np.float64
@@ -1543,7 +1543,7 @@ class DetectionsPanel(QWidget):
                 total_rejected += len(detector)
                 continue
 
-            results = estimate_detector_flux_counts(imagery, detector)
+            results = estimate_detector_flux_counts(imageries, detector)
             detector.flux_counts = np.asarray(
                 [result.flux_counts for result in results], dtype=np.float64
             )
@@ -1623,28 +1623,20 @@ class DetectionsPanel(QWidget):
             message += f"\n...and {len(summaries) - 8} more detector(s)."
         QMessageBox.information(self, "PRF Flux Complete", message)
 
-    def _imagery_for_detector(self, detector):
-        """Find loaded imagery for a detector's sensor, preferring the current imagery."""
-        detector_frames = {int(frame) for frame in detector.frames}
+    def _imageries_for_detector(self, detector):
+        """Find loaded imageries for a detector's sensor, preferring current imagery."""
+        imageries = []
         if (
             self.viewer.imagery is not None
             and self.viewer.imagery.sensor == detector.sensor
         ):
-            current_frames = {int(frame) for frame in self.viewer.imagery.frames}
-            if detector_frames & current_frames:
-                return self.viewer.imagery
+            imageries.append(self.viewer.imagery)
 
-        best_imagery = None
-        best_overlap = -1
         for imagery in self.viewer.imageries:
-            if imagery.sensor != detector.sensor:
+            if imagery.sensor != detector.sensor or imagery in imageries:
                 continue
-            imagery_frames = {int(frame) for frame in imagery.frames}
-            overlap = len(detector_frames & imagery_frames)
-            if overlap > best_overlap:
-                best_overlap = overlap
-                best_imagery = imagery
-        return best_imagery
+            imageries.append(imagery)
+        return imageries
 
     @staticmethod
     def _optional_detection_value(detector, attr: str, index: int) -> float:
