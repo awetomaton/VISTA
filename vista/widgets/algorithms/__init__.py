@@ -3,7 +3,12 @@
 from .detectors import CFARWidget, SimpleThresholdWidget
 
 # Background removal widgets
-from .background_removal import TemporalMedianWidget, RobustPCADialog
+from .background_removal import (
+    RobustPCADialog,
+    StaticMedianBackgroundRemovalDialog,
+    StaticSubspaceBackgroundRemovalDialog,
+    TemporalMedianWidget,
+)
 
 # Tracker widgets
 from .trackers import (
@@ -30,6 +35,8 @@ __all__ = [
     # Background removal
     'TemporalMedianWidget',
     'RobustPCADialog',
+    'StaticMedianBackgroundRemovalDialog',
+    'StaticSubspaceBackgroundRemovalDialog',
     # Trackers
     'KalmanTrackingDialog',
     'NetworkFlowTrackingDialog',
