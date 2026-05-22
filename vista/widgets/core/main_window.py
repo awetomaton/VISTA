@@ -24,6 +24,12 @@ from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.settings_dialog import SettingsDialog
 from vista.widgets.algorithms.background_removal.godec_dialog import GoDecDialog
 from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
+from vista.widgets.algorithms.background_removal.static_median_background_removal_dialog import (
+    StaticMedianBackgroundRemovalDialog,
+)
+from vista.widgets.algorithms.background_removal.static_subspace_background_removal_dialog import (
+    StaticSubspaceBackgroundRemovalDialog,
+)
 from vista.widgets.algorithms.background_removal.subspace_background_removal_dialog import SubspaceBackgroundRemovalDialog
 from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
 from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
@@ -293,6 +299,10 @@ class VistaMainWindow(QMainWindow):
         temporal_median_action.triggered.connect(self.open_temporal_median_widget)
         background_removal_menu.addAction(temporal_median_action)
 
+        static_median_action = QAction("Static Median", self)
+        static_median_action.triggered.connect(self.open_static_median_background_removal_dialog)
+        background_removal_menu.addAction(static_median_action)
+
         robust_pca_action = QAction("Robust PCA", self)
         robust_pca_action.triggered.connect(self.open_robust_pca_dialog)
         background_removal_menu.addAction(robust_pca_action)
@@ -300,6 +310,10 @@ class VistaMainWindow(QMainWindow):
         subspace_bg_action = QAction("Sliding Subspace", self)
         subspace_bg_action.triggered.connect(self.open_subspace_background_removal_dialog)
         background_removal_menu.addAction(subspace_bg_action)
+
+        static_subspace_action = QAction("Static Subspace", self)
+        static_subspace_action.triggered.connect(self.open_static_subspace_background_removal_dialog)
+        background_removal_menu.addAction(static_subspace_action)
 
         godec_action = QAction("GoDec", self)
         godec_action.triggered.connect(self.open_godec_dialog)
@@ -2108,6 +2122,46 @@ class VistaMainWindow(QMainWindow):
         aois = self.viewer.aois
 
         dialog = SubspaceBackgroundRemovalDialog(self, current_imagery, aois)
+        dialog.imagery_processed.connect(self.on_multiple_imagery_created)
+        dialog.exec()
+
+    def open_static_subspace_background_removal_dialog(self):
+        """Open the static (non-sliding) subspace background removal dialog"""
+        if not self.viewer.imagery:
+            QMessageBox.warning(self, "No Imagery",
+                "Please load imagery before running Static Subspace background removal.",
+                QMessageBox.StandardButton.Ok)
+            return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+
+        current_imagery = self.viewer.imagery
+        aois = self.viewer.aois
+
+        dialog = StaticSubspaceBackgroundRemovalDialog(self, current_imagery, aois)
+        dialog.imagery_processed.connect(self.on_multiple_imagery_created)
+        dialog.exec()
+
+    def open_static_median_background_removal_dialog(self):
+        """Open the static (non-sliding) median background removal dialog"""
+        if not self.viewer.imagery:
+            QMessageBox.warning(self, "No Imagery",
+                "Please load imagery before running Static Median background removal.",
+                QMessageBox.StandardButton.Ok)
+            return
+        if self._is_any_imagery_loading():
+            QMessageBox.warning(self, "Loading In Progress",
+                "Please wait for all imagery to finish loading before running algorithms.",
+                QMessageBox.StandardButton.Ok)
+            return
+
+        current_imagery = self.viewer.imagery
+        aois = self.viewer.aois
+
+        dialog = StaticMedianBackgroundRemovalDialog(self, current_imagery, aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 

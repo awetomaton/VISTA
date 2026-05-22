@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import datetime
 from typing import Optional, Union
 import pathlib
 import numpy as np
@@ -85,6 +86,8 @@ class Detector:
     visible: bool = True
     complete: bool = False  # Show all detections across all frames (like track.complete)
     labels: list[set[str]] = field(default_factory=list)  # List of label sets, one per detection point
+    label_times: list[Optional[datetime.datetime]] = field(default_factory=list)  # UTC timestamp each detection was last labeled
+    labelers: list[Optional[str]] = field(default_factory=list)  # Username that last labeled each detection
 
     # Performance optimization: cached data structures
     _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
@@ -210,6 +213,17 @@ class Detector:
                     detector_slice.labels = detector_slice.labels[s]
                 else:  # numpy array boolean mask or indices
                     detector_slice.labels = [detector_slice.labels[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labels[i] for i in s]
+            # Subset per-detection label metadata (same indexing rules as labels)
+            if len(detector_slice.label_times) > 0:
+                if isinstance(s, slice):
+                    detector_slice.label_times = detector_slice.label_times[s]
+                else:
+                    detector_slice.label_times = [detector_slice.label_times[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.label_times[i] for i in s]
+            if len(detector_slice.labelers) > 0:
+                if isinstance(s, slice):
+                    detector_slice.labelers = detector_slice.labelers[s]
+                else:
+                    detector_slice.labelers = [detector_slice.labelers[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labelers[i] for i in s]
             # Slice cached geodetic coords if present
             if detector_slice._cached_lons is not None:
                 detector_slice._cached_lons = detector_slice._cached_lons[s]
@@ -282,6 +296,25 @@ class Detector:
                 else:
                     labels_list.append(set())
             kwargs["labels"] = labels_list
+        if "Label Time" in df.columns:
+            label_times_list = []
+            for time_val in df["Label Time"]:
+                if pd.notna(time_val) and time_val != "":
+                    try:
+                        label_times_list.append(pd.to_datetime(time_val).to_pydatetime())
+                    except (ValueError, TypeError):
+                        label_times_list.append(None)
+                else:
+                    label_times_list.append(None)
+            kwargs["label_times"] = label_times_list
+        if "Labeler" in df.columns:
+            labelers_list = []
+            for labeler_val in df["Labeler"]:
+                if pd.notna(labeler_val) and labeler_val != "":
+                    labelers_list.append(str(labeler_val))
+                else:
+                    labelers_list.append(None)
+            kwargs["labelers"] = labelers_list
 
         detector = cls(
             name = name,
@@ -320,6 +353,8 @@ class Detector:
             line_thickness = self.line_thickness,
             visible = self.visible,
             labels = [label_set.copy() for label_set in self.labels],
+            label_times = list(self.label_times),
+            labelers = list(self.labelers),
         )
         # Preserve cached geodetic coords
         if self._cached_lons is not None:
@@ -334,11 +369,21 @@ class Detector:
     def to_dataframe(self) -> pd.DataFrame:
         # Prepare labels column - one entry per detection
         labels_column = []
+        label_times_column = []
+        labelers_column = []
         for i in range(len(self.frames)):
             if i < len(self.labels) and self.labels[i]:
                 labels_column.append(', '.join(sorted(self.labels[i])))
             else:
                 labels_column.append('')
+            if i < len(self.label_times) and self.label_times[i] is not None:
+                label_times_column.append(self.label_times[i].isoformat())
+            else:
+                label_times_column.append('')
+            if i < len(self.labelers) and self.labelers[i]:
+                labelers_column.append(self.labelers[i])
+            else:
+                labelers_column.append('')
 
         return pd.DataFrame({
             "Detector": len(self)*[self.name],
@@ -352,6 +397,8 @@ class Detector:
             "Visible": self.visible,
             "Complete": self.complete,
             "Labels": labels_column,
+            "Label Time": label_times_column,
+            "Labeler": labelers_column,
         })
 
     def get_unique_labels(self) -> set[str]:

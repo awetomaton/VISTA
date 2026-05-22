@@ -16,6 +16,7 @@ from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
+from vista.utils.labeler import get_current_label_time, get_current_labeler
 from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineThicknessDelegate, MarkerDelegate
 from vista.widgets.core.data.undo_manager import UndoStack
 
@@ -981,7 +982,12 @@ class DetectionsPanel(QWidget):
                 detector.invalidate_caches()
             elif property_name == "Labels":
                 # Set labels on all detection points in the detector
-                detector.labels = [self.bulk_labels.copy() for _ in range(len(detector.frames))]
+                n_detections = len(detector.frames)
+                detector.labels = [self.bulk_labels.copy() for _ in range(n_detections)]
+                now = get_current_label_time()
+                labeler = get_current_labeler()
+                detector.label_times = [now] * n_detections
+                detector.labelers = [labeler] * n_detections
 
         self.refresh_detections_table()
 
@@ -1458,13 +1464,21 @@ class DetectionsPanel(QWidget):
             self.save_undo_state(f"Label {len(self.selected_detections)} detections")
 
             # Set selected labels to each selected detection point (empty set clears labels)
+            now = get_current_label_time()
+            labeler = get_current_labeler()
             for detector, _frame, index in self.selected_detections:
-                # Ensure labels list is initialized and has enough entries
+                # Ensure per-detection lists are initialized and have enough entries
                 while len(detector.labels) <= index:
                     detector.labels.append(set())
+                while len(detector.label_times) <= index:
+                    detector.label_times.append(None)
+                while len(detector.labelers) <= index:
+                    detector.labelers.append(None)
 
                 # Replace labels for this specific detection
                 detector.labels[index] = selected_labels.copy()
+                detector.label_times[index] = now
+                detector.labelers[index] = labeler
 
             # Refresh the table and emit data changed
             self.refresh_detections_table()
@@ -1540,6 +1554,10 @@ class DetectionsPanel(QWidget):
             # Update labels if they exist
             if detector.labels and len(detector.labels) > 0:
                 detector.labels = [label for i, label in enumerate(detector.labels) if keep_mask[i]]
+            if detector.label_times and len(detector.label_times) > 0:
+                detector.label_times = [t for i, t in enumerate(detector.label_times) if keep_mask[i]]
+            if detector.labelers and len(detector.labelers) > 0:
+                detector.labelers = [name for i, name in enumerate(detector.labelers) if keep_mask[i]]
 
             # Invalidate frame index cache
             detector._frame_index = None
@@ -1856,6 +1874,8 @@ class DetectionsPanel(QWidget):
         all_rows = []
         all_columns = []
         all_labels = []
+        all_label_times = []
+        all_labelers = []
 
         for detector in detectors_to_merge:
             all_frames.extend(detector.frames.tolist())
@@ -1867,6 +1887,14 @@ class DetectionsPanel(QWidget):
                     all_labels.append(detector.labels[i].copy())
                 else:
                     all_labels.append(set())
+                if i < len(detector.label_times):
+                    all_label_times.append(detector.label_times[i])
+                else:
+                    all_label_times.append(None)
+                if i < len(detector.labelers):
+                    all_labelers.append(detector.labelers[i])
+                else:
+                    all_labelers.append(None)
 
         # Create merged detector
         merged_name = f"Merged_{first_detector.name}"
@@ -1892,6 +1920,8 @@ class DetectionsPanel(QWidget):
             line_thickness=first_detector.line_thickness,
             visible=True,
             labels=all_labels,
+            label_times=all_label_times,
+            labelers=all_labelers,
         )
 
         # Add merged detector to viewer
