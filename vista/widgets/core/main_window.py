@@ -390,9 +390,9 @@ class VistaMainWindow(QMainWindow):
 
         # Collect algorithm actions for enabling/disabling during imagery loading
         self._algorithm_actions = [
-            subset_frames_action, temporal_median_action, robust_pca_action, subspace_bg_action, godec_action,
-            coaddition_action,
-            simple_threshold_action, cfar_action, pstnn_action, simple_tracker_action, kalman_tracker_action,
+            subset_frames_action, temporal_median_action, static_median_action, static_subspace_action,
+            robust_pca_action, subspace_bg_action, godec_action, coaddition_action, simple_threshold_action, 
+            cfar_action, pstnn_action, simple_tracker_action, kalman_tracker_action,
             network_flow_tracker_action, tracklet_tracker_action, bias_removal_action,
             non_uniformity_correction_action, track_interpolator_action, savitzky_golay_action,
         ]
