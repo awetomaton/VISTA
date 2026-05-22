@@ -619,6 +619,11 @@ class DataLoaderThread(QThread):
                     else Path(self.file_path).stem
                 )
                 detector = Detector.from_dataframe(group_df, sensor=self.sensor, name=detector_name)
+                if group_column == "__vista_project_object_uuid":
+                    try:
+                        detector.uuid = uuid.UUID(str(_group_key))
+                    except ValueError:
+                        pass
                 detectors.append(detector)
                 self.progress_updated.emit("Loading detections...", idx + 1, len(detector_groups))
         else:
@@ -657,6 +662,11 @@ class DataLoaderThread(QThread):
                     else f"Track {idx + 1}"
                 )
                 track = Track.from_dataframe(track_df, sensor=self.sensor, name=str(track_name))
+                if group_column == "__vista_project_object_uuid":
+                    try:
+                        track.uuid = uuid.UUID(str(_group_key))
+                    except ValueError:
+                        pass
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
         else:

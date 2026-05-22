@@ -1021,6 +1021,15 @@ class VistaMainWindow(QMainWindow):
                 for imagery in self.viewer.imageries
                 if imagery.sensor is not None
             }
+            unsaved_references = self._project_unsaved_sensor_references(saved_sensor_uuids)
+            if unsaved_references:
+                raise ValueError(
+                    "Cannot save a complete project because some detections or "
+                    "tracks reference sensors that do not have saved imagery:\n\n"
+                    + "\n".join(unsaved_references)
+                    + "\n\nLoad imagery for those sensors or remove those overlays "
+                    "before saving the project."
+                )
             sensor_order = [
                 str(sensor.uuid)
                 for sensor in self.viewer.sensors
@@ -1056,6 +1065,24 @@ class VistaMainWindow(QMainWindow):
                     "aois": aois_asset,
                 },
                 "sensor_order": sensor_order,
+                "imagery_order": [
+                    str(imagery.uuid)
+                    for imagery in self.viewer.imageries
+                    if imagery.sensor is not None
+                    and str(imagery.sensor.uuid) in saved_sensor_uuids
+                ],
+                "detections_order": [
+                    str(detector.uuid)
+                    for detector in self.viewer.detectors
+                    if detector.sensor is not None
+                    and str(detector.sensor.uuid) in saved_sensor_uuids
+                ],
+                "tracks_order": [
+                    str(track.uuid)
+                    for track in self.viewer.tracks
+                    if track.sensor is not None
+                    and str(track.sensor.uuid) in saved_sensor_uuids
+                ],
                 "counts": {
                     "sensors": len(saved_sensor_uuids),
                     "imagery": len(self.viewer.imageries),
@@ -1073,22 +1100,49 @@ class VistaMainWindow(QMainWindow):
                         archive.write(path, path.relative_to(project_dir).as_posix())
             return manifest
 
+    def _project_unsaved_sensor_references(self, saved_sensor_uuids: set[str]) -> list[str]:
+        """Return overlay references that cannot be restored from a project bundle."""
+        missing = []
+        for label, objects in (
+            ("detections", self.viewer.detectors),
+            ("tracks", self.viewer.tracks),
+        ):
+            for obj in objects:
+                sensor = getattr(obj, "sensor", None)
+                sensor_uuid = str(sensor.uuid) if sensor is not None else ""
+                if sensor_uuid in saved_sensor_uuids:
+                    continue
+                sensor_name = getattr(sensor, "name", "None")
+                object_name = getattr(obj, "name", "unnamed")
+                missing.append(f"- {label}: {object_name} (sensor: {sensor_name})")
+        return missing
+
     def _write_project_sensor_csvs(self, project_dir: Path, data_type: str, objects: list, saved_sensor_uuids: set[str]) -> list[dict]:
         """Write one CSV per sensor for tracks or detections."""
         output_dir = project_dir / data_type
         output_dir.mkdir(parents=True, exist_ok=True)
         grouped = {}
-        skipped = 0
         for obj in objects:
             sensor = getattr(obj, "sensor", None)
             sensor_uuid = str(sensor.uuid) if sensor is not None else ""
             if sensor_uuid not in saved_sensor_uuids:
-                skipped += 1
-                continue
+                raise ValueError(
+                    f"Cannot save {data_type} object '{getattr(obj, 'name', 'unnamed')}' "
+                    "because its sensor is not included in the project imagery."
+                )
             grouped.setdefault(sensor_uuid, {"sensor": sensor, "objects": []})["objects"].append(obj)
 
         assets = []
-        for sensor_uuid, entry in sorted(grouped.items()):
+        sensor_order = [
+            str(sensor.uuid)
+            for sensor in self.viewer.sensors
+            if str(sensor.uuid) in grouped
+        ]
+        for sensor_uuid in grouped:
+            if sensor_uuid not in sensor_order:
+                sensor_order.append(sensor_uuid)
+        for sensor_uuid in sensor_order:
+            entry = grouped[sensor_uuid]
             frames = []
             for obj in entry["objects"]:
                 dataframe = obj.to_dataframe()
@@ -1109,8 +1163,6 @@ class VistaMainWindow(QMainWindow):
                 }
             )
 
-        if skipped:
-            assets.append({"skipped_without_saved_sensor": skipped})
         return assets
 
     def _write_project_aois_csv(self, project_dir: Path) -> str | None:
@@ -1218,6 +1270,10 @@ class VistaMainWindow(QMainWindow):
                 key=lambda sensor: order_lookup.get(str(sensor.uuid), len(order_lookup))
             )
 
+        imagery_order = manifest.get("imagery_order", [])
+        if imagery_order:
+            self._sort_project_objects_by_uuid(self.viewer.imageries, imagery_order)
+
         sensor_by_uuid = {str(sensor.uuid): sensor for sensor in self.viewer.sensors}
         imagery_by_sensor_uuid = {}
         for imagery in self.viewer.imageries:
@@ -1230,6 +1286,10 @@ class VistaMainWindow(QMainWindow):
             if sensor is None:
                 raise ValueError(f"Project detection asset references a missing sensor: {asset.get('sensor_name')}")
             self._run_project_csv_loader(project_dir / asset["file"], "detections", sensor=sensor)
+        self._sort_project_objects_by_uuid(
+            self.viewer.detectors,
+            manifest.get("detections_order", []),
+        )
 
         for asset in assets.get("tracks", []):
             if "file" not in asset:
@@ -1239,12 +1299,16 @@ class VistaMainWindow(QMainWindow):
                 raise ValueError(f"Project track asset references a missing sensor: {asset.get('sensor_name')}")
             imagery = imagery_by_sensor_uuid.get(str(sensor.uuid))
             self._run_project_csv_loader(project_dir / asset["file"], "tracks", sensor=sensor, imagery=imagery)
+        self._sort_project_objects_by_uuid(
+            self.viewer.tracks,
+            manifest.get("tracks_order", []),
+        )
 
         aois_asset = assets.get("aois")
         if aois_asset:
             self._run_project_csv_loader(project_dir / aois_asset, "aois")
 
-        if self.viewer.imageries and self.viewer.imagery is None:
+        if self.viewer.imageries:
             self.viewer.select_imagery(self.viewer.imageries[0])
         if self.viewer.sensors:
             self.data_manager.sensors_panel.selected_sensor = self.viewer.sensors[0]
@@ -1252,6 +1316,19 @@ class VistaMainWindow(QMainWindow):
         min_frame, max_frame = self.viewer.get_frame_range()
         self.controls.set_frame_range(min_frame, max_frame)
         self._update_algorithm_actions_state()
+
+    @staticmethod
+    def _sort_project_objects_by_uuid(objects: list, uuid_order: list[str]) -> None:
+        """Sort loaded project objects by a saved UUID order, preserving extras last."""
+        if not uuid_order:
+            return
+        order_lookup = {
+            str(object_uuid): index
+            for index, object_uuid in enumerate(uuid_order)
+        }
+        objects.sort(
+            key=lambda obj: order_lookup.get(str(obj.uuid), len(order_lookup))
+        )
 
     def _run_project_csv_loader(self, file_path: Path, data_type: str, sensor=None, imagery=None) -> None:
         """Run an existing CSV loader synchronously for project restore."""
