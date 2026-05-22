@@ -633,9 +633,6 @@ Manual workflows:
 - HDF5 PRF inspection:
 - Geospatial/WMS:
 
-Issues observed:
-- 
-
 Decision:
 - Ready for review:
 - Needs follow-up:
