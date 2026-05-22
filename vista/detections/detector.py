@@ -1,12 +1,14 @@
-from dataclasses import dataclass, field
 import datetime
-from typing import Optional, Union
 import pathlib
+import uuid
+from dataclasses import dataclass, field
+from typing import Optional, Union
+
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
 import pyqtgraph as pg
-import uuid
+from numpy.typing import NDArray
+
 from vista.sensors.sensor import Sensor
 
 
@@ -71,6 +73,7 @@ class Detector:
     - Labels are per-detection, allowing individual detection categorization
     - Detection coordinates are always in pixel space (row/column)
     """
+
     name: str
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
@@ -79,33 +82,63 @@ class Detector:
     description: str = ""
 
     # Styling attributes
-    color: str = 'r'  # Red by default
-    marker: str = 'o'  # Circle by default
+    color: str = "r"  # Red by default
+    marker: str = "o"  # Circle by default
     marker_size: int = 10
     line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
-    complete: bool = False  # Show all detections across all frames (like track.complete)
-    labels: list[set[str]] = field(default_factory=list)  # List of label sets, one per detection point
-    label_times: list[Optional[datetime.datetime]] = field(default_factory=list)  # UTC timestamp each detection was last labeled
-    labelers: list[Optional[str]] = field(default_factory=list)  # Username that last labeled each detection
-    flux_counts: Optional[NDArray[np.float64]] = None  # Integrated point-source flux in raw image counts
-    flux_uncertainty_counts: Optional[NDArray[np.float64]] = None  # 1-sigma raw-count flux uncertainty
-    flux_snr: Optional[NDArray[np.float64]] = None  # Flux estimate divided by uncertainty
-    flux_background_counts: Optional[NDArray[np.float64]] = None  # Local background estimate in raw counts
-    flux_residual_ratio: Optional[NDArray[np.float64]] = None  # Normalized PRF fit residual
-    flux_status: list[str] = field(default_factory=list)  # Per-detection PRF flux quality/status
+    complete: bool = (
+        False  # Show all detections across all frames (like track.complete)
+    )
+    labels: list[set[str]] = field(
+        default_factory=list
+    )  # List of label sets, one per detection point
+    label_times: list[Optional[datetime.datetime]] = field(
+        default_factory=list
+    )  # UTC timestamp each detection was last labeled
+    labelers: list[Optional[str]] = field(
+        default_factory=list
+    )  # Username that last labeled each detection
+    flux_counts: Optional[NDArray[np.float64]] = (
+        None  # Integrated point-source flux in raw image counts
+    )
+    flux_uncertainty_counts: Optional[NDArray[np.float64]] = (
+        None  # 1-sigma raw-count flux uncertainty
+    )
+    flux_snr: Optional[NDArray[np.float64]] = (
+        None  # Flux estimate divided by uncertainty
+    )
+    flux_background_counts: Optional[NDArray[np.float64]] = (
+        None  # Local background estimate in raw counts
+    )
+    flux_residual_ratio: Optional[NDArray[np.float64]] = (
+        None  # Normalized PRF fit residual
+    )
+    flux_status: list[str] = field(
+        default_factory=list
+    )  # Per-detection PRF flux quality/status
 
     # Performance optimization: cached data structures
-    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
-    _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
-    _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
-    _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
-    _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
+    _frame_index: dict = field(
+        default=None, init=False, repr=False
+    )  # Frame number -> detection indices
+    _cached_pen: object = field(
+        default=None, init=False, repr=False
+    )  # Cached PyQtGraph pen
+    _pen_params: tuple = field(
+        default=None, init=False, repr=False
+    )  # Parameters used for cached pen
+    _cached_lons: Optional[NDArray[np.float64]] = field(
+        default=None, init=False, repr=False
+    )  # Cached longitude coords
+    _cached_lats: Optional[NDArray[np.float64]] = field(
+        default=None, init=False, repr=False
+    )  # Cached latitude coords
     uuid: str = field(init=None, default=None)
 
     def __post_init__(self):
         self.uuid = uuid.uuid4()
-    
+
     def __eq__(self, other):
         if not isinstance(other, Detector):
             return False
@@ -142,7 +175,9 @@ class Detector:
             return self.rows[indices], self.columns[indices]
         return np.array([]), np.array([])
 
-    def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
+    def get_geodetic_coords(
+        self,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
         """Get geodetic coordinates for all detection points, computing and caching if needed.
 
         Projects each detection point using its own frame's sensor geometry, so the
@@ -218,33 +253,71 @@ class Detector:
                 if isinstance(s, slice):
                     detector_slice.labels = detector_slice.labels[s]
                 else:  # numpy array boolean mask or indices
-                    detector_slice.labels = [detector_slice.labels[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labels[i] for i in s]
+                    detector_slice.labels = (
+                        [
+                            detector_slice.labels[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.labels[i] for i in s]
+                    )
             # Subset per-detection label metadata (same indexing rules as labels)
             if len(detector_slice.label_times) > 0:
                 if isinstance(s, slice):
                     detector_slice.label_times = detector_slice.label_times[s]
                 else:
-                    detector_slice.label_times = [detector_slice.label_times[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.label_times[i] for i in s]
+                    detector_slice.label_times = (
+                        [
+                            detector_slice.label_times[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.label_times[i] for i in s]
+                    )
             if len(detector_slice.labelers) > 0:
                 if isinstance(s, slice):
                     detector_slice.labelers = detector_slice.labelers[s]
                 else:
-                    detector_slice.labelers = [detector_slice.labelers[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labelers[i] for i in s]
+                    detector_slice.labelers = (
+                        [
+                            detector_slice.labelers[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.labelers[i] for i in s]
+                    )
             if detector_slice.flux_counts is not None:
                 detector_slice.flux_counts = detector_slice.flux_counts[s]
             if detector_slice.flux_uncertainty_counts is not None:
-                detector_slice.flux_uncertainty_counts = detector_slice.flux_uncertainty_counts[s]
+                detector_slice.flux_uncertainty_counts = (
+                    detector_slice.flux_uncertainty_counts[s]
+                )
             if detector_slice.flux_snr is not None:
                 detector_slice.flux_snr = detector_slice.flux_snr[s]
             if detector_slice.flux_background_counts is not None:
-                detector_slice.flux_background_counts = detector_slice.flux_background_counts[s]
+                detector_slice.flux_background_counts = (
+                    detector_slice.flux_background_counts[s]
+                )
             if detector_slice.flux_residual_ratio is not None:
-                detector_slice.flux_residual_ratio = detector_slice.flux_residual_ratio[s]
+                detector_slice.flux_residual_ratio = detector_slice.flux_residual_ratio[
+                    s
+                ]
             if len(detector_slice.flux_status) > 0:
                 if isinstance(s, slice):
                     detector_slice.flux_status = detector_slice.flux_status[s]
                 else:
-                    detector_slice.flux_status = [detector_slice.flux_status[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.flux_status[i] for i in s]
+                    detector_slice.flux_status = (
+                        [
+                            detector_slice.flux_status[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.flux_status[i] for i in s]
+                    )
             # Slice cached geodetic coords if present
             if detector_slice._cached_lons is not None:
                 detector_slice._cached_lons = detector_slice._cached_lons[s]
@@ -253,7 +326,7 @@ class Detector:
             return detector_slice
         else:
             raise TypeError("Invalid index or slice type.")
-    
+
     def __len__(self):
         return len(self.frames)
 
@@ -313,7 +386,9 @@ class Detector:
             labels_list = []
             for labels_str in df["Labels"]:
                 if pd.notna(labels_str) and labels_str:
-                    labels_list.append(set(label.strip() for label in labels_str.split(',')))
+                    labels_list.append(
+                        set(label.strip() for label in labels_str.split(","))
+                    )
                 else:
                     labels_list.append(set())
             kwargs["labels"] = labels_list
@@ -322,7 +397,9 @@ class Detector:
             for time_val in df["Label Time"]:
                 if pd.notna(time_val) and time_val != "":
                     try:
-                        label_times_list.append(pd.to_datetime(time_val).to_pydatetime())
+                        label_times_list.append(
+                            pd.to_datetime(time_val).to_pydatetime()
+                        )
                     except (ValueError, TypeError):
                         label_times_list.append(None)
                 else:
@@ -339,13 +416,19 @@ class Detector:
         if "Flux (raw counts)" in df.columns:
             kwargs["flux_counts"] = df["Flux (raw counts)"].to_numpy(dtype=np.float64)
         if "Flux Uncertainty (raw counts)" in df.columns:
-            kwargs["flux_uncertainty_counts"] = df["Flux Uncertainty (raw counts)"].to_numpy(dtype=np.float64)
+            kwargs["flux_uncertainty_counts"] = df[
+                "Flux Uncertainty (raw counts)"
+            ].to_numpy(dtype=np.float64)
         if "Flux SNR" in df.columns:
             kwargs["flux_snr"] = df["Flux SNR"].to_numpy(dtype=np.float64)
         if "Flux Background (raw counts)" in df.columns:
-            kwargs["flux_background_counts"] = df["Flux Background (raw counts)"].to_numpy(dtype=np.float64)
+            kwargs["flux_background_counts"] = df[
+                "Flux Background (raw counts)"
+            ].to_numpy(dtype=np.float64)
         if "Flux Residual Ratio" in df.columns:
-            kwargs["flux_residual_ratio"] = df["Flux Residual Ratio"].to_numpy(dtype=np.float64)
+            kwargs["flux_residual_ratio"] = df["Flux Residual Ratio"].to_numpy(
+                dtype=np.float64
+            )
         if "Flux Status" in df.columns:
             kwargs["flux_status"] = [
                 str(status) if pd.notna(status) and status != "" else ""
@@ -353,12 +436,12 @@ class Detector:
             ]
 
         detector = cls(
-            name = name,
-            frames = df["Frames"].to_numpy(),
-            rows = df["Rows"].to_numpy(),
-            columns = df["Columns"].to_numpy(),
-            sensor = sensor,
-            **kwargs
+            name=name,
+            frames=df["Frames"].to_numpy(),
+            rows=df["Rows"].to_numpy(),
+            columns=df["Columns"].to_numpy(),
+            sensor=sensor,
+            **kwargs,
         )
 
         # Pre-populate geodetic cache if coords were available in the dataframe
@@ -378,25 +461,33 @@ class Detector:
             New Detector object with copied arrays and styling attributes
         """
         detector_copy = self.__class__(
-            name = self.name,
-            frames = self.frames.copy(),
-            rows = self.rows.copy(),
-            columns = self.columns.copy(),
-            sensor = self.sensor,
-            color = self.color,
-            marker = self.marker,
-            marker_size = self.marker_size,
-            line_thickness = self.line_thickness,
-            visible = self.visible,
-            labels = [label_set.copy() for label_set in self.labels],
-            label_times = list(self.label_times),
-            labelers = list(self.labelers),
-            flux_counts = self.flux_counts.copy() if self.flux_counts is not None else None,
-            flux_uncertainty_counts = self.flux_uncertainty_counts.copy() if self.flux_uncertainty_counts is not None else None,
-            flux_snr = self.flux_snr.copy() if self.flux_snr is not None else None,
-            flux_background_counts = self.flux_background_counts.copy() if self.flux_background_counts is not None else None,
-            flux_residual_ratio = self.flux_residual_ratio.copy() if self.flux_residual_ratio is not None else None,
-            flux_status = list(self.flux_status),
+            name=self.name,
+            frames=self.frames.copy(),
+            rows=self.rows.copy(),
+            columns=self.columns.copy(),
+            sensor=self.sensor,
+            color=self.color,
+            marker=self.marker,
+            marker_size=self.marker_size,
+            line_thickness=self.line_thickness,
+            visible=self.visible,
+            labels=[label_set.copy() for label_set in self.labels],
+            label_times=list(self.label_times),
+            labelers=list(self.labelers),
+            flux_counts=self.flux_counts.copy()
+            if self.flux_counts is not None
+            else None,
+            flux_uncertainty_counts=self.flux_uncertainty_counts.copy()
+            if self.flux_uncertainty_counts is not None
+            else None,
+            flux_snr=self.flux_snr.copy() if self.flux_snr is not None else None,
+            flux_background_counts=self.flux_background_counts.copy()
+            if self.flux_background_counts is not None
+            else None,
+            flux_residual_ratio=self.flux_residual_ratio.copy()
+            if self.flux_residual_ratio is not None
+            else None,
+            flux_status=list(self.flux_status),
         )
         # Preserve cached geodetic coords
         if self._cached_lons is not None:
@@ -404,10 +495,10 @@ class Detector:
         if self._cached_lats is not None:
             detector_copy._cached_lats = self._cached_lats.copy()
         return detector_copy
-    
+
     def to_csv(self, file: Union[str, pathlib.Path]):
         self.to_dataframe().to_csv(file, index=None)
-      
+
     def to_dataframe(self) -> pd.DataFrame:
         # Prepare labels column - one entry per detection
         labels_column = []
@@ -415,20 +506,20 @@ class Detector:
         labelers_column = []
         for i in range(len(self.frames)):
             if i < len(self.labels) and self.labels[i]:
-                labels_column.append(', '.join(sorted(self.labels[i])))
+                labels_column.append(", ".join(sorted(self.labels[i])))
             else:
-                labels_column.append('')
+                labels_column.append("")
             if i < len(self.label_times) and self.label_times[i] is not None:
                 label_times_column.append(self.label_times[i].isoformat())
             else:
-                label_times_column.append('')
+                label_times_column.append("")
             if i < len(self.labelers) and self.labelers[i]:
                 labelers_column.append(self.labelers[i])
             else:
-                labelers_column.append('')
+                labelers_column.append("")
 
         data = {
-            "Detector": len(self)*[self.name],
+            "Detector": len(self) * [self.name],
             "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
@@ -456,7 +547,7 @@ class Detector:
             status = list(self.flux_status)
             if len(status) < len(self):
                 status.extend([""] * (len(self) - len(status)))
-            data["Flux Status"] = status[:len(self)]
+            data["Flux Status"] = status[: len(self)]
 
         return pd.DataFrame(data)
 

@@ -28,7 +28,9 @@ def _frame_to_image_index(imagery) -> dict[int, int]:
     return {int(frame): i for i, frame in enumerate(imagery.frames)}
 
 
-def _frame_calibration_index(calibration_frames: Optional[NDArray], frame: int) -> Optional[int]:
+def _frame_calibration_index(
+    calibration_frames: Optional[NDArray], frame: int
+) -> Optional[int]:
     if calibration_frames is None or len(calibration_frames) == 0:
         return None
     frames = np.asarray(calibration_frames, dtype=np.int64)
@@ -40,7 +42,9 @@ def _frame_calibration_index(calibration_frames: Optional[NDArray], frame: int) 
     return index
 
 
-def _bad_pixel_chip(sensor, frame: int, rows: NDArray[np.int64], cols: NDArray[np.int64]) -> NDArray[np.bool_]:
+def _bad_pixel_chip(
+    sensor, frame: int, rows: NDArray[np.int64], cols: NDArray[np.int64]
+) -> NDArray[np.bool_]:
     if not getattr(sensor, "can_correct_bad_pixel", lambda: False)():
         return np.zeros(rows.shape, dtype=bool)
 
@@ -56,7 +60,9 @@ def _bad_pixel_chip(sensor, frame: int, rows: NDArray[np.int64], cols: NDArray[n
     return np.asarray(mask[rows, cols], dtype=bool)
 
 
-def _sigma_clipped_median(values: NDArray[np.float64], sigma: float = 3.0, iterations: int = 3) -> tuple[float, float]:
+def _sigma_clipped_median(
+    values: NDArray[np.float64], sigma: float = 3.0, iterations: int = 3
+) -> tuple[float, float]:
     values = np.asarray(values, dtype=np.float64)
     values = values[np.isfinite(values)]
     if values.size == 0:
@@ -82,7 +88,9 @@ def _sigma_clipped_median(values: NDArray[np.float64], sigma: float = 3.0, itera
     return median, max(robust_std, 1e-6)
 
 
-def _outer_ring_mask(shape: tuple[int, int], inner_radius: Optional[float] = None) -> NDArray[np.bool_]:
+def _outer_ring_mask(
+    shape: tuple[int, int], inner_radius: Optional[float] = None
+) -> NDArray[np.bool_]:
     rows, cols = np.indices(shape, dtype=np.float64)
     center_row = (shape[0] - 1) / 2.0
     center_col = (shape[1] - 1) / 2.0
@@ -110,7 +118,12 @@ def estimate_detection_flux_counts(
     frame = int(detector.frames[index])
     row = float(detector.rows[index] - imagery.row_offset)
     col = float(detector.columns[index] - imagery.column_offset)
-    result = PRFPhotometryResult(index=index, frame=frame, row=float(detector.rows[index]), column=float(detector.columns[index]))
+    result = PRFPhotometryResult(
+        index=index,
+        frame=frame,
+        row=float(detector.rows[index]),
+        column=float(detector.columns[index]),
+    )
 
     if not detector.sensor.can_model_prf():
         result.status = "rejected:no_sensor_prf"
@@ -122,7 +135,9 @@ def estimate_detection_flux_counts(
         result.status = "rejected:frame_not_in_imagery"
         return result
 
-    prf_rows, prf_cols, prf_values = detector.sensor.get_prf(row, col, chip_size=chip_size)
+    prf_rows, prf_cols, prf_values = detector.sensor.get_prf(
+        row, col, chip_size=chip_size
+    )
     if np.any(prf_rows < 0) or np.any(prf_cols < 0):
         result.status = "rejected:edge_clipped"
         return result

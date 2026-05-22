@@ -7,15 +7,16 @@ coordinate conversion, radiometric calibration data (bias, gain, bad pixels), an
 optional point spread function modeling.
 """
 
-from astropy.coordinates import EarthLocation
-from astropy import units
+import uuid
 from dataclasses import dataclass, field
+from typing import Optional, Tuple, Union
+
 import h5py
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
-from typing import Optional, Tuple, Union
-import uuid
+from astropy import units
+from astropy.coordinates import EarthLocation
+from numpy.typing import NDArray
 
 
 @dataclass
@@ -89,14 +90,16 @@ class Sensor:
         if self.uuid is None:
             self.uuid = uuid.uuid4()
         self._added_imagery_uuids = []
-        self._imagery_frames_dataframe = pd.DataFrame({
-            "frames": pd.Series([], dtype=int),
-            "times": pd.Series([], dtype='datetime64[ns]')
-        })
+        self._imagery_frames_dataframe = pd.DataFrame(
+            {
+                "frames": pd.Series([], dtype=int),
+                "times": pd.Series([], dtype="datetime64[ns]"),
+            }
+        )
 
     def __eq__(self, other):
         """Compare Sensors based on UUID"""
-        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
+        return hasattr(other, "uuid") and (self.uuid == other.uuid)
 
     def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
         """
@@ -114,8 +117,10 @@ class Sensor:
         This method aggregates frames and times from all imagery objects that have
         been registered with this sensor via add_imagery().
         """
-        return self._imagery_frames_dataframe["frames"].to_numpy(), self._imagery_frames_dataframe["times"].to_numpy()
-    
+        return self._imagery_frames_dataframe[
+            "frames"
+        ].to_numpy(), self._imagery_frames_dataframe["times"].to_numpy()
+
     def add_imagery(self, imagery):
         """
         Register imagery with this sensor and update frame/time tracking.
@@ -137,14 +142,15 @@ class Sensor:
         """
         if (imagery.uuid in self._added_imagery_uuids) or (imagery.times is None):
             return
-        self._imagery_frames_dataframe = pd.concat((
-            self._imagery_frames_dataframe,
-            pd.DataFrame({
-                "frames": imagery.frames, 
-                "times": imagery.times
-            })
-        ))
-        self._imagery_frames_dataframe = self._imagery_frames_dataframe.drop_duplicates()
+        self._imagery_frames_dataframe = pd.concat(
+            (
+                self._imagery_frames_dataframe,
+                pd.DataFrame({"frames": imagery.frames, "times": imagery.times}),
+            )
+        )
+        self._imagery_frames_dataframe = (
+            self._imagery_frames_dataframe.drop_duplicates()
+        )
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
@@ -167,7 +173,9 @@ class Sensor:
         """
         return None
 
-    def model_psf(self, sigma: Optional[float] = None, size: Optional[int] = None) -> Optional[NDArray[np.float64]]:
+    def model_psf(
+        self, sigma: Optional[float] = None, size: Optional[int] = None
+    ) -> Optional[NDArray[np.float64]]:
         """
         Model the sensor's point spread function (PSF).
 
@@ -226,7 +234,9 @@ class Sensor:
         The base Sensor class does not define a PRF. Subclasses that own detector
         response data should implement this method.
         """
-        raise NotImplementedError("Sensor.get_prf() must be implemented by subclasses with PRF data.")
+        raise NotImplementedError(
+            "Sensor.get_prf() must be implemented by subclasses with PRF data."
+        )
 
     def can_model_prf(self) -> bool:
         """
@@ -241,8 +251,8 @@ class Sensor:
 
     def can_geolocate(self) -> bool:
         """
-        Check if sensor can convert pixels to geodetic coordiantes and vice versa. 
-        
+        Check if sensor can convert pixels to geodetic coordiantes and vice versa.
+
         Notes
         -----
         The default implementation returns False. Subclasses can override this method.
@@ -275,7 +285,7 @@ class Sensor:
             True if sensor has bias images.
         """
         return self.bias_images is not None
-    
+
     def can_correct_non_uniformity(self) -> bool:
         """
         Check if sensor has uniformity gain images
@@ -287,7 +297,9 @@ class Sensor:
         """
         return self.uniformity_gain_images is not None
 
-    def geodetic_to_pixel(self, frame: Union[int, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(
+        self, frame: Union[int, np.ndarray], loc: EarthLocation
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
 
@@ -317,8 +329,9 @@ class Sensor:
         empty.fill(np.nan)
         return empty, empty.copy()
 
-
-    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray):
+    def pixel_to_geodetic(
+        self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray
+    ):
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 
@@ -348,7 +361,7 @@ class Sensor:
         return EarthLocation.from_geodetic(
             lon=np.zeros_like(rows) * units.deg,
             lat=np.zeros_like(rows) * units.deg,
-            height=np.zeros_like(rows) * units.km
+            height=np.zeros_like(rows) * units.km,
         )
 
     def to_hdf5(self, group: h5py.Group):
@@ -370,27 +383,40 @@ class Sensor:
         Subclasses should call super().to_hdf5(group) and then add their own data.
         """
         # Set sensor type and identification attributes
-        group.attrs['sensor_type'] = 'Sensor'
-        group.attrs['name'] = self.name
-        group.attrs['uuid'] = str(self.uuid)
+        group.attrs["sensor_type"] = "Sensor"
+        group.attrs["name"] = self.name
+        group.attrs["uuid"] = str(self.uuid)
 
         # Create radiometric calibration subgroup
-        if (self.bias_images is not None or
-            self.uniformity_gain_images is not None or
-            self.bad_pixel_masks is not None):
-            radiometric_group = group.create_group('radiometric')
+        if (
+            self.bias_images is not None
+            or self.uniformity_gain_images is not None
+            or self.bad_pixel_masks is not None
+        ):
+            radiometric_group = group.create_group("radiometric")
 
             # Save bias images if present
             if self.bias_images is not None:
-                radiometric_group.create_dataset('bias_images', data=self.bias_images)
-                radiometric_group.create_dataset('bias_image_frames', data=self.bias_image_frames)
+                radiometric_group.create_dataset("bias_images", data=self.bias_images)
+                radiometric_group.create_dataset(
+                    "bias_image_frames", data=self.bias_image_frames
+                )
 
             # Save uniformity gain images if present
             if self.uniformity_gain_images is not None:
-                radiometric_group.create_dataset('uniformity_gain_images', data=self.uniformity_gain_images)
-                radiometric_group.create_dataset('uniformity_gain_image_frames', data=self.uniformity_gain_image_frames)
+                radiometric_group.create_dataset(
+                    "uniformity_gain_images", data=self.uniformity_gain_images
+                )
+                radiometric_group.create_dataset(
+                    "uniformity_gain_image_frames",
+                    data=self.uniformity_gain_image_frames,
+                )
 
             # Save bad pixel masks if present
             if self.bad_pixel_masks is not None:
-                radiometric_group.create_dataset('bad_pixel_masks', data=self.bad_pixel_masks)
-                radiometric_group.create_dataset('bad_pixel_mask_frames', data=self.bad_pixel_mask_frames)
+                radiometric_group.create_dataset(
+                    "bad_pixel_masks", data=self.bad_pixel_masks
+                )
+                radiometric_group.create_dataset(
+                    "bad_pixel_mask_frames", data=self.bad_pixel_mask_frames
+                )

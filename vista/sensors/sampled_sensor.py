@@ -7,18 +7,25 @@ supports geodetic coordinate conversion using ARF (Attitude Reference Frame) pol
 radiometric gain calibration.
 """
 
-import h5py
 import json
-from astropy.coordinates import EarthLocation
-from astropy import units
 from dataclasses import dataclass
-from scipy.interpolate import interp1d
 from typing import Optional, Tuple, Union
+
+import h5py
 import numpy as np
+from astropy import units
+from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
+from scipy.interpolate import interp1d
 
 from vista.sensors.sensor import Sensor
-from vista.transforms import cartesian_to_spherical, evaluate_2d_polynomial, get_arf_transform, los_to_earth, spherical_to_cartesian
+from vista.transforms import (
+    cartesian_to_spherical,
+    evaluate_2d_polynomial,
+    get_arf_transform,
+    los_to_earth,
+    spherical_to_cartesian,
+)
 
 
 @dataclass(eq=False)
@@ -102,6 +109,7 @@ class SampledSensor(Sensor):
     >>> # Returns same position for any query time
     >>> pos = sensor_static.get_positions(query_times)
     """
+
     positions: Optional[NDArray[np.float64]] = None
     times: Optional[NDArray[np.datetime64]] = None
     frames: Optional[NDArray[np.int64]] = None
@@ -146,13 +154,17 @@ class SampledSensor(Sensor):
 
         # Validate shape of positions
         if self.positions.ndim != 2 or self.positions.shape[0] != 3:
-            raise ValueError(f"positions must be a (3, N) array, got shape {self.positions.shape}")
+            raise ValueError(
+                f"positions must be a (3, N) array, got shape {self.positions.shape}"
+            )
 
         # Validate that times and positions have matching counts
         n_positions = self.positions.shape[1]
         n_times = len(self.times)
         if n_positions != n_times:
-            raise ValueError(f"Number of positions ({n_positions}) must match number of times ({n_times})")
+            raise ValueError(
+                f"Number of positions ({n_positions}) must match number of times ({n_times})"
+            )
 
         # Remove duplicate times and corresponding positions
         unique_times, unique_indices = np.unique(self.times, return_index=True)
@@ -223,8 +235,13 @@ class SampledSensor(Sensor):
         center = (float(center[0]), float(center[1]))
         if not np.isfinite(center).all():
             raise ValueError(f"{center_attr} must contain finite coordinates")
-        if not (0.0 <= center[0] <= prf.shape[0] - 1 and 0.0 <= center[1] <= prf.shape[1] - 1):
-            raise ValueError(f"{center_attr} must lie within the {prf_attr} array bounds")
+        if not (
+            0.0 <= center[0] <= prf.shape[0] - 1
+            and 0.0 <= center[1] <= prf.shape[1] - 1
+        ):
+            raise ValueError(
+                f"{center_attr} must lie within the {prf_attr} array bounds"
+            )
         setattr(self, center_attr, center)
 
         if getattr(self, metadata_attr) is None:
@@ -240,11 +257,13 @@ class SampledSensor(Sensor):
             True if sensor has all required ARF geolocation data: pointing vectors
             and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
-        return (self.pointing is not None and
-                self.poly_pixel_to_arf_azimuth is not None and
-                self.poly_pixel_to_arf_elevation is not None and
-                self.poly_arf_to_row is not None and
-                self.poly_arf_to_col is not None)
+        return (
+            self.pointing is not None
+            and self.poly_pixel_to_arf_azimuth is not None
+            and self.poly_pixel_to_arf_elevation is not None
+            and self.poly_arf_to_row is not None
+            and self.poly_arf_to_col is not None
+        )
 
     def can_model_prf(self) -> bool:
         """
@@ -311,12 +330,20 @@ class SampledSensor(Sensor):
         if make_active:
             self.active_prf_source = "fitted"
 
-    def _active_prf_payload(self) -> tuple[NDArray[np.float64], int, Tuple[float, float]]:
+    def _active_prf_payload(
+        self,
+    ) -> tuple[NDArray[np.float64], int, Tuple[float, float]]:
         """Return oversampled PRF, oversampling, and center for the active source."""
         if self.active_prf_source == "none":
-            raise ValueError("SampledSensor has PRF data, but no active PRF is selected.")
+            raise ValueError(
+                "SampledSensor has PRF data, but no active PRF is selected."
+            )
         if self.active_prf_source == "fitted" and self.has_fitted_prf():
-            return self.fitted_oversampled_prf, self.fitted_prf_oversampling, self.fitted_prf_center
+            return (
+                self.fitted_oversampled_prf,
+                self.fitted_prf_oversampling,
+                self.fitted_prf_center,
+            )
         if self.active_prf_source == "associated" and self.has_associated_prf():
             return self.oversampled_prf, self.prf_oversampling, self.prf_center
         raise ValueError("SampledSensor has no oversampled PRF data.")
@@ -334,7 +361,9 @@ class SampledSensor(Sensor):
         half_chip = int(np.ceil(max_detector_distance))
         return max(2 * half_chip + 1, 1)
 
-    def _sample_oversampled_prf(self, prf_rows: np.ndarray, prf_cols: np.ndarray) -> np.ndarray:
+    def _sample_oversampled_prf(
+        self, prf_rows: np.ndarray, prf_cols: np.ndarray
+    ) -> np.ndarray:
         """
         Bilinearly sample the stored oversampled PRF at fractional PRF-grid indices.
 
@@ -364,10 +393,10 @@ class SampledSensor(Sensor):
         rf = row_frac[valid]
         cf = col_frac[valid]
         samples[valid] = (
-            v00 * (1.0 - rf) * (1.0 - cf) +
-            v01 * (1.0 - rf) * cf +
-            v10 * rf * (1.0 - cf) +
-            v11 * rf * cf
+            v00 * (1.0 - rf) * (1.0 - cf)
+            + v01 * (1.0 - rf) * cf
+            + v10 * rf * (1.0 - cf)
+            + v11 * rf * cf
         )
         return samples
 
@@ -410,14 +439,20 @@ class SampledSensor(Sensor):
         if chip_size < 1:
             raise ValueError("chip_size must be at least 1")
         if chip_size % 2 == 0:
-            raise ValueError("chip_size must be odd so the local chip has a center pixel")
+            raise ValueError(
+                "chip_size must be odd so the local chip has a center pixel"
+            )
 
         center_row = int(np.round(source_row - 0.5))
         center_col = int(np.round(source_column - 0.5))
         half_chip = chip_size // 2
 
-        row_indices = np.arange(center_row - half_chip, center_row + half_chip + 1, dtype=np.int64)
-        col_indices = np.arange(center_col - half_chip, center_col + half_chip + 1, dtype=np.int64)
+        row_indices = np.arange(
+            center_row - half_chip, center_row + half_chip + 1, dtype=np.int64
+        )
+        col_indices = np.arange(
+            center_col - half_chip, center_col + half_chip + 1, dtype=np.int64
+        )
         columns, rows = np.meshgrid(col_indices, row_indices)
 
         pixel_center_rows = rows.astype(np.float64) + 0.5
@@ -426,11 +461,13 @@ class SampledSensor(Sensor):
         _, prf_oversampling, prf_center = self._active_prf_payload()
         prf_center_row, prf_center_col = prf_center
         prf_rows = prf_center_row + (pixel_center_rows - source_row) * prf_oversampling
-        prf_cols = prf_center_col + (pixel_center_cols - source_column) * prf_oversampling
+        prf_cols = (
+            prf_center_col + (pixel_center_cols - source_column) * prf_oversampling
+        )
         prf_values = self._sample_oversampled_prf(prf_rows, prf_cols)
 
         return rows, columns, prf_values
-    
+
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
         Return sensor positions for given times via interpolation/extrapolation.
@@ -453,7 +490,7 @@ class SampledSensor(Sensor):
           range and linear extrapolation outside the range
         """
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype('datetime64[ns]').astype(np.float64)
+        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
 
         # Handle single-position case (stationary sensor)
         if self.positions.shape[1] == 1:
@@ -462,7 +499,7 @@ class SampledSensor(Sensor):
 
         # Multi-position case: use interpolation/extrapolation
         # Convert sample times to numeric values
-        sample_times_ns = self.times.astype('datetime64[ns]').astype(np.float64)
+        sample_times_ns = self.times.astype("datetime64[ns]").astype(np.float64)
 
         # Create interpolators for each coordinate (x, y, z)
         # fill_value='extrapolate' enables linear extrapolation outside the range
@@ -472,14 +509,16 @@ class SampledSensor(Sensor):
             interpolator = interp1d(
                 sample_times_ns,
                 self.positions[i, :],
-                kind='linear',
-                fill_value='extrapolate'
+                kind="linear",
+                fill_value="extrapolate",
             )
             interpolated_positions[i, :] = interpolator(query_times_ns)
 
         return interpolated_positions
 
-    def _pixel_to_geodetic_single_frame(self, frame_idx: int, rows: np.ndarray, columns: np.ndarray) -> np.ndarray:
+    def _pixel_to_geodetic_single_frame(
+        self, frame_idx: int, rows: np.ndarray, columns: np.ndarray
+    ) -> np.ndarray:
         """
         Convert pixel coordinates to ECEF for a single frame index.
 
@@ -513,7 +552,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         sensor_pointing = self.pointing[:, frame_idx]
 
@@ -532,7 +571,9 @@ class SampledSensor(Sensor):
 
         return intersections
 
-    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray):
+    def pixel_to_geodetic(
+        self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray
+    ):
         """
         Convert pixel coordinates to geodetic coordinates using ARF polynomials.
 
@@ -567,7 +608,9 @@ class SampledSensor(Sensor):
         # If no polynomial coefficients provided, return zeros
         if not self.can_geolocate() or self.frames is None:
             invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+            return EarthLocation.from_geocentric(
+                x=invalid, y=invalid, z=invalid, unit=units.km
+            )
 
         # Handle array of frames: group by unique frame for efficient batch processing
         if isinstance(frame, np.ndarray):
@@ -590,14 +633,16 @@ class SampledSensor(Sensor):
             return EarthLocation.from_geocentric(
                 x=all_intersections[0] * units.km,
                 y=all_intersections[1] * units.km,
-                z=all_intersections[2] * units.km
+                z=all_intersections[2] * units.km,
             )
 
         # Single frame path (original fast path)
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
             invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+            return EarthLocation.from_geocentric(
+                x=invalid, y=invalid, z=invalid, unit=units.km
+            )
 
         frame_idx = np.where(frame_mask)[0][0]
         intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
@@ -605,10 +650,12 @@ class SampledSensor(Sensor):
         return EarthLocation.from_geocentric(
             x=intersections[0] * units.km,
             y=intersections[1] * units.km,
-            z=intersections[2] * units.km
+            z=intersections[2] * units.km,
         )
-    
-    def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+
+    def _geodetic_to_pixel_single_frame(
+        self, frame_idx: int, target_ecef: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert ECEF target positions to pixel coordinates for a single frame index.
 
@@ -631,7 +678,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         # Compute line-of-sight vectors from sensor to targets
         los_vectors = target_ecef - sensor_pos.reshape(3, 1)
@@ -658,7 +705,9 @@ class SampledSensor(Sensor):
 
         return rows, columns
 
-    def geodetic_to_pixel(self, frame: Union[int, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(
+        self, frame: Union[int, np.ndarray], loc: EarthLocation
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using ARF polynomials.
 
@@ -699,11 +748,13 @@ class SampledSensor(Sensor):
             return invalid, invalid
 
         # Convert geodetic → ECEF Cartesian (km) once for all points
-        target_ecef = np.array([
-            loc.geocentric[0].to(units.km).value,
-            loc.geocentric[1].to(units.km).value,
-            loc.geocentric[2].to(units.km).value
-        ])
+        target_ecef = np.array(
+            [
+                loc.geocentric[0].to(units.km).value,
+                loc.geocentric[1].to(units.km).value,
+                loc.geocentric[2].to(units.km).value,
+            ]
+        )
         if target_ecef.ndim == 1:
             target_ecef = target_ecef.reshape(3, 1)
 
@@ -757,44 +808,58 @@ class SampledSensor(Sensor):
         super().to_hdf5(group)
 
         # Override sensor type
-        group.attrs['sensor_type'] = 'SampledSensor'
+        group.attrs["sensor_type"] = "SampledSensor"
 
         # Save position data
         if self.positions is not None and self.times is not None:
-            position_group = group.create_group('position')
-            position_group.create_dataset('positions', data=self.positions)
+            position_group = group.create_group("position")
+            position_group.create_dataset("positions", data=self.positions)
 
             # Convert times to unix nanoseconds
-            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            position_group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            position_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
 
         # Save ARF geolocation polynomials
         if self.can_geolocate():
-            geolocation_group = group.create_group('geolocation')
-            geolocation_group.create_dataset('poly_pixel_to_arf_azimuth', data=self.poly_pixel_to_arf_azimuth)
-            geolocation_group.create_dataset('poly_pixel_to_arf_elevation', data=self.poly_pixel_to_arf_elevation)
-            geolocation_group.create_dataset('poly_arf_to_row', data=self.poly_arf_to_row)
-            geolocation_group.create_dataset('poly_arf_to_col', data=self.poly_arf_to_col)
-            geolocation_group.create_dataset('pointing', data=self.pointing)
-            geolocation_group.create_dataset('frames', data=self.frames)
+            geolocation_group = group.create_group("geolocation")
+            geolocation_group.create_dataset(
+                "poly_pixel_to_arf_azimuth", data=self.poly_pixel_to_arf_azimuth
+            )
+            geolocation_group.create_dataset(
+                "poly_pixel_to_arf_elevation", data=self.poly_pixel_to_arf_elevation
+            )
+            geolocation_group.create_dataset(
+                "poly_arf_to_row", data=self.poly_arf_to_row
+            )
+            geolocation_group.create_dataset(
+                "poly_arf_to_col", data=self.poly_arf_to_col
+            )
+            geolocation_group.create_dataset("pointing", data=self.pointing)
+            geolocation_group.create_dataset("frames", data=self.frames)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
         if self.radiometric_gain is not None:
-            if 'radiometric' in group:
-                radiometric_group = group['radiometric']
+            if "radiometric" in group:
+                radiometric_group = group["radiometric"]
             else:
-                radiometric_group = group.create_group('radiometric')
+                radiometric_group = group.create_group("radiometric")
 
-            radiometric_group.create_dataset('radiometric_gain', data=self.radiometric_gain)
-            radiometric_group.create_dataset('radiometric_gain_frames', data=self.frames)
+            radiometric_group.create_dataset(
+                "radiometric_gain", data=self.radiometric_gain
+            )
+            radiometric_group.create_dataset(
+                "radiometric_gain_frames", data=self.frames
+            )
 
         # Save constant per-sensor PRF data. The root payload preserves the
         # legacy single-PRF layout, while child groups preserve provenance when
         # both associated and fitted PRFs are available.
         if self.has_associated_prf() or self.has_fitted_prf():
-            prf_group = group.create_group('prf')
+            prf_group = group.create_group("prf")
             if self.can_model_prf():
-                active_prf, active_oversampling, active_center = self._active_prf_payload()
+                active_prf, active_oversampling, active_center = (
+                    self._active_prf_payload()
+                )
             elif self.has_associated_prf():
                 active_prf, active_oversampling, active_center = (
                     self.oversampled_prf,
@@ -807,36 +872,48 @@ class SampledSensor(Sensor):
                     self.fitted_prf_oversampling,
                     self.fitted_prf_center,
                 )
-            prf_group.create_dataset('oversampled_prf', data=active_prf)
-            prf_group.attrs['oversampling'] = int(active_oversampling)
-            prf_group.attrs['center_row'] = float(active_center[0])
-            prf_group.attrs['center_column'] = float(active_center[1])
-            prf_group.attrs['coordinate_convention'] = 'corner-origin; pixel centers at row+0.5, column+0.5'
-            prf_group.attrs['model_scope'] = 'constant_per_sensor'
-            prf_group.attrs['normalization'] = 'fraction_of_point_source_flux_per_detector_pixel'
-            prf_group.attrs['active_source'] = self.active_prf_source or ''
+            prf_group.create_dataset("oversampled_prf", data=active_prf)
+            prf_group.attrs["oversampling"] = int(active_oversampling)
+            prf_group.attrs["center_row"] = float(active_center[0])
+            prf_group.attrs["center_column"] = float(active_center[1])
+            prf_group.attrs["coordinate_convention"] = (
+                "corner-origin; pixel centers at row+0.5, column+0.5"
+            )
+            prf_group.attrs["model_scope"] = "constant_per_sensor"
+            prf_group.attrs["normalization"] = (
+                "fraction_of_point_source_flux_per_detector_pixel"
+            )
+            prf_group.attrs["active_source"] = self.active_prf_source or ""
             active_metadata = (
                 self.fitted_prf_metadata
                 if self.active_prf_source == "fitted" and self.has_fitted_prf()
                 else self.prf_metadata
             )
             if active_metadata is not None:
-                prf_group.attrs['construction_metadata_json'] = json.dumps(active_metadata, default=str)
+                prf_group.attrs["construction_metadata_json"] = json.dumps(
+                    active_metadata, default=str
+                )
 
             if self.has_associated_prf():
-                associated_group = prf_group.create_group('associated')
-                associated_group.create_dataset('oversampled_prf', data=self.oversampled_prf)
-                associated_group.attrs['oversampling'] = int(self.prf_oversampling)
-                associated_group.attrs['center_row'] = float(self.prf_center[0])
-                associated_group.attrs['center_column'] = float(self.prf_center[1])
-                associated_group.attrs['construction_metadata_json'] = json.dumps(self.prf_metadata or {}, default=str)
+                associated_group = prf_group.create_group("associated")
+                associated_group.create_dataset(
+                    "oversampled_prf", data=self.oversampled_prf
+                )
+                associated_group.attrs["oversampling"] = int(self.prf_oversampling)
+                associated_group.attrs["center_row"] = float(self.prf_center[0])
+                associated_group.attrs["center_column"] = float(self.prf_center[1])
+                associated_group.attrs["construction_metadata_json"] = json.dumps(
+                    self.prf_metadata or {}, default=str
+                )
 
             if self.has_fitted_prf():
-                fitted_group = prf_group.create_group('fitted')
-                fitted_group.create_dataset('oversampled_prf', data=self.fitted_oversampled_prf)
-                fitted_group.attrs['oversampling'] = int(self.fitted_prf_oversampling)
-                fitted_group.attrs['center_row'] = float(self.fitted_prf_center[0])
-                fitted_group.attrs['center_column'] = float(self.fitted_prf_center[1])
-                fitted_group.attrs['construction_metadata_json'] = json.dumps(
+                fitted_group = prf_group.create_group("fitted")
+                fitted_group.create_dataset(
+                    "oversampled_prf", data=self.fitted_oversampled_prf
+                )
+                fitted_group.attrs["oversampling"] = int(self.fitted_prf_oversampling)
+                fitted_group.attrs["center_row"] = float(self.fitted_prf_center[0])
+                fitted_group.attrs["center_column"] = float(self.fitted_prf_center[1])
+                fitted_group.attrs["construction_metadata_json"] = json.dumps(
                     self.fitted_prf_metadata or {}, default=str
                 )

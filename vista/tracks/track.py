@@ -5,18 +5,21 @@ This module defines the Track class, which represents a single object trajectory
 across multiple frames with support for multiple coordinate systems (pixel, geodetic,
 time-based), visualization styling, and data persistence.
 """
-from dataclasses import dataclass, field
+
 import datetime
+import uuid
+from dataclasses import dataclass, field
 from typing import Optional
+
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
 import pyqtgraph as pg
+from numpy.typing import NDArray
 from PyQt6.QtCore import Qt
-import uuid
+
+from vista.sensors.sensor import Sensor
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
-from vista.sensors.sensor import Sensor
 
 
 @dataclass
@@ -96,51 +99,84 @@ class Track:
     - The from_dataframe() method handles coordinate system conversions automatically
     - Track length is computed lazily and cached for performance
     """
+
     name: str
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
     # Styling attributes
-    color: str = 'g'  # Green by default
-    marker: str = 'o'  # Circle by default
+    color: str = "g"  # Green by default
+    marker: str = "o"  # Circle by default
     line_width: int = 2
     marker_size: int = 12
     visible: bool = True
     tail_length: int = 0  # 0 means show all history, >0 means show only last N frames
     complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
     show_line: bool = True  # If True, show line connecting track points
-    line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
+    line_style: str = "SolidLine"  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
-    label_time: Optional[datetime.datetime] = None  # UTC timestamp labels were last applied
+    label_time: Optional[datetime.datetime] = (
+        None  # UTC timestamp labels were last applied
+    )
     labeler: Optional[str] = None  # Username of the person who last applied labels
     tracker: Optional[str] = None  # Name of tracker this track belongs to
     # Extraction metadata
-    extraction_metadata: Optional[dict] = None  # Dict containing 'chip_size', 'chips', 'signal_masks', 'noise_stds'
+    extraction_metadata: Optional[dict] = (
+        None  # Dict containing 'chip_size', 'chips', 'signal_masks', 'noise_stds'
+    )
     # Uncertainty visualization (2D covariance matrix: [[C00, C01], [C01, C11]])
     covariance_00: Optional[NDArray[np.float64]] = None  # Row variance (C_row_row)
-    covariance_01: Optional[NDArray[np.float64]] = None  # Row-column covariance (C_row_col)
+    covariance_01: Optional[NDArray[np.float64]] = (
+        None  # Row-column covariance (C_row_col)
+    )
     covariance_11: Optional[NDArray[np.float64]] = None  # Column variance (C_col_col)
     show_uncertainty: bool = False  # Whether to display uncertainty ellipses
-    flux_counts: Optional[NDArray[np.float64]] = None  # Integrated point-source flux in raw image counts
-    flux_uncertainty_counts: Optional[NDArray[np.float64]] = None  # 1-sigma raw-count flux uncertainty
-    flux_snr: Optional[NDArray[np.float64]] = None  # Flux estimate divided by uncertainty
-    flux_background_counts: Optional[NDArray[np.float64]] = None  # Local background estimate in raw counts
-    flux_residual_ratio: Optional[NDArray[np.float64]] = None  # Normalized PRF fit residual
-    flux_status: list[str] = field(default_factory=list)  # Per-point PRF flux quality/status
+    flux_counts: Optional[NDArray[np.float64]] = (
+        None  # Integrated point-source flux in raw image counts
+    )
+    flux_uncertainty_counts: Optional[NDArray[np.float64]] = (
+        None  # 1-sigma raw-count flux uncertainty
+    )
+    flux_snr: Optional[NDArray[np.float64]] = (
+        None  # Flux estimate divided by uncertainty
+    )
+    flux_background_counts: Optional[NDArray[np.float64]] = (
+        None  # Local background estimate in raw counts
+    )
+    flux_residual_ratio: Optional[NDArray[np.float64]] = (
+        None  # Normalized PRF fit residual
+    )
+    flux_status: list[str] = field(
+        default_factory=list
+    )  # Per-point PRF flux quality/status
     # Private attributes
     _length: int = field(init=False, default=None)
 
     # Performance optimization: cached data structures
-    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> index
-    _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
-    _cached_brush: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph brush
-    _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
-    _brush_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached brush
-    _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
-    _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
+    _frame_index: dict = field(
+        default=None, init=False, repr=False
+    )  # Frame number -> index
+    _cached_pen: object = field(
+        default=None, init=False, repr=False
+    )  # Cached PyQtGraph pen
+    _cached_brush: object = field(
+        default=None, init=False, repr=False
+    )  # Cached PyQtGraph brush
+    _pen_params: tuple = field(
+        default=None, init=False, repr=False
+    )  # Parameters used for cached pen
+    _brush_params: tuple = field(
+        default=None, init=False, repr=False
+    )  # Parameters used for cached brush
+    _cached_lons: Optional[NDArray[np.float64]] = field(
+        default=None, init=False, repr=False
+    )  # Cached longitude coords
+    _cached_lats: Optional[NDArray[np.float64]] = field(
+        default=None, init=False, repr=False
+    )  # Cached latitude coords
     uuid: str = field(init=None, default=None)
-    
+
     def __post_init__(self):
         self.uuid = uuid.uuid4()
 
@@ -148,7 +184,7 @@ class Track:
         if not isinstance(other, Track):
             return False
         return self.uuid == other.uuid
-    
+
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects
@@ -160,10 +196,10 @@ class Track:
             # Slice extraction metadata if present
             if track_slice.extraction_metadata is not None:
                 track_slice.extraction_metadata = {
-                    'chip_size': track_slice.extraction_metadata['chip_size'],
-                    'chips': track_slice.extraction_metadata['chips'][s],
-                    'signal_masks': track_slice.extraction_metadata['signal_masks'][s],
-                    'noise_stds': track_slice.extraction_metadata['noise_stds'][s],
+                    "chip_size": track_slice.extraction_metadata["chip_size"],
+                    "chips": track_slice.extraction_metadata["chips"][s],
+                    "signal_masks": track_slice.extraction_metadata["signal_masks"][s],
+                    "noise_stds": track_slice.extraction_metadata["noise_stds"][s],
                 }
 
             # Slice uncertainty data if present
@@ -176,18 +212,30 @@ class Track:
             if track_slice.flux_counts is not None:
                 track_slice.flux_counts = track_slice.flux_counts[s]
             if track_slice.flux_uncertainty_counts is not None:
-                track_slice.flux_uncertainty_counts = track_slice.flux_uncertainty_counts[s]
+                track_slice.flux_uncertainty_counts = (
+                    track_slice.flux_uncertainty_counts[s]
+                )
             if track_slice.flux_snr is not None:
                 track_slice.flux_snr = track_slice.flux_snr[s]
             if track_slice.flux_background_counts is not None:
-                track_slice.flux_background_counts = track_slice.flux_background_counts[s]
+                track_slice.flux_background_counts = track_slice.flux_background_counts[
+                    s
+                ]
             if track_slice.flux_residual_ratio is not None:
                 track_slice.flux_residual_ratio = track_slice.flux_residual_ratio[s]
             if len(track_slice.flux_status) > 0:
                 if isinstance(s, slice):
                     track_slice.flux_status = track_slice.flux_status[s]
                 else:
-                    track_slice.flux_status = [track_slice.flux_status[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [track_slice.flux_status[i] for i in s]
+                    track_slice.flux_status = (
+                        [
+                            track_slice.flux_status[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [track_slice.flux_status[i] for i in s]
+                    )
 
             # Slice cached geodetic coords if present
             if track_slice._cached_lons is not None:
@@ -198,7 +246,7 @@ class Track:
             return track_slice
         else:
             raise TypeError("Invalid index or slice type.")
-        
+
     def __len__(self):
         return len(self.frames)
 
@@ -267,7 +315,9 @@ class Track:
         indices = np.where(mask)[0]
         return indices if len(indices) > 0 else None
 
-    def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
+    def get_geodetic_coords(
+        self,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
         """Get geodetic coordinates for all track points, computing and caching if needed.
 
         Projects each track point using its own frame's sensor geometry, so the
@@ -332,18 +382,20 @@ class Track:
 
         # Map string style to Qt constant
         style_map = {
-            'SolidLine': Qt.PenStyle.SolidLine,
-            'DashLine': Qt.PenStyle.DashLine,
-            'DotLine': Qt.PenStyle.DotLine,
-            'DashDotLine': Qt.PenStyle.DashDotLine,
-            'DashDotDotLine': Qt.PenStyle.DashDotDotLine,
+            "SolidLine": Qt.PenStyle.SolidLine,
+            "DashLine": Qt.PenStyle.DashLine,
+            "DotLine": Qt.PenStyle.DotLine,
+            "DashDotLine": Qt.PenStyle.DashDotLine,
+            "DashDotDotLine": Qt.PenStyle.DashDotDotLine,
         }
         qt_style = style_map.get(actual_style, Qt.PenStyle.SolidLine)
 
         params = (self.color, actual_width, qt_style)
 
         if self._pen_params != params:
-            self._cached_pen = pg.mkPen(color=self.color, width=actual_width, style=qt_style)
+            self._cached_pen = pg.mkPen(
+                color=self.color, width=actual_width, style=qt_style
+            )
             self._pen_params = params
 
         return self._cached_pen
@@ -375,11 +427,15 @@ class Track:
         bool
             True if track has all three covariance matrix elements (C00, C01, C11), False otherwise
         """
-        return (self.covariance_00 is not None and
-                self.covariance_01 is not None and
-                self.covariance_11 is not None)
+        return (
+            self.covariance_00 is not None
+            and self.covariance_01 is not None
+            and self.covariance_11 is not None
+        )
 
-    def get_uncertainty_ellipse_parameters(self) -> Optional[tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]]:
+    def get_uncertainty_ellipse_parameters(
+        self,
+    ) -> Optional[tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]]:
         """
         Convert covariance matrix to ellipse parameters for visualization.
 
@@ -401,7 +457,13 @@ class Track:
 
         trace = self.covariance_00 + self.covariance_11
         det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
-        discriminant = np.sqrt(np.maximum((self.covariance_00 - self.covariance_11)**2 + 4 * self.covariance_01**2, 0))
+        discriminant = np.sqrt(
+            np.maximum(
+                (self.covariance_00 - self.covariance_11) ** 2
+                + 4 * self.covariance_01**2,
+                0,
+            )
+        )
 
         lambda1 = 0.5 * (trace + discriminant)  # Larger eigenvalue
         lambda2 = 0.5 * (trace - discriminant)  # Smaller eigenvalue
@@ -412,7 +474,9 @@ class Track:
 
         # Rotation angle (in degrees, counter-clockwise from horizontal)
         # arctan2(2*C01, C00 - C11) gives twice the rotation angle
-        rotation_rad = 0.5 * np.arctan2(2 * self.covariance_01, self.covariance_00 - self.covariance_11)
+        rotation_rad = 0.5 * np.arctan2(
+            2 * self.covariance_01, self.covariance_00 - self.covariance_11
+        )
         rotation_deg = np.degrees(rotation_rad)
 
         return semi_major, semi_minor, rotation_deg
@@ -454,15 +518,19 @@ class Track:
         -----
         Uses binary search (searchsorted) for efficient frame matching.
         """
-        sensor_imagery_frames, sensor_imagery_times = self.sensor.get_imagery_frames_and_times()
+        sensor_imagery_frames, sensor_imagery_times = (
+            self.sensor.get_imagery_frames_and_times()
+        )
         if len(sensor_imagery_times) < 1:
             return None
-        
+
         # Find where each track_frame would be inserted in sensor_frames
         indices = np.searchsorted(sensor_imagery_frames, self.frames)
 
         # Create output array filled with NaT
-        track_times = np.full(len(self.frames), np.datetime64('NaT'), dtype='datetime64[ns]')
+        track_times = np.full(
+            len(self.frames), np.datetime64("NaT"), dtype="datetime64[ns]"
+        )
 
         # Clip so we can safely index; out-of-bounds entries are caught by in_bounds
         in_bounds = indices < len(sensor_imagery_frames)
@@ -554,15 +622,19 @@ class Track:
             # Parse labels from comma-separated string
             labels_str = df["Labels"].iloc[0]
             if pd.notna(labels_str) and labels_str:
-                labels_str = str(labels_str)  # Make sure labels are parsed as a string even if they're something like `1`
-                kwargs["labels"] = set(label.strip() for label in labels_str.split(','))
+                labels_str = str(
+                    labels_str
+                )  # Make sure labels are parsed as a string even if they're something like `1`
+                kwargs["labels"] = set(label.strip() for label in labels_str.split(","))
             else:
                 kwargs["labels"] = set()
         if "Label Time" in df.columns:
             label_time_val = df["Label Time"].iloc[0]
             if pd.notna(label_time_val) and label_time_val != "":
                 try:
-                    kwargs["label_time"] = pd.to_datetime(label_time_val).to_pydatetime()
+                    kwargs["label_time"] = pd.to_datetime(
+                        label_time_val
+                    ).to_pydatetime()
                 except (ValueError, TypeError):
                     kwargs["label_time"] = None
         if "Labeler" in df.columns:
@@ -581,44 +653,70 @@ class Track:
             # Frames take precedence
             frames = df["Frames"].to_numpy()
         elif times is not None:
-            sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
+            sensor_imagery_frames, sensor_imagery_times = (
+                sensor.get_imagery_frames_and_times()
+            )
             if len(sensor_imagery_times) == 0:
                 # Times present but no cannot map to frames using sensor - raise error
-                raise ValueError(f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping.")
-            
+                raise ValueError(
+                    f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping."
+                )
+
             # Eliminate track points before and after the time bounds of the selected sensor
-            df = df[(times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])]
+            df = df[
+                (times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])
+            ]
             if len(df) == 0:
-                raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
+                raise ValueError(
+                    f"Track '{name}' times are not within the bounds of the selected imagery."
+                )
             times = pd.to_datetime(df["Times"]).to_numpy()
 
             # Map times to frames using the sensor imagery
-            frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
+            frames = map_times_to_frames(
+                times, sensor_imagery_times, sensor_imagery_frames
+            )
         else:
-            raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
-        
+            raise ValueError(
+                f"Track '{name}' must have either 'Frames' or 'Times' column"
+            )
+
         # Handle uncertainty data (optional) - covariance matrix elements
         # Only populate if all three columns exist and all values are valid (not NaN)
-        if ("Covariance 00" in df.columns and "Covariance 01" in df.columns and "Covariance 11" in df.columns):
+        if (
+            "Covariance 00" in df.columns
+            and "Covariance 01" in df.columns
+            and "Covariance 11" in df.columns
+        ):
             cov_00 = df["Covariance 00"].to_numpy(dtype=np.float64)
             cov_01 = df["Covariance 01"].to_numpy(dtype=np.float64)
             cov_11 = df["Covariance 11"].to_numpy(dtype=np.float64)
 
             # Only set covariance if all values are valid (no NaN or inf)
-            if (np.all(np.isfinite(cov_00)) and np.all(np.isfinite(cov_01)) and np.all(np.isfinite(cov_11))):
+            if (
+                np.all(np.isfinite(cov_00))
+                and np.all(np.isfinite(cov_01))
+                and np.all(np.isfinite(cov_11))
+            ):
                 kwargs["covariance_00"] = cov_00
                 kwargs["covariance_01"] = cov_01
                 kwargs["covariance_11"] = cov_11
         if "Flux (raw counts)" in df.columns:
             kwargs["flux_counts"] = df["Flux (raw counts)"].to_numpy(dtype=np.float64)
         if "Flux Uncertainty (raw counts)" in df.columns:
-            kwargs["flux_uncertainty_counts"] = df["Flux Uncertainty (raw counts)"].to_numpy(dtype=np.float64)
+            kwargs["flux_uncertainty_counts"] = df[
+                "Flux Uncertainty (raw counts)"
+            ].to_numpy(dtype=np.float64)
         if "Flux SNR" in df.columns:
             kwargs["flux_snr"] = df["Flux SNR"].to_numpy(dtype=np.float64)
         if "Flux Background (raw counts)" in df.columns:
-            kwargs["flux_background_counts"] = df["Flux Background (raw counts)"].to_numpy(dtype=np.float64)
+            kwargs["flux_background_counts"] = df[
+                "Flux Background (raw counts)"
+            ].to_numpy(dtype=np.float64)
         if "Flux Residual Ratio" in df.columns:
-            kwargs["flux_residual_ratio"] = df["Flux Residual Ratio"].to_numpy(dtype=np.float64)
+            kwargs["flux_residual_ratio"] = df["Flux Residual Ratio"].to_numpy(
+                dtype=np.float64
+            )
         if "Flux Status" in df.columns:
             kwargs["flux_status"] = [
                 str(status) if pd.notna(status) and status != "" else ""
@@ -626,8 +724,11 @@ class Track:
             ]
 
         # Determine rows/columns - priority: Rows/Columns > geodetic-to-pixel mapping
-        has_geodetic = ("Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns
-                        and "Altitude (km)" in df.columns)
+        has_geodetic = (
+            "Latitude (deg)" in df.columns
+            and "Longitude (deg)" in df.columns
+            and "Altitude (km)" in df.columns
+        )
         initial_lons = None
         initial_lats = None
 
@@ -646,7 +747,7 @@ class Track:
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no row/column. "
                     "Sensor required for geodetic-to-pixel mapping."
                 )
-            if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
+            if not hasattr(sensor, "can_geolocate") or not sensor.can_geolocate():
                 raise ValueError(
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
                     "does not support geolocation."
@@ -659,7 +760,7 @@ class Track:
                 initial_lons,
                 df["Altitude (km)"].to_numpy(),
                 frames,
-                sensor
+                sensor,
             )
         else:
             raise ValueError(
@@ -668,19 +769,22 @@ class Track:
             )
 
         # Enable show_uncertainty by default if uncertainty data is present
-        if ('covariance_00' in kwargs and 'covariance_01' in kwargs and
-                'covariance_11' in kwargs):
+        if (
+            "covariance_00" in kwargs
+            and "covariance_01" in kwargs
+            and "covariance_11" in kwargs
+        ):
             # Only set to True if not already explicitly set
-            if 'show_uncertainty' not in kwargs:
-                kwargs['show_uncertainty'] = True
+            if "show_uncertainty" not in kwargs:
+                kwargs["show_uncertainty"] = True
 
         track = cls(
-            name = name,
-            frames = frames,
-            rows = rows,
-            columns = columns,
-            sensor = sensor,
-            **kwargs
+            name=name,
+            frames=frames,
+            rows=rows,
+            columns=columns,
+            sensor=sensor,
+            **kwargs,
         )
 
         # Pre-populate geodetic cache if coords were available in the dataframe
@@ -689,7 +793,7 @@ class Track:
             track._cached_lats = initial_lats
 
         return track
-    
+
     @property
     def length(self):
         """
@@ -707,9 +811,11 @@ class Track:
             if len(self.rows) < 2:
                 self._length = 0.0
             else:
-                self._length = np.sum(np.sqrt(np.diff(self.rows)**2 + np.diff(self.columns)**2))
+                self._length = np.sum(
+                    np.sqrt(np.diff(self.rows) ** 2 + np.diff(self.columns) ** 2)
+                )
         return self._length
-    
+
     def copy(self):
         """
         Create a deep copy of this track object.
@@ -723,42 +829,56 @@ class Track:
         extraction_metadata_copy = None
         if self.extraction_metadata is not None:
             extraction_metadata_copy = {
-                'chip_size': self.extraction_metadata['chip_size'],
-                'chips': self.extraction_metadata['chips'].copy(),
-                'signal_masks': self.extraction_metadata['signal_masks'].copy(),
-                'noise_stds': self.extraction_metadata['noise_stds'].copy(),
+                "chip_size": self.extraction_metadata["chip_size"],
+                "chips": self.extraction_metadata["chips"].copy(),
+                "signal_masks": self.extraction_metadata["signal_masks"].copy(),
+                "noise_stds": self.extraction_metadata["noise_stds"].copy(),
             }
 
         track_copy = self.__class__(
-            name = self.name,
-            frames = self.frames.copy(),
-            rows = self.rows.copy(),
-            columns = self.columns.copy(),
-            sensor = self.sensor,
-            color = self.color,
-            marker = self.marker,
-            line_width = self.line_width,
-            marker_size = self.marker_size,
-            visible = self.visible,
-            tail_length = self.tail_length,
-            complete = self.complete,
-            show_line = self.show_line,
-            line_style = self.line_style,
-            labels = self.labels.copy(),
-            label_time = self.label_time,
-            labeler = self.labeler,
-            tracker = self.tracker,
-            extraction_metadata = extraction_metadata_copy,
-            covariance_00 = self.covariance_00.copy() if self.covariance_00 is not None else None,
-            covariance_01 = self.covariance_01.copy() if self.covariance_01 is not None else None,
-            covariance_11 = self.covariance_11.copy() if self.covariance_11 is not None else None,
-            show_uncertainty = self.show_uncertainty,
-            flux_counts = self.flux_counts.copy() if self.flux_counts is not None else None,
-            flux_uncertainty_counts = self.flux_uncertainty_counts.copy() if self.flux_uncertainty_counts is not None else None,
-            flux_snr = self.flux_snr.copy() if self.flux_snr is not None else None,
-            flux_background_counts = self.flux_background_counts.copy() if self.flux_background_counts is not None else None,
-            flux_residual_ratio = self.flux_residual_ratio.copy() if self.flux_residual_ratio is not None else None,
-            flux_status = list(self.flux_status),
+            name=self.name,
+            frames=self.frames.copy(),
+            rows=self.rows.copy(),
+            columns=self.columns.copy(),
+            sensor=self.sensor,
+            color=self.color,
+            marker=self.marker,
+            line_width=self.line_width,
+            marker_size=self.marker_size,
+            visible=self.visible,
+            tail_length=self.tail_length,
+            complete=self.complete,
+            show_line=self.show_line,
+            line_style=self.line_style,
+            labels=self.labels.copy(),
+            label_time=self.label_time,
+            labeler=self.labeler,
+            tracker=self.tracker,
+            extraction_metadata=extraction_metadata_copy,
+            covariance_00=self.covariance_00.copy()
+            if self.covariance_00 is not None
+            else None,
+            covariance_01=self.covariance_01.copy()
+            if self.covariance_01 is not None
+            else None,
+            covariance_11=self.covariance_11.copy()
+            if self.covariance_11 is not None
+            else None,
+            show_uncertainty=self.show_uncertainty,
+            flux_counts=self.flux_counts.copy()
+            if self.flux_counts is not None
+            else None,
+            flux_uncertainty_counts=self.flux_uncertainty_counts.copy()
+            if self.flux_uncertainty_counts is not None
+            else None,
+            flux_snr=self.flux_snr.copy() if self.flux_snr is not None else None,
+            flux_background_counts=self.flux_background_counts.copy()
+            if self.flux_background_counts is not None
+            else None,
+            flux_residual_ratio=self.flux_residual_ratio.copy()
+            if self.flux_residual_ratio is not None
+            else None,
+            flux_status=list(self.flux_status),
         )
         # Preserve cached geodetic coords
         if self._cached_lons is not None:
@@ -766,7 +886,7 @@ class Track:
         if self._cached_lats is not None:
             track_copy._cached_lats = self._cached_lats.copy()
         return track_copy
-    
+
     def to_dataframe(self) -> pd.DataFrame:
         """Convert track to DataFrame
 
@@ -774,8 +894,8 @@ class Track:
             ValueError: If geolocation/time requested but imagery is missing required data
         """
         data = {
-            "Tracker": len(self)*[self.tracker or ""],
-            "Track": len(self)*[self.name],
+            "Tracker": len(self) * [self.tracker or ""],
+            "Track": len(self) * [self.name],
             "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
@@ -788,9 +908,11 @@ class Track:
             "Complete": self.complete,
             "Show Line": self.show_line,
             "Line Style": self.line_style,
-            "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
-            "Label Time": self.label_time.isoformat() if self.label_time is not None else '',
-            "Labeler": self.labeler or '',
+            "Labels": ", ".join(sorted(self.labels)) if self.labels else "",
+            "Label Time": self.label_time.isoformat()
+            if self.label_time is not None
+            else "",
+            "Labeler": self.labeler or "",
         }
 
         # Include geolocation if possible
@@ -801,8 +923,10 @@ class Track:
             data["Latitude (deg)"] = geodetic[1]
 
             # Single vectorized call for altitude
-            locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
-            data["Altitude (km)"] = np.asarray(locations.height.to('km').value)
+            locations = self.sensor.pixel_to_geodetic(
+                self.frames, self.rows, self.columns
+            )
+            data["Altitude (km)"] = np.asarray(locations.height.to("km").value)
         else:
             # Sensor cannot geolocate - fill with NaN
             data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
@@ -812,13 +936,13 @@ class Track:
         # Include times if possible
         track_times = self.get_times()
         if track_times is not None:
-            data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+            data["Times"] = pd.to_datetime(track_times).strftime("%Y-%m-%dT%H:%M:%S.%f")
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:
-            chips = self.extraction_metadata.get('chips')
-            masks = self.extraction_metadata.get('signal_masks')
-            noise = self.extraction_metadata.get('noise_stds')
+            chips = self.extraction_metadata.get("chips")
+            masks = self.extraction_metadata.get("signal_masks")
+            noise = self.extraction_metadata.get("noise_stds")
 
             if chips is not None and masks is not None:
                 data["Signal Total"] = np.sum(chips * masks, axis=(1, 2))
@@ -845,7 +969,7 @@ class Track:
             status = list(self.flux_status)
             if len(status) < len(self):
                 status.extend([""] * (len(self) - len(status)))
-            data["Flux Status"] = status[:len(self)]
+            data["Flux Status"] = status[: len(self)]
 
         return pd.DataFrame(data)
 

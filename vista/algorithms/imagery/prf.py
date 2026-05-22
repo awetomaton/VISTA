@@ -5,10 +5,11 @@ vendor-provided sensor information. A continuous PSF model is discretized by
 averaging it over a configurable pixel aperture, then fitted to user-selected
 point-like detections.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import Iterable
 
 import numpy as np
@@ -16,7 +17,6 @@ from numpy.typing import NDArray
 from scipy.optimize import least_squares
 from scipy.signal import fftconvolve
 from scipy.special import j1
-
 
 NO_PRF_MODEL = "None"
 PRF_FIT_PSF_MODELS = ("None", "Gaussian", "Elliptical Gaussian", "Airy Disk", "Moffat")
@@ -117,8 +117,12 @@ class PRFModel:
             "selected_fit_detections": self.selected_fit_detections,
             "adaptive_fit_stopped_early": self.adaptive_fit_stopped_early,
         }
-        metadata.update({key: value for key, value in optional_fields.items() if value is not None})
-        metadata.update({f"parameter_{key}": value for key, value in self.parameters.items()})
+        metadata.update(
+            {key: value for key, value in optional_fields.items() if value is not None}
+        )
+        metadata.update(
+            {f"parameter_{key}": value for key, value in self.parameters.items()}
+        )
         return metadata
 
     def parameter_summary(self) -> str:
@@ -152,7 +156,9 @@ class PRFModel:
                 continue
             value = self.parameters[key]
             if key == "theta":
-                parts.append(f"{labels[key]}={value:.4g} rad ({math.degrees(value):.4g} deg)")
+                parts.append(
+                    f"{labels[key]}={value:.4g} rad ({math.degrees(value):.4g} deg)"
+                )
             elif key == "beta":
                 parts.append(f"{labels[key]}={value:.4g}")
             else:
@@ -177,7 +183,9 @@ def normalize_kernel(kernel: NDArray[np.float64]) -> NDArray[np.float32]:
     return (kernel / total).astype(np.float32)
 
 
-def _pixel_aperture(size: int, pixel_shape: str, oversample: int) -> NDArray[np.float64]:
+def _pixel_aperture(
+    size: int, pixel_shape: str, oversample: int
+) -> NDArray[np.float64]:
     aperture = np.zeros((size, size), dtype=np.float64)
     center = size // 2
     half = oversample / 2.0
@@ -186,15 +194,15 @@ def _pixel_aperture(size: int, pixel_shape: str, oversample: int) -> NDArray[np.
         yy, xx = np.indices((oversample, oversample), dtype=np.float64)
         yy = yy - (oversample - 1) / 2.0
         xx = xx - (oversample - 1) / 2.0
-        circle = (xx ** 2 + yy ** 2) <= half ** 2
+        circle = (xx**2 + yy**2) <= half**2
         aperture[
-            center - oversample // 2:center - oversample // 2 + oversample,
-            center - oversample // 2:center - oversample // 2 + oversample,
+            center - oversample // 2 : center - oversample // 2 + oversample,
+            center - oversample // 2 : center - oversample // 2 + oversample,
         ] = circle.astype(np.float64)
     else:
         aperture[
-            center - oversample // 2:center - oversample // 2 + oversample,
-            center - oversample // 2:center - oversample // 2 + oversample,
+            center - oversample // 2 : center - oversample // 2 + oversample,
+            center - oversample // 2 : center - oversample // 2 + oversample,
         ] = 1.0
 
     return normalize_kernel(aperture).astype(np.float64)
@@ -226,7 +234,9 @@ def _generate_prf_fine(
         oversample += 1
 
     fine_size = kernel_size * oversample
-    coords = (np.arange(fine_size, dtype=np.float64) - (fine_size - 1) / 2.0) / oversample
+    coords = (
+        np.arange(fine_size, dtype=np.float64) - (fine_size - 1) / 2.0
+    ) / oversample
     x, y = np.meshgrid(coords, coords)
 
     sigma_y = sigma_x if sigma_y is None else sigma_y
@@ -240,7 +250,7 @@ def _generate_prf_fine(
 
     if model == "Airy Disk":
         radius = max(float(airy_radius), 1e-3)
-        radial_distance = np.sqrt(xr ** 2 + yr ** 2)
+        radial_distance = np.sqrt(xr**2 + yr**2)
 
         z = _AIRY_FIRST_ZERO * radial_distance / radius
 
@@ -253,7 +263,9 @@ def _generate_prf_fine(
         # compatibility with the shared PRF-generation path.
         alpha_x = sigma_x
         alpha_y = sigma_y
-        psf = (1.0 + (xr / alpha_x) ** 2 + (yr / alpha_y) ** 2) ** (-max(float(beta), 1.01))
+        psf = (1.0 + (xr / alpha_x) ** 2 + (yr / alpha_y) ** 2) ** (
+            -max(float(beta), 1.01)
+        )
     else:
         psf = np.exp(-0.5 * ((xr / sigma_x) ** 2 + (yr / sigma_y) ** 2))
 
@@ -301,8 +313,8 @@ def generate_oversampled_prf(
     center = (prf_fine.shape[0] - 1) // 2
     half = kernel_size // 2
     lattice = prf_fine[
-        center - half * oversample:center + half * oversample + 1:oversample,
-        center - half * oversample:center + half * oversample + 1:oversample,
+        center - half * oversample : center + half * oversample + 1 : oversample,
+        center - half * oversample : center + half * oversample + 1 : oversample,
     ]
     total = np.sum(lattice)
     if not np.isfinite(total) or total <= 0:
@@ -350,13 +362,15 @@ def generate_prf_kernel(
     center = (prf_fine.shape[0] - 1) // 2
     half = kernel_size // 2
     prf = prf_fine[
-        center - half * oversample:center + half * oversample + 1:oversample,
-        center - half * oversample:center + half * oversample + 1:oversample,
+        center - half * oversample : center + half * oversample + 1 : oversample,
+        center - half * oversample : center + half * oversample + 1 : oversample,
     ]
     return normalize_kernel(prf)
 
 
-def _bilinear_sample_prf(prf: NDArray[np.float64], rows: NDArray[np.float64], cols: NDArray[np.float64]) -> NDArray[np.float64]:
+def _bilinear_sample_prf(
+    prf: NDArray[np.float64], rows: NDArray[np.float64], cols: NDArray[np.float64]
+) -> NDArray[np.float64]:
     """Bilinearly sample an oversampled PRF table at fractional row/column locations."""
     height, width = prf.shape
     r0 = np.floor(rows).astype(np.int64)
@@ -377,10 +391,10 @@ def _bilinear_sample_prf(prf: NDArray[np.float64], rows: NDArray[np.float64], co
     rf = row_frac[valid]
     cf = col_frac[valid]
     samples[valid] = (
-        v00 * (1.0 - rf) * (1.0 - cf) +
-        v01 * (1.0 - rf) * cf +
-        v10 * rf * (1.0 - cf) +
-        v11 * rf * cf
+        v00 * (1.0 - rf) * (1.0 - cf)
+        + v01 * (1.0 - rf) * cf
+        + v10 * rf * (1.0 - cf)
+        + v11 * rf * cf
     )
     return samples
 
@@ -419,8 +433,12 @@ def _sample_shifted_prf_kernels(
     chip_center = (kernel_size - 1) / 2.0
     drows = offsets[:, 0, np.newaxis, np.newaxis]
     dcols = offsets[:, 1, np.newaxis, np.newaxis]
-    prf_rows = center + (pixel_rows[np.newaxis, :, :] - chip_center - drows) * oversample
-    prf_cols = center + (pixel_cols[np.newaxis, :, :] - chip_center - dcols) * oversample
+    prf_rows = (
+        center + (pixel_rows[np.newaxis, :, :] - chip_center - drows) * oversample
+    )
+    prf_cols = (
+        center + (pixel_cols[np.newaxis, :, :] - chip_center - dcols) * oversample
+    )
     kernels = _bilinear_sample_prf(prf_fine, prf_rows, prf_cols)
     totals = np.sum(kernels, axis=(1, 2), keepdims=True)
     valid = np.isfinite(totals) & (totals > 0)
@@ -464,10 +482,15 @@ def _shifted_prf_kernel(
     )
 
 
-def oversampled_prf_from_model(prf_model: PRFModel, oversample: int = 7) -> NDArray[np.float32]:
+def oversampled_prf_from_model(
+    prf_model: PRFModel, oversample: int = 7
+) -> NDArray[np.float32]:
     """Generate a sensor-level oversampled PRF table from a fitted PRFModel."""
     params = prf_model.parameters
-    sigma_x = params.get("sigma_x", params.get("alpha_x", params.get("sigma", params.get("airy_radius", 1.0))))
+    sigma_x = params.get(
+        "sigma_x",
+        params.get("alpha_x", params.get("sigma", params.get("airy_radius", 1.0))),
+    )
     sigma_y = params.get("sigma_y", params.get("alpha_y", params.get("sigma", sigma_x)))
     theta = params.get("theta", 0.0)
     beta = params.get("beta", 4.765)
@@ -485,7 +508,9 @@ def oversampled_prf_from_model(prf_model: PRFModel, oversample: int = 7) -> NDAr
     )
 
 
-def _extract_chip(image: NDArray[np.float32], row: float, col: float, chip_size: int) -> NDArray[np.float32] | None:
+def _extract_chip(
+    image: NDArray[np.float32], row: float, col: float, chip_size: int
+) -> NDArray[np.float32] | None:
     half = chip_size // 2
     row_center = int(round(row))
     col_center = int(round(col))
@@ -520,12 +545,16 @@ def score_prf_chip(chip: NDArray[np.float32]) -> float:
     return peak / noise
 
 
-def chips_from_selected_detections(imagery, selected_detections: Iterable[tuple], chip_size: int) -> list[NDArray[np.float32]]:
+def chips_from_selected_detections(
+    imagery, selected_detections: Iterable[tuple], chip_size: int
+) -> list[NDArray[np.float32]]:
     """Extract fitting chips from VISTA selected detections."""
     return chips_from_detections(imagery, selected_detections, chip_size)
 
 
-def chips_from_detections(imagery, detections: Iterable[tuple], chip_size: int) -> list[NDArray[np.float32]]:
+def chips_from_detections(
+    imagery, detections: Iterable[tuple], chip_size: int
+) -> list[NDArray[np.float32]]:
     """Extract fitting chips from VISTA detection tuples."""
     frame_to_index = {int(frame): i for i, frame in enumerate(imagery.frames)}
     chips: list[NDArray[np.float32]] = []
@@ -555,11 +584,10 @@ def strongest_prf_chips(
 ) -> tuple[list[NDArray[np.float32]], int]:
     """Return high-contrast point-source chips ranked for PRF fitting."""
     chips = chips_from_detections(imagery, detections, chip_size)
+    scored = [(index, score_prf_chip(chip), chip) for index, chip in enumerate(chips)]
     scored = [
-        (index, score_prf_chip(chip), chip)
-        for index, chip in enumerate(chips)
+        (index, score, chip) for index, score, chip in scored if score >= min_score
     ]
-    scored = [(index, score, chip) for index, score, chip in scored if score >= min_score]
     if len(scored) > max_chips:
         scored = sorted(scored, key=lambda item: item[1], reverse=True)[:max_chips]
     scored.sort(key=lambda item: item[0])
@@ -571,7 +599,9 @@ def select_strongest_prf_chips(
     max_chips: int,
 ) -> list[NDArray[np.float32]]:
     """Return up to max_chips high-contrast chips while preserving source order."""
-    return [chips[index] for index in select_strongest_prf_chip_indices(chips, max_chips)]
+    return [
+        chips[index] for index in select_strongest_prf_chip_indices(chips, max_chips)
+    ]
 
 
 def select_strongest_prf_chip_indices(
@@ -581,10 +611,7 @@ def select_strongest_prf_chip_indices(
     """Return indices for up to max_chips high-contrast chips while preserving source order."""
     if max_chips <= 0 or len(chips) <= max_chips:
         return list(range(len(chips)))
-    scored = [
-        (index, score_prf_chip(chip))
-        for index, chip in enumerate(chips)
-    ]
+    scored = [(index, score_prf_chip(chip)) for index, chip in enumerate(chips)]
     selected = sorted(scored, key=lambda item: item[1], reverse=True)[:max_chips]
     return sorted(index for index, _ in selected)
 
@@ -599,7 +626,9 @@ def _select_chips_by_index(
     return [chips[index] for index in indices]
 
 
-def _estimate_elliptical_moments(chips_arr: NDArray[np.float64]) -> tuple[float, float, float]:
+def _estimate_elliptical_moments(
+    chips_arr: NDArray[np.float64],
+) -> tuple[float, float, float]:
     """Estimate an elliptical Gaussian seed from positive chip moments."""
     signal_sum = None
     for chip in chips_arr:
@@ -631,11 +660,15 @@ def _estimate_elliptical_moments(chips_arr: NDArray[np.float64]) -> tuple[float,
     eigenvectors = eigenvectors[:, order]
     sigma_x = float(np.clip(math.sqrt(eigenvalues[0]), 0.1, 10.0))
     sigma_y = float(np.clip(math.sqrt(eigenvalues[1]), 0.1, 10.0))
-    theta = _canonicalize_theta(float(math.atan2(eigenvectors[1, 0], eigenvectors[0, 0])))
+    theta = _canonicalize_theta(
+        float(math.atan2(eigenvectors[1, 0], eigenvectors[0, 0]))
+    )
     return sigma_x, sigma_y, theta
 
 
-def _estimate_chip_fit_seed(chip: NDArray[np.float64]) -> tuple[float, float, float, float]:
+def _estimate_chip_fit_seed(
+    chip: NDArray[np.float64],
+) -> tuple[float, float, float, float]:
     """Estimate amplitude, background, and sub-pixel offset seeds for one chip."""
     background = float(np.median(chip))
     signal = np.clip(chip - background, 0.0, None)
@@ -648,7 +681,12 @@ def _estimate_chip_fit_seed(chip: NDArray[np.float64]) -> tuple[float, float, fl
     weights = signal / amplitude
     drow = float(np.sum(weights * (yy - center)))
     dcol = float(np.sum(weights * (xx - center)))
-    return amplitude, background, float(np.clip(drow, -2.0, 2.0)), float(np.clip(dcol, -2.0, 2.0))
+    return (
+        amplitude,
+        background,
+        float(np.clip(drow, -2.0, 2.0)),
+        float(np.clip(dcol, -2.0, 2.0)),
+    )
 
 
 def _canonicalize_theta(theta: float) -> float:
@@ -743,7 +781,9 @@ def fit_prf_model(
     oversample = max(3, int(oversampling))
     if oversample % 2 == 0:
         oversample += 1
-    prf_fine_cache: dict[tuple[float, float, float, float, float], NDArray[np.float64]] = {}
+    prf_fine_cache: dict[
+        tuple[float, float, float, float, float], NDArray[np.float64]
+    ] = {}
 
     def cached_prf_fine(
         sigma_x: float,
@@ -752,7 +792,13 @@ def fit_prf_model(
         beta: float,
         airy_radius: float,
     ) -> NDArray[np.float64]:
-        key = (float(sigma_x), float(sigma_y), float(theta), float(beta), float(airy_radius))
+        key = (
+            float(sigma_x),
+            float(sigma_y),
+            float(theta),
+            float(beta),
+            float(airy_radius),
+        )
         cached = prf_fine_cache.get(key)
         if cached is not None:
             return cached
@@ -805,9 +851,13 @@ def fit_prf_model(
             out=np.zeros(chip_count, dtype=np.float64),
             where=np.isfinite(denominators) & (denominators > 0),
         )
-        amplitudes = np.where(np.isfinite(amplitudes) & (amplitudes > 0), amplitudes, 0.0)
+        amplitudes = np.where(
+            np.isfinite(amplitudes) & (amplitudes > 0), amplitudes, 0.0
+        )
         backgrounds = chip_means - amplitudes * shape_means
-        model_chips = backgrounds[:, np.newaxis] + amplitudes[:, np.newaxis] * shape_flat
+        model_chips = (
+            backgrounds[:, np.newaxis] + amplitudes[:, np.newaxis] * shape_flat
+        )
         return ((model_chips - chip_flat) / norms_to_score[:, np.newaxis]).ravel()
 
     def residuals(params):
@@ -836,7 +886,17 @@ def fit_prf_model(
         """Refine per-chip sub-pixel offsets without changing the shared PRF shape."""
         offsets = np.asarray(initial_offsets, dtype=np.float64).copy()
         search_grid = np.array(
-            [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1)],
+            [
+                (-1, -1),
+                (-1, 0),
+                (-1, 1),
+                (0, -1),
+                (0, 0),
+                (0, 1),
+                (1, -1),
+                (1, 0),
+                (1, 1),
+            ],
             dtype=np.float64,
         )
         for step in (0.25, 0.10):
@@ -858,9 +918,9 @@ def fit_prf_model(
             ).reshape(chips_to_score.shape[0], len(search_grid), -1)
             candidate_scores = np.linalg.norm(candidate_residuals, axis=2)
             best_indices = np.argmin(candidate_scores, axis=1)
-            offsets = candidate_offsets.reshape(chips_to_score.shape[0], len(search_grid), 2)[
-                np.arange(chips_to_score.shape[0]), best_indices
-            ]
+            offsets = candidate_offsets.reshape(
+                chips_to_score.shape[0], len(search_grid), 2
+            )[np.arange(chips_to_score.shape[0]), best_indices]
         return offsets
 
     optimizer_tolerance = min(1e-8, max(float(tolerance) * 1e-4, 1e-12))
@@ -871,8 +931,12 @@ def fit_prf_model(
         base = starts[0]
         for sigma_scale, beta_seed in ((1.5, 3.5), (1.7, 3.5), (2.0, 3.5), (1.7, 5.0)):
             candidate = base.copy()
-            candidate[0] = np.clip(candidate[0] * sigma_scale, lower_arr[0], upper_arr[0])
-            candidate[1] = np.clip(candidate[1] * sigma_scale, lower_arr[1], upper_arr[1])
+            candidate[0] = np.clip(
+                candidate[0] * sigma_scale, lower_arr[0], upper_arr[0]
+            )
+            candidate[1] = np.clip(
+                candidate[1] * sigma_scale, lower_arr[1], upper_arr[1]
+            )
             candidate[3] = np.clip(beta_seed, lower_arr[3], upper_arr[3])
             starts.append(candidate)
 
@@ -914,13 +978,21 @@ def fit_prf_model(
         airy_radius,
         oversample=oversample,
     )
-    fit_residual_ratio = float(np.linalg.norm(residuals(result.x)) / math.sqrt(chips_arr.size))
+    fit_residual_ratio = float(
+        np.linalg.norm(residuals(result.x)) / math.sqrt(chips_arr.size)
+    )
     validation_offsets = np.asarray(
-        [(_estimate_chip_fit_seed(chip)[2], _estimate_chip_fit_seed(chip)[3]) for chip in validation_chips_arr],
+        [
+            (_estimate_chip_fit_seed(chip)[2], _estimate_chip_fit_seed(chip)[3])
+            for chip in validation_chips_arr
+        ],
         dtype=np.float64,
     )
     validation_norms = np.asarray(
-        [max(np.linalg.norm(chip - np.median(chip)), 1e-6) for chip in validation_chips_arr],
+        [
+            max(np.linalg.norm(chip - np.median(chip)), 1e-6)
+            for chip in validation_chips_arr
+        ],
         dtype=np.float64,
     )
     validation_offsets = refine_offsets_for_fixed_shape(
@@ -944,7 +1016,9 @@ def fit_prf_model(
         airy_radius,
         validation_offsets,
     )
-    residual_ratio = float(np.linalg.norm(validation_residuals) / math.sqrt(validation_chips_arr.size))
+    residual_ratio = float(
+        np.linalg.norm(validation_residuals) / math.sqrt(validation_chips_arr.size)
+    )
     validation_ratio = float(residual_ratio / max(fit_residual_ratio, 1e-12))
     validated = bool(residual_ratio <= max(float(tolerance), fit_residual_ratio * 3.0))
     if model == "Gaussian":
@@ -1035,11 +1109,13 @@ def fit_prf_model_adaptive(
     usable_count = len(chips)
     sequence_cap = max(adaptive_sequence) if adaptive_sequence else usable_count
     fit_cap = max(1, min(int(sequence_cap), usable_count))
-    attempts = sorted({
-        max(1, min(int(candidate), fit_cap, usable_count))
-        for candidate in adaptive_sequence
-        if int(candidate) > 0
-    })
+    attempts = sorted(
+        {
+            max(1, min(int(candidate), fit_cap, usable_count))
+            for candidate in adaptive_sequence
+            if int(candidate) > 0
+        }
+    )
     if not attempts or usable_count <= fit_cap:
         attempts = [usable_count]
     elif attempts[-1] < min(fit_cap, usable_count):
@@ -1059,7 +1135,9 @@ def fit_prf_model_adaptive(
             fit_max_chips=attempt,
             oversampling=oversampling,
         )
-        attempt_residuals.append(f"{candidate.detections_used}:{candidate.residual_ratio:.8g}")
+        attempt_residuals.append(
+            f"{candidate.detections_used}:{candidate.residual_ratio:.8g}"
+        )
         if best_model is None or candidate.residual_ratio < best_model.residual_ratio:
             best_model = candidate
         if candidate.validated:

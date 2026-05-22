@@ -68,8 +68,9 @@ from vista.algorithms.imagery.prf import generate_oversampled_prf
 from vista.imagery.imagery import Imagery, save_imagery_hdf5
 from vista.sensors.sampled_sensor import SampledSensor
 
-
-DEFAULT_OUT_DIR = Path("~/VISTA/testing_auxiliaries/prf_single_frame_known_flux").expanduser()
+DEFAULT_OUT_DIR = Path(
+    "~/VISTA/testing_auxiliaries/prf_single_frame_known_flux"
+).expanduser()
 
 DEFAULT_HEIGHT = 128
 DEFAULT_WIDTH = 128
@@ -104,13 +105,23 @@ STANDARD_CASES: dict[str, dict[str, Any]] = {
     "airy_disk": {
         "name": "airy_disk",
         "model": "Airy Disk",
-        "parameters": {"airy_radius": 1.7, "sigma_x": 1.7, "sigma_y": 1.7, "theta": 0.0},
+        "parameters": {
+            "airy_radius": 1.7,
+            "sigma_x": 1.7,
+            "sigma_y": 1.7,
+            "theta": 0.0,
+        },
         "readme_parameters": {"airy_radius_pixels": 1.7},
     },
     "moffat": {
         "name": "moffat",
         "model": "Moffat",
-        "parameters": {"alpha_x": 2.2, "alpha_y": 1.1, "theta": np.deg2rad(22.5), "beta": 3.5},
+        "parameters": {
+            "alpha_x": 2.2,
+            "alpha_y": 1.1,
+            "theta": np.deg2rad(22.5),
+            "beta": 3.5,
+        },
         "readme_parameters": {
             "alpha_x_pixels": 2.2,
             "alpha_y_pixels": 1.1,
@@ -194,11 +205,15 @@ def normalize_pixel_shape(pixel_shape: str) -> str:
     """Return VISTA's display pixel-shape name from a CLI token."""
     key = pixel_shape.strip().lower()
     if key not in PIXEL_SHAPE_ALIASES:
-        raise ValueError(f"Unknown pixel shape {pixel_shape!r}. Expected square or circular.")
+        raise ValueError(
+            f"Unknown pixel shape {pixel_shape!r}. Expected square or circular."
+        )
     return PIXEL_SHAPE_ALIASES[key]
 
 
-def scalar_or_values(single: float | None, values: list[float] | None, default: float) -> list[float]:
+def scalar_or_values(
+    single: float | None, values: list[float] | None, default: float
+) -> list[float]:
     """Resolve one scalar option and one sweep option into a list of values."""
     if values:
         return values
@@ -221,7 +236,9 @@ def parse_args() -> argparse.Namespace:
             "custom generates requested model/parameter combinations."
         ),
     )
-    parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR, help="Root output directory.")
+    parser.add_argument(
+        "--out-dir", type=Path, default=DEFAULT_OUT_DIR, help="Root output directory."
+    )
     parser.add_argument(
         "--models",
         nargs="+",
@@ -231,7 +248,9 @@ def parse_args() -> argparse.Namespace:
             "In custom mode, equivalent to one or more --model values."
         ),
     )
-    parser.add_argument("--model", default=None, help="Single model to generate in custom mode.")
+    parser.add_argument(
+        "--model", default=None, help="Single model to generate in custom mode."
+    )
     parser.add_argument("--pixel-shapes", nargs="+", default=None)
     parser.add_argument("--pixel-shape", default=None)
 
@@ -338,7 +357,9 @@ def custom_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
     """Build custom PRF cases, including parameter sweeps."""
     model_tokens = args.models or ([args.model] if args.model else ["gaussian"])
     cases: list[dict[str, Any]] = []
-    flux_values = scalar_or_values(args.flux, args.flux_values, DEFAULT_TRUE_FLUX_COUNTS)
+    flux_values = scalar_or_values(
+        args.flux, args.flux_values, DEFAULT_TRUE_FLUX_COUNTS
+    )
 
     for model_token in model_tokens:
         model = normalize_model_name(model_token)
@@ -357,7 +378,10 @@ def custom_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
                             "theta": 0.0,
                             "flux_counts": flux,
                         },
-                        "readme_parameters": {"sigma_pixels": sigma, "flux_counts": flux},
+                        "readme_parameters": {
+                            "sigma_pixels": sigma,
+                            "flux_counts": flux,
+                        },
                     }
                 )
         elif model == "Elliptical Gaussian":
@@ -389,7 +413,9 @@ def custom_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
                     }
                 )
         elif model == "Airy Disk":
-            airy_values = scalar_or_values(args.airy_radius, args.airy_radius_values, 1.7)
+            airy_values = scalar_or_values(
+                args.airy_radius, args.airy_radius_values, 1.7
+            )
             for airy_radius, flux in itertools.product(airy_values, flux_values):
                 cases.append(
                     {
@@ -402,7 +428,10 @@ def custom_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
                             "theta": 0.0,
                             "flux_counts": flux,
                         },
-                        "readme_parameters": {"airy_radius_pixels": airy_radius, "flux_counts": flux},
+                        "readme_parameters": {
+                            "airy_radius_pixels": airy_radius,
+                            "flux_counts": flux,
+                        },
                     }
                 )
         elif model == "Moffat":
@@ -466,7 +495,9 @@ def case_output_dir(root: Path, case_name: str, pixel_shape: str) -> Path:
 
 def frames_array(config: DatasetConfig) -> np.ndarray:
     """Return frame numbers."""
-    return np.arange(config.frame_start, config.frame_start + config.num_frames, dtype=np.int64)
+    return np.arange(
+        config.frame_start, config.frame_start + config.num_frames, dtype=np.int64
+    )
 
 
 def times_array(config: DatasetConfig) -> np.ndarray:
@@ -482,12 +513,17 @@ def create_sensor(config: DatasetConfig, oversampled_prf: np.ndarray) -> Sampled
     theta_degrees = float(np.rad2deg(parameters.get("theta", 0.0)))
     return SampledSensor(
         name=f"Known Flux {config.case['model']} {config.pixel_shape} PRF Sensor",
-        positions=np.tile(np.array([[6871.0], [0.0], [0.0]], dtype=np.float64), (1, config.num_frames)),
+        positions=np.tile(
+            np.array([[6871.0], [0.0], [0.0]], dtype=np.float64), (1, config.num_frames)
+        ),
         times=times_array(config),
         frames=frames_array(config),
         oversampled_prf=oversampled_prf,
         prf_oversampling=config.oversampling,
-        prf_center=((oversampled_prf.shape[0] - 1) / 2.0, (oversampled_prf.shape[1] - 1) / 2.0),
+        prf_center=(
+            (oversampled_prf.shape[0] - 1) / 2.0,
+            (oversampled_prf.shape[1] - 1) / 2.0,
+        ),
         prf_metadata={
             "metadata_version": "2.0",
             "construction": "synthetic_known_flux_verification",
@@ -506,8 +542,12 @@ def create_sensor(config: DatasetConfig, oversampled_prf: np.ndarray) -> Sampled
             "poisson_noise": config.poisson_noise,
             "row_rate_pixels_per_frame": config.row_rate,
             "column_rate_pixels_per_frame": config.column_rate,
-            "sigma_x_pixels": float(parameters.get("sigma_x", parameters.get("airy_radius", np.nan))),
-            "sigma_y_pixels": float(parameters.get("sigma_y", parameters.get("airy_radius", np.nan))),
+            "sigma_x_pixels": float(
+                parameters.get("sigma_x", parameters.get("airy_radius", np.nan))
+            ),
+            "sigma_y_pixels": float(
+                parameters.get("sigma_y", parameters.get("airy_radius", np.nan))
+            ),
             "alpha_x_pixels": float(parameters.get("alpha_x", np.nan)),
             "alpha_y_pixels": float(parameters.get("alpha_y", np.nan)),
             "theta_degrees": theta_degrees,
@@ -538,7 +578,9 @@ def generate_source_centers(config: DatasetConfig) -> list[tuple[float, float]]:
                 centers.append((float(row), float(col)))
                 break
         else:
-            raise RuntimeError("Could not place requested sources with the requested min separation.")
+            raise RuntimeError(
+                "Could not place requested sources with the requested min separation."
+            )
     return centers
 
 
@@ -566,8 +608,15 @@ def render_images_and_truth(
             if chip_sum <= 0:
                 raise RuntimeError("Generated PRF chip has nonpositive sum.")
             prf_chip /= chip_sum
-            valid = (rows >= 0) & (rows < config.height) & (cols >= 0) & (cols < config.width)
-            images[frame_index, rows[valid], cols[valid]] += config.flux_counts * prf_chip[valid]
+            valid = (
+                (rows >= 0)
+                & (rows < config.height)
+                & (cols >= 0)
+                & (cols < config.width)
+            )
+            images[frame_index, rows[valid], cols[valid]] += (
+                config.flux_counts * prf_chip[valid]
+            )
             truths.append(
                 SourceTruth(
                     source_id=source_id,
@@ -669,25 +718,41 @@ def truth_payload(config: DatasetConfig, truths: list[SourceTruth]) -> dict[str,
     }
 
 
-def write_truth_json(output_dir: Path, config: DatasetConfig, truths: list[SourceTruth]) -> None:
+def write_truth_json(
+    output_dir: Path, config: DatasetConfig, truths: list[SourceTruth]
+) -> None:
     """Write machine-readable truth metadata."""
     payload = truth_payload(config, truths)
-    (output_dir / "truth.json").write_text(json.dumps(payload, indent=2, sort_keys=True))
+    (output_dir / "truth.json").write_text(
+        json.dumps(payload, indent=2, sort_keys=True)
+    )
 
 
-def write_readme(output_dir: Path, config: DatasetConfig, truths: list[SourceTruth]) -> None:
+def write_readme(
+    output_dir: Path, config: DatasetConfig, truths: list[SourceTruth]
+) -> None:
     """Write human-readable truth metadata."""
     parameters = config.case["parameters"]
     theta_degrees = float(np.rad2deg(parameters.get("theta", 0.0)))
     parameter_lines = ["Model parameters:"]
     if "sigma_x" in parameters or "sigma_y" in parameters:
-        parameter_lines.insert(1, f"sigma_x_pixels: {float(parameters.get('sigma_x', np.nan)):.6f}")
-        parameter_lines.insert(2, f"sigma_y_pixels: {float(parameters.get('sigma_y', np.nan)):.6f}")
+        parameter_lines.insert(
+            1, f"sigma_x_pixels: {float(parameters.get('sigma_x', np.nan)):.6f}"
+        )
+        parameter_lines.insert(
+            2, f"sigma_y_pixels: {float(parameters.get('sigma_y', np.nan)):.6f}"
+        )
     if "alpha_x" in parameters or "alpha_y" in parameters:
-        parameter_lines.insert(1, f"alpha_x_pixels: {float(parameters.get('alpha_x', np.nan)):.6f}")
-        parameter_lines.insert(2, f"alpha_y_pixels: {float(parameters.get('alpha_y', np.nan)):.6f}")
+        parameter_lines.insert(
+            1, f"alpha_x_pixels: {float(parameters.get('alpha_x', np.nan)):.6f}"
+        )
+        parameter_lines.insert(
+            2, f"alpha_y_pixels: {float(parameters.get('alpha_y', np.nan)):.6f}"
+        )
     if "airy_radius" in parameters:
-        parameter_lines.append(f"airy_radius_pixels: {float(parameters.get('airy_radius', np.nan)):.6f}")
+        parameter_lines.append(
+            f"airy_radius_pixels: {float(parameters.get('airy_radius', np.nan)):.6f}"
+        )
     parameter_lines.append(f"theta_degrees: {theta_degrees:.6f}")
     if "beta" in parameters:
         parameter_lines.append(f"beta: {float(parameters.get('beta', np.nan)):.6f}")
@@ -771,7 +836,9 @@ def prepare_output_dir(output_dir: Path, overwrite: bool) -> None:
     """Create or clear one dataset output directory."""
     if output_dir.exists():
         if not overwrite:
-            raise FileExistsError(f"{output_dir} already exists. Use --overwrite or choose another --out-dir.")
+            raise FileExistsError(
+                f"{output_dir} already exists. Use --overwrite or choose another --out-dir."
+            )
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 

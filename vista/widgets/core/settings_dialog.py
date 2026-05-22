@@ -1,16 +1,36 @@
 """Settings dialog for global VISTA application configuration"""
+
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QPushButton, QRadioButton,
-    QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from vista.utils.labeler import LABELER_SETTINGS_KEY, get_system_user
 from vista.wms.wms_client import get_tile_servers, save_tile_servers
+
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -113,11 +133,12 @@ class ImagerySettingsTab(QVBoxLayout):
 
         # Font weight
         self.tooltip_weight_combo = QComboBox()
-        self.tooltip_weight_combo.addItems(["Thin", "Light", "Normal", "DemiBold", "Bold", "Black"])
+        self.tooltip_weight_combo.addItems(
+            ["Thin", "Light", "Normal", "DemiBold", "Bold", "Black"]
+        )
         self.tooltip_weight_combo.setCurrentText("Normal")
         self.tooltip_weight_combo.setToolTip(
-            "Font weight for geolocation and pixel value tooltips.\n"
-            "Default: Normal"
+            "Font weight for geolocation and pixel value tooltips.\nDefault: Normal"
         )
         tooltip_layout.addRow("Font Weight:", self.tooltip_weight_combo)
 
@@ -131,7 +152,11 @@ class ImagerySettingsTab(QVBoxLayout):
 
     def _pick_tooltip_color(self):
         """Open a color picker dialog for the tooltip font color."""
-        color = QColorDialog.getColor(self._tooltip_color, self.tooltip_color_button.window(), "Tooltip Font Color")
+        color = QColorDialog.getColor(
+            self._tooltip_color,
+            self.tooltip_color_button.window(),
+            "Tooltip Font Color",
+        )
         if color.isValid():
             self._tooltip_color = color
             self._update_color_button_style()
@@ -158,7 +183,9 @@ class ImagerySettingsTab(QVBoxLayout):
         )
 
         # Tooltip font settings
-        color_name = self.settings.value("imagery/tooltip_font_color", "yellow", type=str)
+        color_name = self.settings.value(
+            "imagery/tooltip_font_color", "yellow", type=str
+        )
         self._tooltip_color = QColor(color_name)
         self._update_color_button_style()
         self.tooltip_size_spinbox.setValue(
@@ -172,22 +199,23 @@ class ImagerySettingsTab(QVBoxLayout):
         """Save settings to QSettings"""
         self.settings.setValue("imagery/histogram_bins", self.bins_spinbox.value())
         self.settings.setValue(
-            "imagery/histogram_min_percentile",
-            self.min_percentile_spinbox.value()
+            "imagery/histogram_min_percentile", self.min_percentile_spinbox.value()
         )
         self.settings.setValue(
-            "imagery/histogram_max_percentile",
-            self.max_percentile_spinbox.value()
+            "imagery/histogram_max_percentile", self.max_percentile_spinbox.value()
         )
         self.settings.setValue(
-            "imagery/histogram_max_rowcol",
-            self.max_rowcol_spinbox.value()
+            "imagery/histogram_max_rowcol", self.max_rowcol_spinbox.value()
         )
 
         # Tooltip font settings
         self.settings.setValue("imagery/tooltip_font_color", self._tooltip_color.name())
-        self.settings.setValue("imagery/tooltip_font_size", self.tooltip_size_spinbox.value())
-        self.settings.setValue("imagery/tooltip_font_weight", self.tooltip_weight_combo.currentText())
+        self.settings.setValue(
+            "imagery/tooltip_font_size", self.tooltip_size_spinbox.value()
+        )
+        self.settings.setValue(
+            "imagery/tooltip_font_weight", self.tooltip_weight_combo.currentText()
+        )
 
 
 class TrackVisualizationSettingsTab(QVBoxLayout):
@@ -211,16 +239,11 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
 
         # Line style dropdown
         self.ellipse_style_combo = QComboBox()
-        self.ellipse_style_combo.addItems([
-            'Solid',
-            'Dash',
-            'Dot',
-            'Dash-Dot',
-            'Dash-Dot-Dot'
-        ])
+        self.ellipse_style_combo.addItems(
+            ["Solid", "Dash", "Dot", "Dash-Dot", "Dash-Dot-Dot"]
+        )
         self.ellipse_style_combo.setToolTip(
-            "Line style for uncertainty ellipses.\n"
-            "Default: Dash"
+            "Line style for uncertainty ellipses.\nDefault: Dash"
         )
         uncertainty_layout.addRow("Line Style:", self.ellipse_style_combo)
 
@@ -229,8 +252,7 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         self.ellipse_width_spinbox.setRange(1, 10)
         self.ellipse_width_spinbox.setValue(1)
         self.ellipse_width_spinbox.setToolTip(
-            "Line width for uncertainty ellipses (pixels).\n"
-            "Default: 1"
+            "Line width for uncertainty ellipses (pixels).\nDefault: 1"
         )
         uncertainty_layout.addRow("Line Width:", self.ellipse_width_spinbox)
 
@@ -261,14 +283,16 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         """Load settings from QSettings"""
         # Map internal style names to display names
         style_map = {
-            'SolidLine': 'Solid',
-            'DashLine': 'Dash',
-            'DotLine': 'Dot',
-            'DashDotLine': 'Dash-Dot',
-            'DashDotDotLine': 'Dash-Dot-Dot'
+            "SolidLine": "Solid",
+            "DashLine": "Dash",
+            "DotLine": "Dot",
+            "DashDotLine": "Dash-Dot",
+            "DashDotDotLine": "Dash-Dot-Dot",
         }
-        internal_style = self.settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
-        display_style = style_map.get(internal_style, 'Dash')
+        internal_style = self.settings.value(
+            "tracks/uncertainty_line_style", "DashLine", type=str
+        )
+        display_style = style_map.get(internal_style, "Dash")
         self.ellipse_style_combo.setCurrentText(display_style)
 
         self.ellipse_width_spinbox.setValue(
@@ -282,18 +306,22 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         """Save settings to QSettings"""
         # Map display names back to internal style names
         style_map = {
-            'Solid': 'SolidLine',
-            'Dash': 'DashLine',
-            'Dot': 'DotLine',
-            'Dash-Dot': 'DashDotLine',
-            'Dash-Dot-Dot': 'DashDotDotLine'
+            "Solid": "SolidLine",
+            "Dash": "DashLine",
+            "Dot": "DotLine",
+            "Dash-Dot": "DashDotLine",
+            "Dash-Dot-Dot": "DashDotDotLine",
         }
         display_style = self.ellipse_style_combo.currentText()
-        internal_style = style_map.get(display_style, 'DashLine')
+        internal_style = style_map.get(display_style, "DashLine")
         self.settings.setValue("tracks/uncertainty_line_style", internal_style)
 
-        self.settings.setValue("tracks/uncertainty_line_width", self.ellipse_width_spinbox.value())
-        self.settings.setValue("tracks/uncertainty_scale", self.ellipse_scale_spinbox.value())
+        self.settings.setValue(
+            "tracks/uncertainty_line_width", self.ellipse_width_spinbox.value()
+        )
+        self.settings.setValue(
+            "tracks/uncertainty_scale", self.ellipse_scale_spinbox.value()
+        )
 
 
 class DataManagerSettingsTab(QVBoxLayout):
@@ -391,7 +419,9 @@ class GPUSettingsTab(QVBoxLayout):
         for i in range(torch.cuda.device_count()):
             device_name = torch.cuda.get_device_name(i)
             self.device_combo.addItem(f"{device_name} (cuda:{i})", f"cuda:{i}")
-        self.device_combo.setToolTip("Select which GPU device to use for accelerated algorithms")
+        self.device_combo.setToolTip(
+            "Select which GPU device to use for accelerated algorithms"
+        )
         device_layout.addRow("Device:", self.device_combo)
 
         device_group.setLayout(device_layout)
@@ -484,8 +514,12 @@ class ToolbarSettingsTab(QVBoxLayout):
 
     def save_settings(self):
         """Save settings to QSettings"""
-        self.settings.setValue("toolbar/ewma_decay_factor", self.ewma_decay_spinbox.value())
-        self.settings.setValue("toolbar/ewma_frame_offset", self.ewma_frame_offset_spinbox.value())
+        self.settings.setValue(
+            "toolbar/ewma_decay_factor", self.ewma_decay_spinbox.value()
+        )
+        self.settings.setValue(
+            "toolbar/ewma_frame_offset", self.ewma_frame_offset_spinbox.value()
+        )
 
 
 class UserSettingsTab(QVBoxLayout):
@@ -529,7 +563,9 @@ class UserSettingsTab(QVBoxLayout):
 
     def save_settings(self) -> None:
         """Save settings to QSettings."""
-        self.settings.setValue(LABELER_SETTINGS_KEY, self.labeler_name_edit.text().strip())
+        self.settings.setValue(
+            LABELER_SETTINGS_KEY, self.labeler_name_edit.text().strip()
+        )
 
 
 class TileServerEditDialog(QDialog):
@@ -629,16 +665,26 @@ class WMSSettingsTab(QVBoxLayout):
         self.settings = settings
 
         # ---- Tile Servers group ----
-        server_group = QGroupBox("Tile Servers (click a row to select the active server)")
+        server_group = QGroupBox(
+            "Tile Servers (click a row to select the active server)"
+        )
         server_layout = QVBoxLayout()
 
         self.server_table = QTableWidget()
         self.server_table.setColumnCount(3)
         self.server_table.setHorizontalHeaderLabels(["Name", "URL Template", "EPSG"])
-        self.server_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-        self.server_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.server_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.server_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.server_table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Interactive
+        )
+        self.server_table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.Stretch
+        )
+        self.server_table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.server_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
         self.server_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.server_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.server_table.verticalHeader().setVisible(False)
@@ -764,7 +810,9 @@ class WMSSettingsTab(QVBoxLayout):
         row = self.server_table.currentRow()
         if row < 0 or row >= len(self._servers):
             return
-        dlg = TileServerEditDialog(parent=self.server_table.window(), server=self._servers[row])
+        dlg = TileServerEditDialog(
+            parent=self.server_table.window(), server=self._servers[row]
+        )
         if dlg.exec() == QDialog.DialogCode.Accepted:
             server = dlg.get_server()
             if server["name"] and server["url_template"]:
@@ -813,10 +861,16 @@ class WMSSettingsTab(QVBoxLayout):
     def save_settings(self) -> None:
         """Save settings to QSettings."""
         save_tile_servers(self.settings, self._servers)
-        self.settings.setValue("wms/selected_server", max(0, self.server_table.currentRow()))
+        self.settings.setValue(
+            "wms/selected_server", max(0, self.server_table.currentRow())
+        )
         self.settings.setValue("wms/tile_cache_size", self.tile_cache_spinbox.value())
-        self.settings.setValue("wms/projection_cache_size", self.projection_cache_spinbox.value())
-        self.settings.setValue("wms/coarse_grid_enabled", self.coarse_grid_checkbox.isChecked())
+        self.settings.setValue(
+            "wms/projection_cache_size", self.projection_cache_spinbox.value()
+        )
+        self.settings.setValue(
+            "wms/coarse_grid_enabled", self.coarse_grid_checkbox.isChecked()
+        )
         self.settings.setValue("wms/coarse_grid_size", self.coarse_grid_spinbox.value())
 
 
@@ -927,8 +981,7 @@ class SettingsDialog(QDialog):
 
         # Add standard dialog buttons
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok |
-            QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         button_box.accepted.connect(self.accept_settings)
         button_box.rejected.connect(self.reject)
