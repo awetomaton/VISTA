@@ -535,8 +535,8 @@ class SensorsPanel(QWidget):
                 "Add Fitted PRF",
                 (
                     f"Sensor '{sensor.name}' already has an associated PRF.\n\n"
-                    "VISTA will preserve that PRF, store the newly fitted PRF separately, "
-                    "and make the fitted PRF active after fitting.\n\n"
+                    "VISTA will preserve that PRF and store the newly fitted PRF separately. "
+                    "Only a converged fit will become the active PRF source automatically.\n\n"
                     "Continue?"
                 ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -557,11 +557,11 @@ class SensorsPanel(QWidget):
         self.refresh_sensors_table()
         self.data_changed.emit()
         if prf_model.converged:
-            status = "converged"
+            status = "converged and is now active"
         elif prf_model.validated is False:
-            status = "did not validate; stored the lowest-residual fit"
+            status = "did not validate; stored inactive for review"
         else:
-            status = "used the best fit above tolerance"
+            status = "used the best fit above tolerance; stored inactive for review"
         QMessageBox.information(
             self,
             "PRF Fit Complete",

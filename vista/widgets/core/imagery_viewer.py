@@ -3779,6 +3779,7 @@ class ImageryViewer(QWidget):
             "stored_prf_oversampling": int(oversampling),
             **prf_model.to_metadata(),
         }
+        make_fit_active = bool(prf_model.converged)
         sensor.store_fitted_prf(
             oversampled_prf=oversampled_prf,
             oversampling=oversampling,
@@ -3787,7 +3788,7 @@ class ImageryViewer(QWidget):
                 (oversampled_prf.shape[1] - 1) / 2.0,
             ),
             metadata=fitted_prf_metadata,
-            make_active=True,
+            make_active=make_fit_active,
         )
         if self.projection_cache is not None:
             self.projection_cache.clear()
