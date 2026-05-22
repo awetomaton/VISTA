@@ -68,6 +68,45 @@ class DataLoaderThread(QThread):
         """Request cancellation of the loading operation"""
         self._cancelled = True
 
+    @staticmethod
+    def _is_prf_payload_validation_error(exc: ValueError) -> bool:
+        """Return True if a SampledSensor validation error came from PRF data."""
+        message = str(exc)
+        return any(
+            token in message
+            for token in (
+                "oversampled_prf",
+                "prf_oversampling",
+                "prf_center",
+                "fitted_oversampled_prf",
+                "fitted_prf_oversampling",
+                "fitted_prf_center",
+            )
+        )
+
+    @staticmethod
+    def _invalid_prf_source_from_error(exc: ValueError) -> str:
+        """Return which PRF payload failed validation."""
+        message = str(exc)
+        return "fitted" if "fitted_" in message else "associated"
+
+    @staticmethod
+    def _clear_prf_payload(sensor_kwargs: dict, source: str) -> None:
+        """Remove one PRF payload from SampledSensor constructor kwargs."""
+        if source == "fitted":
+            sensor_kwargs["fitted_oversampled_prf"] = None
+            sensor_kwargs["fitted_prf_oversampling"] = None
+            sensor_kwargs["fitted_prf_center"] = None
+            sensor_kwargs["fitted_prf_metadata"] = None
+        else:
+            sensor_kwargs["oversampled_prf"] = None
+            sensor_kwargs["prf_oversampling"] = None
+            sensor_kwargs["prf_center"] = None
+            sensor_kwargs["prf_metadata"] = None
+
+        if sensor_kwargs.get("active_prf_source") == source:
+            sensor_kwargs["active_prf_source"] = None
+
     def run(self):
         """Execute the data loading in background thread"""
         try:
@@ -366,33 +405,55 @@ class DataLoaderThread(QThread):
             if frames is None:
                 frames = np.array([0], dtype=np.int64)
 
-            sensor = SampledSensor(
-                name=sensor_name,
-                positions=positions,
-                times=times,
-                frames=frames,
-                pointing=pointing,
-                poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
-                poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
-                poly_arf_to_row=poly_arf_to_row,
-                poly_arf_to_col=poly_arf_to_col,
-                radiometric_gain=radiometric_gain,
-                bias_images=bias_images,
-                bias_image_frames=bias_image_frames,
-                uniformity_gain_images=uniformity_gain_images,
-                uniformity_gain_image_frames=uniformity_gain_image_frames,
-                bad_pixel_masks=bad_pixel_masks,
-                bad_pixel_mask_frames=bad_pixel_mask_frames,
-                oversampled_prf=oversampled_prf,
-                prf_oversampling=prf_oversampling,
-                prf_center=prf_center,
-                prf_metadata=prf_metadata,
-                fitted_oversampled_prf=fitted_oversampled_prf,
-                fitted_prf_oversampling=fitted_prf_oversampling,
-                fitted_prf_center=fitted_prf_center,
-                fitted_prf_metadata=fitted_prf_metadata,
-                active_prf_source=active_prf_source,
-            )
+            sensor_kwargs = {
+                "name": sensor_name,
+                "positions": positions,
+                "times": times,
+                "frames": frames,
+                "pointing": pointing,
+                "poly_pixel_to_arf_azimuth": poly_pixel_to_arf_azimuth,
+                "poly_pixel_to_arf_elevation": poly_pixel_to_arf_elevation,
+                "poly_arf_to_row": poly_arf_to_row,
+                "poly_arf_to_col": poly_arf_to_col,
+                "radiometric_gain": radiometric_gain,
+                "bias_images": bias_images,
+                "bias_image_frames": bias_image_frames,
+                "uniformity_gain_images": uniformity_gain_images,
+                "uniformity_gain_image_frames": uniformity_gain_image_frames,
+                "bad_pixel_masks": bad_pixel_masks,
+                "bad_pixel_mask_frames": bad_pixel_mask_frames,
+                "oversampled_prf": oversampled_prf,
+                "prf_oversampling": prf_oversampling,
+                "prf_center": prf_center,
+                "prf_metadata": prf_metadata,
+                "fitted_oversampled_prf": fitted_oversampled_prf,
+                "fitted_prf_oversampling": fitted_prf_oversampling,
+                "fitted_prf_center": fitted_prf_center,
+                "fitted_prf_metadata": fitted_prf_metadata,
+                "active_prf_source": active_prf_source,
+            }
+            ignored_prf_sources = set()
+            while True:
+                try:
+                    sensor = SampledSensor(**sensor_kwargs)
+                    break
+                except ValueError as exc:
+                    if (
+                        not self._is_prf_payload_validation_error(exc)
+                        or len(ignored_prf_sources) >= 2
+                    ):
+                        raise
+                    source = self._invalid_prf_source_from_error(exc)
+                    ignored_prf_sources.add(source)
+                    self._clear_prf_payload(sensor_kwargs, source)
+                    self.warning_occurred.emit(
+                        "Invalid Sensor PRF",
+                        (
+                            f"Sensor '{sensor_name}' contains an invalid {source} "
+                            "PRF payload. Imagery will load, but that PRF source "
+                            f"will be ignored.\n\nDetails: {exc}"
+                        ),
+                    )
         else:
             # Base Sensor class
             sensor = Sensor(
