@@ -151,6 +151,7 @@ class Sensor:
         self._imagery_frames_dataframe = (
             self._imagery_frames_dataframe.drop_duplicates()
         )
+        self._added_imagery_uuids.append(imagery.uuid)
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """

@@ -24,6 +24,23 @@ def make_sensor(oversampled_prf, oversampling=3, active_prf_source="associated")
     )
 
 
+def test_sensor_add_imagery_ignores_duplicate_uuid_registration():
+    sensor = make_sensor(np.ones((3, 3), dtype=np.float64), oversampling=1)
+    imagery = Imagery(
+        name="Duplicate Registration",
+        images=np.zeros((1, 8, 8), dtype=np.float32),
+        frames=np.array([0], dtype=np.int64),
+        sensor=sensor,
+        times=np.array(["2024-01-01T00:00:00"], dtype="datetime64[us]"),
+    )
+
+    sensor.add_imagery(imagery)
+    frames, times = sensor.get_imagery_frames_and_times()
+
+    assert list(frames) == [0]
+    assert len(times) == 1
+
+
 def test_sampled_sensor_rejects_invalid_prf_payloads():
     with pytest.raises(ValueError, match="finite"):
         make_sensor(np.array([[1.0, np.nan]], dtype=np.float64))
