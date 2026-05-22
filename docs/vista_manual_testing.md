@@ -102,6 +102,11 @@ python -m scripts.generate_single_frame \
   --out-dir testing_auxiliaries/prf_noisy_cases
 ```
 
+The noisy case is a stress test, not a truth-recovery requirement. Large parameter errors are
+acceptable when the signal-to-noise ratio is intentionally poor or when the selected model is poorly
+conditioned for the chip. Use it to verify that VISTA reports residuals/status cleanly and does not
+crash, not to require exact recovery of `alpha_x`, `alpha_y`, `theta`, or `beta`.
+
 If a command fails because an option is not supported, inspect the current script help:
 
 ```bash
@@ -255,11 +260,20 @@ Expected PRF flux columns include fields such as:
 Edge cases to verify:
 
 - Edge-clipped source: should be rejected, not estimated as a misleading valid flux.
-- NaN or invalid pixels: sparse invalid pixels should be handled; too many invalid pixels should
-  reject or mark low confidence.
+- NaN or invalid pixels: this requires a custom HDF5 test file or an imagery product with bad-pixel
+  metadata. Sparse invalid pixels should be handled; too many invalid pixels should reject or mark
+  low confidence.
 - Saturated chip: should warn or mark low confidence.
 - Low SNR/noisy chip: should produce status/confidence information.
 - PRF Source set to `None`: should warn cleanly.
+
+Flux status values are stored on detections after `Estimate PRF Flux` runs and appear in exported
+detection or track CSVs when any status values are present. Common values include `ok`,
+`low_confidence:high_residual`, `low_confidence:low_snr`,
+`low_confidence:possible_saturation`, `rejected:edge_clipped`, `rejected:no_sensor_prf`,
+`rejected:frame_not_in_imagery`, `rejected:invalid_prf`,
+`rejected:too_many_bad_pixels_or_nans`, `rejected:insufficient_background_pixels`,
+`rejected:invalid_background`, and `rejected:invalid_prf_support`.
 
 ## 8. Fit a PRF from Detections
 
@@ -381,6 +395,7 @@ Expected result:
 
 - Imagery reloads.
 - Sensor rows reload.
+- Sensor row order matches the saved project.
 - Detections reload.
 - PRF Source state reloads.
 - Associated/fitted PRF state reloads.
@@ -402,6 +417,28 @@ Use a current IFOV-generated HDF5 file that includes sensor PRF data, for exampl
 ```text
 /path/to/ifov/examples/output/simple_scenario_output.h5
 ```
+
+Before loading, verify that the file is actually HDF5 and nonempty:
+
+```bash
+python - <<'PY'
+from pathlib import Path
+import h5py
+
+path = Path("/path/to/ifov/examples/output/simple_scenario_output.h5")
+print("exists:", path.exists())
+print("size_bytes:", path.stat().st_size if path.exists() else None)
+print("is_hdf5:", h5py.is_hdf5(path) if path.exists() else None)
+PY
+```
+
+Expected result:
+
+- `size_bytes` is greater than zero.
+- `is_hdf5` is `True`.
+
+If `size_bytes` is zero or `is_hdf5` is `False`, regenerate the IFOV output file before testing
+VISTA compatibility. VISTA should reject a zero-byte or non-HDF5 file.
 
 Manual test:
 

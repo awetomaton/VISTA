@@ -1021,6 +1021,14 @@ class VistaMainWindow(QMainWindow):
                 for imagery in self.viewer.imageries
                 if imagery.sensor is not None
             }
+            sensor_order = [
+                str(sensor.uuid)
+                for sensor in self.viewer.sensors
+                if str(sensor.uuid) in saved_sensor_uuids
+            ]
+            for sensor_uuid in saved_sensor_uuids:
+                if sensor_uuid not in sensor_order:
+                    sensor_order.append(sensor_uuid)
             detections_assets = self._write_project_sensor_csvs(
                 project_dir,
                 "detections",
@@ -1047,6 +1055,7 @@ class VistaMainWindow(QMainWindow):
                     "tracks": tracks_assets,
                     "aois": aois_asset,
                 },
+                "sensor_order": sensor_order,
                 "counts": {
                     "sensors": len(saved_sensor_uuids),
                     "imagery": len(self.viewer.imageries),
@@ -1201,6 +1210,13 @@ class VistaMainWindow(QMainWindow):
         self.loader_thread = None
         if errors:
             raise ValueError("\n".join(errors))
+
+        sensor_order = manifest.get("sensor_order", [])
+        if sensor_order:
+            order_lookup = {str(sensor_uuid): index for index, sensor_uuid in enumerate(sensor_order)}
+            self.viewer.sensors.sort(
+                key=lambda sensor: order_lookup.get(str(sensor.uuid), len(order_lookup))
+            )
 
         sensor_by_uuid = {str(sensor.uuid): sensor for sensor in self.viewer.sensors}
         imagery_by_sensor_uuid = {}
