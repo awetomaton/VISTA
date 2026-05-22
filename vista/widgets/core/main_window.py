@@ -1261,12 +1261,27 @@ class VistaMainWindow(QMainWindow):
             )
 
             project_path.parent.mkdir(parents=True, exist_ok=True)
-            with zipfile.ZipFile(
-                project_path, "w", compression=zipfile.ZIP_DEFLATED
-            ) as archive:
-                for path in sorted(project_dir.rglob("*")):
-                    if path.is_file():
-                        archive.write(path, path.relative_to(project_dir).as_posix())
+            temp_bundle = tempfile.NamedTemporaryFile(
+                prefix=f".{project_path.name}.",
+                suffix=".tmp",
+                dir=project_path.parent,
+                delete=False,
+            )
+            temp_bundle_path = Path(temp_bundle.name)
+            temp_bundle.close()
+            try:
+                with zipfile.ZipFile(
+                    temp_bundle_path, "w", compression=zipfile.ZIP_DEFLATED
+                ) as archive:
+                    for path in sorted(project_dir.rglob("*")):
+                        if path.is_file():
+                            archive.write(
+                                path, path.relative_to(project_dir).as_posix()
+                            )
+                temp_bundle_path.replace(project_path)
+            except Exception:
+                temp_bundle_path.unlink(missing_ok=True)
+                raise
             return manifest
 
     def _project_unsaved_sensor_references(
