@@ -1,3 +1,4 @@
+import h5py
 import numpy as np
 import pytest
 
@@ -8,8 +9,9 @@ from vista.algorithms.imagery.prf import (
 )
 from vista.algorithms.imagery.prf_photometry import estimate_detector_flux_counts
 from vista.detections.detector import Detector
-from vista.imagery.imagery import Imagery
+from vista.imagery.imagery import Imagery, save_imagery_hdf5
 from vista.sensors.sampled_sensor import SampledSensor
+from vista.widgets.core.data.data_loader import DataLoaderThread
 
 
 def make_sensor(oversampled_prf, oversampling=3, active_prf_source="associated"):
@@ -186,6 +188,86 @@ def test_photometry_uses_multiple_imagery_products_for_split_detector():
     assert [result.flux_counts for result in results] == pytest.approx(
         [flux, flux], rel=1e-5
     )
+
+
+def test_hdf5_roundtrip_preserves_associated_and_fitted_prfs(tmp_path):
+    associated_prf = np.ones((3, 3), dtype=np.float64)
+    fitted_prf = np.eye(3, dtype=np.float64)
+    sensor = make_sensor(associated_prf, oversampling=1)
+    sensor.prf_metadata = {"model": "associated"}
+    sensor.store_fitted_prf(
+        fitted_prf,
+        oversampling=1,
+        center=(1.0, 1.0),
+        metadata={"model": "fitted"},
+        make_active=True,
+    )
+    imagery = Imagery(
+        name="Roundtrip PRF",
+        images=np.zeros((1, 8, 8), dtype=np.float32),
+        frames=np.array([0], dtype=np.int64),
+        sensor=sensor,
+        times=np.array(["2024-01-01T00:00:00"], dtype="datetime64[us]"),
+    )
+    file_path = tmp_path / "imagery.h5"
+
+    save_imagery_hdf5(file_path, {sensor.name: [imagery]})
+
+    with h5py.File(file_path, "r") as handle:
+        sensor_group = next(iter(handle["sensors"].values()))
+        prf_group = sensor_group["prf"]
+        assert prf_group.attrs["active_source"] == "fitted"
+        assert "associated" in prf_group
+        assert "fitted" in prf_group
+
+        loader = DataLoaderThread(str(file_path), "imagery")
+        loaded_sensor = loader._load_sensor_from_group(sensor_group)
+
+    assert loaded_sensor.active_prf_source == "fitted"
+    assert np.allclose(loaded_sensor.oversampled_prf, associated_prf)
+    assert np.allclose(loaded_sensor.fitted_oversampled_prf, fitted_prf)
+    assert loaded_sensor.prf_metadata["model"] == "associated"
+    assert loaded_sensor.fitted_prf_metadata["model"] == "fitted"
+
+
+def test_legacy_root_prf_payload_loads_as_associated_prf(tmp_path):
+    file_path = tmp_path / "legacy_root_prf.h5"
+    prf = np.ones((3, 3), dtype=np.float64)
+    with h5py.File(file_path, "w") as handle:
+        sensors_group = handle.create_group("sensors")
+        sensor_group = sensors_group.create_group("legacy-sensor")
+        sensor_group.attrs["sensor_type"] = "SampledSensor"
+        sensor_group.attrs["name"] = "Legacy Root PRF Sensor"
+        position_group = sensor_group.create_group("position")
+        position_group.create_dataset(
+            "positions", data=np.array([[0.0], [0.0], [0.0]], dtype=np.float64)
+        )
+        position_group.create_dataset(
+            "unix_nanoseconds",
+            data=np.array(
+                [np.datetime64("2024-01-01T00:00:00", "ns").astype(np.int64)]
+            ),
+        )
+        prf_group = sensor_group.create_group("prf")
+        prf_group.create_dataset("oversampled_prf", data=prf)
+        prf_group.attrs["oversampling"] = 1
+        prf_group.attrs["center_row"] = 1.0
+        prf_group.attrs["center_column"] = 1.0
+        prf_group.attrs["active_source"] = "associated"
+        imagery_group = sensor_group.create_group("imagery")
+        image_group = imagery_group.create_group("frame")
+        image_group.attrs["name"] = "Frame"
+        image_group.create_dataset("frames", data=np.array([0], dtype=np.int64))
+        image_group.create_dataset("images", data=np.zeros((1, 8, 8), dtype=np.float32))
+
+    with h5py.File(file_path, "r") as handle:
+        sensor_group = handle["sensors"]["legacy-sensor"]
+        loader = DataLoaderThread(str(file_path), "imagery")
+        loaded_sensor = loader._load_sensor_from_group(sensor_group)
+
+    assert loaded_sensor.active_prf_source == "associated"
+    assert np.allclose(loaded_sensor.oversampled_prf, prf)
+    assert loaded_sensor.fitted_oversampled_prf is None
 
 
 def test_edge_clipped_photometry_is_rejected():
