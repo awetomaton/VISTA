@@ -456,7 +456,6 @@ class Track:
         # lambda = 0.5 * (C00 + C11 +/- sqrt((C00 - C11)^2 + 4*C01^2))
 
         trace = self.covariance_00 + self.covariance_11
-        det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
         discriminant = np.sqrt(
             np.maximum(
                 (self.covariance_00 - self.covariance_11) ** 2
