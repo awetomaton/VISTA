@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-5-21
+
+### Improvements
+
+ - ✨ Added median and subspace background removal algorithms for static targets.
+
+## [1.11.1] - 2026-4-30
+
+### Bug Fixes
+
+ - 🔧 Fixed bug where frame slider range didn't update when changing sensor selection ([#11](https://github.com/awetomaton/VISTA/issues/11)).
+
+### Contributors
+- @nolanking90 — reported issue #11, identified the root cause, provided code to reproduce the issue, and provided the fix!
+
+## [1.11.0] - 2026-4-19
+
+### Improvements
+
+ - ✨ Added the ability to set the user's name in the Settings dialog. Label user name and label time is stored and saved to exported detections and tracks.
+
 ## [1.10.3] - 2026-3-21
 
 ### Improvements
@@ -331,6 +352,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[1.12.0]: https://github.com/awetomaton/VISTA/releases/tag/1.12.0
+[1.11.1]: https://github.com/awetomaton/VISTA/releases/tag/1.11.1
+[1.11.0]: https://github.com/awetomaton/VISTA/releases/tag/1.11.0
 [1.10.3]: https://github.com/awetomaton/VISTA/releases/tag/1.10.3
 [1.10.2]: https://github.com/awetomaton/VISTA/releases/tag/1.10.2
 [1.10.1]: https://github.com/awetomaton/VISTA/releases/tag/1.10.1

@@ -6,6 +6,7 @@ across multiple frames with support for multiple coordinate systems (pixel, geod
 time-based), visualization styling, and data persistence.
 """
 from dataclasses import dataclass, field
+import datetime
 from typing import Optional
 import numpy as np
 from numpy.typing import NDArray
@@ -111,6 +112,8 @@ class Track:
     show_line: bool = True  # If True, show line connecting track points
     line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
+    label_time: Optional[datetime.datetime] = None  # UTC timestamp labels were last applied
+    labeler: Optional[str] = None  # Username of the person who last applied labels
     tracker: Optional[str] = None  # Name of tracker this track belongs to
     # Extraction metadata
     extraction_metadata: Optional[dict] = None  # Dict containing 'chip_size', 'chips', 'signal_masks', 'noise_stds'
@@ -534,6 +537,17 @@ class Track:
                 kwargs["labels"] = set(label.strip() for label in labels_str.split(','))
             else:
                 kwargs["labels"] = set()
+        if "Label Time" in df.columns:
+            label_time_val = df["Label Time"].iloc[0]
+            if pd.notna(label_time_val) and label_time_val != "":
+                try:
+                    kwargs["label_time"] = pd.to_datetime(label_time_val).to_pydatetime()
+                except (ValueError, TypeError):
+                    kwargs["label_time"] = None
+        if "Labeler" in df.columns:
+            labeler_val = df["Labeler"].iloc[0]
+            if pd.notna(labeler_val) and labeler_val != "":
+                kwargs["labeler"] = str(labeler_val)
 
         # Handle times (optional)
         times = None
@@ -695,6 +709,8 @@ class Track:
             show_line = self.show_line,
             line_style = self.line_style,
             labels = self.labels.copy(),
+            label_time = self.label_time,
+            labeler = self.labeler,
             tracker = self.tracker,
             extraction_metadata = extraction_metadata_copy,
             covariance_00 = self.covariance_00.copy() if self.covariance_00 is not None else None,
@@ -731,6 +747,8 @@ class Track:
             "Show Line": self.show_line,
             "Line Style": self.line_style,
             "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
+            "Label Time": self.label_time.isoformat() if self.label_time is not None else '',
+            "Labeler": self.labeler or '',
         }
 
         # Include geolocation if possible

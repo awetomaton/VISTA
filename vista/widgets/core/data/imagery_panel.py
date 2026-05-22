@@ -230,12 +230,10 @@ class ImageryPanel(QWidget):
                 for imagery in self.viewer.imageries:
                     if imagery.uuid == imagery_uuid:
                         # Skip if the viewer is already displaying this imagery
-                        if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
-                            break
-                        self.viewer.select_imagery(imagery)
+                        if self.viewer.imagery is None or self.viewer.imagery.uuid != imagery_uuid:
+                            self.viewer.select_imagery(imagery)
                         # Update frame range in main window
                         self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
-                        # Note: Don't emit data_changed here - selection doesn't change data
                         break
         else:
             # No imagery selected - clear the viewer display

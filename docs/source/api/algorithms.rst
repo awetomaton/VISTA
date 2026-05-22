@@ -78,9 +78,17 @@ Background Removal
    background_removal.temporal_median.TemporalMedian
    background_removal.robust_pca.run_robust_pca
    background_removal.subspace_background_removal.subspace_background_removal
+   background_removal.static_subspace_background_removal.static_subspace_background_removal
+   background_removal.static_median_background_removal.static_median_background_removal
    background_removal.godec.godec
 
-Background removal algorithms separate moving objects from static background.
+Background removal algorithms separate transient or moving signal from background. The
+sliding variants (``TemporalMedian``, ``subspace_background_removal``) model the
+background from a temporal window around each target frame and are best suited to
+moving targets. The static variants
+(``static_median_background_removal``, ``static_subspace_background_removal``) model
+the background once from user-specified background frames and are best suited to
+non-moving transient events whose timing is known.
 
 Temporal Median Example:
 
@@ -107,6 +115,48 @@ Sliding Subspace Background Removal Example:
    # Manual rank with tiling for large images
    background, foreground = subspace_background_removal(
        images, rank=5, window_size=25, gap_size=3, tile_size=64
+   )
+
+Static Median Background Removal Example:
+
+.. code-block:: python
+
+   import numpy as np
+   from vista.algorithms.background_removal.static_median_background_removal import (
+       static_median_background_removal,
+   )
+
+   # images is a numpy array of shape (num_frames, height, width).
+   # Frames 0-80 and 130-200 are quiescent; the transient occurs in 80-130.
+   images = imagery.images.astype(np.float32)
+   background_frames = np.concatenate([images[0:80], images[130:200]], axis=0)
+   target_frames = images[80:130]
+
+   background, foreground = static_median_background_removal(
+       background_frames, target_frames
+   )
+
+Static Subspace Background Removal Example:
+
+.. code-block:: python
+
+   import numpy as np
+   from vista.algorithms.background_removal.static_subspace_background_removal import (
+       static_subspace_background_removal,
+   )
+
+   images = imagery.images.astype(np.float32)
+   background_frames = np.concatenate([images[0:80], images[130:200]], axis=0)
+   target_frames = images[80:130]
+
+   # Manual rank
+   background, foreground = static_subspace_background_removal(
+       background_frames, target_frames, rank=5
+   )
+
+   # Automatic rank selection via knee detection, with tiling for large images
+   background, foreground = static_subspace_background_removal(
+       background_frames, target_frames, rank=None, tile_size=64
    )
 
 GoDec Background Removal Example:
@@ -233,6 +283,16 @@ Background Removal
    :show-inheritance:
 
 .. automodule:: vista.algorithms.background_removal.subspace_background_removal
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: vista.algorithms.background_removal.static_subspace_background_removal
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: vista.algorithms.background_removal.static_median_background_removal
    :members:
    :undoc-members:
    :show-inheritance:
