@@ -12,7 +12,7 @@ def _bind_project_helpers(window):
     for name in (
         "_write_project_bundle",
         "_project_unsaved_sensor_references",
-        "_write_project_sensor_csvs",
+        "_write_project_overlay_csvs",
         "_write_project_aois_csv",
         "_extract_project_bundle",
         "_read_project_manifest",

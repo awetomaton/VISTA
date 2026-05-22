@@ -1201,13 +1201,13 @@ class VistaMainWindow(QMainWindow):
             for sensor_uuid in saved_sensor_uuids:
                 if sensor_uuid not in sensor_order:
                     sensor_order.append(sensor_uuid)
-            detections_assets = self._write_project_sensor_csvs(
+            detections_assets = self._write_project_overlay_csvs(
                 project_dir,
                 "detections",
                 self.viewer.detectors,
                 saved_sensor_uuids,
             )
-            tracks_assets = self._write_project_sensor_csvs(
+            tracks_assets = self._write_project_overlay_csvs(
                 project_dir,
                 "tracks",
                 self.viewer.tracks,
@@ -1303,7 +1303,7 @@ class VistaMainWindow(QMainWindow):
                 missing.append(f"- {label}: {object_name} (sensor: {sensor_name})")
         return missing
 
-    def _write_project_sensor_csvs(
+    def _write_project_overlay_csvs(
         self,
         project_dir: Path,
         data_type: str,

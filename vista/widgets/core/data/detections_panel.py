@@ -1524,7 +1524,7 @@ class DetectionsPanel(QWidget):
         total_rejected = 0
 
         for detector in selected_detectors:
-            imageries = self._imageries_for_detector(detector)
+            imageries = self._candidate_imageries_for_detector(detector)
             if not imageries:
                 detector.flux_counts = np.full(len(detector), np.nan, dtype=np.float64)
                 detector.flux_uncertainty_counts = np.full(
@@ -1623,7 +1623,7 @@ class DetectionsPanel(QWidget):
             message += f"\n...and {len(summaries) - 8} more detector(s)."
         QMessageBox.information(self, "PRF Flux Complete", message)
 
-    def _imageries_for_detector(self, detector):
+    def _candidate_imageries_for_detector(self, detector):
         """Find loaded imageries for a detector's sensor, preferring current imagery."""
         imageries = []
         if (

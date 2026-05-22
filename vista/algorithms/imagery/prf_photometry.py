@@ -213,7 +213,7 @@ def estimate_detection_flux_counts(
     return result
 
 
-def _result_for_missing_imagery(detector, index: int) -> PRFPhotometryResult:
+def _missing_imagery_result(detector, index: int) -> PRFPhotometryResult:
     """Return a rejected result when no loaded imagery contains a detection frame."""
     return PRFPhotometryResult(
         index=index,
@@ -224,7 +224,7 @@ def _result_for_missing_imagery(detector, index: int) -> PRFPhotometryResult:
     )
 
 
-def _imagery_for_detection_frame(imageries: Sequence, detector, index: int):
+def _find_imagery_for_detection(imageries: Sequence, detector, index: int):
     """Find sensor-matched imagery containing one detection frame."""
     frame = int(detector.frames[index])
     for imagery in imageries:
@@ -252,11 +252,11 @@ def estimate_detector_flux_counts(
         imageries = list(imagery)
         results = []
         for index in range(len(detector.frames)):
-            detection_imagery = _imagery_for_detection_frame(
+            detection_imagery = _find_imagery_for_detection(
                 imageries, detector, index
             )
             if detection_imagery is None:
-                results.append(_result_for_missing_imagery(detector, index))
+                results.append(_missing_imagery_result(detector, index))
                 continue
             results.append(
                 estimate_detection_flux_counts(
