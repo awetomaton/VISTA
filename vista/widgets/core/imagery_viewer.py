@@ -564,11 +564,15 @@ class ImageryViewer(QWidget):
 
         # Collect frames from detectors
         for detector in self.detectors:
+            if (self.selected_sensor is not None) and (self.selected_sensor != detector.sensor):
+                continue
             if len(detector.frames) > 0:
                 all_frames.extend(detector.frames)
 
         # Collect frames from tracks
         for track in self.tracks:
+            if (self.selected_sensor is not None) and (self.selected_sensor != track.sensor):
+                continue
             if len(track.frames) > 0:
                 all_frames.extend(track.frames)
 

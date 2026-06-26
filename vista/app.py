@@ -37,12 +37,6 @@ class VistaApp:
     >>> app = VistaApp(imagery=imagery)
     >>> app.exec()
 
-    Loading with explicit sensor parameter:
-
-    >>> # Launch VISTA with explicit sensor parameter
-    >>> app = VistaApp(sensors=sensor, imagery=imagery)
-    >>> app.exec()
-
     Loading multiple data types:
 
     >>> from vista.detections.detector import Detector
@@ -69,7 +63,6 @@ class VistaApp:
     >>>
     >>> # Launch VISTA with all data types
     >>> app = VistaApp(
-    ...     sensors=sensor,
     ...     imagery=imagery,
     ...     detections=detector,
     ...     tracks=track  # Can be a Track or list of Track objects
@@ -77,7 +70,7 @@ class VistaApp:
     >>> app.exec()
     """
 
-    def __init__(self, imagery=None, tracks=None, detections=None, sensors=None, show=True):
+    def __init__(self, imagery=None, tracks=None, detections=None, show=True):
         """
         Initialize the VISTA application with optional data.
 
@@ -90,9 +83,6 @@ class VistaApp:
             to group tracks by tracker name.
         detections : Detector or list of Detector, optional
             Detector object(s) to load at startup
-        sensors : Sensor or list of Sensor, optional
-            Sensor object(s) to load at startup. If not provided, sensors will be
-            extracted from imagery objects that have associated sensors.
         show : bool, optional
             If True, show the window immediately, by default True
         """
@@ -109,7 +99,6 @@ class VistaApp:
             imagery=imagery,
             tracks=tracks,
             detections=detections,
-            sensors=sensors
         )
 
         if show:

@@ -54,7 +54,7 @@ from .save_imagery_dialog import SaveImageryDialog
 class VistaMainWindow(QMainWindow):
     """Main application window"""
 
-    def __init__(self, imagery=None, tracks=None, detections=None, sensors=None):
+    def __init__(self, imagery=None, tracks=None, detections=None):
         """
         Initialize the Vista main window.
 
@@ -66,9 +66,6 @@ class VistaMainWindow(QMainWindow):
             Track object(s) to load at startup
         detections : Detector or list of Detector, optional
             Detector object(s) to load at startup
-        sensors : Sensor or list of Sensor, optional
-            Sensor object(s) to load at startup. If not provided, sensors will be
-            extracted from imagery objects that have associated sensors.
         """
         super().__init__()
         self.setWindowTitle(f"VISTA - {vista.__version__}")
@@ -92,8 +89,8 @@ class VistaMainWindow(QMainWindow):
         self.init_ui()
 
         # Load any provided data programmatically
-        if imagery is not None or tracks is not None or detections is not None or sensors is not None:
-            self.load_data_programmatically(imagery, tracks, detections, sensors)
+        if imagery or tracks or detections:
+            self.load_data_programmatically(imagery, tracks, detections)
 
     def init_ui(self):
         # Create main widget and layout
@@ -1442,8 +1439,7 @@ class VistaMainWindow(QMainWindow):
                     self.load_data_programmatically(
                         imagery=simulation.imagery,
                         tracks=simulation.tracks,
-                        detections=simulation.detectors,
-                        sensors=simulation.imagery.sensor if simulation.imagery else None
+                        detections=simulation.detectors
                     )
 
                 self.statusBar().showMessage(f"Simulation saved to: {dir_path}", 5000)
@@ -2719,7 +2715,7 @@ class VistaMainWindow(QMainWindow):
                                 item.setSelected(True)
             self.data_manager.tracks_panel.tracks_table.blockSignals(False)
 
-    def load_data_programmatically(self, imagery=None, tracks=None, detections=None, sensors=None):
+    def load_data_programmatically(self, imagery=None, tracks=None, detections=None):
         """
         Load data programmatically without file dialogs.
 
@@ -2731,26 +2727,26 @@ class VistaMainWindow(QMainWindow):
             Track object(s) to load
         detections : Detector or list of Detector, optional
             Detector object(s) to load
-        sensors : Sensor or list of Sensor, optional
-            Sensor object(s) to load. If not provided, sensors will be extracted
-            from imagery objects that have associated sensors.
+        
         """
-        # Load sensors first (if provided)
-        if sensors is not None:
-            # Convert single item to list
-            sensors_list = [sensors] if isinstance(sensors, Sensor) else sensors
 
-            for sensor in sensors_list:
-                # Check if sensor with same UUID already exists
-                existing_sensor = None
-                for s in self.viewer.sensors:
-                    if s == sensor:  # Use UUID-based equality
-                        existing_sensor = s
-                        break
+        # Find sensors from imagery, tracks, and detections
+        objects_with_sensors = []
+        if imagery is not None:
+            objects_with_sensors += [imagery] if isinstance(imagery, Imagery) else imagery
+        if detections is not None:
+            objects_with_sensors += [detections] if isinstance(detections, Detector) else detections
+        if tracks is not None:
+            objects_with_sensors += [tracks] if isinstance(tracks, Track) else tracks
+        for obj in objects_with_sensors:
+            if obj.sensor not in self.viewer.sensors:
+                self.viewer.sensors.append(obj.sensor)
 
-                if existing_sensor is None:
-                    # Add new sensor to viewer
-                    self.viewer.sensors.append(sensor)
+        if not self.viewer.sensors:
+            return  # nothing to load
+        
+        # Select the first sensor for viewing
+        self.viewer.selected_sensor = self.viewer.sensors[0]
 
         # Load imagery
         if imagery is not None:
@@ -2758,21 +2754,8 @@ class VistaMainWindow(QMainWindow):
             imagery_list = [imagery] if isinstance(imagery, Imagery) else imagery
 
             for img in imagery_list:
-                # If imagery has a sensor, make sure it's in the viewer's sensor list
-                if img.sensor is not None:
-                    sensor_exists = False
-                    for s in self.viewer.sensors:
-                        if s == img.sensor:  # Use UUID-based equality
-                            sensor_exists = True
-                            # Reuse existing sensor instead of the one from imagery
-                            img.sensor = s
-                            break
-
-                    if not sensor_exists:
-                        # Add the imagery's sensor to viewer
-                        self.viewer.sensors.append(img.sensor)
-
                 self.viewer.add_imagery(img)
+        
                 # Select the first imagery for viewing
                 if img == imagery_list[0]:
                     self.viewer.select_imagery(img)
@@ -2803,8 +2786,8 @@ class VistaMainWindow(QMainWindow):
 
         # Update status bar
         status_parts = []
-        if sensors is not None:
-            count = len(sensors_list) if isinstance(sensors_list, list) else 1
+        if self.viewer.sensors is not None:
+            count = len(self.viewer.sensors) if isinstance(self.viewer.sensors, list) else 1
             status_parts.append(f"{count} sensor(s)")
         if imagery is not None:
             count = len(imagery_list) if isinstance(imagery_list, list) else 1
