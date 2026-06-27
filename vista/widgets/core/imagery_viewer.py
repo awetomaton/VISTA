@@ -477,18 +477,16 @@ class ImageryViewer(QWidget):
                         mn, mx = hist_min, hist_max
                     self.histogram.setLevels(mn, mx)
                 else:
+                    # Use or create pre-computed histogram data
+                    hist_y, hist_x = self.imagery.get_histogram(image_index)
                     if self.histogram_visible:
-                        # Use or create pre-computed histogram data
-                        hist_y, hist_x = self.imagery.get_histogram(image_index)
                         self.histogram.plot.setData(hist_x, hist_y)
 
                     # Apply histogram bounds
                     if user_histogram_bounds is not None:
                         self.histogram.setLevels(*user_histogram_bounds)
-                    elif self.imagery.default_histogram_bounds is None:
-                        self.histogram.setLevels(
-                            self.histogram.plot.xData[0], self.histogram.plot.xData[-1]
-                        )
+                    elif self.imagery.default_histogram_bounds is None and len(hist_x) > 0:
+                        self.histogram.setLevels(hist_x[0], hist_x[-1])
                     else:
                         self.histogram.setLevels(
                             *self.imagery.default_histogram_bounds[image_index]
