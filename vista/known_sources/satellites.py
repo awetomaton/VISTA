@@ -3,7 +3,7 @@
 
 """
 
-from astropy.coordinates import ITRS, SkyCoord, TEME
+from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
 from astropy import units as u
 import numpy as np
@@ -72,9 +72,9 @@ class Satellites():
 
         self.satellites = SatrecArray(list(satellites.values()))
 
-    def get_geodetics(self, times: NDArray[np.datetime64]) -> NDArray:
+    def get_geodetics(self, times: NDArray[np.datetime64]) -> EarthLocation:
         """
-        Return an array of ECEF coordinates for the satellites at the provided times
+        Return an EarthLocation containing the positions of the satellites at the provided times
 
         Parameters
         ----------
@@ -83,9 +83,8 @@ class Satellites():
             
         Returns
         -------
-        NDArray[np.float64]
-            Satellite ECEF positions (km) as (satellites, times, 3) array
-            If times was a single number, the times axis is absent
+        EarthLocation
+            Astropy EarthLocation object containing geodetic coordinates
         """
         # SGP4 for a SatrecArray expects an array of times
         times = np.atleast_1d(times)
@@ -106,7 +105,5 @@ class Satellites():
         # ...which we transform to ITRS (ECEF) coordinates
         ecef_coords = teme_coords.transform_to(ITRS(obstime=times))
 
-        # ensure that x,y,z coordinates are the last axis
-        # final result should have axes like (satellites, times, coordinates), in units of km
-        # (times axis will be missing if times was a single number)
-        return np.moveaxis(ecef_coords.cartesian.xyz.to(u.km).value, 0, -1)
+        # unpack cartesian xyz coordinates into xyz arguments
+        return EarthLocation(*ecef_coords.cartesian.xyz)
