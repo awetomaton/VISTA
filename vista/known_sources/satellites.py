@@ -3,11 +3,14 @@
 
 """
 
+from sensors.sensor import Sensor
+
 from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
 from astropy import units as u
 import numpy as np
 from numpy.typing import NDArray
+from typing import Tuple, Union
 from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
@@ -86,6 +89,8 @@ class Satellites():
         EarthLocation
             Astropy EarthLocation object containing geodetic coordinates
         """
+        # TODO: cache results for specific times (frames)?
+
         # SGP4 for a SatrecArray expects an array of times
         times = np.atleast_1d(times)
         times = Time(times)
@@ -107,3 +112,31 @@ class Satellites():
 
         # unpack cartesian xyz coordinates into xyz arguments
         return EarthLocation(*ecef_coords.cartesian.xyz)
+
+    def get_pixels(self, sensor: Sensor, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
+        """
+        Return the pixel positions of the satellites for the provided sensor and frame number(s)
+
+        Parameters
+        ----------
+        sensor : Sensor
+            The sensor whose imagery we want to project the satellites onto
+        frame : int, NDArray
+            The frame number(s) to project onto 
+        
+        Returns
+        -------
+        rows : NDArray
+            Row coordinates of satellite positions in the frame(s)
+        cols : NDArray
+            Column coordinates of satellite positions in the frame(s)
+        """
+        # get times for the desired frame(s)
+        _, times = sensor.get_imagery_frames_and_times()
+        times = times[frame]
+
+        # geodetic locations for the satellites at those times
+        locs = self.get_geodetics(times)
+
+        # convert from ECEF to ARF to pixels
+        return sensor.geodetic_to_pixel(frame, locs)
