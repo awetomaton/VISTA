@@ -3,7 +3,7 @@
 
 """
 
-from sgp4.api import Satrec
+from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
 class Satellites():
@@ -14,8 +14,9 @@ class Satellites():
     # TODO: Don't restrict myself to TLEs only?
     # use more up-to-date OMM files since number of known sats has surpassed TLE ID limits?
 
+    # TODO: require filename on initialization instead?
     def __init__(self):
-        self.satellites = {}
+        self.satellites = SatrecArray([]) # empty satellites array
 
     def _parse_tle_blocks(self, lines):
         """Generates (name, line1, line2) tuples from raw TLE lines."""
@@ -45,7 +46,7 @@ class Satellites():
                     break
 
     def load_tle_file(self, file_path):
-        """Parses a TLE file into a unique dictionary of Satrec objects."""
+        """Parses a TLE file into a SatrecArray of unique objects"""
         satellites = {}
         
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -63,5 +64,5 @@ class Satellites():
             
             sat = Satrec.twoline2rv(l1, l2)
             satellites[name] = sat
-                
-        self.satellites = satellites
+
+        self.satellites = SatrecArray(list(satellites.values()))
