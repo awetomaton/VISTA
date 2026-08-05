@@ -122,7 +122,7 @@ class Satellites():
         sensor : Sensor
             The sensor whose imagery we want to project the satellites onto
         frame : int, NDArray
-            The frame number(s) to project onto 
+            The frame number(s) to project onto
         
         Returns
         -------

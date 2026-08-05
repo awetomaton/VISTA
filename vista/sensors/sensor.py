@@ -195,7 +195,7 @@ class Sensor:
 
     def can_geolocate(self) -> bool:
         """
-        Check if sensor can convert pixels to geodetic coordiantes and vice versa.
+        Check if sensor can convert pixels to geodetic coordinates and vice versa.
 
         Notes
         -----
