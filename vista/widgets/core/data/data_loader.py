@@ -35,6 +35,7 @@ class DataLoaderThread(QThread):
     detectors_loaded = pyqtSignal(list)  # Emits list of Detector objects
     tracks_loaded = pyqtSignal(list)  # Emits list of Track objects with tracker attribute set
     aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
+    satellites_loaded = pyqtSignal(list)  # Emits Satellites object
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
@@ -48,9 +49,9 @@ class DataLoaderThread(QThread):
         file_path : str or Path
             Path to the file to load
         data_type : str
-            Type of data to load ('imagery', 'detections', 'tracks', 'aois')
+            Type of data to load ('imagery', 'detections', 'tracks', 'aois', 'satellites')
         file_format : str, optional
-            Format of the file ('hdf5' or 'csv'), by default 'hdf5'
+            Format of the file ('hdf5', 'csv', or 'tle'), by default 'hdf5'
         sensor : Sensor, optional
             Optional Sensor object for track/detection association and geodetic mapping, by default None
         imagery : Imagery, optional
@@ -79,6 +80,8 @@ class DataLoaderThread(QThread):
                 self._load_tracks_csv()
             elif self.data_type == "aois":
                 self._load_aois_csv()
+            elif self.data_type == "satellites":
+                self._load_satellites_tle()
             else:
                 self.error_occurred.emit(f"Unknown data type: {self.data_type}")
         except Exception as e:
@@ -550,3 +553,8 @@ class DataLoaderThread(QThread):
 
         # Emit the loaded AOIs
         self.aois_loaded.emit(aois)
+
+    def _load_satellites_tle(self):
+        """Load satellites from TLE file"""
+        # TODO: decide how to load file and what to emit
+        pass

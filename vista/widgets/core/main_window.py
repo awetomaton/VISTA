@@ -234,6 +234,10 @@ class VistaMainWindow(QMainWindow):
         load_placemarks_action.triggered.connect(self.load_placemarks_file)
         file_menu.addAction(load_placemarks_action)
 
+        load_satellites_action = QAction("Load Satellites (TLE)", self)
+        load_satellites_action.triggered.connect(self.load_satellites_file)
+        file_menu.addAction(load_satellites_action)
+
         file_menu.addSeparator()
 
         simulate_action = QAction("Simulate", self)
@@ -1857,6 +1861,87 @@ class VistaMainWindow(QMainWindow):
         if self.loader_thread:
             self.loader_thread.deleteLater()
             self.loader_thread = None
+
+    def load_satellites_file(self):
+        """Load Satellites from TLE file(s) using background thread"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_satellites_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self, "Load Satellites", last_dir, "TLE Files (*.tle)"
+        )
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_satellites_dir", str(Path(file_paths[0]).parent))
+
+            # Store file paths queue for sequential loading
+            self.satellites_file_queue = list(file_paths)
+            self.satellites_loaded_count = 0
+            self.satellites_total_count = len(file_paths)
+
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading Satellites...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
+
+            # Start loading the first file
+            self._load_next_satellites_file()
+
+    def _load_next_satellites_file(self):
+        """Load the next Satellites file from the queue"""
+        if not self.satellites_file_queue:
+            # All files loaded
+            return
+
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        file_path = self.satellites_file_queue.pop(0)
+
+        # Create and start loader thread
+        self.loader_thread = DataLoaderThread(file_path, 'satellites', 'tle')
+        self.loader_thread.satellites_loaded.connect(self.on_satellites_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_satellites_file_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_satellites_file_loaded(self):
+        """Handle completion of a single Satellites file load"""
+        self.satellites_loaded_count += 1
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # Check if there are more files to load
+        if self.satellites_file_queue:
+            # Load next file
+            self._load_next_satellites_file()
+        else:
+            # All files loaded, close progress dialog
+            self.on_loading_finished()
+
+            # Update status with total count
+            self.statusBar().showMessage(f"Loaded {self.satellites_loaded_count} Satellite file(s)", 3000)
+
+    def on_satellites_loaded(self, satellites):
+        """Handle Satellites loaded in background thread"""
+        self.statusBar().showMessage(f"Loaded {len(satellites)} Satellite(s)", 3000)
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""
