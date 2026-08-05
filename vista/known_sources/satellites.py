@@ -3,6 +3,11 @@
 
 """
 
+from astropy.coordinates import ITRS, SkyCoord, TEME
+from astropy.time import Time
+from astropy import units as u
+import numpy as np
+from numpy.typing import NDArray
 from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
@@ -66,3 +71,42 @@ class Satellites():
             satellites[name] = sat
 
         self.satellites = SatrecArray(list(satellites.values()))
+
+    def get_geodetics(self, times: NDArray[np.datetime64]) -> NDArray:
+        """
+        Return an array of ECEF coordinates for the satellites at the provided times
+
+        Parameters
+        ----------
+        times : NDArray[np.datetime64]
+            Array of times for which to retrieve sensor positions
+            
+        Returns
+        -------
+        NDArray[np.float64]
+            Satellite ECEF positions (km) as (satellites, times, 3) array
+            If times was a single number, the times axis is absent
+        """
+        # SGP4 for a SatrecArray expects an array of times
+        times = np.atleast_1d(times)
+        times = Time(times)
+
+        # errors, positions, velocities
+        e, r, v = self.satellites.sgp4(times.jd1, times.jd2)
+
+        if np.any(e != 0):
+            raise ValueError(f"Error propogating SGP4 positions")
+
+        # now remove extra dimensions if time was single value
+        r = np.squeeze(r)
+
+        # SGP4 provides satellite True Equator Mean Equinox coordinates...
+        teme_coords = SkyCoord(x = r[..., 0] * u.km, y = r[..., 1] * u.km, z = r[..., 2] * u.km, 
+                               obstime = times, frame=TEME, representation_type='cartesian')
+        # ...which we transform to ITRS (ECEF) coordinates
+        ecef_coords = teme_coords.transform_to(ITRS(obstime=times))
+
+        # ensure that x,y,z coordinates are the last axis
+        # final result should have axes like (satellites, times, coordinates), in units of km
+        # (times axis will be missing if times was a single number)
+        return np.moveaxis(ecef_coords.cartesian.xyz.to(u.km).value, 0, -1)
