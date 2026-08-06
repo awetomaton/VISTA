@@ -11,6 +11,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
+from vista.known_sources.satellites import Satellites
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
@@ -556,5 +557,7 @@ class DataLoaderThread(QThread):
 
     def _load_satellites_tle(self):
         """Load satellites from TLE file"""
-        # TODO: decide how to load file and what to emit
-        pass
+        satellites = Satellites(self.file_path)
+
+        # Emit the created satellites
+        self.satellites_loaded.emit(satellites)

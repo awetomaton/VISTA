@@ -22,9 +22,20 @@ class Satellites():
     # TODO: Don't restrict myself to TLEs only?
     # use more up-to-date OMM files since number of known sats has surpassed TLE ID limits?
 
-    # TODO: require filename on initialization instead?
-    def __init__(self):
+    def __init__(self, file_path: str=None):
+        """
+        Create a Satellites object
+
+        Parameters
+        ----------
+        file_path : str, optional
+            File path to satellite TLE data.
+            Data can optionally be loaded later with the load_tle_file function
+        """
         self.satellites = SatrecArray([]) # empty satellites array
+
+        if file_path is not None:
+            self.load_tle_file(file_path)
 
     def _parse_tle_blocks(self, lines):
         """Generates (name, line1, line2) tuples from raw TLE lines."""
@@ -98,6 +109,7 @@ class Satellites():
         # errors, positions, velocities
         e, r, v = self.satellites.sgp4(times.jd1, times.jd2)
 
+        # TODO: raise actual SGP4 error code value(s)
         if np.any(e != 0):
             raise ValueError(f"Error propogating SGP4 positions")
 
