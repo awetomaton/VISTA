@@ -557,7 +557,10 @@ class DataLoaderThread(QThread):
 
     def _load_satellites_tle(self):
         """Load satellites from TLE file"""
-        satellites = Satellites(self.file_path)
+
+        # Name for the satellites object is just the filename
+        name = Path(self.file_path).stem
+        satellites = Satellites(name, self.file_path)
 
         # Emit the created satellites
         self.satellites_loaded.emit(satellites)
