@@ -95,6 +95,7 @@ class ImageryViewer(QWidget):
         self.tracks = []  # List of Track objects
         self.aois = []  # List of AOI objects
         self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
+        self.known_sources = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
         # Use UUID as key for reliable object identification
@@ -2099,6 +2100,10 @@ class ImageryViewer(QWidget):
                     )
                     self.plot_item.addItem(scatter_item)
                     feature._plot_items.append(scatter_item)
+
+    def add_known_source(self, source):
+        if source not in self.known_sources:
+            self.known_sources.append(source)
 
     def start_track_creation(self):
         """Start track creation mode"""

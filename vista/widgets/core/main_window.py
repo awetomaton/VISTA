@@ -1941,6 +1941,12 @@ class VistaMainWindow(QMainWindow):
 
     def on_satellites_loaded(self, satellites):
         """Handle Satellites loaded in background thread"""
+        # satellites is a single object
+        self.viewer.add_known_source(satellites)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
         self.statusBar().showMessage(f"Loaded {satellites.num_satellites} Satellite(s)", 3000)
 
     def save_imagery_file(self):
