@@ -3,7 +3,7 @@
 
 """
 
-from sensors.sensor import Sensor
+from vista.sensors.sensor import Sensor
 
 from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
