@@ -1941,7 +1941,7 @@ class VistaMainWindow(QMainWindow):
 
     def on_satellites_loaded(self, satellites):
         """Handle Satellites loaded in background thread"""
-        self.statusBar().showMessage(f"Loaded {len(satellites)} Satellite(s)", 3000)
+        self.statusBar().showMessage(f"Loaded {satellites.num_satellites} Satellite(s)", 3000)
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""
