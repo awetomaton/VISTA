@@ -4,6 +4,7 @@
 """
 
 from vista.sensors.sensor import Sensor
+from .known_source import KnownSource
 
 from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
@@ -14,7 +15,7 @@ from typing import Tuple, Union
 from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
-class Satellites():
+class Satellites(KnownSource):
     """
     Class to hold satellite TLE data, converting to positions as necessary
     """
@@ -22,7 +23,7 @@ class Satellites():
     # TODO: Don't restrict myself to TLEs only?
     # use more up-to-date OMM files since number of known sats has surpassed TLE ID limits?
 
-    def __init__(self, file_path: str=None):
+    def __init__(self, name: str, file_path: str | None = None):
         """
         Create a Satellites object
 
@@ -32,6 +33,7 @@ class Satellites():
             File path to satellite TLE data.
             Data can optionally be loaded later with the load_tle_file function
         """
+        super().__init__(name, "satellites")
         self.num_satellites = 0
         self.satellites = SatrecArray([]) # empty satellites array
 
