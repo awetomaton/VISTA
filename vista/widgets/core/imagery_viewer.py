@@ -2105,11 +2105,40 @@ class ImageryViewer(QWidget):
     def add_known_source(self, source):
         if source not in self.known_sources:
             self.known_sources.append(source)
+            self._render_known_source(source)
 
     def remove_known_source(self, source: KnownSource):
         if source in self.known_sources:
+            # Remove from plot
+            if source._plot_item:
+                self.plot_item.removeItem(source._plot_item)
+                source._plot_item = None
             self.known_sources.remove(source)
 
+    def _render_known_source(self, source):
+        # TODO: this only runs when adding a known source
+        # Need to make it run when a sensor is loaded in as well
+        # in case you load the sources before the image files
+        # also need to rerender when changing frames, etc.
+        if self.selected_sensor is None:
+            return
+
+        # TODO: make color editable for each different source
+        color = pg.mkColor('g')
+
+        rows, columns = source.get_pixels(self.selected_sensor, self.current_frame_number)
+
+        # Create a small marker for the sources
+        scatter_item = pg.ScatterPlotItem(
+            x=columns, y=rows,
+            size=3,
+            pen=pg.mkPen(color, width=2),
+            brush=pg.mkBrush(color),
+            symbol='o'
+        )
+        self.plot_item.addItem(scatter_item)
+        source._plot_item = scatter_item
+        
     def start_track_creation(self):
         """Start track creation mode"""
         self.track_creation_mode = True

@@ -154,5 +154,9 @@ class Satellites(KnownSource):
         # geodetic locations for the satellites at those times
         locs = self.get_geodetics(times)
 
+        # TODO: check if pixels are within bounds of image
+        # TODO: check if satellite is on the other side of the earth via intersection along LOS
+
         # convert from ECEF to ARF to pixels
-        return sensor.geodetic_to_pixel(frame, locs)
+        rows, columns = sensor.geodetic_to_pixel(frame, locs)
+        return rows, columns

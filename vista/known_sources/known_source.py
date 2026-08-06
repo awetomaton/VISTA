@@ -27,6 +27,7 @@ class KnownSource():
         self.name = name
         self.source_type = source_type
         self.uuid = uuid.uuid4()
+        self._plot_item = None  # reference to the actual displayed item in the viewer
 
     def get_pixels(self, sensor: Sensor, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
