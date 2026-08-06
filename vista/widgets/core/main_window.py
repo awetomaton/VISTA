@@ -1937,7 +1937,7 @@ class VistaMainWindow(QMainWindow):
             self.on_loading_finished()
 
             # Update status with total count
-            self.statusBar().showMessage(f"Loaded {self.satellites_loaded_count} Satellite file(s)", 3000)
+            self.statusBar().showMessage(f"Loaded {self.satellites_loaded_count} Satellites file(s)", 3000)
 
     def on_satellites_loaded(self, satellites):
         """Handle Satellites loaded in background thread"""

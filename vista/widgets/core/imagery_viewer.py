@@ -16,6 +16,7 @@ from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
+from vista.known_sources.known_source import KnownSource
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
@@ -2104,6 +2105,10 @@ class ImageryViewer(QWidget):
     def add_known_source(self, source):
         if source not in self.known_sources:
             self.known_sources.append(source)
+
+    def remove_known_source(self, source: KnownSource):
+        if source in self.known_sources:
+            self.known_sources.remove(source)
 
     def start_track_creation(self):
         """Start track creation mode"""

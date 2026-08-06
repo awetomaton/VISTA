@@ -1,0 +1,131 @@
+"""Known Sources panel for data manager"""
+
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWidgets import (
+    QHeaderView, QHBoxLayout, QPushButton, QTableWidget, 
+    QTableWidgetItem, QVBoxLayout, QWidget
+)
+
+
+class KnownSourcesPanel(QWidget):
+    """Panel for managing Known Sources"""
+
+    data_changed = pyqtSignal()  # Signal when data is modified
+
+    def __init__(self, viewer):
+        super().__init__()
+        self.viewer = viewer
+        self.settings = QSettings('VISTA', 'VISTA')
+        self.init_ui()
+
+    def init_ui(self):
+        """Initialize the user interface"""
+        layout = QVBoxLayout()
+
+        # Button bar for actions
+        button_layout = QHBoxLayout()
+
+        # Delete button
+        self.delete_known_sources_btn = QPushButton("Delete Selected")
+        self.delete_known_sources_btn.clicked.connect(self.delete_selected_known_sources)
+        button_layout.addWidget(self.delete_known_sources_btn)
+
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        # Known Sources table
+        self.known_sources_table = QTableWidget()
+        self.known_sources_table.setColumnCount(2)
+        self.known_sources_table.setHorizontalHeaderLabels([
+            "Name", "Type of source"
+        ])
+
+        # Enable row selection via vertical header
+        self.known_sources_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.known_sources_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+
+        # Set column resize modes
+        header = self.known_sources_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (editable)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Type of source (read-only)
+
+        self.known_sources_table.cellChanged.connect(self.on_known_sources_cell_changed)
+
+        layout.addWidget(self.known_sources_table)
+        self.setLayout(layout)
+
+        # Delete key shortcuts (active when this panel or its children have focus)
+        delete_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Delete), self)
+        delete_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        delete_shortcut.activated.connect(self.delete_selected_known_sources)
+
+        # Backspace shortcut for macOS (the Mac "Delete" key sends Key_Backspace)
+        backspace_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Backspace), self)
+        backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        backspace_shortcut.activated.connect(self.delete_selected_known_sources)
+
+    def refresh_known_sources_table(self):
+        """Refresh the Known Sources table"""
+        self.known_sources_table.blockSignals(True)
+        self.known_sources_table.setRowCount(0)
+
+        for row, source in enumerate(self.viewer.known_sources):
+            self.known_sources_table.insertRow(row)
+
+            # Name (editable)
+            name_item = QTableWidgetItem(source.name)
+            name_item.setData(Qt.ItemDataRole.UserRole, source.uuid)  # Store AOI UUID
+            self.known_sources_table.setItem(row, 0, name_item)
+
+            # Source Type (read-only)
+            type_text = source.source_type
+            type_item = QTableWidgetItem(type_text)
+            type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.known_sources_table.setItem(row, 1, type_item)
+
+        self.known_sources_table.blockSignals(False)
+
+        # Select rows for Known Sources that are marked as selected
+        for row, source in enumerate(self.viewer.known_sources):
+            if hasattr(source, '_selected') and source._selected:
+                self.known_sources_table.selectRow(row)
+
+    def on_known_sources_cell_changed(self, row, column):
+        """Handle Known Source cell changes"""
+        if column == 0:  # Name column
+            item = self.known_sources_table.item(row, column)
+            if item:
+                known_source_uuid = item.data(Qt.ItemDataRole.UserRole)
+                new_name = item.text()
+
+                # Find the Known Source and update its name
+                for source in self.viewer.known_sources:
+                    if source.uuid == known_source_uuid:
+                        source.name = new_name
+                        break
+
+    def delete_selected_known_sources(self):
+        """Delete Known Sources that are selected in the table"""
+        known_sources_to_delete = []
+
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.known_sources_table.selectedIndexes())
+
+        # Collect Known Sources from selected rows
+        for row in selected_rows:
+            name_item = self.known_sources_table.item(row, 0)  # Name column
+            if name_item:
+                known_source_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the Known Source by UUID
+                for source in self.viewer.known_sources:
+                    if source.uuid == known_source_uuid:
+                        known_sources_to_delete.append(source)
+                        break
+
+        # Delete the Known Sources
+        for source in known_sources_to_delete:
+            self.viewer.remove_known_source(source)
+
+        # Refresh table
+        self.refresh_known_sources_table()
