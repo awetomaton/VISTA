@@ -6,6 +6,7 @@ from vista.sensors.sensor import Sensor
 
 from numpy.typing import NDArray
 from typing import Tuple, Union
+import uuid
 
 
 class KnownSource():
@@ -25,6 +26,7 @@ class KnownSource():
     def __init__(self, name: str, source_type: str):
         self.name = name
         self.source_type = source_type
+        self.uuid = uuid.uuid4()
 
     def get_pixels(self, sensor: Sensor, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
