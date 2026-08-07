@@ -2120,13 +2120,13 @@ class ImageryViewer(QWidget):
         # Need to make it run when a sensor is loaded in as well
         # in case you load the sources before the image files
         # also need to rerender when changing frames, etc.
-        if self.selected_sensor is None:
+        if self.imagery is None:
             return
 
         # TODO: make color editable for each different source
         color = pg.mkColor('g')
 
-        rows, columns = source.get_pixels(self.selected_sensor, self.imagery, self.current_frame_number)
+        rows, columns = source.get_pixels(self.imagery.sensor, self.imagery, self.current_frame_number)
 
         # Create a small marker for the sources
         scatter_item = pg.ScatterPlotItem(
