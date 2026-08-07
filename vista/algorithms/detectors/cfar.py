@@ -9,6 +9,7 @@ to maintain a constant false alarm rate across images with varying backgrounds.
 The implementation uses FFT-based convolution for efficient computation of local
 statistics across large images.
 """
+
 import numpy as np
 from scipy import fft
 from skimage.measure import label, regionprops
@@ -89,10 +90,17 @@ class CFAR:
 
     name = "CFAR"
 
-    def __init__(self, background_radius: int, ignore_radius: int,
-                 threshold_deviation: float, min_area: int = 1, max_area: int = 1000,
-                 annulus_shape: str = 'circular', detection_mode: str = 'above',
-                 search_radius: int = None):
+    def __init__(
+        self,
+        background_radius: int,
+        ignore_radius: int,
+        threshold_deviation: float,
+        min_area: int = 1,
+        max_area: int = 1000,
+        annulus_shape: str = 'circular',
+        detection_mode: str = 'above',
+        search_radius: int = None,
+    ):
         self.background_radius = background_radius
         self.ignore_radius = ignore_radius
         self.threshold_deviation = threshold_deviation
@@ -142,7 +150,7 @@ class CFAR:
         y, x = np.ogrid[:size, :size]
 
         # Calculate distances from center
-        distances = np.sqrt((x - center)**2 + (y - center)**2)
+        distances = np.sqrt((x - center) ** 2 + (y - center) ** 2)
 
         # Create annular mask: within background_radius but outside ignore_radius
         kernel[(distances <= self.background_radius) & (distances > self.ignore_radius)] = 1
@@ -241,10 +249,10 @@ class CFAR:
 
         # Calculate local standard deviation
         # Var(X) = E[X^2] - E[X]^2
-        padded_image_sq = padded_image ** 2
+        padded_image_sq = padded_image**2
         local_sum_sq = self._convolve_fft(padded_image_sq)
         local_mean_sq = local_sum_sq / self.n_pixels
-        local_variance = local_mean_sq - local_mean ** 2
+        local_variance = local_mean_sq - local_mean**2
         local_variance = np.maximum(local_variance, 0)  # Handle numerical errors
         local_std = np.sqrt(local_variance)
 
@@ -268,8 +276,7 @@ class CFAR:
             threshold = self.threshold_deviation * local_std
             binary = deviation > threshold
         else:
-            raise ValueError(f"Invalid detection_mode: {self.detection_mode}. "
-                           f"Must be 'above', 'below', or 'both'.")
+            raise ValueError(f"Invalid detection_mode: {self.detection_mode}. Must be 'above', 'below', or 'both'.")
 
         # Label connected components
         labeled = label(binary)
@@ -295,7 +302,7 @@ class CFAR:
                 centroid = region.weighted_centroid
 
                 if self.annulus_shape == 'circular':
-                    dist = np.sqrt((centroid[0] - center_row)**2 + (centroid[1] - center_col)**2)
+                    dist = np.sqrt((centroid[0] - center_row) ** 2 + (centroid[1] - center_col) ** 2)
                 else:  # square
                     dist = max(abs(centroid[0] - center_row), abs(centroid[1] - center_col))
 
@@ -371,11 +378,11 @@ class CFAR:
         local_mean = local_sum / self.n_pixels
 
         # Calculate local std
-        padded_chip_sq = padded_chip ** 2
+        padded_chip_sq = padded_chip**2
         image_sq_fft = fft.fft2(padded_chip_sq)
         local_sum_sq = fft.ifft2(image_sq_fft * kernel_fft).real
         local_mean_sq = local_sum_sq / self.n_pixels
-        local_variance = np.maximum(local_mean_sq - local_mean ** 2, 0)
+        local_variance = np.maximum(local_mean_sq - local_mean**2, 0)
         local_std = np.sqrt(local_variance)
 
         # Get center noise std
@@ -419,7 +426,7 @@ class CFAR:
                         centroid = region.weighted_centroid
 
                         if self.annulus_shape == 'circular':
-                            dist = np.sqrt((centroid[0] - center_row)**2 + (centroid[1] - center_col)**2)
+                            dist = np.sqrt((centroid[0] - center_row) ** 2 + (centroid[1] - center_col) ** 2)
                         else:  # square
                             dist = max(abs(centroid[0] - center_row), abs(centroid[1] - center_col))
 

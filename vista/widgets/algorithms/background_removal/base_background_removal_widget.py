@@ -1,4 +1,5 @@
 """Base classes for background removal widgets to reduce code duplication"""
+
 import traceback
 
 import numpy as np
@@ -16,8 +17,7 @@ class BaseBackgroundRemovalThread(QThread):
     processing_complete = pyqtSignal(object)  # Emits processed Imagery object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, algorithm_class, algorithm_params, aoi=None,
-                 start_frame=0, end_frame=None):
+    def __init__(self, imagery, algorithm_class, algorithm_params, aoi=None, start_frame=0, end_frame=None):
         """
         Initialize the processing thread.
 
@@ -61,7 +61,7 @@ class BaseBackgroundRemovalThread(QThread):
                 temp_imagery = self.imagery
 
             # Apply frame range
-            temp_imagery = temp_imagery[self.start_frame:self.end_frame]
+            temp_imagery = temp_imagery[self.start_frame : self.end_frame]
 
             # Create the algorithm instance
             algorithm = self.algorithm_class(imagery=temp_imagery, **self.algorithm_params)
@@ -121,9 +121,16 @@ class BaseBackgroundRemovalWidget(QDialog):
     # Signal emitted when processing is complete
     imagery_processed = pyqtSignal(object)  # Emits processed Imagery object
 
-    def __init__(self, parent=None, imagery=None, aois=None, algorithm_class=None,
-                 settings_name="BaseBackgroundRemoval", window_title="Background Removal",
-                 description=""):
+    def __init__(
+        self,
+        parent=None,
+        imagery=None,
+        aois=None,
+        algorithm_class=None,
+        settings_name="BaseBackgroundRemoval",
+        window_title="Background Removal",
+        description="",
+    ):
         """
         Initialize the base background removal configuration widget.
 
@@ -319,8 +326,7 @@ class BaseBackgroundRemovalWidget(QDialog):
 
         # Create and start processing thread
         self.processing_thread = BaseBackgroundRemovalThread(
-            self.imagery, self.algorithm_class, algorithm_params, selected_aoi,
-            start_frame, end_frame
+            self.imagery, self.algorithm_class, algorithm_params, selected_aoi, start_frame, end_frame
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -416,7 +422,7 @@ class BaseBackgroundRemovalWidget(QDialog):
                 "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
 
             if reply == QMessageBox.StandardButton.Yes:

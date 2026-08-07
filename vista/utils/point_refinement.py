@@ -10,6 +10,7 @@ manual track and detection creation/editing:
 All refinement functions accept image coordinates and return refined coordinates,
 with optional mode-specific parameters.
 """
+
 import numpy as np
 
 from vista.algorithms.detectors.cfar import CFAR
@@ -117,8 +118,17 @@ def refine_peak(row, col, imagery, frame_index, radius=5, detection_mode='bright
     return float(peak_row), float(peak_col)
 
 
-def refine_cfar(row, col, imagery, frame_index, background_radius=10, ignore_radius=3,
-                threshold_deviation=3.0, annulus_shape='circular', search_radius=50):
+def refine_cfar(
+    row,
+    col,
+    imagery,
+    frame_index,
+    background_radius=10,
+    ignore_radius=3,
+    threshold_deviation=3.0,
+    annulus_shape='circular',
+    search_radius=50,
+):
     """
     CFAR mode: Run CFAR detection in local area and return signal blob centroid.
 
@@ -197,7 +207,7 @@ def refine_cfar(row, col, imagery, frame_index, background_radius=10, ignore_rad
             max_area=10000,
             annulus_shape=annulus_shape,
             detection_mode='above',  # Typically looking for bright pixels
-            search_radius=search_radius
+            search_radius=search_radius,
         )
 
         # Process the local region
@@ -211,8 +221,7 @@ def refine_cfar(row, col, imagery, frame_index, background_radius=10, ignore_rad
 
         # Find the detection closest to the clicked location
         # (in case multiple detections were found)
-        distances = np.sqrt((det_rows - (center_row - row_min))**2 +
-                          (det_columns - (center_col - col_min))**2)
+        distances = np.sqrt((det_rows - (center_row - row_min)) ** 2 + (det_columns - (center_col - col_min)) ** 2)
         closest_idx = np.argmin(distances)
 
         # Get the closest detection and convert back to full image coordinates
@@ -291,8 +300,17 @@ def refine_point(row, col, imagery, frame_index, mode='verbatim', **kwargs):
         threshold_deviation = kwargs.get('threshold_deviation', 3.0)
         annulus_shape = kwargs.get('annulus_shape', 'circular')
         search_radius = kwargs.get('search_radius', 50)
-        return refine_cfar(row, col, imagery, frame_index, background_radius,
-                         ignore_radius, threshold_deviation, annulus_shape, search_radius)
+        return refine_cfar(
+            row,
+            col,
+            imagery,
+            frame_index,
+            background_radius,
+            ignore_radius,
+            threshold_deviation,
+            annulus_shape,
+            search_radius,
+        )
     else:
         # Unknown mode, return verbatim
         print(f"Warning: Unknown refinement mode '{mode}', using verbatim")

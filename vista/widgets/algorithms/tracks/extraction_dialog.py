@@ -1,4 +1,5 @@
 """Dialog for configuring and running track extraction"""
+
 import traceback
 
 from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
@@ -56,11 +57,7 @@ class TrackExtractionThread(QThread):
         """Execute the extraction algorithm in background thread"""
         try:
             # Create the extraction algorithm instance
-            extractor = TrackExtraction(
-                track=self.track,
-                imagery=self.imagery,
-                **self.extraction_params
-            )
+            extractor = TrackExtraction(track=self.track, imagery=self.imagery, **self.extraction_params)
 
             # Run extraction (this might take a while for long tracks)
             # Note: We could add incremental progress updates here in the future
@@ -171,7 +168,7 @@ class TrackExtractionDialog(QDialog):
             show_area_filters=False,
             show_detection_mode=True,
             settings_prefix="TrackExtraction/CFAR",
-            show_group_box=True
+            show_group_box=True,
         )
         layout.addWidget(self.cfar_widget)
 
@@ -182,8 +179,7 @@ class TrackExtractionDialog(QDialog):
         # Update centroids checkbox
         self.update_centroids_check = QCheckBox("Update track coordinates to weighted centroid")
         self.update_centroids_check.setToolTip(
-            "If checked, track point coordinates will be updated to the weighted centroid\n"
-            "of the detected signal blob."
+            "If checked, track point coordinates will be updated to the weighted centroid\nof the detected signal blob."
         )
         self.update_centroids_check.stateChanged.connect(self.on_update_centroids_changed)
         centroid_layout.addRow(self.update_centroids_check)
@@ -196,8 +192,7 @@ class TrackExtractionDialog(QDialog):
         self.max_centroid_shift_spin.setValue(5.0)
         self.max_centroid_shift_spin.setEnabled(False)
         self.max_centroid_shift_spin.setToolTip(
-            "Maximum allowed centroid shift in pixels. Points with larger shifts\n"
-            "will not be updated."
+            "Maximum allowed centroid shift in pixels. Points with larger shifts\nwill not be updated."
         )
         centroid_layout.addRow("Max Centroid Shift (px):", self.max_centroid_shift_spin)
 
@@ -278,7 +273,7 @@ class TrackExtractionDialog(QDialog):
             'annulus_shape': cfar_params['annulus_shape'],
             'detection_mode': cfar_params['detection_mode'],
             'update_centroids': self.update_centroids_check.isChecked(),
-            'max_centroid_shift': self.max_centroid_shift_spin.value()
+            'max_centroid_shift': self.max_centroid_shift_spin.value(),
         }
 
     def validate_parameters(self):
@@ -387,11 +382,7 @@ class TrackExtractionDialog(QDialog):
         self.extraction_complete.emit(self.tracks, self.results)
 
         # Show success message
-        QMessageBox.information(
-            self,
-            "Extraction Complete",
-            f"Successfully extracted {len(self.tracks)} track(s)."
-        )
+        QMessageBox.information(self, "Extraction Complete", f"Successfully extracted {len(self.tracks)} track(s).")
 
     def on_cancel_clicked(self):
         """Handle Cancel button click"""
@@ -425,8 +416,6 @@ class TrackExtractionDialog(QDialog):
         self.cfar_widget.setEnabled(enabled)
         self.update_centroids_check.setEnabled(enabled)
         if enabled:
-            self.max_centroid_shift_spin.setEnabled(
-                self.update_centroids_check.isChecked()
-            )
+            self.max_centroid_shift_spin.setEnabled(self.update_centroids_check.isChecked())
         else:
             self.max_centroid_shift_spin.setEnabled(False)

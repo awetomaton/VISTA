@@ -5,6 +5,7 @@ This module defines the Track class, which represents a single object trajectory
 across multiple frames with support for multiple coordinate systems (pixel, geodetic,
 time-based), visualization styling, and data persistence.
 """
+
 import datetime
 import uuid
 from dataclasses import dataclass, field
@@ -98,6 +99,7 @@ class Track:
     - The from_dataframe() method handles coordinate system conversions automatically
     - Track length is computed lazily and cached for performance
     """
+
     name: str
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
@@ -136,7 +138,7 @@ class Track:
     _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
     _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
     uuid: str = field(init=None, default=None)
-    
+
     def __post_init__(self):
         self.uuid = uuid.uuid4()
 
@@ -144,7 +146,7 @@ class Track:
         if not isinstance(other, Track):
             return False
         return self.uuid == other.uuid
-    
+
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects
@@ -179,7 +181,7 @@ class Track:
             return track_slice
         else:
             raise TypeError("Invalid index or slice type.")
-        
+
     def __len__(self):
         return len(self.frames)
 
@@ -356,11 +358,11 @@ class Track:
         bool
             True if track has all three covariance matrix elements (C00, C01, C11), False otherwise
         """
-        return (self.covariance_00 is not None and
-                self.covariance_01 is not None and
-                self.covariance_11 is not None)
+        return self.covariance_00 is not None and self.covariance_01 is not None and self.covariance_11 is not None
 
-    def get_uncertainty_ellipse_parameters(self) -> Optional[tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]]:
+    def get_uncertainty_ellipse_parameters(
+        self,
+    ) -> Optional[tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]]:
         """
         Convert covariance matrix to ellipse parameters for visualization.
 
@@ -382,7 +384,9 @@ class Track:
 
         trace = self.covariance_00 + self.covariance_11
         det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
-        discriminant = np.sqrt(np.maximum((self.covariance_00 - self.covariance_11)**2 + 4 * self.covariance_01**2, 0))
+        discriminant = np.sqrt(
+            np.maximum((self.covariance_00 - self.covariance_11) ** 2 + 4 * self.covariance_01**2, 0)
+        )
 
         lambda1 = 0.5 * (trace + discriminant)  # Larger eigenvalue
         lambda2 = 0.5 * (trace - discriminant)  # Smaller eigenvalue
@@ -438,7 +442,7 @@ class Track:
         sensor_imagery_frames, sensor_imagery_times = self.sensor.get_imagery_frames_and_times()
         if len(sensor_imagery_times) < 1:
             return None
-        
+
         # Find where each track_frame would be inserted in sensor_frames
         indices = np.searchsorted(sensor_imagery_frames, self.frames)
 
@@ -535,7 +539,9 @@ class Track:
             # Parse labels from comma-separated string
             labels_str = df["Labels"].iloc[0]
             if pd.notna(labels_str) and labels_str:
-                labels_str = str(labels_str)  # Make sure labels are parsed as a string even if they're something like `1`
+                labels_str = str(
+                    labels_str
+                )  # Make sure labels are parsed as a string even if they're something like `1`
                 kwargs["labels"] = set(label.strip() for label in labels_str.split(','))
             else:
                 kwargs["labels"] = set()
@@ -565,8 +571,10 @@ class Track:
             sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
             if len(sensor_imagery_times) == 0:
                 # Times present but no cannot map to frames using sensor - raise error
-                raise ValueError(f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping.")
-            
+                raise ValueError(
+                    f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping."
+                )
+
             # Eliminate track points before and after the time bounds of the selected sensor
             df = df[(times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])]
             if len(df) == 0:
@@ -577,23 +585,24 @@ class Track:
             frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
         else:
             raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
-        
+
         # Handle uncertainty data (optional) - covariance matrix elements
         # Only populate if all three columns exist and all values are valid (not NaN)
-        if ("Covariance 00" in df.columns and "Covariance 01" in df.columns and "Covariance 11" in df.columns):
+        if "Covariance 00" in df.columns and "Covariance 01" in df.columns and "Covariance 11" in df.columns:
             cov_00 = df["Covariance 00"].to_numpy(dtype=np.float64)
             cov_01 = df["Covariance 01"].to_numpy(dtype=np.float64)
             cov_11 = df["Covariance 11"].to_numpy(dtype=np.float64)
 
             # Only set covariance if all values are valid (no NaN or inf)
-            if (np.all(np.isfinite(cov_00)) and np.all(np.isfinite(cov_01)) and np.all(np.isfinite(cov_11))):
+            if np.all(np.isfinite(cov_00)) and np.all(np.isfinite(cov_01)) and np.all(np.isfinite(cov_11)):
                 kwargs["covariance_00"] = cov_00
                 kwargs["covariance_01"] = cov_01
                 kwargs["covariance_11"] = cov_11
 
         # Determine rows/columns - priority: Rows/Columns > geodetic-to-pixel mapping
-        has_geodetic = ("Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns
-                        and "Altitude (km)" in df.columns)
+        has_geodetic = (
+            "Latitude (deg)" in df.columns and "Longitude (deg)" in df.columns and "Altitude (km)" in df.columns
+        )
         initial_lons = None
         initial_lats = None
 
@@ -621,11 +630,7 @@ class Track:
             initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
             # Map geodetic to pixel using sensor
             rows, columns = map_geodetic_to_pixel(
-                df["Latitude (deg)"].to_numpy(),
-                initial_lons,
-                df["Altitude (km)"].to_numpy(),
-                frames,
-                sensor
+                df["Latitude (deg)"].to_numpy(), initial_lons, df["Altitude (km)"].to_numpy(), frames, sensor
             )
         else:
             raise ValueError(
@@ -634,20 +639,12 @@ class Track:
             )
 
         # Enable show_uncertainty by default if uncertainty data is present
-        if ('covariance_00' in kwargs and 'covariance_01' in kwargs and
-                'covariance_11' in kwargs):
+        if 'covariance_00' in kwargs and 'covariance_01' in kwargs and 'covariance_11' in kwargs:
             # Only set to True if not already explicitly set
             if 'show_uncertainty' not in kwargs:
                 kwargs['show_uncertainty'] = True
 
-        track = cls(
-            name = name,
-            frames = frames,
-            rows = rows,
-            columns = columns,
-            sensor = sensor,
-            **kwargs
-        )
+        track = cls(name=name, frames=frames, rows=rows, columns=columns, sensor=sensor, **kwargs)
 
         # Pre-populate geodetic cache if coords were available in the dataframe
         if initial_lons is not None and initial_lats is not None:
@@ -655,7 +652,7 @@ class Track:
             track._cached_lats = initial_lats
 
         return track
-    
+
     @property
     def length(self):
         """
@@ -673,9 +670,9 @@ class Track:
             if len(self.rows) < 2:
                 self._length = 0.0
             else:
-                self._length = np.sum(np.sqrt(np.diff(self.rows)**2 + np.diff(self.columns)**2))
+                self._length = np.sum(np.sqrt(np.diff(self.rows) ** 2 + np.diff(self.columns) ** 2))
         return self._length
-    
+
     def copy(self):
         """
         Create a deep copy of this track object.
@@ -696,29 +693,29 @@ class Track:
             }
 
         track_copy = self.__class__(
-            name = self.name,
-            frames = self.frames.copy(),
-            rows = self.rows.copy(),
-            columns = self.columns.copy(),
-            sensor = self.sensor,
-            color = self.color,
-            marker = self.marker,
-            line_width = self.line_width,
-            marker_size = self.marker_size,
-            visible = self.visible,
-            tail_length = self.tail_length,
-            complete = self.complete,
-            show_line = self.show_line,
-            line_style = self.line_style,
-            labels = self.labels.copy(),
-            label_time = self.label_time,
-            labeler = self.labeler,
-            tracker = self.tracker,
-            extraction_metadata = extraction_metadata_copy,
-            covariance_00 = self.covariance_00.copy() if self.covariance_00 is not None else None,
-            covariance_01 = self.covariance_01.copy() if self.covariance_01 is not None else None,
-            covariance_11 = self.covariance_11.copy() if self.covariance_11 is not None else None,
-            show_uncertainty = self.show_uncertainty,
+            name=self.name,
+            frames=self.frames.copy(),
+            rows=self.rows.copy(),
+            columns=self.columns.copy(),
+            sensor=self.sensor,
+            color=self.color,
+            marker=self.marker,
+            line_width=self.line_width,
+            marker_size=self.marker_size,
+            visible=self.visible,
+            tail_length=self.tail_length,
+            complete=self.complete,
+            show_line=self.show_line,
+            line_style=self.line_style,
+            labels=self.labels.copy(),
+            label_time=self.label_time,
+            labeler=self.labeler,
+            tracker=self.tracker,
+            extraction_metadata=extraction_metadata_copy,
+            covariance_00=self.covariance_00.copy() if self.covariance_00 is not None else None,
+            covariance_01=self.covariance_01.copy() if self.covariance_01 is not None else None,
+            covariance_11=self.covariance_11.copy() if self.covariance_11 is not None else None,
+            show_uncertainty=self.show_uncertainty,
         )
         # Preserve cached geodetic coords
         if self._cached_lons is not None:
@@ -726,7 +723,7 @@ class Track:
         if self._cached_lats is not None:
             track_copy._cached_lats = self._cached_lats.copy()
         return track_copy
-    
+
     def to_dataframe(self) -> pd.DataFrame:
         """Convert track to DataFrame
 
@@ -734,8 +731,8 @@ class Track:
             ValueError: If geolocation/time requested but imagery is missing required data
         """
         data = {
-            "Tracker": len(self)*[self.tracker or ""],
-            "Track": len(self)*[self.name],
+            "Tracker": len(self) * [self.tracker or ""],
+            "Track": len(self) * [self.name],
             "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
@@ -793,4 +790,3 @@ class Track:
             data["Covariance 11"] = self.covariance_11
 
         return pd.DataFrame(data)
-    

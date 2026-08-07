@@ -5,6 +5,7 @@ This module implements track extraction that crops image chips around each track
 detects signal pixels using CFAR-like thresholding, computes local noise statistics,
 and optionally refines track coordinates using weighted centroids.
 """
+
 import numpy as np
 from numpy.typing import NDArray
 from skimage.measure import label, regionprops
@@ -84,11 +85,20 @@ class TrackExtraction:
 
     name = "Track Extraction"
 
-    def __init__(self, track: Track, imagery: Imagery, chip_radius: int,
-                 background_radius: int, ignore_radius: int, threshold_deviation: float,
-                 annulus_shape: str = 'circular', detection_mode: str = 'above',
-                 search_radius: int = None,
-                 update_centroids: bool = False, max_centroid_shift: float = np.inf):
+    def __init__(
+        self,
+        track: Track,
+        imagery: Imagery,
+        chip_radius: int,
+        background_radius: int,
+        ignore_radius: int,
+        threshold_deviation: float,
+        annulus_shape: str = 'circular',
+        detection_mode: str = 'above',
+        search_radius: int = None,
+        update_centroids: bool = False,
+        max_centroid_shift: float = np.inf,
+    ):
         # Validate chip_radius
         if not isinstance(chip_radius, int) or chip_radius <= 0:
             raise ValueError(f"chip_radius must be a positive integer, got {chip_radius}")
@@ -113,7 +123,7 @@ class TrackExtraction:
             threshold_deviation=threshold_deviation,
             annulus_shape=annulus_shape,
             detection_mode=detection_mode,
-            search_radius=search_radius
+            search_radius=search_radius,
         )
 
     def _extract_chip(self, image: NDArray, row: float, col: float) -> NDArray:
@@ -163,9 +173,9 @@ class TrackExtraction:
 
         # Copy valid region from image to chip
         if valid_row_end > valid_row_start and valid_col_end > valid_col_start:
-            chip[chip_valid_row_start:chip_valid_row_end,
-                 chip_valid_col_start:chip_valid_col_end] = \
-                image[valid_row_start:valid_row_end, valid_col_start:valid_col_end]
+            chip[chip_valid_row_start:chip_valid_row_end, chip_valid_col_start:chip_valid_col_end] = image[
+                valid_row_start:valid_row_end, valid_col_start:valid_col_end
+            ]
 
         return chip
 
@@ -257,17 +267,13 @@ class TrackExtraction:
 
             # Use CFAR to detect signal pixels and compute noise std
             chip_center = self.chip_diameter // 2
-            signal_mask, noise_std = self.cfar_detector.process_chip(
-                chip,
-                search_center=(chip_center, chip_center)
-            )
+            signal_mask, noise_std = self.cfar_detector.process_chip(chip, search_center=(chip_center, chip_center))
             signal_masks[i, :, :] = signal_mask
             noise_stds[i] = noise_std
 
             # Update centroid if requested
             if self.update_centroids:
-                centroid_offset_row, centroid_offset_col = \
-                    self._compute_weighted_centroid(chip, signal_mask)
+                centroid_offset_row, centroid_offset_col = self._compute_weighted_centroid(chip, signal_mask)
 
                 # Check if shift is within allowed range
                 shift_distance = np.sqrt(centroid_offset_row**2 + centroid_offset_col**2)

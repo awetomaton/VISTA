@@ -1,4 +1,5 @@
 """Dialog for configuring and running the Network Flow tracker"""
+
 from PyQt6.QtWidgets import QDoubleSpinBox, QSpinBox
 
 from vista.algorithms.trackers import run_network_flow_tracker
@@ -31,7 +32,7 @@ class NetworkFlowTrackingDialog(BaseTrackingDialog):
             default_track_color='g',
             default_track_marker='o',
             default_track_line_width=2,
-            default_track_marker_size=10
+            default_track_marker_size=10,
         )
 
     def add_algorithm_parameters(self, main_layout):

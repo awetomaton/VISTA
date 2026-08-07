@@ -1,4 +1,5 @@
 """Map tile client for fetching basemap tiles and tile caching"""
+
 import collections
 import io
 import json
@@ -16,16 +17,14 @@ DEFAULT_SERVERS = [
     {
         "name": "ESRI World Imagery",
         "url_template": (
-            "https://services.arcgisonline.com/ArcGIS/rest/services/"
-            "World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         ),
         "epsg": 3857,
     },
     {
         "name": "ESRI World Topo",
         "url_template": (
-            "https://services.arcgisonline.com/ArcGIS/rest/services/"
-            "World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+            "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
         ),
         "epsg": 3857,
     },
@@ -205,35 +204,33 @@ class WMSTileCache:
 
 # ===================== EPSG:3857 (Web Mercator / Slippy Map) =====================
 
+
 def _mercator_tile_to_lon(x: int, z: int) -> float:
     """Convert Web Mercator tile x coordinate to longitude."""
-    return x / (2 ** z) * 360.0 - 180.0
+    return x / (2**z) * 360.0 - 180.0
 
 
 def _mercator_tile_to_lat(y: int, z: int) -> float:
     """Convert Web Mercator tile y coordinate to latitude (top edge of tile)."""
-    n = math.pi * (1 - 2 * y / (2 ** z))
+    n = math.pi * (1 - 2 * y / (2**z))
     return math.degrees(math.atan(math.sinh(n)))
 
 
 def _mercator_lon_to_tile_x(lon: float, z: int) -> int:
     """Convert longitude to Web Mercator tile x coordinate."""
-    n = 2 ** z
+    n = 2**z
     return int(math.floor((lon + 180.0) / 360.0 * n))
 
 
 def _mercator_lat_to_tile_y(lat: float, z: int) -> int:
     """Convert latitude to Web Mercator tile y coordinate."""
     lat_rad = math.radians(lat)
-    n = 2 ** z
-    return int(
-        math.floor(
-            (1 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2 * n
-        )
-    )
+    n = 2**z
+    return int(math.floor((1 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2 * n))
 
 
 # ===================== EPSG:4326 (Geographic / Equirectangular) =====================
+
 
 def _geographic_tile_to_lon(x: int, z: int) -> float:
     """Convert EPSG:4326 tile x coordinate to longitude (left edge).
@@ -249,7 +246,7 @@ def _geographic_tile_to_lat(y: int, z: int) -> float:
 
     At zoom z there are 2^z rows spanning 90..-90 (north to south).
     """
-    n_rows = 2 ** z
+    n_rows = 2**z
     return 90.0 - y * (180.0 / n_rows)
 
 
@@ -261,7 +258,7 @@ def _geographic_lon_to_tile_x(lon: float, z: int) -> int:
 
 def _geographic_lat_to_tile_y(lat: float, z: int) -> int:
     """Convert latitude to EPSG:4326 tile y coordinate."""
-    n_rows = 2 ** z
+    n_rows = 2**z
     return int(math.floor((90.0 - lat) / 180.0 * n_rows))
 
 
@@ -392,7 +389,7 @@ class WMSClient:
             y_min = _mercator_lat_to_tile_y(lat_max, zoom)  # higher lat = lower y
             y_max = _mercator_lat_to_tile_y(lat_min, zoom)
 
-            max_tile = (2 ** zoom) - 1
+            max_tile = (2**zoom) - 1
             x_min = max(0, x_min)
             x_max = min(max_tile, x_max)
             y_min = max(0, y_min)
@@ -407,7 +404,7 @@ class WMSClient:
         x_max = _mercator_lon_to_tile_x(lon_max, zoom)
         y_min = _mercator_lat_to_tile_y(lat_max, zoom)
         y_max = _mercator_lat_to_tile_y(lat_min, zoom)
-        max_tile = (2 ** zoom) - 1
+        max_tile = (2**zoom) - 1
         x_min = max(0, x_min)
         x_max = min(max_tile, x_max)
         y_min = max(0, y_min)
@@ -462,7 +459,7 @@ class WMSClient:
             y_max = _geographic_lat_to_tile_y(lat_min, zoom)
 
             max_col = 2 ** (zoom + 1) - 1
-            max_row = 2 ** zoom - 1
+            max_row = 2**zoom - 1
             x_min = max(0, x_min)
             x_max = min(max_col, x_max)
             y_min = max(0, y_min)
@@ -478,7 +475,7 @@ class WMSClient:
         y_min = _geographic_lat_to_tile_y(lat_max, zoom)
         y_max = _geographic_lat_to_tile_y(lat_min, zoom)
         max_col = 2 ** (zoom + 1) - 1
-        max_row = 2 ** zoom - 1
+        max_row = 2**zoom - 1
         x_min = max(0, x_min)
         x_max = min(max_col, x_max)
         y_min = max(0, y_min)

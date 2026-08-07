@@ -1,4 +1,5 @@
 """Simple threshold detector algorithm for finding bright blobs in imagery"""
+
 import numpy as np
 from skimage.measure import label, regionprops
 
@@ -13,8 +14,7 @@ class SimpleThreshold:
 
     name = "Simple Threshold"
 
-    def __init__(self, threshold: float, min_area: int = 1, max_area: int = 1000,
-                 detection_mode: str = 'above'):
+    def __init__(self, threshold: float, min_area: int = 1, max_area: int = 1000, detection_mode: str = 'above'):
         """
         Initialize the Simple Threshold detector.
 
@@ -79,8 +79,7 @@ class SimpleThreshold:
             # Detect pixels with large absolute values (far from zero in either direction)
             binary = np.abs(image) > self.threshold
         else:
-            raise ValueError(f"Invalid detection_mode: {self.detection_mode}. "
-                           f"Must be 'above', 'below', or 'both'.")
+            raise ValueError(f"Invalid detection_mode: {self.detection_mode}. Must be 'above', 'below', or 'both'.")
 
         # Label connected components
         labeled = label(binary)

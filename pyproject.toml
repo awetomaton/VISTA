@@ -51,7 +51,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu = ["torch"]
-dev = ["pytest>=7.0", "pytest-qt", "black", "ruff"]
+dev = ["pytest>=7.0", "pytest-qt", "ruff"]
 docs = [
     "sphinx>=7.0,<9.0",
     "furo>=2024.1.29",
@@ -79,9 +79,13 @@ version = { attr = "vista.__version__" }
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+extend-exclude = ["notebooks", "docs", "scripts"]
+
+[tool.ruff.format]
+quote-style = "preserve"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
-ignore = []
-
+# We will add these back one at a time as we address the lints.
+# select = ["E", "F", "W", "I"]
+select = ["I"]
+pydocstyle = { convention = "numpy" }

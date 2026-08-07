@@ -8,20 +8,20 @@ def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray
     """Find the intersection of a pointing vector with the Earth
 
     Finds the intersection of a pointing vector u and starting point s with the WGS-84 geoid
-    
+
     Parameters
     ----------
-    position : NDArray 
+    position : NDArray
         Length 3 or (3 X N) array defining the starting point location(s) in kilometers
-    pointing : NDArray 
+    pointing : NDArray
         Length 3 or (3 X N) array defining the pointing vector(s) (must be a unit vector)
-    
+
     Returns
     -------
-    NDArray : 
+    NDArray :
         Distance(s) to the Earth's surface
-    NDArray : 
-        Length 3 or (3 X N) array of point(s) of intersection with the Earth in kilometers. NaN's represent 
+    NDArray :
+        Length 3 or (3 X N) array of point(s) of intersection with the Earth in kilometers. NaN's represent
         non-intersection
     """
 
@@ -41,25 +41,40 @@ def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray
     v = pointing[1]
     w = pointing[2]
 
-    value = -a**2*b**2*w*z - a**2*c**2*v*y - b**2*c**2*u*x
-    radical = a**2*b**2*w**2 + a**2*c**2*v**2 - a**2*v**2*z**2 + 2*a**2*v*w*y*z - a**2*w**2*y**2 + b**2*c**2*u**2 - b**2*u**2*z**2 + 2*b**2*u*w*x*z - b**2*w**2*x**2 - c**2*u**2*y**2 + 2*c**2*u*v*x*y - c**2*v**2*x**2
-    magnitude = a**2*b**2*w**2 + a**2*c**2*v**2 + b**2*c**2*u**2
+    value = -(a**2) * b**2 * w * z - a**2 * c**2 * v * y - b**2 * c**2 * u * x
+    radical = (
+        a**2 * b**2 * w**2
+        + a**2 * c**2 * v**2
+        - a**2 * v**2 * z**2
+        + 2 * a**2 * v * w * y * z
+        - a**2 * w**2 * y**2
+        + b**2 * c**2 * u**2
+        - b**2 * u**2 * z**2
+        + 2 * b**2 * u * w * x * z
+        - b**2 * w**2 * x**2
+        - c**2 * u**2 * y**2
+        + 2 * c**2 * u * v * x * y
+        - c**2 * v**2 * x**2
+    )
+    magnitude = a**2 * b**2 * w**2 + a**2 * c**2 * v**2 + b**2 * c**2 * u**2
 
     # The Line-of-Sight vector does not point toward the Earth
     radical[radical < 0] = np.nan
 
     # Get the distance along the pointing vector to the intersection with the Earth
-    d = (value - a*b*c*np.sqrt(radical)) / magnitude
+    d = (value - a * b * c * np.sqrt(radical)) / magnitude
 
     # Can't move backward along line-of-sight, negative values are non-intersecting
     d[d < 0] = np.nan
 
-    intersection = np.array([
-        x + d * u,
-        y + d * v,
-        z + d * w,
-    ])
+    intersection = np.array(
+        [
+            x + d * u,
+            y + d * v,
+            z + d * w,
+        ]
+    )
 
     if return_singleton:
-        return d,  intersection.squeeze()
+        return d, intersection.squeeze()
     return d, intersection

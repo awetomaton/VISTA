@@ -1,4 +1,5 @@
 """Feature data model for placemarks, shapefiles, and other persistent overlays"""
+
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -53,7 +54,7 @@ class Feature:
             'geometry': self.geometry,
             'visible': self.visible,
             'color': self.color,
-            'uuid': self.uuid
+            'uuid': self.uuid,
         }
 
     @classmethod
@@ -79,7 +80,7 @@ class Feature:
             geometry=data['geometry'],
             visible=data.get('visible', True),
             color=data.get('color', 'y'),
-            uuid=data.get('uuid', str(uuid.uuid4()))
+            uuid=data.get('uuid', str(uuid.uuid4())),
         )
 
 

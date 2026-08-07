@@ -2,6 +2,7 @@
 
 PyQt6 application for viewing imagery, tracks, and detections from HDF5 and CSV files.
 """
+
 import sys
 
 import pyqtgraph as pg

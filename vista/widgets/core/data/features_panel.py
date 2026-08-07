@@ -1,4 +1,5 @@
 """Features panel for data manager"""
+
 from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
@@ -52,9 +53,7 @@ class FeaturesPanel(QWidget):
         # Features table
         self.features_table = QTableWidget()
         self.features_table.setColumnCount(3)
-        self.features_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Type"
-        ])
+        self.features_table.setHorizontalHeaderLabels(["Visible", "Name", "Type"])
 
         # Enable row selection via vertical header
         self.features_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -93,9 +92,7 @@ class FeaturesPanel(QWidget):
                 # Visible checkbox
                 checkbox = QCheckBox()
                 checkbox.setChecked(feature.visible)
-                checkbox.stateChanged.connect(
-                    lambda state, f=feature: self.on_feature_visibility_changed(f, state)
-                )
+                checkbox.stateChanged.connect(lambda state, f=feature: self.on_feature_visibility_changed(f, state))
                 # Center the checkbox in the cell
                 checkbox_widget = QWidget()
                 checkbox_layout = QHBoxLayout(checkbox_widget)
@@ -118,7 +115,7 @@ class FeaturesPanel(QWidget):
 
     def on_feature_visibility_changed(self, feature, state):
         """Handle feature visibility checkbox changes"""
-        feature.visible = (state == Qt.CheckState.Checked.value)
+        feature.visible = state == Qt.CheckState.Checked.value
         self.viewer.update_feature_display(feature)
 
     def on_feature_cell_changed(self, row, column):
@@ -188,11 +185,7 @@ class FeaturesPanel(QWidget):
 
         # Check if we have imagery
         if not self.viewer.imagery:
-            QMessageBox.warning(
-                self,
-                "No Imagery",
-                "Please load imagery before creating placemarks."
-            )
+            QMessageBox.warning(self, "No Imagery", "Please load imagery before creating placemarks.")
             return
 
         # Open dialog
@@ -210,8 +203,8 @@ class FeaturesPanel(QWidget):
                         'col': placemark_data['col'],
                         'lat': placemark_data.get('lat'),
                         'lon': placemark_data.get('lon'),
-                        'alt': placemark_data.get('alt')
-                    }
+                        'alt': placemark_data.get('alt'),
+                    },
                 )
 
                 # Add to viewer

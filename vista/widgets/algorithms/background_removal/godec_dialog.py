@@ -1,4 +1,5 @@
 """Dialog for configuring and running GoDec background removal"""
+
 import traceback
 
 from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
@@ -33,8 +34,20 @@ class GoDecThread(QThread):
     processing_complete = pyqtSignal(object, object)  # (background_imagery, foreground_imagery)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, imagery, rank, sparsity, max_iter, power_iters, use_gpu=True, aoi=None,
-                 start_frame=0, end_frame=None, frame_block_size=None, block_overlap_frames=0):
+    def __init__(
+        self,
+        imagery,
+        rank,
+        sparsity,
+        max_iter,
+        power_iters,
+        use_gpu=True,
+        aoi=None,
+        start_frame=0,
+        end_frame=None,
+        frame_block_size=None,
+        block_overlap_frames=0,
+    ):
         """
         Initialize the processing thread.
 
@@ -108,7 +121,7 @@ class GoDecThread(QThread):
                 return
 
             # Subset imagery by frame range
-            imagery_subset = self.imagery[self.start_frame:self.end_frame]
+            imagery_subset = self.imagery[self.start_frame : self.end_frame]
 
             # Apply AOI if selected
             if self.aoi:
@@ -526,14 +539,16 @@ class GoDecDialog(QDialog):
     def run_processing(self):
         """Start GoDec background removal."""
         if self.imagery is None:
-            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.",
-                                QMessageBox.StandardButton.Ok)
+            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.", QMessageBox.StandardButton.Ok)
             return
 
         if not HAS_TORCH:
-            QMessageBox.warning(self, "PyTorch Not Available",
-                                "PyTorch is not installed. Install with: pip install vista-imagery[gpu]",
-                                QMessageBox.StandardButton.Ok)
+            QMessageBox.warning(
+                self,
+                "PyTorch Not Available",
+                "PyTorch is not installed. Install with: pip install vista-imagery[gpu]",
+                QMessageBox.StandardButton.Ok,
+            )
             return
 
         # Get parameters
@@ -579,8 +594,17 @@ class GoDecDialog(QDialog):
 
         # Create and start worker thread
         self.worker = GoDecThread(
-            self.imagery, rank, sparsity, max_iter, power_iters, use_gpu, selected_aoi, start_frame, end_frame,
-            frame_block_size, block_overlap_frames
+            self.imagery,
+            rank,
+            sparsity,
+            max_iter,
+            power_iters,
+            use_gpu,
+            selected_aoi,
+            start_frame,
+            end_frame,
+            frame_block_size,
+            block_overlap_frames,
         )
         self.worker.progress_updated.connect(self.on_progress_updated)
         self.worker.status_updated.connect(self.on_status_updated)
@@ -625,9 +649,10 @@ class GoDecDialog(QDialog):
         self.imagery_processed.emit(created_imagery)
 
         QMessageBox.information(
-            self, "Processing Complete",
+            self,
+            "Processing Complete",
             f"GoDec background removal complete.\nAdded: {', '.join(added_items)}",
-            QMessageBox.StandardButton.Ok
+            QMessageBox.StandardButton.Ok,
         )
         self.accept()
 
@@ -684,10 +709,11 @@ class GoDecDialog(QDialog):
         """Handle dialog close event."""
         if self.worker and self.worker.isRunning():
             reply = QMessageBox.question(
-                self, "Processing in Progress",
+                self,
+                "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
                 self.cancel_processing()

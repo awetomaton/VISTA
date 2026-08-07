@@ -4,6 +4,7 @@ Track interpolation algorithm for filling missing frames in trajectories.
 This module provides the TrackInterpolation class which fills gaps in track data
 by interpolating missing frames between existing track points.
 """
+
 import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
@@ -101,24 +102,16 @@ class TrackInterpolation:
                 'interpolated_track': self.track.copy(),
                 'original_frames': existing_frames.copy(),
                 'interpolated_frames': np.array([], dtype=np.int_),
-                'n_interpolated': 0
+                'n_interpolated': 0,
             }
 
         # Create interpolation functions for rows and columns
         try:
             row_interp = interp1d(
-                existing_frames,
-                existing_rows,
-                kind=self.method,
-                assume_sorted=False,
-                fill_value='extrapolate'
+                existing_frames, existing_rows, kind=self.method, assume_sorted=False, fill_value='extrapolate'
             )
             col_interp = interp1d(
-                existing_frames,
-                existing_columns,
-                kind=self.method,
-                assume_sorted=False,
-                fill_value='extrapolate'
+                existing_frames, existing_columns, kind=self.method, assume_sorted=False, fill_value='extrapolate'
             )
         except Exception as e:
             raise ValueError(f"Interpolation failed: {str(e)}")
@@ -153,5 +146,5 @@ class TrackInterpolation:
             'interpolated_track': interpolated_track,
             'original_frames': existing_frames.copy(),
             'interpolated_frames': missing_frames,
-            'n_interpolated': len(missing_frames)
+            'n_interpolated': len(missing_frames),
         }

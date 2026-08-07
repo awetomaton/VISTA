@@ -1,4 +1,5 @@
 """Imagery projection engine for projecting VISTA imagery to geodetic coordinates."""
+
 import numpy as np
 from astropy import units
 from astropy.coordinates import EarthLocation
@@ -8,6 +9,7 @@ from scipy.ndimage import map_coordinates
 try:
     import torch
     import torch.nn.functional as F
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -201,9 +203,7 @@ class ImageryProjector:
 
             # Restore NaN where the coarse grid had invalid points
             if np.any(nan_mask):
-                validity = map_coordinates(
-                    (~nan_mask).astype(np.float64), interp_coords, order=1, mode='nearest'
-                )
+                validity = map_coordinates((~nan_mask).astype(np.float64), interp_coords, order=1, mode='nearest')
                 invalid = validity < 0.5
                 src_rows[invalid] = np.nan
                 src_cols[invalid] = np.nan
@@ -264,16 +264,24 @@ class ImageryProjector:
             the source image bounds are set to NaN.
         """
         src_rows, src_cols = self._compute_coordinate_mapping(
-            frame, output_bbox, output_width, output_height, row_offset, column_offset,
+            frame,
+            output_bbox,
+            output_width,
+            output_height,
+            row_offset,
+            column_offset,
         )
 
         img_h, img_w = image.shape
 
         # Determine downsampling factor if source resolution >> output resolution
         valid_mask = (
-            (src_rows >= 0) & (src_rows < img_h) &
-            (src_cols >= 0) & (src_cols < img_w) &
-            ~np.isnan(src_rows) & ~np.isnan(src_cols)
+            (src_rows >= 0)
+            & (src_rows < img_h)
+            & (src_cols >= 0)
+            & (src_cols < img_w)
+            & ~np.isnan(src_rows)
+            & ~np.isnan(src_cols)
         )
         if np.sum(valid_mask) > 1:
             valid_rows = src_rows[valid_mask]
@@ -290,6 +298,7 @@ class ImageryProjector:
         work_image = image
         if downsample_factor > 1:
             from skimage.transform import downscale_local_mean
+
             work_image = downscale_local_mean(image, (downsample_factor, downsample_factor)).astype(np.float32)
             src_rows = src_rows / downsample_factor
             src_cols = src_cols / downsample_factor
@@ -298,16 +307,17 @@ class ImageryProjector:
         coords = np.array([src_rows, src_cols])
 
         # Bilinear interpolation; pixels outside bounds get cval=np.nan
-        projected_flat = map_coordinates(
-            work_image, coords, order=1, mode='constant', cval=np.nan
-        )
+        projected_flat = map_coordinates(work_image, coords, order=1, mode='constant', cval=np.nan)
 
         # Mask out-of-bounds pixels that map_coordinates might have interpolated at the boundary
         work_h, work_w = work_image.shape
         out_of_bounds = (
-            (src_rows < -0.5) | (src_rows > work_h - 0.5) |
-            (src_cols < -0.5) | (src_cols > work_w - 0.5) |
-            np.isnan(src_rows) | np.isnan(src_cols)
+            (src_rows < -0.5)
+            | (src_rows > work_h - 0.5)
+            | (src_cols < -0.5)
+            | (src_cols > work_w - 0.5)
+            | np.isnan(src_rows)
+            | np.isnan(src_cols)
         )
         projected_flat[out_of_bounds] = np.nan
 
@@ -379,9 +389,12 @@ class ImageryProjector:
 
         # Determine downsampling factor
         valid_mask = (
-            (src_rows >= 0) & (src_rows < img_h) &
-            (src_cols >= 0) & (src_cols < img_w) &
-            ~np.isnan(src_rows) & ~np.isnan(src_cols)
+            (src_rows >= 0)
+            & (src_rows < img_h)
+            & (src_cols >= 0)
+            & (src_cols < img_w)
+            & ~np.isnan(src_rows)
+            & ~np.isnan(src_cols)
         )
         if np.sum(valid_mask) > 1:
             valid_rows = src_rows[valid_mask]
@@ -400,9 +413,9 @@ class ImageryProjector:
             # Use adaptive average pooling for downsampling
             new_h = max(1, img_h // downsample_factor)
             new_w = max(1, img_w // downsample_factor)
-            work_image = F.adaptive_avg_pool2d(
-                gpu_image.unsqueeze(0).unsqueeze(0), (new_h, new_w)
-            ).squeeze(0).squeeze(0)
+            work_image = (
+                F.adaptive_avg_pool2d(gpu_image.unsqueeze(0).unsqueeze(0), (new_h, new_w)).squeeze(0).squeeze(0)
+            )
             src_rows = src_rows / downsample_factor
             src_cols = src_cols / downsample_factor
 
@@ -415,27 +428,31 @@ class ImageryProjector:
 
         # Mark out-of-bounds as large values (grid_sample with zeros padding will zero them)
         out_of_bounds = (
-            np.isnan(src_rows) | np.isnan(src_cols) |
-            (src_rows < -0.5) | (src_rows > work_h - 0.5) |
-            (src_cols < -0.5) | (src_cols > work_w - 0.5)
+            np.isnan(src_rows)
+            | np.isnan(src_cols)
+            | (src_rows < -0.5)
+            | (src_rows > work_h - 0.5)
+            | (src_cols < -0.5)
+            | (src_cols > work_w - 0.5)
         )
         norm_x[out_of_bounds] = -10.0
         norm_y[out_of_bounds] = -10.0
 
         # Build grid tensor: (1, output_height, output_width, 2)
-        grid_np = np.stack([
-            norm_x.reshape(output_height, output_width),
-            norm_y.reshape(output_height, output_width),
-        ], axis=-1).astype(np.float32)
+        grid_np = np.stack(
+            [
+                norm_x.reshape(output_height, output_width),
+                norm_y.reshape(output_height, output_width),
+            ],
+            axis=-1,
+        ).astype(np.float32)
         grid_tensor = torch.from_numpy(grid_np).unsqueeze(0).to(device)
 
         # Prepare source image: (1, 1, H, W)
         src_tensor = work_image.unsqueeze(0).unsqueeze(0).float()
 
         # grid_sample with bilinear interpolation
-        result = F.grid_sample(
-            src_tensor, grid_tensor, mode='bilinear', padding_mode='zeros', align_corners=True
-        )
+        result = F.grid_sample(src_tensor, grid_tensor, mode='bilinear', padding_mode='zeros', align_corners=True)
 
         # Convert back to numpy
         projected = result.squeeze().cpu().numpy().astype(np.float32)

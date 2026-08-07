@@ -1,4 +1,5 @@
 """Color conversion utilities for pyqtgraph and Qt"""
+
 from PyQt6.QtGui import QColor
 
 

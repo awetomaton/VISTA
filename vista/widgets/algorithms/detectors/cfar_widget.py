@@ -1,4 +1,5 @@
 """Widget for configuring and running the CFAR detector algorithm"""
+
 from vista.algorithms.detectors.cfar import CFAR
 from vista.widgets.algorithms.detectors.base_detector_widget import BaseDetectorWidget
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
@@ -29,17 +30,13 @@ class CFARWidget(BaseDetectorWidget):
             description=description,
             default_color='r',
             default_marker='o',
-            default_marker_size=12
+            default_marker_size=12,
         )
 
     def add_algorithm_parameters(self, layout):
         """Add CFAR-specific parameters"""
         # CFAR configuration widget (with all CFAR-specific parameters)
-        self.cfar_config = CFARConfigWidget(
-            show_visualization=True,
-            show_area_filters=True,
-            show_detection_mode=True
-        )
+        self.cfar_config = CFARConfigWidget(show_visualization=True, show_area_filters=True, show_detection_mode=True)
         layout.addWidget(self.cfar_config)
 
     def load_settings(self):
@@ -80,7 +77,7 @@ class CFARWidget(BaseDetectorWidget):
             'min_area': cfar_params['min_area'],
             'max_area': cfar_params['max_area'],
             'annulus_shape': cfar_params['annulus_shape'],
-            'detection_mode': cfar_params['detection_mode']
+            'detection_mode': cfar_params['detection_mode'],
         }
 
     def validate_parameters(self):

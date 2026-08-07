@@ -1,4 +1,5 @@
 """Track plot window for visualizing track point-by-point data"""
+
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt
@@ -120,7 +121,9 @@ class TrackPlotWindow(QWidget):
 
         # Symmetric log Y-axis checkbox
         self.symlog_y = QCheckBox("Symlog Y")
-        self.symlog_y.setToolTip("Use symmetric logarithmic scale for Y-axis\n(handles both positive and negative values)")
+        self.symlog_y.setToolTip(
+            "Use symmetric logarithmic scale for Y-axis\n(handles both positive and negative values)"
+        )
         self.symlog_y.setChecked(False)
         self.symlog_y.stateChanged.connect(self._on_settings_changed)
         color_layout.addWidget(self.symlog_y)
@@ -198,14 +201,14 @@ class TrackPlotWindow(QWidget):
         """Handle plot settings change"""
         # Check if axis selection changed
         sender = self.sender()
-        axis_changed = (sender == self.x_combo or sender == self.y_combo)
+        axis_changed = sender == self.x_combo or sender == self.y_combo
 
         self.update_plot()
 
         # Reset zoom if axis selection changed
         if axis_changed:
             self.plot.autoRange()
-        
+
     def _on_axis_changed(self):
         """Handle axis combo box change - reset zoom and update plot"""
         self.update_plot()
@@ -582,7 +585,7 @@ class TrackPlotWindow(QWidget):
                 continue
 
             # Calculate distances to all points
-            distances = np.sqrt((x_data - x)**2 + (y_data - y)**2)
+            distances = np.sqrt((x_data - x) ** 2 + (y_data - y) ** 2)
             min_dist = np.min(distances)
 
             if min_dist < tolerance and min_dist < closest_distance:
@@ -832,7 +835,7 @@ class TrackPlotWindow(QWidget):
                 assignments[track.uuid] = {
                     'color': self.COLORS[i % len(self.COLORS)],
                     'symbol': tracker_symbols.get(tracker_name, 'o'),
-                    'name': f"{track.name} ({tracker_name})"
+                    'name': f"{track.name} ({tracker_name})",
                 }
         else:  # color_by == 'tracker'
             # Each tracker gets unique color, each track within tracker gets unique symbol
@@ -852,7 +855,7 @@ class TrackPlotWindow(QWidget):
                 assignments[track.uuid] = {
                     'color': tracker_colors.get(tracker_name, self.COLORS[0]),
                     'symbol': self.SYMBOLS[track_idx % len(self.SYMBOLS)],
-                    'name': f"{track.name} ({tracker_name})"
+                    'name': f"{track.name} ({tracker_name})",
                 }
 
         return assignments
@@ -919,13 +922,14 @@ class TrackPlotWindow(QWidget):
             # Plot scatter with lines
             name = assignment['name'] if self.show_legend.isChecked() else None
             self.plot.plot(
-                x_filtered, y_filtered,
+                x_filtered,
+                y_filtered,
                 pen=pg.mkPen(assignment['color'], width=2),
                 symbol=assignment['symbol'],
                 symbolPen=pg.mkPen(assignment['color']),
                 symbolBrush=pg.mkBrush(assignment['color']),
                 symbolSize=8,
-                name=name
+                name=name,
             )
 
             # Store for hover detection (filtered data)
@@ -937,7 +941,8 @@ class TrackPlotWindow(QWidget):
                 idx = current_idx[0]
                 y_current = self._symlog(np.array([y_data_original[idx]]))[0] if use_symlog else y_data_original[idx]
                 self.plot.plot(
-                    [x_data[idx]], [y_current],
+                    [x_data[idx]],
+                    [y_current],
                     pen=None,
                     symbol=assignment['symbol'],
                     symbolPen=pg.mkPen('w', width=2),
@@ -965,9 +970,7 @@ class TrackPlotWindow(QWidget):
             QMessageBox.warning(self, "No Data", "No tracks selected to export.")
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export Data", "", "CSV Files (*.csv);;All Files (*)"
-        )
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export Data", "", "CSV Files (*.csv);;All Files (*)")
 
         if not file_path:
             return
@@ -1001,8 +1004,7 @@ class TrackPlotWindow(QWidget):
     def export_plot(self):
         """Export current plot to image file"""
         file_path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Export Plot", "",
-            "PNG Files (*.png);;SVG Files (*.svg);;All Files (*)"
+            self, "Export Plot", "", "PNG Files (*.png);;SVG Files (*.svg);;All Files (*)"
         )
 
         if not file_path:

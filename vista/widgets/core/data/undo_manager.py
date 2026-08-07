@@ -5,6 +5,7 @@ This module provides a snapshot-based undo system that saves complete copies of 
 before modifying operations. This approach works for any operation without needing
 to anticipate specific action types.
 """
+
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -71,10 +72,7 @@ class UndoStack(QObject):
         copy_func : Callable
             Function to copy a single item (e.g., lambda t: t.copy())
         """
-        snapshot = UndoSnapshot(
-            description=description,
-            data=[copy_func(item) for item in data_list]
-        )
+        snapshot = UndoSnapshot(description=description, data=[copy_func(item) for item in data_list])
         self._stack.append(snapshot)
 
         # Trim to max depth

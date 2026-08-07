@@ -1,4 +1,5 @@
 """Detections panel for data manager"""
+
 import pathlib
 import traceback
 
@@ -77,9 +78,9 @@ class DetectionsPanel(QWidget):
         # Property selector dropdown
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
-        self.bulk_property_combo.addItems([
-            "Visibility", "Complete", "Color", "Marker", "Marker Size", "Line Thickness", "Labels"
-        ])
+        self.bulk_property_combo.addItems(
+            ["Visibility", "Complete", "Color", "Marker", "Marker Size", "Line Thickness", "Labels"]
+        )
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
 
@@ -187,7 +188,9 @@ class DetectionsPanel(QWidget):
         self.add_to_existing_track_btn = QPushButton("Add to Track")
         self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
         self.add_to_existing_track_btn.setEnabled(False)
-        self.add_to_existing_track_btn.setToolTip("Add selected detections to an existing track (click track in viewer after)")
+        self.add_to_existing_track_btn.setToolTip(
+            "Add selected detections to an existing track (click track in viewer after)"
+        )
         track_from_detections_layout.addWidget(self.add_to_existing_track_btn)
 
         # Add edit detector button
@@ -217,14 +220,14 @@ class DetectionsPanel(QWidget):
         # Detection column visibility (all columns visible by default)
         # Column 0 (Visible) is always shown and cannot be hidden
         self.detection_column_visibility = {
-            0: True,   # Visible - always shown
-            1: True,   # Name
-            2: True,   # Labels
-            3: True,   # Color
-            4: True,   # Marker
-            5: True,   # Marker Size
-            6: True,   # Line Thickness
-            7: True,   # Complete
+            0: True,  # Visible - always shown
+            1: True,  # Name
+            2: True,  # Labels
+            3: True,  # Color
+            4: True,  # Marker
+            5: True,  # Marker Size
+            6: True,  # Line Thickness
+            7: True,  # Complete
         }
 
         # Load saved column visibility settings
@@ -239,9 +242,9 @@ class DetectionsPanel(QWidget):
         # Detections table (using DraggableRowTableWidget for row reordering)
         self.detections_table = DraggableRowTableWidget()
         self.detections_table.setColumnCount(8)
-        self.detections_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"
-        ])
+        self.detections_table.setHorizontalHeaderLabels(
+            ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
+        )
 
         # Enable row selection via vertical header
         self.detections_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -253,10 +256,10 @@ class DetectionsPanel(QWidget):
         # Set column resize modes - Name and Labels should stretch
         header = self.detections_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)       # Name (can be long)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)       # Labels (can have multiple labels)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)  # Name (can be long)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)  # Labels (can have multiple labels)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
-        #header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
+        # header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Marker (dropdown)
         self.detections_table.setColumnWidth(4, 80)  # Set reasonably large width to accomodate delegate
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Size (numeric)
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Line thickness (numeric)
@@ -285,7 +288,9 @@ class DetectionsPanel(QWidget):
 
         # Enable context menu on header
         self.detections_table.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.detections_table.horizontalHeader().customContextMenuRequested.connect(self.on_detections_header_context_menu)
+        self.detections_table.horizontalHeader().customContextMenuRequested.connect(
+            self.on_detections_header_context_menu
+        )
 
         # Enable column reordering via drag and drop
         self.detections_table.horizontalHeader().setSectionsMovable(True)
@@ -326,7 +331,8 @@ class DetectionsPanel(QWidget):
                 return True
             elif event.type() == QEvent.Type.Drop and event.mimeData().hasUrls():
                 file_paths = [
-                    url.toLocalFile() for url in event.mimeData().urls()
+                    url.toLocalFile()
+                    for url in event.mimeData().urls()
                     if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
                 ]
                 if file_paths:
@@ -346,8 +352,7 @@ class DetectionsPanel(QWidget):
     def dropEvent(self, event):
         """Handle dropped CSV files by emitting the files_dropped signal."""
         file_paths = [
-            url.toLocalFile() for url in event.mimeData().urls()
-            if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
+            url.toLocalFile() for url in event.mimeData().urls() if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
         ]
         if file_paths:
             self.files_dropped.emit(file_paths)
@@ -380,7 +385,9 @@ class DetectionsPanel(QWidget):
 
                     # Visible checkbox
                     visible_item = QTableWidgetItem()
-                    visible_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    visible_item.setFlags(
+                        Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+                    )
                     visible_item.setCheckState(Qt.CheckState.Checked if detector.visible else Qt.CheckState.Unchecked)
                     self.detections_table.setItem(row, 0, visible_item)
 
@@ -420,7 +427,9 @@ class DetectionsPanel(QWidget):
 
                     # Complete checkbox
                     complete_item = QTableWidgetItem()
-                    complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                    complete_item.setFlags(
+                        Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+                    )
                     complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
                     self.detections_table.setItem(row, 7, complete_item)
 
@@ -477,8 +486,11 @@ class DetectionsPanel(QWidget):
                                 # Include detector if this detection matches:
                                 # 1. Detection has no labels AND "(No Labels)" is selected, OR
                                 # 2. Detection has labels that intersect with filter labels
-                                detection_matches = (has_no_labels and no_labels_selected) or \
-                                                  (not has_no_labels and len(label_filter_values) > 0 and detection_labels.intersection(label_filter_values))
+                                detection_matches = (has_no_labels and no_labels_selected) or (
+                                    not has_no_labels
+                                    and len(label_filter_values) > 0
+                                    and detection_labels.intersection(label_filter_values)
+                                )
 
                                 if detection_matches:
                                     matches_filter = True
@@ -514,7 +526,9 @@ class DetectionsPanel(QWidget):
 
             clear_filter_action = QAction("Clear Filter", self)
             clear_filter_action.triggered.connect(lambda: self.clear_detection_column_filter(column))
-            clear_filter_action.setEnabled(column in self.detection_column_filters and bool(self.detection_column_filters[column]))
+            clear_filter_action.setEnabled(
+                column in self.detection_column_filters and bool(self.detection_column_filters[column])
+            )
             menu.addAction(clear_filter_action)
 
         # Clear all filters option (always available)
@@ -628,10 +642,7 @@ class DetectionsPanel(QWidget):
                 if column in self.detection_column_filters:
                     del self.detection_column_filters[column]
             else:
-                self.detection_column_filters[column] = {
-                    'type': 'set',
-                    'values': selected_values
-                }
+                self.detection_column_filters[column] = {'type': 'set', 'values': selected_values}
             self.refresh_detections_table()
             # Update viewer to apply the new filter
             if hasattr(self.viewer, 'update_detection_display'):
@@ -789,16 +800,22 @@ class DetectionsPanel(QWidget):
             mask = np.array([len(detector.labels[i]) == 0 for i in range(num_detections)], dtype=bool)
         elif not no_labels_selected and label_filter_values:
             # Only specific labels selected - return detections with matching labels
-            mask = np.array([
-                len(detector.labels[i]) > 0 and bool(detector.labels[i] & label_filter_values)
-                for i in range(num_detections)
-            ], dtype=bool)
+            mask = np.array(
+                [
+                    len(detector.labels[i]) > 0 and bool(detector.labels[i] & label_filter_values)
+                    for i in range(num_detections)
+                ],
+                dtype=bool,
+            )
         else:
             # Both "(No Labels)" and specific labels selected
-            mask = np.array([
-                len(detector.labels[i]) == 0 or bool(detector.labels[i] & label_filter_values)
-                for i in range(num_detections)
-            ], dtype=bool)
+            mask = np.array(
+                [
+                    len(detector.labels[i]) == 0 or bool(detector.labels[i] & label_filter_values)
+                    for i in range(num_detections)
+                ],
+                dtype=bool,
+            )
 
         return mask
 
@@ -1032,8 +1049,7 @@ class DetectionsPanel(QWidget):
                 if detector_uuid in detector_uuids:
                     index = model.index(row, 0)
                     selection_model.select(
-                        index,
-                        QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
                     )
 
     def toggle_selected_detections_visibility(self):
@@ -1261,7 +1277,7 @@ class DetectionsPanel(QWidget):
                 if hasattr(main_window, 'statusBar'):
                     main_window.statusBar().showMessage(
                         f"Detector editing mode: Click to add detections or click existing detections to remove them for '{detector.name}'. Only current frame shown. Uncheck 'Edit Detector' when finished.",
-                        0
+                        0,
                     )
         else:
             # Finish detector editing
@@ -1279,7 +1295,7 @@ class DetectionsPanel(QWidget):
                         unique_frames = len(np.unique(edited_detector.frames))
                         main_window.statusBar().showMessage(
                             f"Detector '{edited_detector.name}' updated with {total_detections} detections across {unique_frames} frames",
-                            3000
+                            3000,
                         )
             else:
                 # Update main window status
@@ -1345,14 +1361,10 @@ class DetectionsPanel(QWidget):
                 QMessageBox.information(
                     self,
                     "Success",
-                    f"Exported {num_detections} detection(s) from {len(selected_detectors)} detector(s) to:\n{file_path}"
+                    f"Exported {num_detections} detection(s) from {len(selected_detectors)} detector(s) to:\n{file_path}",
                 )
             except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Export Error",
-                    f"Failed to export detections:\n{str(e)}"
-                )
+                QMessageBox.critical(self, "Export Error", f"Failed to export detections:\n{str(e)}")
 
     def copy_to_sensor(self):
         """Copy selected detections to a different sensor"""
@@ -1360,10 +1372,7 @@ class DetectionsPanel(QWidget):
 
         if not selected_rows:
             QMessageBox.information(
-                self,
-                "No Selection",
-                "Please select one or more detectors to copy.",
-                QMessageBox.StandardButton.Ok
+                self, "No Selection", "Please select one or more detectors to copy.", QMessageBox.StandardButton.Ok
             )
             return
 
@@ -1373,7 +1382,7 @@ class DetectionsPanel(QWidget):
                 self,
                 "No Sensors",
                 "No sensors are available. Please load imagery to create sensors.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -1459,7 +1468,7 @@ class DetectionsPanel(QWidget):
                 self,
                 "Success",
                 f"Copied {len(detectors_to_copy)} detector(s) with {total_detections_copied} total detections to sensor '{target_sensor.name}'.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
 
     def label_selected_detections(self):
@@ -1470,7 +1479,7 @@ class DetectionsPanel(QWidget):
                 self,
                 "No Selection",
                 "Please select detection points using the 'Select Detections' tool in the toolbar first.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -1514,7 +1523,7 @@ class DetectionsPanel(QWidget):
                 self,
                 "Success",
                 f"Set {len(selected_labels)} label(s) on {len(self.selected_detections)} detection(s).",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
 
     def on_detections_selected_in_viewer(self, detections):
@@ -1613,9 +1622,9 @@ class DetectionsPanel(QWidget):
         QMessageBox.information(
             self,
             "Points Deleted",
-            f"Deleted {total_deleted} detection point(s)." +
-            (f"\n{len(detectors_to_remove)} empty detector(s) were also removed." if detectors_to_remove else ""),
-            QMessageBox.StandardButton.Ok
+            f"Deleted {total_deleted} detection point(s)."
+            + (f"\n{len(detectors_to_remove)} empty detector(s) were also removed." if detectors_to_remove else ""),
+            QMessageBox.StandardButton.Ok,
         )
 
     def create_track_from_selected_detections(self):
@@ -1639,8 +1648,9 @@ class DetectionsPanel(QWidget):
                 sensor = detector.sensor
             elif sensor != detector.sensor:
                 QMessageBox.warning(
-                    self, "Mixed Sensors",
-                    "Selected detections belong to different sensors. Please select detections from the same sensor."
+                    self,
+                    "Mixed Sensors",
+                    "Selected detections belong to different sensors. Please select detections from the same sensor.",
                 )
                 return
 
@@ -1662,7 +1672,7 @@ class DetectionsPanel(QWidget):
             rows=rows,
             columns=columns,
             sensor=sensor,
-            tracker="Manual Tracks from Detections"
+            tracker="Manual Tracks from Detections",
         )
 
         # Add track to viewer
@@ -1689,8 +1699,9 @@ class DetectionsPanel(QWidget):
         self._exit_detection_selection_mode()
 
         QMessageBox.information(
-            self, "Track Created",
-            f"Track '{track_name}' created with {len(frames)} points across {len(np.unique(frames))} frames."
+            self,
+            "Track Created",
+            f"Track '{track_name}' created with {len(frames)} points across {len(np.unique(frames))} frames.",
         )
 
     def start_add_to_existing_track(self):
@@ -1753,10 +1764,7 @@ class DetectionsPanel(QWidget):
             if sensor is None:
                 sensor = detector.sensor
             elif sensor != detector.sensor:
-                QMessageBox.warning(
-                    self, "Mixed Sensors",
-                    "Selected detections belong to different sensors."
-                )
+                QMessageBox.warning(self, "Mixed Sensors", "Selected detections belong to different sensors.")
                 self.cancel_add_to_existing_track()
                 return
 
@@ -1765,8 +1773,9 @@ class DetectionsPanel(QWidget):
                 self.cancel_add_to_existing_track()
             else:
                 QMessageBox.warning(
-                    self, "Sensor Mismatch",
-                    f"Selected detections are from sensor '{sensor.name}' but track is from sensor '{track.sensor.name}'."
+                    self,
+                    "Sensor Mismatch",
+                    f"Selected detections are from sensor '{sensor.name}' but track is from sensor '{track.sensor.name}'.",
                 )
                 self.cancel_add_to_existing_track()
             return
@@ -1778,7 +1787,7 @@ class DetectionsPanel(QWidget):
             f"Add {len(self.selected_detections)} detection(s) to track '{track.name}'?\n\n"
             f"The detections will be merged with the existing track data.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes
+            QMessageBox.StandardButton.Yes,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
@@ -1827,9 +1836,10 @@ class DetectionsPanel(QWidget):
             self._exit_detection_selection_mode()
 
             QMessageBox.information(
-                self, "Detections Added",
+                self,
+                "Detections Added",
                 f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
-                f"Track now has {len(frames)} points across {len(np.unique(frames))} frames."
+                f"Track now has {len(frames)} points across {len(np.unique(frames))} frames.",
             )
         else:
             self.cancel_add_to_existing_track()
@@ -1850,11 +1860,7 @@ class DetectionsPanel(QWidget):
         selected_rows = sorted(set(index.row() for index in self.detections_table.selectedIndexes()))
 
         if len(selected_rows) < 2:
-            QMessageBox.warning(
-                self,
-                "Cannot Merge",
-                "Please select at least 2 detectors to merge."
-            )
+            QMessageBox.warning(self, "Cannot Merge", "Please select at least 2 detectors to merge.")
             return
 
         # Collect detectors from selected rows
@@ -1870,11 +1876,7 @@ class DetectionsPanel(QWidget):
                             break
 
         if len(detectors_to_merge) < 2:
-            QMessageBox.warning(
-                self,
-                "Cannot Merge",
-                "Could not find enough valid detectors to merge."
-            )
+            QMessageBox.warning(self, "Cannot Merge", "Could not find enough valid detectors to merge.")
             return
 
         # Check that all detectors are from the same sensor (compare by UUID)
@@ -1884,7 +1886,7 @@ class DetectionsPanel(QWidget):
             QMessageBox.warning(
                 self,
                 "Cannot Merge",
-                "Selected detectors belong to different sensors. Please select detectors from the same sensor."
+                "Selected detectors belong to different sensors. Please select detectors from the same sensor.",
             )
             return
 
@@ -1930,6 +1932,7 @@ class DetectionsPanel(QWidget):
             counter += 1
 
         from vista.detections.detector import Detector
+
         merged_detector = Detector(
             name=merged_name,
             frames=np.array(all_frames, dtype=np.int_),
@@ -1968,7 +1971,7 @@ class DetectionsPanel(QWidget):
             self,
             "Merge Complete",
             f"Successfully merged {len(detectors_to_merge)} detectors into '{merged_name}'.\n"
-            f"The merged detector has {len(all_frames)} detection points."
+            f"The merged detector has {len(all_frames)} detection points.",
         )
 
     # -------------------------------------------------------------------------
@@ -1985,9 +1988,7 @@ class DetectionsPanel(QWidget):
             Human-readable description of the operation (e.g., "Delete 3 detectors")
         """
         self.undo_stack.save_state(
-            data_list=self.viewer.detectors,
-            description=description,
-            copy_func=lambda d: d.copy()
+            data_list=self.viewer.detectors, description=description, copy_func=lambda d: d.copy()
         )
 
     def undo(self) -> None:

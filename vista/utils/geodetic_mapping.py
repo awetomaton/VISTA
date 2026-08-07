@@ -1,4 +1,5 @@
 """Utility functions for mapping geodetic coordinates to pixel coordinates"""
+
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
@@ -10,7 +11,7 @@ def map_geodetic_to_pixel(
     longitudes: NDArray[np.float64],
     altitudes: NDArray[np.float64],
     frames: NDArray[np.int_],
-    sensor
+    sensor,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """
     Map geodetic coordinates (lat/lon/alt) to pixel coordinates (row/col) using sensor.
@@ -40,19 +41,14 @@ def map_geodetic_to_pixel(
     """
     if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
         raise ValueError(
-            "Sensor does not have geodetic conversion capability. "
-            "Cannot convert lat/lon to row/col coordinates."
+            "Sensor does not have geodetic conversion capability. Cannot convert lat/lon to row/col coordinates."
         )
 
     if len(latitudes) != len(longitudes) or len(latitudes) != len(altitudes) or len(latitudes) != len(frames):
         raise ValueError("Latitude, longitude, altitude, and frames arrays must have the same length")
 
     # Build EarthLocation for all points at once
-    locations = EarthLocation(
-        lat=latitudes * u.deg,
-        lon=longitudes * u.deg,
-        height=altitudes * u.m
-    )
+    locations = EarthLocation(lat=latitudes * u.deg, lon=longitudes * u.deg, height=altitudes * u.m)
 
     # Single vectorized call — sensor handles frame grouping internally
     rows, columns = sensor.geodetic_to_pixel(frames, locations)

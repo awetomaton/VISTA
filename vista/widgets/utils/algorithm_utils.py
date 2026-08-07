@@ -1,4 +1,5 @@
 """Utility functions for algorithm widgets to reduce code duplication"""
+
 import traceback
 
 from PyQt6.QtCore import Qt

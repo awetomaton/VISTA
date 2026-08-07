@@ -1,4 +1,5 @@
 """Widget for configuring and running the Subset Frames algorithm"""
+
 import traceback
 
 from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
@@ -61,7 +62,7 @@ class SubsetFramesProcessingThread(QThread):
 
             # Slice the imagery using __getitem__
             # Convert start and end frames to slice indices
-            sliced_imagery = temp_imagery[self.start_frame:self.end_frame + 1]
+            sliced_imagery = temp_imagery[self.start_frame : self.end_frame + 1]
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -87,7 +88,9 @@ class SubsetFramesProcessingThread(QThread):
                     if original_frame_idx in self.imagery._histograms:
                         sliced_imagery._histograms[i] = self.imagery._histograms[original_frame_idx]
                     if original_frame_idx in self.imagery.default_histogram_bounds:
-                        sliced_imagery.default_histogram_bounds[i] = self.imagery.default_histogram_bounds[original_frame_idx]
+                        sliced_imagery.default_histogram_bounds[i] = self.imagery.default_histogram_bounds[
+                            original_frame_idx
+                        ]
                     self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Copying histograms...")
             else:
                 # Compute histograms (for AOI or if original doesn't have cached histograms)
@@ -177,8 +180,7 @@ class SubsetFramesWidget(QDialog):
         start_frame_layout = QHBoxLayout()
         start_frame_label = QLabel("Start Frame:")
         start_frame_label.setToolTip(
-            "The starting frame index (inclusive).\n"
-            "This frame will be included in the subset."
+            "The starting frame index (inclusive).\nThis frame will be included in the subset."
         )
         self.start_frame_spinbox = QSpinBox()
         self.start_frame_spinbox.setMinimum(0)
@@ -196,10 +198,7 @@ class SubsetFramesWidget(QDialog):
         # End frame parameter
         end_frame_layout = QHBoxLayout()
         end_frame_label = QLabel("End Frame:")
-        end_frame_label.setToolTip(
-            "The ending frame index (inclusive).\n"
-            "This frame will be included in the subset."
-        )
+        end_frame_label.setToolTip("The ending frame index (inclusive).\nThis frame will be included in the subset.")
         self.end_frame_spinbox = QSpinBox()
         self.end_frame_spinbox.setMinimum(0)
         if self.imagery:
@@ -260,7 +259,7 @@ class SubsetFramesWidget(QDialog):
                 self,
                 "No Imagery",
                 "No imagery is currently loaded. Please load imagery first.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -278,7 +277,7 @@ class SubsetFramesWidget(QDialog):
                 self,
                 "Invalid Parameters",
                 f"Start frame ({start_frame}) cannot be greater than end frame ({end_frame}).",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -287,7 +286,7 @@ class SubsetFramesWidget(QDialog):
                 self,
                 "Invalid Parameters",
                 f"Frame indices must be between 0 and {len(self.imagery) - 1}.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -306,9 +305,7 @@ class SubsetFramesWidget(QDialog):
         self.progress_bar.setMaximum(num_frames)
 
         # Create and start processing thread
-        self.processing_thread = SubsetFramesProcessingThread(
-            self.imagery, start_frame, end_frame, selected_aoi
-        )
+        self.processing_thread = SubsetFramesProcessingThread(self.imagery, start_frame, end_frame, selected_aoi)
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
         self.processing_thread.error_occurred.connect(self.on_error_occurred)
@@ -391,7 +388,7 @@ class SubsetFramesWidget(QDialog):
                 "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
 
             if reply == QMessageBox.StandardButton.Yes:

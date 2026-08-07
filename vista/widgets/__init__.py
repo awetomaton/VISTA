@@ -1,4 +1,5 @@
 """Vista widgets package"""
+
 # Core widgets
 from .core import ImageryViewer, PlaybackControls, VistaMainWindow
 from .core.data import DataLoaderThread, DataManagerPanel

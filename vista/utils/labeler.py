@@ -1,4 +1,5 @@
 """Utilities for resolving the current labeler name and label timestamps."""
+
 import datetime
 import getpass
 

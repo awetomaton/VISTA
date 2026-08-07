@@ -1,4 +1,5 @@
 """Widget for configuring and running the Non-Uniformity Correction treatment"""
+
 import numpy as np
 
 from vista.widgets.algorithms.treatments.base_treatment_widget import BaseTreatmentThread, BaseTreatmentWidget
@@ -40,7 +41,7 @@ class NonUniformityCorrectionWidget(BaseTreatmentWidget):
             imagery=imagery,
             aois=aois,
             window_title="Non-Uniformity Correction Treatment",
-            description=description
+            description=description,
         )
 
     def create_processing_thread(self, imagery, aoi):
@@ -52,8 +53,10 @@ class NonUniformityCorrectionWidget(BaseTreatmentWidget):
         if self.imagery is None or self.imagery.sensor is None:
             return False, "No sensor information available."
 
-        if not hasattr(self.imagery.sensor, 'uniformity_gain_images') or \
-           self.imagery.sensor.uniformity_gain_images is None:
+        if (
+            not hasattr(self.imagery.sensor, 'uniformity_gain_images')
+            or self.imagery.sensor.uniformity_gain_images is None
+        ):
             return False, "Sensor does not have uniformity gain images. Please load NUC calibration data."
 
         if len(self.imagery.sensor.uniformity_gain_images) == 0:

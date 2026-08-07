@@ -6,6 +6,7 @@ locations are determined when clicking to add track or detection points. Three m
 supported: Verbatim (exact location), Peak (brightest pixel within radius), and CFAR
 (signal blob centroid via CFAR detection).
 """
+
 from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 
@@ -57,11 +58,11 @@ class PointSelectionDialog(QDialog):
 
         self.setWindowTitle("Point Selection Mode")
         self.setWindowFlags(
-            Qt.WindowType.Tool |
-            Qt.WindowType.CustomizeWindowHint |
-            Qt.WindowType.WindowTitleHint |
-            Qt.WindowType.WindowCloseButtonHint |
-            Qt.WindowType.WindowStaysOnTopHint
+            Qt.WindowType.Tool
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.WindowStaysOnTopHint
         )
         self.setModal(False)
 
@@ -79,8 +80,7 @@ class PointSelectionDialog(QDialog):
 
         # Information label
         info_label = QLabel(
-            "<b>Point Selection Mode</b><br>"
-            "Choose how point locations are determined when clicking to add points:"
+            "<b>Point Selection Mode</b><br>Choose how point locations are determined when clicking to add points:"
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
@@ -182,11 +182,7 @@ class PointSelectionDialog(QDialog):
         cfar_layout.addLayout(cfar_search_radius_layout)
 
         # CFAR configuration widget (with visualization, but without area filters)
-        self.cfar_config = CFARConfigWidget(
-            show_visualization=True,
-            show_area_filters=False,
-            show_detection_mode=True
-        )
+        self.cfar_config = CFARConfigWidget(show_visualization=True, show_area_filters=False, show_detection_mode=True)
         cfar_layout.addWidget(self.cfar_config)
 
         cfar_layout.addStretch()
@@ -262,9 +258,7 @@ class PointSelectionDialog(QDialog):
         self.tab_widget.setCurrentIndex(last_tab)
 
         # Load peak radius and detection mode
-        self.peak_radius_spinbox.setValue(
-            self.settings.value("peak_radius", 5, type=int)
-        )
+        self.peak_radius_spinbox.setValue(self.settings.value("peak_radius", 5, type=int))
         peak_detection_mode = self.settings.value("peak_detection_mode", "bright")
         for i in range(self.peak_mode_combo.count()):
             if self.peak_mode_combo.itemData(i) == peak_detection_mode:
@@ -272,9 +266,7 @@ class PointSelectionDialog(QDialog):
                 break
 
         # Load CFAR search radius
-        self.cfar_search_radius_spinbox.setValue(
-            self.settings.value("cfar_search_radius", 50, type=int)
-        )
+        self.cfar_search_radius_spinbox.setValue(self.settings.value("cfar_search_radius", 50, type=int))
 
         # Load CFAR parameters
         cfar_params = {

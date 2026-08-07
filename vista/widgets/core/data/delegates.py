@@ -1,4 +1,5 @@
 """Custom delegates for table editing in data manager"""
+
 from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -72,15 +73,7 @@ class ColorDelegate(QStyledItemDelegate):
 class MarkerDelegate(QStyledItemDelegate):
     """Delegate for marker selection"""
 
-    MARKERS = {
-        'Circle': 'o',
-        'Square': 's',
-        'Triangle': 't',
-        'Diamond': 'd',
-        'Plus': '+',
-        'Cross': 'x',
-        'Star': 'star'
-    }
+    MARKERS = {'Circle': 'o', 'Square': 's', 'Triangle': 't', 'Diamond': 'd', 'Plus': '+', 'Cross': 'x', 'Star': 'star'}
 
     def createEditor(self, parent, option, index):
         combo = QComboBox(parent)
@@ -123,7 +116,7 @@ class LineStyleDelegate(QStyledItemDelegate):
         'Dash': 'DashLine',
         'Dot': 'DotLine',
         'Dash-Dot': 'DashDotLine',
-        'Dash-Dot-Dot': 'DashDotDotLine'
+        'Dash-Dot-Dot': 'DashDotDotLine',
     }
 
     def createEditor(self, parent, option, index):
@@ -260,9 +253,7 @@ class LabelsSelectionDialog(QDialog):
             layout.addWidget(no_labels_label)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)

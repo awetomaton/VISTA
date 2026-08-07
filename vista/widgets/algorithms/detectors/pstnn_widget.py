@@ -1,4 +1,5 @@
 """Widget for configuring and running the PSTNN detector algorithm"""
+
 import traceback
 
 import numpy as np
@@ -36,10 +37,17 @@ class PSTNNProcessingThread(QThread):
     processing_complete = pyqtSignal(object)  # Emits Detector object
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, imagery, algorithm_params: dict, aoi=None,
-                 start_frame: int = 0, end_frame: int = None,
-                 default_color: str = 'r', default_marker: str = 'o',
-                 default_marker_size: int = 12):
+    def __init__(
+        self,
+        imagery,
+        algorithm_params: dict,
+        aoi=None,
+        start_frame: int = 0,
+        end_frame: int = None,
+        default_color: str = 'r',
+        default_marker: str = 'o',
+        default_marker_size: int = 12,
+    ):
         """
         Initialize the PSTNN processing thread.
 
@@ -104,7 +112,7 @@ class PSTNNProcessingThread(QThread):
                 return
 
             # Subset imagery by frame range
-            imagery_subset = self.imagery[self.start_frame:self.end_frame]
+            imagery_subset = self.imagery[self.start_frame : self.end_frame]
 
             # Apply AOI if selected
             if self.aoi:
@@ -120,8 +128,7 @@ class PSTNNProcessingThread(QThread):
 
             if len(images) < 2:
                 self.error_occurred.emit(
-                    "PSTNN requires at least 2 frames for tensor decomposition. "
-                    "Please adjust the frame range."
+                    "PSTNN requires at least 2 frames for tensor decomposition. Please adjust the frame range."
                 )
                 return
 
@@ -183,7 +190,7 @@ class PSTNNProcessingThread(QThread):
                 color=self.default_color,
                 marker=self.default_marker,
                 marker_size=self.default_marker_size,
-                visible=True
+                visible=True,
             )
 
             self.status_updated.emit("Complete")
@@ -392,8 +399,7 @@ class PSTNNWidget(QDialog):
         self.min_area_spinbox.setRange(1, 10000)
         self.min_area_spinbox.setValue(1)
         self.min_area_spinbox.setToolTip(
-            "Minimum blob area in pixels for a valid detection.\n"
-            "Blobs smaller than this are rejected as noise."
+            "Minimum blob area in pixels for a valid detection.\nBlobs smaller than this are rejected as noise."
         )
         filters_layout.addRow("Min Area:", self.min_area_spinbox)
 
@@ -453,6 +459,7 @@ class PSTNNWidget(QDialog):
     def _on_auto_lambda_changed(self, state):
         """Handle auto lambda checkbox change"""
         from PyQt6.QtCore import Qt
+
         self.lambda_spinbox.setEnabled(state != Qt.CheckState.Checked.value)
 
     def load_settings(self):
@@ -512,8 +519,7 @@ class PSTNNWidget(QDialog):
     def run_processing(self):
         """Start PSTNN detection processing"""
         if self.imagery is None:
-            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.",
-                                QMessageBox.StandardButton.Ok)
+            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.", QMessageBox.StandardButton.Ok)
             return
 
         # Validate parameters
@@ -554,9 +560,7 @@ class PSTNNWidget(QDialog):
         self.progress_bar.setMaximum(0)
 
         # Create and start worker thread
-        self.worker = PSTNNProcessingThread(
-            self.imagery, algorithm_params, selected_aoi, start_frame, end_frame
-        )
+        self.worker = PSTNNProcessingThread(self.imagery, algorithm_params, selected_aoi, start_frame, end_frame)
         self.worker.progress_updated.connect(self.on_progress_updated)
         self.worker.status_updated.connect(self.on_status_updated)
         self.worker.processing_complete.connect(self.on_processing_complete)
@@ -646,11 +650,10 @@ class PSTNNWidget(QDialog):
 
         num_detections = len(detector.frames)
         QMessageBox.information(
-            self, "Processing Complete",
-            f"PSTNN detection complete.\n\n"
-            f"Detector: {detector.name}\n"
-            f"Total detections: {num_detections}",
-            QMessageBox.StandardButton.Ok
+            self,
+            "Processing Complete",
+            f"PSTNN detection complete.\n\nDetector: {detector.name}\nTotal detections: {num_detections}",
+            QMessageBox.StandardButton.Ok,
         )
         self.accept()
 
@@ -707,10 +710,11 @@ class PSTNNWidget(QDialog):
         """
         if self.worker and self.worker.isRunning():
             reply = QMessageBox.question(
-                self, "Processing in Progress",
+                self,
+                "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
                 self.cancel_processing()

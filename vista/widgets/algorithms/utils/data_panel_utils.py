@@ -1,4 +1,5 @@
 """Utility functions for data panels to reduce code duplication"""
+
 import numpy as np
 import pandas as pd
 from PyQt6.QtCore import Qt
@@ -42,7 +43,7 @@ def show_copy_to_sensor_dialog(parent, viewer, item_type_singular, item_type_plu
             parent,
             "No Sensors",
             "No sensors are available. Please load imagery to create sensors.",
-            QMessageBox.StandardButton.Ok
+            QMessageBox.StandardButton.Ok,
         )
         return None, None
 
@@ -106,10 +107,7 @@ def export_table_to_csv(parent, table_widget, default_filename):
     """
     # Get save file name
     file_path, _ = QFileDialog.getSaveFileName(
-        parent,
-        "Export to CSV",
-        default_filename,
-        "CSV Files (*.csv);;All Files (*)"
+        parent, "Export to CSV", default_filename, "CSV Files (*.csv);;All Files (*)"
     )
 
     if not file_path:
@@ -146,19 +144,13 @@ def export_table_to_csv(parent, table_widget, default_filename):
         df.to_csv(file_path, index=False)
 
         QMessageBox.information(
-            parent,
-            "Export Successful",
-            f"Data exported to:\n{file_path}",
-            QMessageBox.StandardButton.Ok
+            parent, "Export Successful", f"Data exported to:\n{file_path}", QMessageBox.StandardButton.Ok
         )
         return True
 
     except Exception as e:
         QMessageBox.critical(
-            parent,
-            "Export Failed",
-            f"Failed to export data:\n{str(e)}",
-            QMessageBox.StandardButton.Ok
+            parent, "Export Failed", f"Failed to export data:\n{str(e)}", QMessageBox.StandardButton.Ok
         )
         return False
 
@@ -223,7 +215,7 @@ def show_filter_not_supported_message(parent, feature_name):
         parent,
         f"{feature_name} Not Available",
         f"{feature_name} is not yet implemented for this data type.",
-        QMessageBox.StandardButton.Ok
+        QMessageBox.StandardButton.Ok,
     )
 
 
@@ -303,7 +295,7 @@ def confirm_deletion(parent, num_items, item_type_plural):
         "Confirm Deletion",
         f"Are you sure you want to delete {num_items} {item_type_plural}?",
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No
+        QMessageBox.StandardButton.No,
     )
 
     return reply == QMessageBox.StandardButton.Yes

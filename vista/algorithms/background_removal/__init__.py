@@ -1,4 +1,5 @@
 """Background removal algorithms for VISTA"""
+
 from .godec import godec
 from .robust_pca import run_robust_pca
 from .static_median_background_removal import static_median_background_removal

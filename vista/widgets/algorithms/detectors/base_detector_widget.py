@@ -1,4 +1,5 @@
 """Base classes for detector widgets to reduce code duplication"""
+
 import traceback
 
 import numpy as np
@@ -17,9 +18,19 @@ class BaseDetectorProcessingThread(QThread):
     processing_complete = pyqtSignal(object)  # Emits Detector object
     error_occurred = pyqtSignal(str)  # Emits error message
 
-    def __init__(self, imagery, algorithm_class, algorithm_params, aoi=None,
-                 start_frame=0, end_frame=None, detector_name=None, default_color='r',
-                 default_marker='o', default_marker_size=12):
+    def __init__(
+        self,
+        imagery,
+        algorithm_class,
+        algorithm_params,
+        aoi=None,
+        start_frame=0,
+        end_frame=None,
+        detector_name=None,
+        default_color='r',
+        default_marker='o',
+        default_marker_size=12,
+    ):
         """
         Initialize the processing thread.
 
@@ -75,7 +86,7 @@ class BaseDetectorProcessingThread(QThread):
                 temp_imagery = self.imagery
 
             # Apply frame range
-            temp_imagery = temp_imagery[self.start_frame:self.end_frame]
+            temp_imagery = temp_imagery[self.start_frame : self.end_frame]
 
             # Create the algorithm instance
             algorithm = self.algorithm_class(**self.algorithm_params)
@@ -135,7 +146,7 @@ class BaseDetectorProcessingThread(QThread):
                 color=self.default_color,
                 marker=self.default_marker,
                 marker_size=self.default_marker_size,
-                visible=True
+                visible=True,
             )
 
             # Emit the detector
@@ -154,10 +165,19 @@ class BaseDetectorWidget(QDialog):
     # Signal emitted when processing is complete
     detector_processed = pyqtSignal(object)  # Emits Detector object
 
-    def __init__(self, parent=None, imagery=None, aois=None, algorithm_class=None,
-                 settings_name="BaseDetector", window_title="Detector",
-                 description="", default_color='r', default_marker='o',
-                 default_marker_size=12):
+    def __init__(
+        self,
+        parent=None,
+        imagery=None,
+        aois=None,
+        algorithm_class=None,
+        settings_name="BaseDetector",
+        window_title="Detector",
+        description="",
+        default_color='r',
+        default_marker='o',
+        default_marker_size=12,
+    ):
         """
         Initialize the base detector configuration widget.
 
@@ -357,9 +377,16 @@ class BaseDetectorWidget(QDialog):
 
         # Create and start processing thread
         self.processing_thread = BaseDetectorProcessingThread(
-            self.imagery, self.algorithm_class, algorithm_params, selected_aoi,
-            start_frame, end_frame, None, self.default_color, self.default_marker,
-            self.default_marker_size
+            self.imagery,
+            self.algorithm_class,
+            algorithm_params,
+            selected_aoi,
+            start_frame,
+            end_frame,
+            None,
+            self.default_color,
+            self.default_marker,
+            self.default_marker_size,
         )
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
@@ -419,10 +446,8 @@ class BaseDetectorWidget(QDialog):
         QMessageBox.information(
             self,
             "Processing Complete",
-            f"Successfully processed imagery.\n\n"
-            f"Detector: {detector.name}\n"
-            f"Total detections: {num_detections}",
-            QMessageBox.StandardButton.Ok
+            f"Successfully processed imagery.\n\nDetector: {detector.name}\nTotal detections: {num_detections}",
+            QMessageBox.StandardButton.Ok,
         )
 
         # Close the dialog
@@ -491,7 +516,7 @@ class BaseDetectorWidget(QDialog):
                 "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
 
             if reply == QMessageBox.StandardButton.Yes:

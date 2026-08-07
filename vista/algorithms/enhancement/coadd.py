@@ -1,4 +1,5 @@
 """Coaddition algorithm for enhancing slowly moving objects by summing frames over a running window"""
+
 import numpy as np
 
 from vista.imagery.imagery import Imagery

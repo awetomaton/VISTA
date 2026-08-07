@@ -4,7 +4,7 @@ from PIL import Image
 
 from vista.visualize.data import EARTH_IMAGE_1K
 
-colorscale=[
+colorscale = [
     [0.0, 'rgb(30, 59, 117)'],
     [0.1, 'rgb(46, 68, 21)'],
     [0.2, 'rgb(74, 96, 28)'],
@@ -14,13 +14,14 @@ colorscale=[
     [0.7, 'rgb(141, 115, 96)'],
     [0.8, 'rgb(223, 197, 170)'],
     [0.9, 'rgb(237, 214, 183)'],
-    [1.0, 'rgb(255, 255, 255)']
+    [1.0, 'rgb(255, 255, 255)'],
 ]
+
 
 def get_earth_ellipsoid(texture):
     N_lon = int(texture.shape[0])
     N_lat = int(texture.shape[1])
-    theta = np.pi + np.linspace(0, 2*np.pi, N_lon)
+    theta = np.pi + np.linspace(0, 2 * np.pi, N_lon)
     phi = np.linspace(0, np.pi, N_lat)
 
     x0 = 6378.137 * np.outer(np.cos(theta), np.sin(phi))
@@ -28,6 +29,7 @@ def get_earth_ellipsoid(texture):
     z0 = 6356.752314245 * np.outer(np.ones(N_lon), np.cos(phi))
 
     return x0, y0, z0
+
 
 def get_earth_fig() -> go.Figure:
     """Get a plotly figure with a WGS-84 Ellipsoid with a 1K Earth image texture"""
@@ -39,5 +41,5 @@ def get_earth_fig() -> go.Figure:
 
     fig = go.Figure(data=[surf], layout=layout)
     fig.update_coloraxes(showscale=False)
-    #fig.update_scenes(zaxis=dict(range=[-10, 10]))
+    # fig.update_scenes(zaxis=dict(range=[-10, 10]))
     return fig

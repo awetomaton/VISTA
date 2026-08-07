@@ -4,6 +4,7 @@ Main entry point for VISTA application.
 This module allows the VISTA application to be run as a package:
     python -m vista
 """
+
 import sys
 
 import pyqtgraph as pg

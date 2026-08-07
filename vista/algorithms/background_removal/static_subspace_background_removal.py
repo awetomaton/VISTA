@@ -10,6 +10,7 @@ Compared to the sliding-window variant, this is appropriate for non-moving
 transient events where one or more quiescent periods can be designated for
 background modeling.
 """
+
 import numpy as np
 
 from vista.algorithms.background_removal.subspace_background_removal import (
@@ -19,8 +20,7 @@ from vista.algorithms.background_removal.subspace_background_removal import (
 )
 
 
-def static_subspace_background_removal(background_images, target_images, rank=5,
-                                       tile_size=None, callback=None):
+def static_subspace_background_removal(background_images, target_images, rank=5, tile_size=None, callback=None):
     """
     Remove background from target imagery using a fixed low-rank subspace
     modeled from a separate set of background frames.
@@ -70,11 +70,8 @@ def static_subspace_background_removal(background_images, target_images, rank=5,
     """
     if background_images.ndim != 3 or target_images.ndim != 3:
         raise ValueError("background_images and target_images must be 3D arrays.")
-    if (background_images.shape[1] != target_images.shape[1] or
-            background_images.shape[2] != target_images.shape[2]):
-        raise ValueError(
-            "background_images and target_images must have the same height and width."
-        )
+    if background_images.shape[1] != target_images.shape[1] or background_images.shape[2] != target_images.shape[2]:
+        raise ValueError("background_images and target_images must have the same height and width.")
     if background_images.shape[0] == 0:
         raise ValueError("background_images must contain at least one frame.")
 
@@ -141,5 +138,4 @@ def static_subspace_background_removal(background_images, target_images, rank=5,
             if not callback(t + 1, num_tgt):
                 raise InterruptedError("Processing cancelled by user")
 
-    return (bg_flat.reshape(num_tgt, height, width),
-            fg_flat.reshape(num_tgt, height, width))
+    return (bg_flat.reshape(num_tgt, height, width), fg_flat.reshape(num_tgt, height, width))

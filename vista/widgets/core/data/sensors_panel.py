@@ -1,4 +1,5 @@
 """Sensors panel for data manager"""
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -42,7 +43,9 @@ class SensorsPanel(QWidget):
         # Sensors table
         self.sensors_table = QTableWidget()
         self.sensors_table.setColumnCount(5)
-        self.sensors_table.setHorizontalHeaderLabels(["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask"])
+        self.sensors_table.setHorizontalHeaderLabels(
+            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask"]
+        )
 
         # Enable row selection (single selection only)
         self.sensors_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -150,7 +153,7 @@ class SensorsPanel(QWidget):
             f"Delete sensor '{sensor.name}' and all associated imagery, tracks, and detections?\n\n"
             f"This action cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
@@ -206,9 +209,7 @@ class SensorsPanel(QWidget):
             self.data_changed.emit()
 
             QMessageBox.information(
-                self,
-                "Sensor Deleted",
-                f"Sensor '{sensor.name}' and all associated data have been deleted."
+                self, "Sensor Deleted", f"Sensor '{sensor.name}' and all associated data have been deleted."
             )
 
     def dragEnterEvent(self, event):
@@ -223,8 +224,7 @@ class SensorsPanel(QWidget):
     def dropEvent(self, event):
         """Handle dropped HDF5 files by emitting the files_dropped signal."""
         file_paths = [
-            url.toLocalFile() for url in event.mimeData().urls()
-            if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS)
+            url.toLocalFile() for url in event.mimeData().urls() if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS)
         ]
         if file_paths:
             self.files_dropped.emit(file_paths)

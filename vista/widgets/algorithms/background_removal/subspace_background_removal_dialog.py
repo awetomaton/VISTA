@@ -1,4 +1,5 @@
 """Dialog for configuring and running sliding subspace background removal"""
+
 import traceback
 
 from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
@@ -28,8 +29,7 @@ class SubspaceBackgroundRemovalThread(QThread):
     processing_complete = pyqtSignal(object, object)  # (background_imagery, foreground_imagery)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, imagery, rank, window_size, gap_size, tile_size=None, aoi=None,
-                 start_frame=0, end_frame=None):
+    def __init__(self, imagery, rank, window_size, gap_size, tile_size=None, aoi=None, start_frame=0, end_frame=None):
         """
         Initialize the processing thread.
 
@@ -94,7 +94,7 @@ class SubspaceBackgroundRemovalThread(QThread):
                 return
 
             # Subset imagery by frame range
-            imagery_subset = self.imagery[self.start_frame:self.end_frame]
+            imagery_subset = self.imagery[self.start_frame : self.end_frame]
 
             # Apply AOI if selected
             if self.aoi:
@@ -411,8 +411,7 @@ class SubspaceBackgroundRemovalDialog(QDialog):
     def run_processing(self):
         """Start the sliding subspace background removal."""
         if self.imagery is None:
-            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.",
-                                QMessageBox.StandardButton.Ok)
+            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.", QMessageBox.StandardButton.Ok)
             return
 
         # Get parameters
@@ -494,9 +493,10 @@ class SubspaceBackgroundRemovalDialog(QDialog):
         self.imagery_processed.emit(created_imagery)
 
         QMessageBox.information(
-            self, "Processing Complete",
+            self,
+            "Processing Complete",
             f"Subspace background removal complete.\nAdded: {', '.join(added_items)}",
-            QMessageBox.StandardButton.Ok
+            QMessageBox.StandardButton.Ok,
         )
         self.accept()
 
@@ -550,10 +550,11 @@ class SubspaceBackgroundRemovalDialog(QDialog):
         """Handle dialog close event."""
         if self.worker and self.worker.isRunning():
             reply = QMessageBox.question(
-                self, "Processing in Progress",
+                self,
+                "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
                 self.cancel_processing()

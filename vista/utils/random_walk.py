@@ -24,6 +24,5 @@ class RandomWalk:
 
         new_value = self.value + walk
         self._value = np.max([np.min([new_value, self.max_walk]), self.min_walk])
-        
+
         return self.value
-    

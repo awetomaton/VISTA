@@ -1,4 +1,5 @@
 """Background data loading using QThread to prevent UI blocking"""
+
 import uuid
 from pathlib import Path
 
@@ -101,7 +102,7 @@ class DataLoaderThread(QThread):
             "Deprecated File Format",
             "The 1.5 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
             "Please re-save your imagery files using the new 1.7 format:\n"
-            "File > Save Imagery (HDF5)"
+            "File > Save Imagery (HDF5)",
         )
 
         images_dataset = f['images']
@@ -156,11 +157,11 @@ class DataLoaderThread(QThread):
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
         sensor_times = np.array(
             [times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')],
-            dtype='datetime64[ns]'
+            dtype='datetime64[ns]',
         )
 
         sensor = SampledSensor(
-            name=f"Unknown {SampledSensor._instance_count+1}",
+            name=f"Unknown {SampledSensor._instance_count + 1}",
             positions=sensor_positions,
             times=sensor_times,
             frames=frames,
@@ -359,7 +360,7 @@ class DataLoaderThread(QThread):
                 "Deprecated File Format",
                 "The 1.6 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
                 "Please re-save your imagery files using the new 1.7 format:\n"
-                "File > Save Imagery (HDF5)"
+                "File > Save Imagery (HDF5)",
             )
             # version 1.6 format with split fields (backward compatibility)
             unix_times = img_group['unix_times'][:]
@@ -390,8 +391,9 @@ class DataLoaderThread(QThread):
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset, sensor)
 
-    def _load_images_incrementally(self, imagery: Imagery, images_dataset: h5py.Dataset, sensor,
-                                     image_dataset_slice=None):
+    def _load_images_incrementally(
+        self, imagery: Imagery, images_dataset: h5py.Dataset, sensor, image_dataset_slice=None
+    ):
         """Load images block-by-block, emitting signals so the UI can display frames as they arrive.
 
         Parameters
@@ -431,7 +433,7 @@ class DataLoaderThread(QThread):
 
         images_dataset.read_direct(
             images,
-            source_sel=np.s_[source_offset:source_offset + first_end],
+            source_sel=np.s_[source_offset : source_offset + first_end],
             dest_sel=np.s_[0:first_end],
         )
         imagery.loaded_frame_count = first_end
@@ -448,7 +450,7 @@ class DataLoaderThread(QThread):
             end_idx = min(start_idx + block_size, num_images)
             images_dataset.read_direct(
                 images,
-                source_sel=np.s_[source_offset + start_idx:source_offset + end_idx],
+                source_sel=np.s_[source_offset + start_idx : source_offset + end_idx],
                 dest_sel=np.s_[start_idx:end_idx],
             )
             imagery.loaded_frame_count = end_idx
@@ -537,7 +539,7 @@ class DataLoaderThread(QThread):
                 return  # Exit early if cancelled
 
             # Get single row as DataFrame
-            row_df = df.iloc[idx:idx+1]
+            row_df = df.iloc[idx : idx + 1]
             aoi = AOI.from_dataframe(row_df)
             aois.append(aoi)
 

@@ -1,4 +1,5 @@
 """Base classes for tracker dialogs to reduce code duplication"""
+
 import traceback
 
 from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
@@ -74,9 +75,19 @@ class BaseTrackingWorker(QThread):
 class BaseTrackingDialog(QDialog):
     """Base dialog for configuring tracker parameters"""
 
-    def __init__(self, viewer, parent=None, algorithm_function=None, settings_name="BaseTracker",
-                 window_title="Tracker", description="", default_track_color='b',
-                 default_track_marker='s', default_track_line_width=2, default_track_marker_size=10):
+    def __init__(
+        self,
+        viewer,
+        parent=None,
+        algorithm_function=None,
+        settings_name="BaseTracker",
+        window_title="Tracker",
+        description="",
+        default_track_color='b',
+        default_track_marker='s',
+        default_track_line_width=2,
+        default_track_marker_size=10,
+    ):
         """
         Initialize the base tracking dialog.
 
@@ -229,8 +240,7 @@ class BaseTrackingDialog(QDialog):
         # Validate selection
         selected_items = self.detector_list.selectedItems()
         if not selected_items:
-            QMessageBox.warning(self, "No Detectors Selected",
-                              "Please select at least one detector.")
+            QMessageBox.warning(self, "No Detectors Selected", "Please select at least one detector.")
             return
 
         # Get selected detectors
@@ -286,11 +296,7 @@ class BaseTrackingDialog(QDialog):
                 break
 
         if sensor is None:
-            QMessageBox.critical(
-                self,
-                "Tracking Error",
-                "Could not determine sensor from selected detectors."
-            )
+            QMessageBox.critical(self, "Tracking Error", "Could not determine sensor from selected detectors.")
             return
 
         # Create Track objects from raw track data and add to viewer
@@ -307,17 +313,13 @@ class BaseTrackingDialog(QDialog):
                 marker=self.default_track_marker,
                 line_width=self.default_track_line_width,
                 marker_size=self.default_track_marker_size,
-                visible=True
+                visible=True,
             )
             vista_tracks.append(vista_track)
             self.viewer.tracks.append(vista_track)
 
         # Show success message
-        QMessageBox.information(
-            self,
-            "Tracking Complete",
-            f"Generated {len(vista_tracks)} track(s)."
-        )
+        QMessageBox.information(self, "Tracking Complete", f"Generated {len(vista_tracks)} track(s).")
 
         # Accept dialog
         self.accept()

@@ -1,4 +1,5 @@
 """Extraction editor floating widget for fine-tuning track extraction"""
+
 import numpy as np
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -68,7 +69,7 @@ class ExtractionEditorWidget(QDialog):
             show_area_filters=False,
             show_detection_mode=False,
             settings_prefix="ExtractionEditor/CFAR",
-            show_group_box=True
+            show_group_box=True,
         )
         layout.addWidget(self.cfar_widget)
 
@@ -228,7 +229,7 @@ class ExtractionEditorWidget(QDialog):
             ignore_radius=cfar_params['ignore_radius'],
             threshold_deviation=cfar_params['threshold_deviation'],
             annulus_shape=cfar_params['annulus_shape'],
-            search_radius=None  # No search radius filtering in editor
+            search_radius=None,  # No search radius filtering in editor
         )
 
         # Use CFAR to detect signal pixels

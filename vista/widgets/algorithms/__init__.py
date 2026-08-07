@@ -1,4 +1,5 @@
 """VISTA Algorithm Widgets Packages"""
+
 # Detector widgets
 # Background removal widgets
 from .background_removal import (

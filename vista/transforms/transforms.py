@@ -1,5 +1,5 @@
-
 """General transform support functions"""
+
 from typing import Tuple
 
 import numpy as np
@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 
 def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[float, NDArray]) -> NDArray:
     """Convert spherical angle(s) to Cartesian vector(s)
-    
+
     Parameters
     ----------
     azimuth : Tuple[float, NDArray]
@@ -23,16 +23,18 @@ def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[floa
     """
 
     cos_elevation = np.cos(elevation)
-    return np.array([
-        cos_elevation * np.cos(azimuth),
-        cos_elevation * np.sin(azimuth),
-        np.sin(elevation),
-    ]).squeeze()
+    return np.array(
+        [
+            cos_elevation * np.cos(azimuth),
+            cos_elevation * np.sin(azimuth),
+            np.sin(elevation),
+        ]
+    ).squeeze()
 
 
 def cartesian_to_spherical(unit_vector) -> Tuple[NDArray, NDArray]:
     """Convert Cartesian vector(s) to spherical angle(s)
-    
+
     Parameters
     ----------
     unit_vector : NDArray
@@ -45,7 +47,7 @@ def cartesian_to_spherical(unit_vector) -> Tuple[NDArray, NDArray]:
     NDArray
         Angle(s) in radians coming off the x-y plane toward the z-axis
     """
-    
+
     x = unit_vector[0]
     y = unit_vector[1]
     z = unit_vector[2]

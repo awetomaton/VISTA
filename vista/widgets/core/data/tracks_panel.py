@@ -1,4 +1,5 @@
 """Tracks panel for data manager"""
+
 import pathlib
 
 import numpy as np
@@ -54,8 +55,22 @@ from vista.widgets.core.data.undo_manager import UndoStack
 # Complete (10), Show Line (11), Avg SNR (14), Show Uncertainty (15)
 SORTABLE_COLUMNS = [0, 1, 2, 3, 4, 10, 11, 14, 15]
 COLUMN_NAMES = [
-    "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width",
-    "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"
+    "Visible",
+    "Tracker",
+    "Name",
+    "Labels",
+    "Length",
+    "Color",
+    "Marker",
+    "Line Width",
+    "Marker Size",
+    "Tail Length",
+    "Complete",
+    "Show Line",
+    "Line Style",
+    "Extracted",
+    "Avg SNR",
+    "Show Uncertainty",
 ]
 
 
@@ -85,8 +100,10 @@ class OrderByDialog(QDialog):
         layout = QVBoxLayout()
 
         # Instructions
-        instructions = QLabel("Select columns to sort by and their order. Tracks will be sorted by the first column, "
-                              "then by subsequent columns for rows with equal values.")
+        instructions = QLabel(
+            "Select columns to sort by and their order. Tracks will be sorted by the first column, "
+            "then by subsequent columns for rows with equal values."
+        )
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
 
@@ -305,10 +322,21 @@ class TracksPanel(QWidget):
         # Property selector dropdown
         bulk_layout.addWidget(QLabel("Property:"))
         self.bulk_property_combo = QComboBox()
-        self.bulk_property_combo.addItems([
-            "Visibility", "Complete", "Tail Length", "Color", "Marker", "Line Width", "Line Style", "Marker Size", "Labels",
-            "Show Uncertainty", "Tracker"
-        ])
+        self.bulk_property_combo.addItems(
+            [
+                "Visibility",
+                "Complete",
+                "Tail Length",
+                "Color",
+                "Marker",
+                "Line Width",
+                "Line Style",
+                "Marker Size",
+                "Labels",
+                "Show Uncertainty",
+                "Tracker",
+            ]
+        )
         self.bulk_property_combo.currentIndexChanged.connect(self.on_bulk_property_changed)
         bulk_layout.addWidget(self.bulk_property_combo)
 
@@ -508,22 +536,22 @@ class TracksPanel(QWidget):
         # Track column visibility (all columns visible by default except what we decide to hide)
         # Column 0 (Visible) is always shown and cannot be hidden
         self.track_column_visibility = {
-            0: True,   # Visible - always shown
-            1: True,   # Tracker
-            2: True,   # Name
-            3: True,   # Labels
-            4: True,   # Length
-            5: True,   # Color
-            6: True,   # Marker
-            7: True,   # Line Width
-            8: True,   # Marker Size
-            9: True,   # Tail Length
+            0: True,  # Visible - always shown
+            1: True,  # Tracker
+            2: True,  # Name
+            3: True,  # Labels
+            4: True,  # Length
+            5: True,  # Color
+            6: True,  # Marker
+            7: True,  # Line Width
+            8: True,  # Marker Size
+            9: True,  # Tail Length
             10: True,  # Complete
             11: True,  # Show Line
             12: True,  # Line Style
             13: True,  # Extracted
             14: True,  # Avg SNR
-            15: True   # Show Uncertainty
+            15: True,  # Show Uncertainty
         }
 
         # Load saved column visibility settings
@@ -538,10 +566,26 @@ class TracksPanel(QWidget):
         # Tracks table with all trackers consolidated (using DraggableRowTableWidget for row reordering)
         self.tracks_table = DraggableRowTableWidget()
         self.tracks_table.setColumnCount(16)  # Added Extracted, Avg SNR, and Show Uncertainty columns
-        self.tracks_table.setHorizontalHeaderLabels([
-            "Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length",
-            "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"
-        ])
+        self.tracks_table.setHorizontalHeaderLabels(
+            [
+                "Visible",
+                "Tracker",
+                "Name",
+                "Labels",
+                "Length",
+                "Color",
+                "Marker",
+                "Line Width",
+                "Marker Size",
+                "Tail Length",
+                "Complete",
+                "Show Line",
+                "Line Style",
+                "Extracted",
+                "Avg SNR",
+                "Show Uncertainty",
+            ]
+        )
 
         # Enable row selection via vertical header
         self.tracks_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -556,16 +600,18 @@ class TracksPanel(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Visible (checkbox)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)  # Tracker (can be long, user resizable)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)  # Name (can be long, user resizable)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)  # Labels (can have multiple labels, user resizable)
+        header.setSectionResizeMode(
+            3, QHeaderView.ResizeMode.Interactive
+        )  # Labels (can have multiple labels, user resizable)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)  # Length (numeric, user resizable)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Color (fixed)
-        #header.setSectionResizeMode(6, QHeaderView.ResizeMode.Interactive)  # Marker (dropdown)
+        # header.setSectionResizeMode(6, QHeaderView.ResizeMode.Interactive)  # Marker (dropdown)
         header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Line Width (numeric)
         header.setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  # Marker Size (numeric)
         header.setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  # Tail Length (numeric)
         header.setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents)  # Complete (checkbox)
         header.setSectionResizeMode(11, QHeaderView.ResizeMode.ResizeToContents)  # Show Line (checkbox)
-        #header.setSectionResizeMode(12, QHeaderView.ResizeMode.Interactive)  # Line Style (dropdown)
+        # header.setSectionResizeMode(12, QHeaderView.ResizeMode.Interactive)  # Line Style (dropdown)
         header.setSectionResizeMode(13, QHeaderView.ResizeMode.ResizeToContents)  # Extracted (checkbox)
         header.setSectionResizeMode(14, QHeaderView.ResizeMode.Interactive)  # Avg SNR (numeric, user resizable)
         header.setSectionResizeMode(15, QHeaderView.ResizeMode.ResizeToContents)  # Show Uncertainty (checkbox)
@@ -661,7 +707,8 @@ class TracksPanel(QWidget):
                 return True
             elif event.type() == QEvent.Type.Drop and event.mimeData().hasUrls():
                 file_paths = [
-                    url.toLocalFile() for url in event.mimeData().urls()
+                    url.toLocalFile()
+                    for url in event.mimeData().urls()
                     if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
                 ]
                 if file_paths:
@@ -681,8 +728,7 @@ class TracksPanel(QWidget):
     def dropEvent(self, event):
         """Handle dropped CSV files by emitting the files_dropped signal."""
         file_paths = [
-            url.toLocalFile() for url in event.mimeData().urls()
-            if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
+            url.toLocalFile() for url in event.mimeData().urls() if url.toLocalFile().lower().endswith(_CSV_EXTENSIONS)
         ]
         if file_paths:
             self.files_dropped.emit(file_paths)
@@ -720,7 +766,9 @@ class TracksPanel(QWidget):
 
             # Visible checkbox
             visible_item = QTableWidgetItem()
-            visible_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            visible_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
             visible_item.setCheckState(Qt.CheckState.Checked if track.visible else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 0, visible_item)
 
@@ -769,13 +817,17 @@ class TracksPanel(QWidget):
 
             # Complete checkbox
             complete_item = QTableWidgetItem()
-            complete_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            complete_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
             complete_item.setCheckState(Qt.CheckState.Checked if track.complete else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 10, complete_item)
 
             # Show Line checkbox
             show_line_item = QTableWidgetItem()
-            show_line_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            show_line_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
             show_line_item.setCheckState(Qt.CheckState.Checked if track.show_line else Qt.CheckState.Unchecked)
             self.tracks_table.setItem(row, 11, show_line_item)
 
@@ -827,9 +879,7 @@ class TracksPanel(QWidget):
             # Only make checkable if track has uncertainty data
             if track.has_uncertainty():
                 show_uncertainty_item.setFlags(
-                    Qt.ItemFlag.ItemIsUserCheckable |
-                    Qt.ItemFlag.ItemIsEnabled |
-                    Qt.ItemFlag.ItemIsSelectable
+                    Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
                 )
                 show_uncertainty_item.setCheckState(
                     Qt.CheckState.Checked if track.show_uncertainty else Qt.CheckState.Unchecked
@@ -854,8 +904,24 @@ class TracksPanel(QWidget):
     def _update_track_header_icons(self):
         """Update header labels to show filter and sort indicators"""
         # Base column names
-        base_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size",
-                      "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"]
+        base_names = [
+            "Visible",
+            "Tracker",
+            "Name",
+            "Labels",
+            "Length",
+            "Color",
+            "Marker",
+            "Line Width",
+            "Marker Size",
+            "Tail Length",
+            "Complete",
+            "Show Line",
+            "Line Style",
+            "Extracted",
+            "Avg SNR",
+            "Show Uncertainty",
+        ]
 
         for col_idx in range(len(base_names)):
             label = base_names[col_idx]
@@ -908,8 +974,11 @@ class TracksPanel(QWidget):
                         # Include track if:
                         # 1. Track has no labels AND "(No Labels)" is selected, OR
                         # 2. Track has labels that intersect with filter labels
-                        matches_filter = (has_no_labels and no_labels_selected) or \
-                                       (not has_no_labels and len(label_filter_values) > 0 and track.labels.intersection(label_filter_values))
+                        matches_filter = (has_no_labels and no_labels_selected) or (
+                            not has_no_labels
+                            and len(label_filter_values) > 0
+                            and track.labels.intersection(label_filter_values)
+                        )
 
                         if not matches_filter:
                             include = False
@@ -971,6 +1040,7 @@ class TracksPanel(QWidget):
 
     def _sort_tracks(self, tracks_list, column, order):
         """Sort tracks by specified column"""
+
         def get_sort_key(track):
             if column == 0:
                 return track.visible
@@ -992,7 +1062,7 @@ class TracksPanel(QWidget):
                 return track.show_uncertainty
             return ""
 
-        reverse = (order == Qt.SortOrder.DescendingOrder)
+        reverse = order == Qt.SortOrder.DescendingOrder
         return sorted(tracks_list, key=get_sort_key, reverse=reverse)
 
     def _get_track_avg_snr(self, track):
@@ -1129,7 +1199,9 @@ class TracksPanel(QWidget):
 
             clear_filter_action = QAction("Clear Filter", self)
             clear_filter_action.triggered.connect(lambda: self.clear_track_column_filter(column))
-            clear_filter_action.setEnabled(column in self.track_column_filters and bool(self.track_column_filters[column]))
+            clear_filter_action.setEnabled(
+                column in self.track_column_filters and bool(self.track_column_filters[column])
+            )
             menu.addAction(clear_filter_action)
 
         # Clear all filters option (always available, shown for all columns)
@@ -1141,7 +1213,24 @@ class TracksPanel(QWidget):
         menu.addSeparator()
 
         # Column visibility submenu (always available)
-        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker", "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line", "Line Style", "Extracted", "Avg SNR", "Show Uncertainty"]
+        column_names = [
+            "Visible",
+            "Tracker",
+            "Name",
+            "Labels",
+            "Length",
+            "Color",
+            "Marker",
+            "Line Width",
+            "Marker Size",
+            "Tail Length",
+            "Complete",
+            "Show Line",
+            "Line Style",
+            "Extracted",
+            "Avg SNR",
+            "Show Uncertainty",
+        ]
         columns_menu = QMenu("Show/Hide Columns", menu)  # Make menu the parent, not self
 
         for col_idx in range(len(column_names)):
@@ -1240,9 +1329,23 @@ class TracksPanel(QWidget):
 
     def update_hidden_columns_indicator(self):
         """Update the hidden columns indicator label"""
-        column_names = ["Visible", "Tracker", "Name", "Labels", "Length", "Color", "Marker",
-                        "Line Width", "Marker Size", "Tail Length", "Complete", "Show Line",
-                        "Line Style", "Extracted", "Avg SNR"]
+        column_names = [
+            "Visible",
+            "Tracker",
+            "Name",
+            "Labels",
+            "Length",
+            "Color",
+            "Marker",
+            "Line Width",
+            "Marker Size",
+            "Tail Length",
+            "Complete",
+            "Show Line",
+            "Line Style",
+            "Extracted",
+            "Avg SNR",
+        ]
 
         hidden_columns = []
         for col_idx, visible in self.track_column_visibility.items():
@@ -1346,10 +1449,7 @@ class TracksPanel(QWidget):
                 else:
                     mode = 'not_contains'
 
-                self.track_column_filters[column] = {
-                    'type': 'text',
-                    'values': {'mode': mode, 'text': text}
-                }
+                self.track_column_filters[column] = {'type': 'text', 'values': {'mode': mode, 'text': text}}
             self.refresh_tracks_table()
 
     def _show_numeric_filter_dialog(self, column, column_name):
@@ -1409,10 +1509,7 @@ class TracksPanel(QWidget):
             value = value_input.value()
             mode = 'greater' if greater_radio.isChecked() else 'less'
 
-            self.track_column_filters[column] = {
-                'type': 'numeric',
-                'values': {'mode': mode, 'value': value}
-            }
+            self.track_column_filters[column] = {'type': 'numeric', 'values': {'mode': mode, 'value': value}}
             self.refresh_tracks_table()
 
     def _show_set_filter_dialog(self, column, column_name):
@@ -1503,10 +1600,7 @@ class TracksPanel(QWidget):
                 if column in self.track_column_filters:
                     del self.track_column_filters[column]
             else:
-                self.track_column_filters[column] = {
-                    'type': 'set',
-                    'values': selected_values
-                }
+                self.track_column_filters[column] = {'type': 'set', 'values': selected_values}
             self.refresh_tracks_table()
 
     def clear_track_column_filter(self, column):
@@ -1744,8 +1838,13 @@ class TracksPanel(QWidget):
 
         # Map marker names to symbols
         marker_map = {
-            'Circle': 'o', 'Square': 's', 'Triangle': 't',
-            'Diamond': 'd', 'Plus': '+', 'Cross': 'x', 'Star': 'star'
+            'Circle': 'o',
+            'Square': 's',
+            'Triangle': 't',
+            'Diamond': 'd',
+            'Plus': '+',
+            'Cross': 'x',
+            'Star': 'star',
         }
 
         # Map line style display names to Qt style names
@@ -1754,7 +1853,7 @@ class TracksPanel(QWidget):
             'Dash': 'DashLine',
             'Dot': 'DotLine',
             'Dash-Dot': 'DashDotLine',
-            'Dash-Dot-Dot': 'DashDotDotLine'
+            'Dash-Dot-Dot': 'DashDotDotLine',
         }
 
         # Apply to all selected tracks
@@ -1829,11 +1928,7 @@ class TracksPanel(QWidget):
         selected_rows = sorted(set(index.row() for index in self.tracks_table.selectedIndexes()))
 
         if len(selected_rows) < 2:
-            QMessageBox.warning(
-                self,
-                "Cannot Merge",
-                "Please select at least 2 tracks to merge."
-            )
+            QMessageBox.warning(self, "Cannot Merge", "Please select at least 2 tracks to merge.")
             return
 
         # Collect tracks from selected rows
@@ -1852,11 +1947,7 @@ class TracksPanel(QWidget):
                         break
 
         if len(tracks_to_merge) < 2:
-            QMessageBox.warning(
-                self,
-                "Cannot Merge",
-                "Could not find enough valid tracks to merge."
-            )
+            QMessageBox.warning(self, "Cannot Merge", "Could not find enough valid tracks to merge.")
             return
 
         # Save state before merge
@@ -1911,7 +2002,7 @@ class TracksPanel(QWidget):
             tail_length=first_track.tail_length,
             complete=first_track.complete,
             show_line=first_track.show_line,
-            line_style=first_track.line_style
+            line_style=first_track.line_style,
         )
 
         # Add merged track to viewer
@@ -1942,9 +2033,7 @@ class TracksPanel(QWidget):
         self.data_changed.emit()
 
         QMessageBox.information(
-            self,
-            "Merge Complete",
-            f"Successfully merged {len(tracks_to_merge)} tracks into '{merged_name}'."
+            self, "Merge Complete", f"Successfully merged {len(tracks_to_merge)} tracks into '{merged_name}'."
         )
 
     def split_selected_track(self):
@@ -1953,11 +2042,7 @@ class TracksPanel(QWidget):
         selected_rows = list(set(index.row() for index in self.tracks_table.selectedIndexes()))
 
         if len(selected_rows) != 1:
-            QMessageBox.warning(
-                self,
-                "Cannot Split",
-                "Please select exactly one track to split."
-            )
+            QMessageBox.warning(self, "Cannot Split", "Please select exactly one track to split.")
             return
 
         row = selected_rows[0]
@@ -1977,11 +2062,7 @@ class TracksPanel(QWidget):
                 break
 
         if not track_to_split:
-            QMessageBox.warning(
-                self,
-                "Cannot Split",
-                "Could not find the selected track."
-            )
+            QMessageBox.warning(self, "Cannot Split", "Could not find the selected track.")
             return
 
         # Get current frame from viewer
@@ -1994,7 +2075,7 @@ class TracksPanel(QWidget):
                 "Cannot Split",
                 f"Current frame ({current_frame}) is not within the track's frame range "
                 f"({track_to_split.frames[0]} - {track_to_split.frames[-1]}). "
-                "Please navigate to a frame within the track to split it."
+                "Please navigate to a frame within the track to split it.",
             )
             return
 
@@ -2007,9 +2088,7 @@ class TracksPanel(QWidget):
         # Check if split would create valid tracks
         if not np.any(mask_first) or not np.any(mask_second):
             QMessageBox.warning(
-                self,
-                "Cannot Split",
-                "Split would result in an empty track. Please choose a different frame."
+                self, "Cannot Split", "Split would result in an empty track. Please choose a different frame."
             )
             return
 
@@ -2064,7 +2143,7 @@ class TracksPanel(QWidget):
             "Split Complete",
             f"Track '{track_to_split.name}' has been split at frame {current_frame} into:\n"
             f"  - '{first_name}' (frames {first_track.frames[0]} to {first_track.frames[-1]})\n"
-            f"  - '{second_name}' (frames {second_track.frames[0]} to {second_track.frames[-1]})"
+            f"  - '{second_name}' (frames {second_track.frames[0]} to {second_track.frames[-1]})",
         )
 
     def delete_selected_tracks(self):
@@ -2327,7 +2406,9 @@ class TracksPanel(QWidget):
         """Handle track selection from viewer click"""
         # Check if Ctrl (Windows/Linux) or Cmd (Mac) is held down
         modifiers = QApplication.keyboardModifiers()
-        ctrl_or_cmd_held = (modifiers & Qt.KeyboardModifier.ControlModifier) or (modifiers & Qt.KeyboardModifier.MetaModifier)
+        ctrl_or_cmd_held = (modifiers & Qt.KeyboardModifier.ControlModifier) or (
+            modifiers & Qt.KeyboardModifier.MetaModifier
+        )
 
         # Find the row in the tracks table that matches this track
         for row in range(self.tracks_table.rowCount()):
@@ -2395,7 +2476,7 @@ class TracksPanel(QWidget):
                 if hasattr(main_window, 'statusBar'):
                     main_window.statusBar().showMessage(
                         f"Track editing mode: Click on frames to add/move track points for '{track.name}'. Uncheck 'Edit Track' when finished.",
-                        0
+                        0,
                     )
         else:
             # Finish track editing
@@ -2410,8 +2491,7 @@ class TracksPanel(QWidget):
                     main_window = self.parent().parent()
                     if hasattr(main_window, 'statusBar'):
                         main_window.statusBar().showMessage(
-                            f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points",
-                            3000
+                            f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points", 3000
                         )
             else:
                 # Update main window status
@@ -2434,10 +2514,7 @@ class TracksPanel(QWidget):
 
         if not selected_rows:
             QMessageBox.information(
-                self,
-                "No Selection",
-                "Please select one or more tracks to extract.",
-                QMessageBox.StandardButton.Ok
+                self, "No Selection", "Please select one or more tracks to extract.", QMessageBox.StandardButton.Ok
             )
             return
 
@@ -2459,10 +2536,7 @@ class TracksPanel(QWidget):
 
         if not selected_tracks:
             QMessageBox.warning(
-                self,
-                "No Tracks Found",
-                "Could not find the selected tracks.",
-                QMessageBox.StandardButton.Ok
+                self, "No Tracks Found", "Could not find the selected tracks.", QMessageBox.StandardButton.Ok
             )
             return
 
@@ -2477,16 +2551,12 @@ class TracksPanel(QWidget):
                 "No Imagery",
                 f"No imagery available for sensor '{sensor.name}'.\n"
                 "Please load imagery for this sensor before extracting tracks.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
         # Open extraction dialog
-        dialog = TrackExtractionDialog(
-            parent=self,
-            tracks=selected_tracks,
-            imagery=imagery
-        )
+        dialog = TrackExtractionDialog(parent=self, tracks=selected_tracks, imagery=imagery)
         dialog.extraction_complete.connect(self.on_extraction_complete)
         dialog.exec()
 
@@ -2512,8 +2582,9 @@ class TracksPanel(QWidget):
             }
 
             # Update track coordinates if they were refined
-            if not np.array_equal(track.rows, results['updated_rows']) or \
-               not np.array_equal(track.columns, results['updated_columns']):
+            if not np.array_equal(track.rows, results['updated_rows']) or not np.array_equal(
+                track.columns, results['updated_columns']
+            ):
                 track.rows = results['updated_rows']
                 track.columns = results['updated_columns']
                 track.invalidate_caches()
@@ -2548,10 +2619,7 @@ class TracksPanel(QWidget):
         # Show status message
         main_window = self.window()
         if hasattr(main_window, 'statusBar'):
-            main_window.statusBar().showMessage(
-                f"Successfully extracted {len(tracks)} track(s)",
-                3000
-            )
+            main_window.statusBar().showMessage(f"Successfully extracted {len(tracks)} track(s)", 3000)
 
     def on_view_extraction_clicked(self, checked):
         """Handle View Extraction button click"""
@@ -2597,7 +2665,7 @@ class TracksPanel(QWidget):
             if hasattr(main_window, 'statusBar'):
                 main_window.statusBar().showMessage(
                     f"Viewing extraction for '{track.name}'. Signal pixels shown in red. Uncheck 'View Extraction' when finished.",
-                    0
+                    0,
                 )
         else:
             # Finish extraction viewing
@@ -2654,7 +2722,7 @@ class TracksPanel(QWidget):
                     self,
                     "No Imagery",
                     f"No imagery available for sensor '{track.sensor.name}'.",
-                    QMessageBox.StandardButton.Ok
+                    QMessageBox.StandardButton.Ok,
                 )
                 self.edit_extraction_btn.setChecked(False)
                 return
@@ -2669,7 +2737,7 @@ class TracksPanel(QWidget):
             if hasattr(main_window, 'statusBar'):
                 main_window.statusBar().showMessage(
                     f"Editing extraction for '{track.name}'. Click to paint/erase signal pixels. Use the editor panel to adjust settings.",
-                    0
+                    0,
                 )
         else:
             # Finish extraction editing
@@ -2746,17 +2814,9 @@ class TracksPanel(QWidget):
 
                 # Build success message
                 message = f"Exported {len(selected_tracks)} track(s) to:\n{file_path}"
-                QMessageBox.information(
-                    self,
-                    "Success",
-                    message
-                )
+                QMessageBox.information(self, "Success", message)
             except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Export Error",
-                    f"Failed to export tracks:\n{str(e)}"
-                )
+                QMessageBox.critical(self, "Export Error", f"Failed to export tracks:\n{str(e)}")
 
     def copy_to_sensor(self):
         """Copy selected tracks to a different sensor"""
@@ -2764,10 +2824,7 @@ class TracksPanel(QWidget):
 
         if not selected_rows:
             QMessageBox.information(
-                self,
-                "No Selection",
-                "Please select one or more tracks to copy.",
-                QMessageBox.StandardButton.Ok
+                self, "No Selection", "Please select one or more tracks to copy.", QMessageBox.StandardButton.Ok
             )
             return
 
@@ -2777,7 +2834,7 @@ class TracksPanel(QWidget):
                 self,
                 "No Sensors",
                 "No sensors are available. Please load imagery to create sensors.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -2837,7 +2894,7 @@ class TracksPanel(QWidget):
                 self,
                 "Success",
                 f"Copied {len(tracks_to_copy)} track(s) to sensor '{target_sensor.name}'.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
 
     def break_into_detections(self):
@@ -2897,7 +2954,7 @@ class TracksPanel(QWidget):
             self,
             "Success",
             f"Created {detectors_created} detector(s) from the selected tracks.",
-            QMessageBox.StandardButton.Ok
+            QMessageBox.StandardButton.Ok,
         )
 
     def label_selected_tracks(self):
@@ -2950,7 +3007,7 @@ class TracksPanel(QWidget):
                 self,
                 "Labels Set",
                 f"Set {len(selected_labels)} label(s) on {len(selected_tracks)} track(s).",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
 
     def on_plot_track_details_clicked(self):
@@ -3040,11 +3097,7 @@ class TracksPanel(QWidget):
         description : str
             Human-readable description of the operation (e.g., "Delete 3 tracks")
         """
-        self.undo_stack.save_state(
-            data_list=self.viewer.tracks,
-            description=description,
-            copy_func=lambda t: t.copy()
-        )
+        self.undo_stack.save_state(data_list=self.viewer.tracks, description=description, copy_func=lambda t: t.copy())
 
     def undo(self) -> None:
         """Undo the last track operation."""

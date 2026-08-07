@@ -108,6 +108,7 @@ class SampledSensor(Sensor):
     >>> # Returns same position for any query time
     >>> pos = sensor_static.get_positions(query_times)
     """
+
     positions: Optional[NDArray[np.float64]] = None
     times: Optional[NDArray[np.datetime64]] = None
     frames: Optional[NDArray[np.int64]] = None
@@ -169,12 +170,14 @@ class SampledSensor(Sensor):
             True if sensor has all required ARF geolocation data: pointing vectors
             and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
-        return (self.pointing is not None and
-                self.poly_pixel_to_arf_azimuth is not None and
-                self.poly_pixel_to_arf_elevation is not None and
-                self.poly_arf_to_row is not None and
-                self.poly_arf_to_col is not None)
-    
+        return (
+            self.pointing is not None
+            and self.poly_pixel_to_arf_azimuth is not None
+            and self.poly_pixel_to_arf_elevation is not None
+            and self.poly_arf_to_row is not None
+            and self.poly_arf_to_col is not None
+        )
+
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
         Return sensor positions for given times via interpolation/extrapolation.
@@ -213,12 +216,7 @@ class SampledSensor(Sensor):
         interpolated_positions = np.zeros((3, len(times)))
 
         for i in range(3):
-            interpolator = interp1d(
-                sample_times_ns,
-                self.positions[i, :],
-                kind='linear',
-                fill_value='extrapolate'
-            )
+            interpolator = interp1d(sample_times_ns, self.positions[i, :], kind='linear', fill_value='extrapolate')
             interpolated_positions[i, :] = interpolator(query_times_ns)
 
         return interpolated_positions
@@ -257,7 +255,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         sensor_pointing = self.pointing[:, frame_idx]
 
@@ -326,15 +324,11 @@ class SampledSensor(Sensor):
 
                 # Gather pixels belonging to this frame
                 point_mask = frame == uframe
-                intersections = self._pixel_to_geodetic_single_frame(
-                    frame_idx, rows[point_mask], columns[point_mask]
-                )
+                intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows[point_mask], columns[point_mask])
                 all_intersections[:, point_mask] = intersections
 
             return EarthLocation.from_geocentric(
-                x=all_intersections[0] * units.km,
-                y=all_intersections[1] * units.km,
-                z=all_intersections[2] * units.km
+                x=all_intersections[0] * units.km, y=all_intersections[1] * units.km, z=all_intersections[2] * units.km
             )
 
         # Single frame path (original fast path)
@@ -347,11 +341,9 @@ class SampledSensor(Sensor):
         intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
 
         return EarthLocation.from_geocentric(
-            x=intersections[0] * units.km,
-            y=intersections[1] * units.km,
-            z=intersections[2] * units.km
+            x=intersections[0] * units.km, y=intersections[1] * units.km, z=intersections[2] * units.km
         )
-    
+
     def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert ECEF target positions to pixel coordinates for a single frame index.
@@ -375,7 +367,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         # Compute line-of-sight vectors from sensor to targets
         los_vectors = target_ecef - sensor_pos.reshape(3, 1)
@@ -443,11 +435,13 @@ class SampledSensor(Sensor):
             return invalid, invalid
 
         # Convert geodetic → ECEF Cartesian (km) once for all points
-        target_ecef = np.array([
-            loc.geocentric[0].to(units.km).value,
-            loc.geocentric[1].to(units.km).value,
-            loc.geocentric[2].to(units.km).value
-        ])
+        target_ecef = np.array(
+            [
+                loc.geocentric[0].to(units.km).value,
+                loc.geocentric[1].to(units.km).value,
+                loc.geocentric[2].to(units.km).value,
+            ]
+        )
         if target_ecef.ndim == 1:
             target_ecef = target_ecef.reshape(3, 1)
 
@@ -464,9 +458,7 @@ class SampledSensor(Sensor):
                 frame_idx = np.where(sensor_mask)[0][0]
 
                 point_mask = frame == uframe
-                r, c = self._geodetic_to_pixel_single_frame(
-                    frame_idx, target_ecef[:, point_mask]
-                )
+                r, c = self._geodetic_to_pixel_single_frame(frame_idx, target_ecef[:, point_mask])
                 all_rows[point_mask] = r
                 all_cols[point_mask] = c
 

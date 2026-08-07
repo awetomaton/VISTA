@@ -1,4 +1,5 @@
 """Widget for configuring and running the Bias Removal treatment"""
+
 import numpy as np
 
 from vista.widgets.algorithms.treatments.base_treatment_widget import BaseTreatmentThread, BaseTreatmentWidget
@@ -36,11 +37,7 @@ class BiasRemovalWidget(BaseTreatmentWidget):
         description = "Remove imagery bias using imagery bias frames"
 
         super().__init__(
-            parent=parent,
-            imagery=imagery,
-            aois=aois,
-            window_title="Bias Removal Treatment",
-            description=description
+            parent=parent, imagery=imagery, aois=aois, window_title="Bias Removal Treatment", description=description
         )
 
     def create_processing_thread(self, imagery, aoi):

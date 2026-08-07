@@ -5,6 +5,7 @@ shape: one or more background frame ranges, an optional application range,
 optional AOI cropping, and output (background/foreground) selection. Subclasses
 provide the algorithm function and any algorithm-specific parameters.
 """
+
 import traceback
 
 import numpy as np
@@ -35,8 +36,9 @@ class StaticBackgroundRemovalThread(QThread):
     processing_complete = pyqtSignal(object, object)  # (background, foreground)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, imagery, algorithm_fn, algorithm_params, algorithm_label,
-                 background_ranges, target_range=None, aoi=None):
+    def __init__(
+        self, imagery, algorithm_fn, algorithm_params, algorithm_label, background_ranges, target_range=None, aoi=None
+    ):
         """
         Parameters
         ----------
@@ -136,9 +138,7 @@ class StaticBackgroundRemovalThread(QThread):
 
             background_imagery = target_subset.copy()
             background_imagery.images = background_images
-            background_imagery.name = (
-                f"{self.imagery.name} - Background ({self.algorithm_label}){aoi_suffix}"
-            )
+            background_imagery.name = f"{self.imagery.name} - Background ({self.algorithm_label}){aoi_suffix}"
             background_imagery.description = (
                 f"Background from {self.algorithm_label} background removal "
                 f"(background ranges: {ranges_str}; target {target_start}-{target_end}{params_suffix})"
@@ -146,9 +146,7 @@ class StaticBackgroundRemovalThread(QThread):
 
             foreground_imagery = target_subset.copy()
             foreground_imagery.images = foreground_images
-            foreground_imagery.name = (
-                f"{self.imagery.name} - Foreground ({self.algorithm_label}){aoi_suffix}"
-            )
+            foreground_imagery.name = f"{self.imagery.name} - Foreground ({self.algorithm_label}){aoi_suffix}"
             foreground_imagery.description = (
                 f"Foreground from {self.algorithm_label} background removal "
                 f"(background ranges: {ranges_str}; target {target_start}-{target_end}{params_suffix})"
@@ -181,10 +179,7 @@ class StaticBackgroundRemovalThread(QThread):
             return
         except Exception as e:
             tb_str = traceback.format_exc()
-            error_msg = (
-                f"Error running {self.algorithm_label} background removal: {str(e)}"
-                f"\n\nTraceback:\n{tb_str}"
-            )
+            error_msg = f"Error running {self.algorithm_label} background removal: {str(e)}\n\nTraceback:\n{tb_str}"
             self.error_occurred.emit(error_msg)
 
 
@@ -199,10 +194,16 @@ class StaticBackgroundRemovalDialog(QDialog):
 
     imagery_processed = pyqtSignal(object)  # Emits list of created Imagery objects
 
-    def __init__(self, parent=None, imagery=None, aois=None,
-                 settings_name="StaticBackgroundRemoval",
-                 window_title="Static Background Removal",
-                 description="", algorithm_label="Static"):
+    def __init__(
+        self,
+        parent=None,
+        imagery=None,
+        aois=None,
+        settings_name="StaticBackgroundRemoval",
+        window_title="Static Background Removal",
+        description="",
+        algorithm_label="Static",
+    ):
         """
         Parameters
         ----------
@@ -266,8 +267,7 @@ class StaticBackgroundRemovalDialog(QDialog):
         bg_group = QGroupBox("Background Frame Ranges")
         bg_layout = QVBoxLayout()
         bg_info = QLabel(
-            "Frames used to model the background. Add one or more ranges "
-            "(inclusive start, exclusive end)."
+            "Frames used to model the background. Add one or more ranges (inclusive start, exclusive end)."
         )
         bg_info.setWordWrap(True)
         bg_layout.addWidget(bg_info)
@@ -297,16 +297,12 @@ class StaticBackgroundRemovalDialog(QDialog):
         self.target_start_spinbox = QSpinBox()
         self.target_start_spinbox.setRange(0, max_frame)
         self.target_start_spinbox.setValue(0)
-        self.target_start_spinbox.setToolTip(
-            "First frame to which removal is applied (inclusive, 0-indexed)."
-        )
+        self.target_start_spinbox.setToolTip("First frame to which removal is applied (inclusive, 0-indexed).")
         target_form.addRow("Start Frame:", self.target_start_spinbox)
         self.target_end_spinbox = QSpinBox()
         self.target_end_spinbox.setRange(0, max_frame)
         self.target_end_spinbox.setValue(max_frame)
-        self.target_end_spinbox.setToolTip(
-            "Last frame to which removal is applied (exclusive)."
-        )
+        self.target_end_spinbox.setToolTip("Last frame to which removal is applied (exclusive).")
         target_form.addRow("End Frame:", self.target_end_spinbox)
         target_outer.addLayout(target_form)
         target_group.setLayout(target_outer)
@@ -398,18 +394,12 @@ class StaticBackgroundRemovalDialog(QDialog):
                 except (TypeError, IndexError, ValueError):
                     continue
         self.range_list.set_ranges(ranges)
-        self.use_full_range_checkbox.setChecked(
-            self.settings.value("use_full_range", True, type=bool)
-        )
+        self.use_full_range_checkbox.setChecked(self.settings.value("use_full_range", True, type=bool))
         max_frame = len(self.imagery.frames) if self.imagery is not None else 999999
         self.target_start_spinbox.setValue(self.settings.value("target_start", 0, type=int))
         self.target_end_spinbox.setValue(self.settings.value("target_end", max_frame, type=int))
-        self.add_background_checkbox.setChecked(
-            self.settings.value("add_background", False, type=bool)
-        )
-        self.add_foreground_checkbox.setChecked(
-            self.settings.value("add_foreground", True, type=bool)
-        )
+        self.add_background_checkbox.setChecked(self.settings.value("add_background", False, type=bool))
+        self.add_foreground_checkbox.setChecked(self.settings.value("add_foreground", True, type=bool))
 
     def save_settings(self):
         """Save current settings for next time."""
@@ -426,16 +416,16 @@ class StaticBackgroundRemovalDialog(QDialog):
     def run_processing(self):
         """Validate inputs and launch the worker thread."""
         if self.imagery is None:
-            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.",
-                                QMessageBox.StandardButton.Ok)
+            QMessageBox.warning(self, "No Imagery", "No imagery is currently loaded.", QMessageBox.StandardButton.Ok)
             return
 
         background_ranges = self.range_list.get_ranges()
         if not background_ranges:
             QMessageBox.warning(
-                self, "No Background Ranges",
+                self,
+                "No Background Ranges",
                 "Please add at least one background frame range.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -448,9 +438,10 @@ class StaticBackgroundRemovalDialog(QDialog):
                 clamped_ranges.append((start, end))
         if not clamped_ranges:
             QMessageBox.warning(
-                self, "No Background Frames",
+                self,
+                "No Background Frames",
                 "The specified background ranges contain no frames within the imagery.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -461,17 +452,17 @@ class StaticBackgroundRemovalDialog(QDialog):
             target_end = min(self.target_end_spinbox.value(), num_frames)
             if target_end <= target_start:
                 QMessageBox.warning(
-                    self, "Invalid Application Range",
+                    self,
+                    "Invalid Application Range",
                     "The application range must have an end greater than its start.",
-                    QMessageBox.StandardButton.Ok
+                    QMessageBox.StandardButton.Ok,
                 )
                 return
             target_range = (target_start, target_end)
 
         is_valid, error_message = self.validate_parameters()
         if not is_valid:
-            QMessageBox.warning(self, "Invalid Parameters", error_message,
-                                QMessageBox.StandardButton.Ok)
+            QMessageBox.warning(self, "Invalid Parameters", error_message, QMessageBox.StandardButton.Ok)
             return
 
         selected_aoi = self.aoi_combo.currentData()
@@ -543,9 +534,10 @@ class StaticBackgroundRemovalDialog(QDialog):
 
         added_str = ", ".join(added_items) if added_items else "nothing"
         QMessageBox.information(
-            self, "Processing Complete",
+            self,
+            "Processing Complete",
             f"{self.algorithm_label} background removal complete.\nAdded: {added_str}",
-            QMessageBox.StandardButton.Ok
+            QMessageBox.StandardButton.Ok,
         )
         self.accept()
 
@@ -589,10 +581,11 @@ class StaticBackgroundRemovalDialog(QDialog):
         """Handle dialog close event."""
         if self.worker and self.worker.isRunning():
             reply = QMessageBox.question(
-                self, "Processing in Progress",
+                self,
+                "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
                 self.cancel_processing()

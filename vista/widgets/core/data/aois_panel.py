@@ -1,4 +1,5 @@
 """AOIs panel for data manager"""
+
 import pathlib
 
 import pandas as pd
@@ -50,16 +51,16 @@ class AOIsPanel(QWidget):
         layout.addLayout(button_layout)
 
         # Help text
-        help_label = QLabel("Select row(s) to move and resize AOIs in the viewer. De-select (ctrl/cmd + click) to disable manipulation.")
+        help_label = QLabel(
+            "Select row(s) to move and resize AOIs in the viewer. De-select (ctrl/cmd + click) to disable manipulation."
+        )
         help_label.setWordWrap(True)
         layout.addWidget(help_label)
 
         # AOIs table
         self.aois_table = QTableWidget()
         self.aois_table.setColumnCount(2)
-        self.aois_table.setHorizontalHeaderLabels([
-            "Name", "Bounds (x, y, w, h)"
-        ])
+        self.aois_table.setHorizontalHeaderLabels(["Name", "Bounds (x, y, w, h)"])
 
         # Enable row selection via vertical header
         self.aois_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -223,14 +224,6 @@ class AOIsPanel(QWidget):
 
                 # Build success message
                 message = f"Exported {num_aois} AOI(s) to:\n{file_path}"
-                QMessageBox.information(
-                    self,
-                    "Success",
-                    message
-                )
+                QMessageBox.information(self, "Success", message)
             except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Export Error",
-                    f"Failed to export AOIs:\n{str(e)}"
-                )
+                QMessageBox.critical(self, "Export Error", f"Failed to export AOIs:\n{str(e)}")

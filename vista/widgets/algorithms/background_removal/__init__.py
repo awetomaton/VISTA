@@ -1,4 +1,5 @@
 """Background removal algorithm widgets"""
+
 from .godec_dialog import GoDecDialog
 from .robust_pca_dialog import RobustPCADialog
 from .static_median_background_removal_dialog import StaticMedianBackgroundRemovalDialog

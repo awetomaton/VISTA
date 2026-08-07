@@ -1,4 +1,5 @@
 """AOI (Area of Interest) / ROI (Region of Interest) data model"""
+
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional
@@ -72,12 +73,7 @@ class AOI:
             are the top-left coordinates, and x_max and y_max are the
             bottom-right coordinates.
         """
-        return (
-            self.x,
-            self.y,
-            self.x + self.width,
-            self.y + self.height
-        )
+        return (self.x, self.y, self.x + self.width, self.y + self.height)
 
     def contains_point(self, x: float, y: float) -> bool:
         """
@@ -116,7 +112,7 @@ class AOI:
             'height': self.height,
             'visible': self.visible,
             'color': self.color,
-            'uuid': str(self.uuid)
+            'uuid': str(self.uuid),
         }
 
     @classmethod
@@ -142,7 +138,7 @@ class AOI:
             width=data['width'],
             height=data['height'],
             visible=data.get('visible', True),
-            color=data.get('color', 'y')
+            color=data.get('color', 'y'),
         )
         # Restore UUID if present, otherwise a new one will be generated
         if 'uuid' in data:
@@ -165,7 +161,7 @@ class AOI:
             "Width": [self.width],
             "Height": [self.height],
             "Visible": [self.visible],
-            "Color": [self.color]
+            "Color": [self.color],
         }
         return pd.DataFrame(data)
 
@@ -203,7 +199,7 @@ class AOI:
             "x": float(df["X"].iloc[0]),
             "y": float(df["Y"].iloc[0]),
             "width": float(df["Width"].iloc[0]),
-            "height": float(df["Height"].iloc[0])
+            "height": float(df["Height"].iloc[0]),
         }
 
         if "Visible" in df.columns:

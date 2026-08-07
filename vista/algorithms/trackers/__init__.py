@@ -1,4 +1,5 @@
 """Tracker algorithms for VISTA"""
+
 from .kalman_tracker import run_kalman_tracker
 from .network_flow_tracker import run_network_flow_tracker
 from .simple_tracker import run_simple_tracker

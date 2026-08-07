@@ -1,4 +1,5 @@
 """Dialog for configuring and running track interpolation"""
+
 import traceback
 
 from PyQt6.QtCore import QSettings, QThread, pyqtSignal
@@ -50,10 +51,7 @@ class TrackInterpolationThread(QThread):
         """Execute the interpolation algorithm in background thread"""
         try:
             # Create the interpolation algorithm instance
-            interpolator = TrackInterpolation(
-                track=self.track,
-                **self.interpolation_params
-            )
+            interpolator = TrackInterpolation(track=self.track, **self.interpolation_params)
 
             # Run interpolation
             results = interpolator()
@@ -139,14 +137,10 @@ class TrackInterpolationDialog(QDialog):
                     total_missing += expected_frames - actual_frames
 
             if total_missing > 0:
-                summary_label = QLabel(
-                    f"<b>Total missing frames to interpolate:</b> {total_missing}"
-                )
+                summary_label = QLabel(f"<b>Total missing frames to interpolate:</b> {total_missing}")
                 layout.addWidget(summary_label)
             else:
-                summary_label = QLabel(
-                    "<b>Note:</b> Selected tracks have no missing frames"
-                )
+                summary_label = QLabel("<b>Note:</b> Selected tracks have no missing frames")
                 layout.addWidget(summary_label)
 
         # Interpolation parameters group
@@ -155,14 +149,7 @@ class TrackInterpolationDialog(QDialog):
 
         # Interpolation method
         self.method_combo = QComboBox()
-        self.method_combo.addItems([
-            'linear',
-            'nearest',
-            'zero',
-            'slinear',
-            'quadratic',
-            'cubic'
-        ])
+        self.method_combo.addItems(['linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'])
         self.method_combo.setToolTip(
             "Interpolation method:\n"
             "  • linear: Linear interpolation (default)\n"
@@ -228,9 +215,7 @@ class TrackInterpolationDialog(QDialog):
         dict
             Interpolation parameters
         """
-        return {
-            'method': self.method_combo.currentText()
-        }
+        return {'method': self.method_combo.currentText()}
 
     def validate_parameters(self):
         """
@@ -333,11 +318,7 @@ class TrackInterpolationDialog(QDialog):
         success_msg += f"Total frames interpolated: {total_interpolated}"
 
         # Show success message
-        QMessageBox.information(
-            self,
-            "Interpolation Complete",
-            success_msg
-        )
+        QMessageBox.information(self, "Interpolation Complete", success_msg)
 
     def on_cancel_clicked(self):
         """Handle Cancel button click"""

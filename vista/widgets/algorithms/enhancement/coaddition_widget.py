@@ -1,4 +1,5 @@
 """Widget for configuring and running the Coaddition enhancement algorithm"""
+
 import traceback
 
 import numpy as np
@@ -78,10 +79,7 @@ class CoadditionProcessingThread(QThread):
     def _run_streaming(self, temp_imagery):
         """Run the streaming (non-decimating) coaddition algorithm"""
         # Create the algorithm instance
-        algorithm = Coaddition(
-            imagery=temp_imagery,
-            window_size=self.window_size
-        )
+        algorithm = Coaddition(imagery=temp_imagery, window_size=self.window_size)
 
         # Pre-allocate result array
         num_frames = len(temp_imagery)
@@ -129,10 +127,7 @@ class CoadditionProcessingThread(QThread):
     def _run_decimating(self, temp_imagery):
         """Run the decimating coaddition algorithm"""
         # Create the algorithm instance
-        algorithm = DecimatingCoaddition(
-            imagery=temp_imagery,
-            window_size=self.window_size
-        )
+        algorithm = DecimatingCoaddition(imagery=temp_imagery, window_size=self.window_size)
 
         # Get the number of output frames
         num_output_frames = len(algorithm)
@@ -340,13 +335,9 @@ class CoadditionWidget(QDialog):
 
         if self.decimating_checkbox.isChecked():
             num_output_frames = num_input_frames // window_size
-            self.output_info_label.setText(
-                f"Output: {num_output_frames} frames (from {num_input_frames} input frames)"
-            )
+            self.output_info_label.setText(f"Output: {num_output_frames} frames (from {num_input_frames} input frames)")
         else:
-            self.output_info_label.setText(
-                f"Output: {num_input_frames} frames (same as input)"
-            )
+            self.output_info_label.setText(f"Output: {num_input_frames} frames (same as input)")
 
     def run_algorithm(self):
         """Start processing the imagery with the configured parameters"""
@@ -355,7 +346,7 @@ class CoadditionWidget(QDialog):
                 self,
                 "No Imagery",
                 "No imagery is currently loaded. Please load imagery first.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -373,7 +364,7 @@ class CoadditionWidget(QDialog):
                 self,
                 "Invalid Parameters",
                 f"Window size ({window_size}) cannot exceed number of frames ({len(self.imagery)}).",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -386,7 +377,7 @@ class CoadditionWidget(QDialog):
                     "Invalid Parameters",
                     f"Window size ({window_size}) is larger than the number of frames ({len(self.imagery)}).\n"
                     "No output frames would be produced in decimating mode.",
-                    QMessageBox.StandardButton.Ok
+                    QMessageBox.StandardButton.Ok,
                 )
                 return
 
@@ -404,9 +395,7 @@ class CoadditionWidget(QDialog):
         self.progress_bar.setMaximum(len(self.imagery))
 
         # Create and start processing thread
-        self.processing_thread = CoadditionProcessingThread(
-            self.imagery, window_size, selected_aoi, decimating
-        )
+        self.processing_thread = CoadditionProcessingThread(self.imagery, window_size, selected_aoi, decimating)
         self.processing_thread.progress_updated.connect(self.on_progress_updated)
         self.processing_thread.processing_complete.connect(self.on_processing_complete)
         self.processing_thread.error_occurred.connect(self.on_error_occurred)
@@ -489,7 +478,7 @@ class CoadditionWidget(QDialog):
                 "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
 
             if reply == QMessageBox.StandardButton.Yes:
