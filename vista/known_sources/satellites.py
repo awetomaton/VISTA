@@ -31,8 +31,10 @@ class Satellites(KnownSource):
 
         Parameters
         ----------
+        name : str
+            Name of the Satellites object (e.g. 'LEO satellites', 'GEO satellites', etc.)
         file_path : str, optional
-            File path to satellite TLE data.
+            File path to satellite TLE data
             Data can optionally be loaded later with the load_tle_file function
         """
         super().__init__(name, "satellites")
@@ -69,8 +71,15 @@ class Satellites(KnownSource):
                 except StopIteration:
                     break
 
-    def load_tle_file(self, file_path):
-        """Parses a TLE file into a SatrecArray of unique objects"""
+    def load_tle_file(self, file_path: str):
+        """
+        Parses a TLE file into a SatrecArray of unique objects
+
+        Parameters
+        ----------
+        file_path : str
+            File path to satellite TLE data
+        """
         satellites = {}
         
         with open(file_path, 'r', encoding='utf-8') as f:
