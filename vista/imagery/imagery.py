@@ -370,7 +370,7 @@ class Imagery:
         The numpy images array and GPU tensor (if present) are shared by reference, not copied.
         """
         imagery_copy = self.__class__(
-            name=self.name + f" (copy)",
+            name=self.name + " (copy)",
             images=self.images,
             frames=self.frames,
             sensor=self.sensor,

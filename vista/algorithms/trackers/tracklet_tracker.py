@@ -174,7 +174,6 @@ def run_tracklet_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration with smart defaults
-    tracker_name = config.get("tracker_name", "Tracklet Tracker")
     initial_search_radius = config.get("initial_search_radius", 10.0)
     max_velocity_change = config.get("max_velocity_change", 5.0)
     min_tracklet_length = config.get("min_tracklet_length", 3)

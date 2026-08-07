@@ -44,7 +44,6 @@ def run_network_flow_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration with defaults
-    tracker_name = config.get("tracker_name", "Network Flow Tracker")
     max_gap = config.get("max_gap", 5)
     max_distance = config.get("max_distance", 50.0)
     entrance_cost = config.get("entrance_cost", 50.0)
@@ -79,8 +78,6 @@ def run_network_flow_tracker(detectors, config):
     detections_by_frame = defaultdict(list)
     for det in all_detections:
         detections_by_frame[det["frame"]].append(det)
-
-    frames = sorted(detections_by_frame.keys())
 
     # Build graph edges with costs
     # Edge types: (1) detection-to-detection, (2) source-to-detection, (3) detection-to-sink

@@ -642,18 +642,11 @@ class TrackPlotWindow(QWidget):
         # Y-axis excludes Frame and Time (they don't make sense as dependent variables)
         y_axis_options = ["Row", "Column"]
 
-        # Check if any track has time data
-        has_time = False
         has_geolocation = False
         has_extraction = False
         has_uncertainty = False
 
         for track in self.tracks:
-            # Check time
-            times = track.get_times()
-            if times is not None and not np.all(np.isnat(times)):
-                has_time = True
-
             # Check geolocation
             if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
                 has_geolocation = True

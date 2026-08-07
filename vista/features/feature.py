@@ -4,8 +4,6 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import pyqtgraph as pg
-
 
 @dataclass
 class Feature:

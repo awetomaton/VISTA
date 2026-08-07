@@ -6,7 +6,6 @@ by interpolating missing frames between existing track points.
 """
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 
 from vista.tracks.track import Track

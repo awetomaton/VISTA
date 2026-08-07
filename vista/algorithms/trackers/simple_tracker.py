@@ -239,7 +239,6 @@ def run_simple_tracker(detectors, config):
     >>> print(f"Found {len(tracks)} tracks")
     """
     # Extract configuration with smart defaults
-    tracker_name = config.get("tracker_name", "Simple Tracker")
     min_track_length = config.get("min_track_length", 5)
 
     # Collect all detections by frame
