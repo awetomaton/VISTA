@@ -1,9 +1,6 @@
 """Dialog for selecting imagery for time-based track mapping"""
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QListWidget,
-    QPushButton, QHBoxLayout, QMessageBox
-)
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QListWidget, QMessageBox, QPushButton, QVBoxLayout
 
 
 class ImagerySelectionDialog(QDialog):

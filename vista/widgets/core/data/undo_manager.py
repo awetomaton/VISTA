@@ -8,7 +8,7 @@ to anticipate specific action types.
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QObject
 
 
 @dataclass

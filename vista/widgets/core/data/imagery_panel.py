@@ -1,9 +1,17 @@
 """Imagery panel for data manager"""
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QMessageBox, QProgressBar, QPushButton,
-    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QHBoxLayout,
+    QHeaderView,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
 
 from vista.imagery.imagery import HAS_TORCH
 

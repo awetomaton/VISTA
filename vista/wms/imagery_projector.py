@@ -1,7 +1,7 @@
 """Imagery projection engine for projecting VISTA imagery to geodetic coordinates."""
+import numpy as np
 from astropy import units
 from astropy.coordinates import EarthLocation
-import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import map_coordinates
 

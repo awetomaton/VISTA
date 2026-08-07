@@ -2,8 +2,8 @@
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import QThread, pyqtSignal, QSettings
-from PyQt6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout)
+from PyQt6.QtCore import pyqtSignal, QSettings, QThread
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
 from vista.detections.detector import Detector
 from vista.widgets.utils.algorithm_utils import create_aoi_selector, create_frame_range_spinboxes

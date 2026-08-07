@@ -1,11 +1,21 @@
 """Extraction editor floating widget for fine-tuning track extraction"""
 import numpy as np
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtWidgets import (
-    QButtonGroup, QCheckBox, QDialog, QFormLayout,
-    QGroupBox, QHBoxLayout, QLabel, QPushButton, QRadioButton, QSpinBox, QVBoxLayout
+    QButtonGroup,
+    QCheckBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QVBoxLayout,
 )
 from skimage.measure import label, regionprops
+
 from vista.algorithms.detectors.cfar import CFAR
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 

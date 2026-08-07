@@ -1,6 +1,7 @@
+from typing import Tuple
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
 
 
 def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray]:

@@ -1,19 +1,19 @@
 """ImageryViewer widget for displaying imagery with overlays"""
+import os
+import time
+
+import numpy as np
+import pyqtgraph as pg
 from astropy import units
 from astropy.coordinates import EarthLocation
-import numpy as np
-import os
-import pyqtgraph as pg
-from shapely.geometry import Point, Polygon
-import time
-from PyQt6.QtCore import Qt, QRectF, QSettings, QTimer, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QRectF, QSettings, Qt, QTimer
 from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QVBoxLayout, QWidget
+from shapely.geometry import Point, Polygon
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
-from vista.features import PlacemarkFeature
-from vista.features import ShapefileFeature
+from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point

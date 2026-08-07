@@ -2,11 +2,8 @@
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from PyQt6.QtWidgets import (
-    QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
-    QPushButton, QVBoxLayout
-)
+from PyQt6.QtCore import pyqtSignal, Qt, QThread
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
 from vista.widgets.utils.algorithm_utils import create_aoi_selector
 

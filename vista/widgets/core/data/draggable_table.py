@@ -1,5 +1,5 @@
 """Custom QTableWidget with row drag-and-drop reordering support."""
-from PyQt6.QtCore import pyqtSignal, Qt, QMimeData
+from PyQt6.QtCore import pyqtSignal, QMimeData, Qt
 from PyQt6.QtGui import QColor, QDrag, QPainter, QPen
 from PyQt6.QtWidgets import QAbstractItemView, QTableWidget
 

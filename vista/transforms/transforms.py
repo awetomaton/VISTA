@@ -1,8 +1,9 @@
 
 """General transform support functions"""
+from typing import Tuple
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
 
 
 def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[float, NDArray]) -> NDArray:

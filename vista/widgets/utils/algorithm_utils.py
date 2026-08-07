@@ -1,7 +1,8 @@
 """Utility functions for algorithm widgets to reduce code duplication"""
+import traceback
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QMessageBox, QProgressDialog, QSpinBox
-import traceback
 
 
 def show_error_with_traceback(parent, error_message, title="Processing Error"):
@@ -121,8 +122,8 @@ def populate_detector_list_by_sensor(list_widget, viewer):
     viewer : VISTA
         VISTA viewer object containing detectors and selected_sensor
     """
-    from PyQt6.QtWidgets import QListWidgetItem
     from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QListWidgetItem
 
     list_widget.clear()
 

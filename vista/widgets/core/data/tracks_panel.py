@@ -1,28 +1,54 @@
 """Tracks panel for data manager"""
+import pathlib
+
 import numpy as np
 import pandas as pd
-import pathlib
-from PyQt6.QtCore import QEvent, Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import pyqtSignal, QEvent, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
-    QApplication, QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
-    QDoubleSpinBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QMenu, QMessageBox, QPushButton, QRadioButton, QScrollArea,
-    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QApplication,
+    QButtonGroup,
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QRadioButton,
+    QScrollArea,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QListWidgetItem
 
 from vista.detections.detector import Detector
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
 from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
-from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LabelsSelectionDialog, LineStyleDelegate, MarkerDelegate
+from vista.widgets.core.data.delegates import (
+    ColorDelegate,
+    LabelsDelegate,
+    LabelsSelectionDialog,
+    LineStyleDelegate,
+    MarkerDelegate,
+)
 from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.track_plot_window import TrackPlotWindow
 from vista.widgets.core.data.undo_manager import UndoStack
-
 
 # Sortable columns: Visible (0), Tracker (1), Name (2), Labels (3), Length (4),
 # Complete (10), Show Line (11), Avg SNR (14), Show Uncertainty (15)

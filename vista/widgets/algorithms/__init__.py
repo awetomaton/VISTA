@@ -1,7 +1,5 @@
 """VISTA Algorithm Widgets Packages"""
 # Detector widgets
-from .detectors import CFARWidget, SimpleThresholdWidget
-
 # Background removal widgets
 from .background_removal import (
     RobustPCADialog,
@@ -9,6 +7,10 @@ from .background_removal import (
     StaticSubspaceBackgroundRemovalDialog,
     TemporalMedianWidget,
 )
+from .detectors import CFARWidget, SimpleThresholdWidget
+
+# Enhancement widgets
+from .enhancement import CoadditionWidget
 
 # Tracker widgets
 from .trackers import (
@@ -17,10 +19,6 @@ from .trackers import (
     SimpleTrackingDialog,
     TrackletTrackingDialog,
 )
-
-# Enhancement widgets
-from .enhancement import CoadditionWidget
-
 
 __all__ = [
     # Core

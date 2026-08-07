@@ -1,10 +1,18 @@
 """Dialog for creating placemarks"""
-from astropy.coordinates import EarthLocation
-from astropy import units
 import numpy as np
+from astropy import units
+from astropy.coordinates import EarthLocation
 from PyQt6.QtWidgets import (
-    QButtonGroup, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QLineEdit, QMessageBox, QRadioButton, QVBoxLayout
+    QButtonGroup,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QLineEdit,
+    QMessageBox,
+    QRadioButton,
+    QVBoxLayout,
 )
 
 

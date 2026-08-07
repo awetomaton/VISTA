@@ -1,15 +1,22 @@
 """Main window for the Vista application"""
-from astropy.coordinates import EarthLocation
-from astropy import units
+from pathlib import Path
+
 import darkdetect
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from PyQt6.QtCore import Qt, QSettings
+from astropy import units
+from astropy.coordinates import EarthLocation
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
-    QDockWidget, QFileDialog, QMainWindow, QMessageBox,
-    QProgressDialog, QSplitter, QVBoxLayout, QWidget
+    QDockWidget,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QProgressDialog,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
 )
 
 import vista
@@ -20,8 +27,6 @@ from vista.imagery.imagery import HAS_TORCH, Imagery
 from vista.sensors.sensor import Sensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
-from vista.widgets.core.data.labels_manager import LabelsManagerDialog
-from vista.widgets.core.settings_dialog import SettingsDialog
 from vista.widgets.algorithms.background_removal.godec_dialog import GoDecDialog
 from vista.widgets.algorithms.background_removal.robust_pca_dialog import RobustPCADialog
 from vista.widgets.algorithms.background_removal.static_median_background_removal_dialog import (
@@ -30,7 +35,9 @@ from vista.widgets.algorithms.background_removal.static_median_background_remova
 from vista.widgets.algorithms.background_removal.static_subspace_background_removal_dialog import (
     StaticSubspaceBackgroundRemovalDialog,
 )
-from vista.widgets.algorithms.background_removal.subspace_background_removal_dialog import SubspaceBackgroundRemovalDialog
+from vista.widgets.algorithms.background_removal.subspace_background_removal_dialog import (
+    SubspaceBackgroundRemovalDialog,
+)
 from vista.widgets.algorithms.background_removal.temporal_median_widget import TemporalMedianWidget
 from vista.widgets.algorithms.detectors.cfar_widget import CFARWidget
 from vista.widgets.algorithms.detectors.pstnn_widget import PSTNNWidget
@@ -44,6 +51,9 @@ from vista.widgets.algorithms.trackers.tracklet_tracking_dialog import TrackletT
 from vista.widgets.algorithms.tracks.interpolation_dialog import TrackInterpolationDialog
 from vista.widgets.algorithms.tracks.savitzky_golay_dialog import SavitzkyGolayDialog
 from vista.widgets.algorithms.treatments import BiasRemovalWidget, NonUniformityCorrectionWidget
+from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+from vista.widgets.core.settings_dialog import SettingsDialog
+
 from .data.data_loader import DataLoaderThread
 from .data.data_manager import DataManagerPanel
 from .imagery_viewer import ImageryViewer

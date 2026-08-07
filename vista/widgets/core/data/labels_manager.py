@@ -1,7 +1,16 @@
 """Labels manager"""
 from PyQt6.QtCore import QSettings
-from PyQt6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,  QVBoxLayout)
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 from vista.utils.labels_fixture import load_labels_from_fixture
 

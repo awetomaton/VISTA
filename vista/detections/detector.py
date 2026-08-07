@@ -1,12 +1,14 @@
-from dataclasses import dataclass, field
 import datetime
-from typing import Optional, Union
 import pathlib
+import uuid
+from dataclasses import dataclass, field
+from typing import Optional, Union
+
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
 import pyqtgraph as pg
-import uuid
+from numpy.typing import NDArray
+
 from vista.sensors.sensor import Sensor
 
 

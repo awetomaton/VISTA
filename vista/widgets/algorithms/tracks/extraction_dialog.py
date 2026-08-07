@@ -1,11 +1,22 @@
 """Dialog for configuring and running track extraction"""
 import traceback
-from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
+
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
 from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox,
-    QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QSpinBox,
-    QVBoxLayout
+    QCheckBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
 )
+
 from vista.algorithms.tracks.extraction import TrackExtraction
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 

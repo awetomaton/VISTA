@@ -1,10 +1,20 @@
 """Custom delegates for table editing in data manager"""
-from PyQt6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QLabel, QScrollArea, QSpinBox, QStyle,
-    QStyledItemDelegate, QVBoxLayout, QWidget
-)
-from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QBrush, QColor
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QLabel,
+    QScrollArea,
+    QSpinBox,
+    QStyle,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class ColorDelegate(QStyledItemDelegate):

@@ -11,7 +11,6 @@ from numpy.typing import NDArray
 from PIL import Image
 from PyQt6.QtCore import QSettings
 
-
 # Default tile servers shipped with VISTA
 DEFAULT_SERVERS = [
     {

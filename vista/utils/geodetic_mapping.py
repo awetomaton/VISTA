@@ -1,8 +1,8 @@
 """Utility functions for mapping geodetic coordinates to pixel coordinates"""
-import numpy as np
-from numpy.typing import NDArray
-from astropy.coordinates import EarthLocation
 import astropy.units as u
+import numpy as np
+from astropy.coordinates import EarthLocation
+from numpy.typing import NDArray
 
 
 def map_geodetic_to_pixel(

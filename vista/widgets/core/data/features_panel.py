@@ -1,12 +1,21 @@
 """Features panel for data manager"""
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QCheckBox, QHeaderView, QHBoxLayout, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QCheckBox,
+    QHBoxLayout,
+    QHeaderView,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from .placemark_dialog import PlacemarkDialog
+
 from vista.features import PlacemarkFeature
+
+from .placemark_dialog import PlacemarkDialog
 
 
 class FeaturesPanel(QWidget):

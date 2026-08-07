@@ -8,6 +8,7 @@ and optionally refines track coordinates using weighted centroids.
 import numpy as np
 from numpy.typing import NDArray
 from skimage.measure import label, regionprops
+
 from vista.algorithms.detectors.cfar import CFAR
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track

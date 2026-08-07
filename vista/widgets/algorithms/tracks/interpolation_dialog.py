@@ -1,10 +1,20 @@
 """Dialog for configuring and running track interpolation"""
 import traceback
-from PyQt6.QtCore import QSettings, QThread, pyqtSignal
+
+from PyQt6.QtCore import pyqtSignal, QSettings, QThread
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
-    QMessageBox, QProgressBar, QPushButton, QVBoxLayout
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
 )
+
 from vista.algorithms.tracks.interpolation import TrackInterpolation
 
 

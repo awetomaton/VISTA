@@ -1,5 +1,5 @@
 """Dialog for configuring and running the Tracklet tracker"""
-from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox, QFormLayout, QSpinBox
+from PyQt6.QtWidgets import QDoubleSpinBox, QFormLayout, QGroupBox, QSpinBox
 
 from vista.algorithms.trackers import run_tracklet_tracker
 from vista.widgets.algorithms.trackers.base_tracker_dialog import BaseTrackingDialog

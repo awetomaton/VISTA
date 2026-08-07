@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
+from typing import Tuple
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
+
 from vista.imagery.imagery import Imagery
 
 

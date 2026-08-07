@@ -1,8 +1,8 @@
-import plotly.graph_objects as go
 import numpy as np
+import plotly.graph_objects as go
 from PIL import Image
-from vista.visualize.data import EARTH_IMAGE_1K
 
+from vista.visualize.data import EARTH_IMAGE_1K
 
 colorscale=[
     [0.0, 'rgb(30, 59, 117)'],

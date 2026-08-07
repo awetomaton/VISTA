@@ -1,25 +1,47 @@
 """Detections panel for data manager"""
+import pathlib
 import traceback
 
 import numpy as np
 import pandas as pd
-import pathlib
-from PyQt6.QtCore import QEvent, QItemSelectionModel, Qt, pyqtSignal, QSettings
-from PyQt6.QtGui import QBrush, QColor, QAction
+from PyQt6.QtCore import pyqtSignal, QEvent, QItemSelectionModel, QSettings, Qt
+from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QMenu,
-    QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QApplication,
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QListWidget,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget, QScrollArea, QApplication
-from vista.widgets.core.data.delegates import LabelsSelectionDialog
-from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
-from vista.widgets.core.data.labels_manager import LabelsManagerDialog
+
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
-from vista.widgets.core.data.delegates import ColorDelegate, LabelsDelegate, LineThicknessDelegate, MarkerDelegate
+from vista.widgets.core.data.delegates import (
+    ColorDelegate,
+    LabelsDelegate,
+    LabelsSelectionDialog,
+    LineThicknessDelegate,
+    MarkerDelegate,
+)
+from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
+from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.undo_manager import UndoStack
-
 
 _CSV_EXTENSIONS = ('.csv',)
 

@@ -1,11 +1,20 @@
 """Widget for configuring and running the Coaddition enhancement algorithm"""
-from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QSpinBox, QPushButton, QProgressBar, QMessageBox, QComboBox
-)
-from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt
-import numpy as np
 import traceback
+
+import numpy as np
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+)
 
 from vista.algorithms.enhancement.coadd import Coaddition, DecimatingCoaddition
 

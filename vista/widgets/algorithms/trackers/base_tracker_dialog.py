@@ -1,10 +1,19 @@
 """Base classes for tracker dialogs to reduce code duplication"""
 import traceback
 
-from PyQt6.QtCore import Qt, QSettings, QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
-    QListWidget, QMessageBox, QProgressDialog, QPushButton, QVBoxLayout
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QMessageBox,
+    QProgressDialog,
+    QPushButton,
+    QVBoxLayout,
 )
 
 from vista.tracks.track import Track

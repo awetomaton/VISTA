@@ -1,10 +1,20 @@
 """Dialog for configuring and running Savitzky-Golay track filtering"""
 import traceback
-from PyQt6.QtCore import QSettings, QThread, pyqtSignal
+
+from PyQt6.QtCore import pyqtSignal, QSettings, QThread
 from PyQt6.QtWidgets import (
-    QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QMessageBox,
-    QProgressBar, QPushButton, QSpinBox, QVBoxLayout
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
 )
+
 from vista.algorithms.tracks.savitzky_golay import SavitzkyGolayFilter
 
 

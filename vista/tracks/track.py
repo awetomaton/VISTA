@@ -5,18 +5,20 @@ This module defines the Track class, which represents a single object trajectory
 across multiple frames with support for multiple coordinate systems (pixel, geodetic,
 time-based), visualization styling, and data persistence.
 """
-from dataclasses import dataclass, field
 import datetime
+import uuid
+from dataclasses import dataclass, field
 from typing import Optional
+
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
 import pyqtgraph as pg
+from numpy.typing import NDArray
 from PyQt6.QtCore import Qt
-import uuid
+
+from vista.sensors.sensor import Sensor
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
-from vista.sensors.sensor import Sensor
 
 
 @dataclass

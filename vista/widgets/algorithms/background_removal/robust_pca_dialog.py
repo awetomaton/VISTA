@@ -1,12 +1,22 @@
 """Dialog for configuring and running Robust PCA background removal"""
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QGroupBox, QFormLayout,
-    QDoubleSpinBox, QMessageBox, QProgressBar,
-    QSpinBox, QCheckBox, QComboBox
-)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
 import traceback
+
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+)
 
 from vista.algorithms.background_removal.robust_pca import run_robust_pca
 

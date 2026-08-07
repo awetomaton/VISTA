@@ -3,13 +3,15 @@
 The Imagery object in this class can be subclassed by third-party objects to implement their own logic including
 file readers and pixel-to-geodetic conversions
 """
+import pathlib
+import uuid
 from dataclasses import dataclass, field
+from typing import Optional, Union
+
 import h5py
 import numpy as np
 from numpy.typing import NDArray
-import pathlib
-from typing import Union, Optional
-import uuid
+
 from vista.aoi import AOI
 from vista.sensors.sensor import Sensor
 

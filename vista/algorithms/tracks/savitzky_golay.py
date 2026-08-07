@@ -8,6 +8,7 @@ higher moments of the signal better than a simple moving average.
 import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import savgol_filter
+
 from vista.tracks.track import Track
 
 

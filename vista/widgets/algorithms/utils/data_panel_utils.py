@@ -3,8 +3,14 @@ import numpy as np
 import pandas as pd
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QLabel, QListWidget,
-    QMessageBox, QVBoxLayout
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QLabel,
+    QListWidget,
+    QMessageBox,
+    QVBoxLayout,
 )
 
 

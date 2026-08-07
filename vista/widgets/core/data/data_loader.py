@@ -1,17 +1,17 @@
 """Background data loading using QThread to prevent UI blocking"""
+import uuid
 from pathlib import Path
 
 import h5py
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QThread, pyqtSignal
-import uuid
+from PyQt6.QtCore import pyqtSignal, QThread
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
-from vista.sensors.sensor import Sensor
 from vista.sensors.sampled_sensor import SampledSensor
+from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 
 

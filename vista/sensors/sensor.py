@@ -7,15 +7,16 @@ coordinate conversion, radiometric calibration data (bias, gain, bad pixels), an
 optional point spread function modeling.
 """
 
-from astropy.coordinates import EarthLocation
-from astropy import units
+import uuid
 from dataclasses import dataclass, field
+from typing import Optional, Tuple, Union
+
 import h5py
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
-from typing import Optional, Tuple, Union
-import uuid
+from astropy import units
+from astropy.coordinates import EarthLocation
+from numpy.typing import NDArray
 
 
 @dataclass

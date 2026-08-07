@@ -1,10 +1,18 @@
 """PlaybackControls widget for controlling imagery playback"""
+from PyQt6.QtCore import QElapsedTimer, Qt, QTimer
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QSlider, QLabel, QSpinBox, QCheckBox, QDial, QApplication
+    QApplication,
+    QCheckBox,
+    QDial,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSlider,
+    QSpinBox,
+    QStyle,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
-from PyQt6.QtWidgets import QStyle
 
 
 class PlaybackControls(QWidget):

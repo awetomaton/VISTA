@@ -6,10 +6,8 @@ locations are determined when clicking to add track or detection points. Three m
 supported: Verbatim (exact location), Peak (brightest pixel within radius), and CFAR
 (signal blob centroid via CFAR detection).
 """
-from PyQt6.QtCore import QSettings, Qt, pyqtSignal
-from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
-)
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt
+from PyQt6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QSpinBox, QTabWidget, QVBoxLayout, QWidget
 
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 

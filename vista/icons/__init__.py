@@ -1,6 +1,6 @@
 import pathlib
-from PyQt6.QtGui import QIcon
 
+from PyQt6.QtGui import QIcon
 
 ICON_DIR = pathlib.Path(__file__).resolve().parent
 

@@ -1,10 +1,18 @@
 """Widget for configuring and running the Subset Frames algorithm"""
-from PyQt6.QtCore import QSettings, QThread, Qt, pyqtSignal
-from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox,
-    QProgressBar, QPushButton, QSpinBox, QVBoxLayout
-)
 import traceback
+
+from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+)
 
 
 class SubsetFramesProcessingThread(QThread):

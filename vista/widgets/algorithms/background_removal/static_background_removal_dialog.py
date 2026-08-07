@@ -8,11 +8,20 @@ provide the algorithm function and any algorithm-specific parameters.
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import QSettings, QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QSettings, QThread
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QFormLayout, QGroupBox,
-    QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton,
-    QSpinBox, QVBoxLayout
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
 )
 
 from vista.widgets.algorithms.background_removal.frame_range_list_widget import FrameRangeListWidget
