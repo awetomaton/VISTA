@@ -83,6 +83,8 @@ extend-exclude = ["notebooks", "docs", "scripts"]
 
 [tool.ruff.lint]
 # We will add these back one at a time as we address the lints.
-# select = ["E", "F", "W", "I"]
-select = ["F", "I"]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501", # Line too long. Let formatter wrap lines.
+]
 pydocstyle = { convention = "numpy" }
