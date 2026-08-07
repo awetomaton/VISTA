@@ -2,7 +2,7 @@
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,

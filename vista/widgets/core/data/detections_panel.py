@@ -4,7 +4,7 @@ import traceback
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import pyqtSignal, QEvent, QItemSelectionModel, QSettings, Qt
+from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
     QApplication,

@@ -1,7 +1,7 @@
 """Dialog for configuring and running Savitzky-Golay track filtering"""
 import traceback
 
-from PyQt6.QtCore import pyqtSignal, QSettings, QThread
+from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QFormLayout,

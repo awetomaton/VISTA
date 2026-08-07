@@ -6,7 +6,7 @@ import numpy as np
 import pyqtgraph as pg
 from astropy import units
 from astropy.coordinates import EarthLocation
-from PyQt6.QtCore import pyqtSignal, QRectF, QSettings, Qt, QTimer
+from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QVBoxLayout, QWidget
 from shapely.geometry import Point, Polygon

@@ -5,7 +5,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import pyqtSignal, QThread
+from PyQt6.QtCore import QThread, pyqtSignal
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector

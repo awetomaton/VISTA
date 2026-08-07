@@ -1,7 +1,7 @@
 """Widget for configuring and running the Subset Frames algorithm"""
 import traceback
 
-from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,

@@ -2,7 +2,7 @@
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
 from vista.widgets.utils.algorithm_utils import create_aoi_selector, create_frame_range_spinboxes

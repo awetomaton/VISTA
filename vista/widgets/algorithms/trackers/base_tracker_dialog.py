@@ -1,7 +1,7 @@
 """Base classes for tracker dialogs to reduce code duplication"""
 import traceback
 
-from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,

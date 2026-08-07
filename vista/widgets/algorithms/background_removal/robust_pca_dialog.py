@@ -1,7 +1,7 @@
 """Dialog for configuring and running Robust PCA background removal"""
 import traceback
 
-from PyQt6.QtCore import pyqtSignal, QSettings, Qt, QThread
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,

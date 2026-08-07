@@ -1,5 +1,5 @@
 """Features panel for data manager"""
-from PyQt6.QtCore import pyqtSignal, QSettings, Qt
+from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,

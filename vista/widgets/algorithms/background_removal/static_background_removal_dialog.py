@@ -8,7 +8,7 @@ provide the algorithm function and any algorithm-specific parameters.
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QSettings, QThread
+from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,

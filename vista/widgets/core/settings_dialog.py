@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from vista.utils.labeler import get_system_user, LABELER_SETTINGS_KEY
+from vista.utils.labeler import LABELER_SETTINGS_KEY, get_system_user
 from vista.wms.wms_client import get_tile_servers, save_tile_servers
 
 try:

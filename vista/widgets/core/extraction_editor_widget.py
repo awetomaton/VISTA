@@ -1,6 +1,6 @@
 """Extraction editor floating widget for fine-tuning track extraction"""
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
