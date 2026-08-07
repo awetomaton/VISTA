@@ -7,14 +7,20 @@ name = "vista-imagery"
 dynamic = ["version"]
 description = "A PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays"
 readme = "readme.md"
-license = {text = "MIT"}
-authors = [
-    {name = "Stephen Hartzell", email = "shartzell@awetomaton.com"}
-]
+license = { text = "MIT" }
+authors = [{ name = "Stephen Hartzell", email = "shartzell@awetomaton.com" }]
 maintainers = [
-    {name = "Stephen Hartzell", email = "shartzell@awetomaton.com"}
+    { name = "Stephen Hartzell", email = "shartzell@awetomaton.com" },
 ]
-keywords = ["VISTA", "tracking", "detection", "imagery", "PyQt6", "scientific", "analysis"]
+keywords = [
+    "VISTA",
+    "tracking",
+    "detection",
+    "imagery",
+    "PyQt6",
+    "scientific",
+    "analysis",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -44,15 +50,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = [
-    "torch",
-]
-dev = [
-    "pytest>=7.0",
-    "pytest-qt",
-    "black",
-    "ruff",
-]
+gpu = ["torch"]
+dev = ["pytest>=7.0", "pytest-qt", "black", "ruff"]
 docs = [
     "sphinx>=7.0,<9.0",
     "furo>=2024.1.29",
@@ -76,16 +75,13 @@ include-package-data = true
 exclude = ["scripts*", "notebooks*", "docs*", "data*"]
 
 [tool.setuptools.dynamic]
-version = {attr = "vista.__version__"}
-
-[tool.black]
-line-length = 88
-target-version = ["py39", "py310", "py311", "py312", "py313"]
+version = { attr = "vista.__version__" }
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = []
+
