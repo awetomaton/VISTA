@@ -2126,7 +2126,7 @@ class ImageryViewer(QWidget):
         # TODO: make color editable for each different source
         color = pg.mkColor('g')
 
-        rows, columns = source.get_pixels(self.selected_sensor, self.current_frame_number)
+        rows, columns = source.get_pixels(self.selected_sensor, self.imagery, self.current_frame_number)
 
         # Create a small marker for the sources
         scatter_item = pg.ScatterPlotItem(

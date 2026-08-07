@@ -2,6 +2,8 @@
 
 
 """
+
+from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 
 from numpy.typing import NDArray
@@ -29,7 +31,7 @@ class KnownSource():
         self.uuid = uuid.uuid4()
         self._plot_item = None  # reference to the actual displayed item in the viewer
 
-    def get_pixels(self, sensor: Sensor, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
+    def get_pixels(self, sensor: Sensor, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
         Return the pixel positions of the source for the provided sensor and frame number(s)
         Subclasses shosuld implement this function based on the source type

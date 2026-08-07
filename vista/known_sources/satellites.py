@@ -3,6 +3,7 @@
 
 """
 
+from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from .known_source import KnownSource
 
@@ -114,6 +115,8 @@ class Satellites(KnownSource):
         e, r, v = self.satellites.sgp4(times.jd1, times.jd2)
 
         # TODO: raise actual SGP4 error code value(s)
+        # or even better, raise a window to the user so they know to load a different file
+        # alternatively, just remove those satellites with error codes?
         if np.any(e != 0):
             raise ValueError(f"Error propogating SGP4 positions")
 
@@ -129,9 +132,10 @@ class Satellites(KnownSource):
         # unpack cartesian xyz coordinates into xyz arguments
         return EarthLocation(*ecef_coords.cartesian.xyz)
 
-    def get_pixels(self, sensor: Sensor, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
+    def get_pixels(self, sensor: Sensor, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
         Return the pixel positions of the satellites for the provided sensor and frame number(s)
+        Satellites which are off-frame have NaN locations
 
         Parameters
         ----------
@@ -159,4 +163,14 @@ class Satellites(KnownSource):
 
         # convert from ECEF to ARF to pixels
         rows, columns = sensor.geodetic_to_pixel(frame, locs)
+
+        # Only display objects within the image frame
+        # TODO: Handle when there's a cropped image
+        _, max_rows, max_cols = imagery.images.shape
+        # where is the valid region...
+        where = (rows >= 0) & (rows <= max_rows + 1) & (columns >= 0) & (columns <= max_cols + 1)
+        # ... so negate it to set invalid pixels to nan
+        rows[~where] = np.nan
+        columns[~where] = np.nan
+
         return rows, columns
