@@ -54,7 +54,7 @@ class NonUniformityCorrectionWidget(BaseTreatmentWidget):
             return False, "No sensor information available."
 
         if (
-            not hasattr(self.imagery.sensor, 'uniformity_gain_images')
+            not hasattr(self.imagery.sensor, "uniformity_gain_images")
             or self.imagery.sensor.uniformity_gain_images is None
         ):
             return False, "Sensor does not have uniformity gain images. Please load NUC calibration data."

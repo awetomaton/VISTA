@@ -14,7 +14,7 @@ class SimpleThreshold:
 
     name = "Simple Threshold"
 
-    def __init__(self, threshold: float, min_area: int = 1, max_area: int = 1000, detection_mode: str = 'above'):
+    def __init__(self, threshold: float, min_area: int = 1, max_area: int = 1000, detection_mode: str = "above"):
         """
         Initialize the Simple Threshold detector.
 
@@ -69,13 +69,13 @@ class SimpleThreshold:
         5. Returns centroid coordinates as (rows, columns) tuple
         """
         # Apply threshold based on detection mode
-        if self.detection_mode == 'above':
+        if self.detection_mode == "above":
             # Detect pixels brighter than threshold
             binary = image > self.threshold
-        elif self.detection_mode == 'below':
+        elif self.detection_mode == "below":
             # Detect pixels darker than threshold (for negative values)
             binary = image < -self.threshold
-        elif self.detection_mode == 'both':
+        elif self.detection_mode == "both":
             # Detect pixels with large absolute values (far from zero in either direction)
             binary = np.abs(image) > self.threshold
         else:

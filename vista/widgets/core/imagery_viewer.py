@@ -26,14 +26,14 @@ from vista.wms.wms_client import WMSClient, WMSTileCache
 from vista.wms.wms_tile_fetcher import WMSTileFetcherThread
 
 # Performance monitoring (enabled via environment variable)
-ENABLE_PERF_MONITORING = os.environ.get('VISTA_PERF_MONITOR', '0') == '1'
+ENABLE_PERF_MONITORING = os.environ.get("VISTA_PERF_MONITOR", "0") == "1"
 
 
 class CustomViewBox(pg.ViewBox):
     """Custom ViewBox to add Draw AOI to context menu"""
 
     def __init__(self, *args, **kwargs):
-        self.imagery_viewer = kwargs.pop('imagery_viewer', None)
+        self.imagery_viewer = kwargs.pop("imagery_viewer", None)
         super().__init__(*args, **kwargs)
 
     def raiseContextMenu(self, ev):
@@ -240,12 +240,12 @@ class ImageryViewer(QWidget):
         self.plot_item.addItem(self.image_item)
 
         # Create geolocation text overlay using TextItem positioned in scene coordinates
-        self.geolocation_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
+        self.geolocation_text = pg.TextItem(text="", color="yellow", anchor=(1, 1))
         self.geolocation_text.setVisible(False)
         self.plot_item.addItem(self.geolocation_text, ignoreBounds=True)
 
         # Create pixel value text overlay using TextItem positioned in scene coordinates
-        self.pixel_value_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
+        self.pixel_value_text = pg.TextItem(text="", color="yellow", anchor=(1, 1))
         self.pixel_value_text.setVisible(False)
         self.plot_item.addItem(self.pixel_value_text, ignoreBounds=True)
 
@@ -269,7 +269,7 @@ class ImageryViewer(QWidget):
         self.hist_widget.setMaximumHeight(150)
 
         # Create HistogramLUTItem and set it to horizontal orientation
-        self.histogram = pg.HistogramLUTItem(orientation='horizontal')
+        self.histogram = pg.HistogramLUTItem(orientation="horizontal")
         self.hist_widget.addItem(self.histogram)
 
         # Link the histogram to the image item
@@ -734,8 +734,8 @@ class ImageryViewer(QWidget):
             # Apply label filter if detections panel has active filters
             if np.any(det_mask):
                 try:
-                    if hasattr(self, 'data_manager') and self.data_manager is not None:
-                        if hasattr(self.data_manager, 'detections_panel'):
+                    if hasattr(self, "data_manager") and self.data_manager is not None:
+                        if hasattr(self.data_manager, "detections_panel"):
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
                             det_mask &= label_mask
                 except AttributeError:
@@ -1246,7 +1246,7 @@ class ImageryViewer(QWidget):
         lasso_polygon = Polygon(self.lasso_points)
 
         # Find contained items
-        selected_items = {'tracks': [], 'detections': [], 'aois': [], 'features': []}
+        selected_items = {"tracks": [], "detections": [], "aois": [], "features": []}
 
         _map_mode = self.map_view_mode
 
@@ -1279,7 +1279,7 @@ class ImageryViewer(QWidget):
                     break
 
             if all_contained:
-                selected_items['tracks'].append(track)
+                selected_items["tracks"].append(track)
 
         # Check detections (visible detections based on complete mode)
         for detector in self.detectors:
@@ -1303,8 +1303,8 @@ class ImageryViewer(QWidget):
             # Apply label filter if detections panel has active filters
             if len(rows) > 0:
                 try:
-                    if hasattr(self, 'data_manager') and self.data_manager is not None:
-                        if hasattr(self.data_manager, 'detections_panel'):
+                    if hasattr(self, "data_manager") and self.data_manager is not None:
+                        if hasattr(self.data_manager, "detections_panel"):
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
                             if detector.complete:
                                 # For complete mode, just apply label filter
@@ -1342,7 +1342,7 @@ class ImageryViewer(QWidget):
                 if not np.isnan(x) and not np.isnan(y) and lasso_polygon.contains(Point(x, y)):
                     # Store as (detector, frame, original_index)
                     detection_frame = detector.frames[indices[i]]
-                    selected_items['detections'].append((detector, int(detection_frame), int(indices[i])))
+                    selected_items["detections"].append((detector, int(detection_frame), int(indices[i])))
 
         # Check AOIs (wholly contained = ALL 4 corners inside) — skip in map view (AOIs are pixel-space)
         if not _map_mode:
@@ -1360,7 +1360,7 @@ class ImageryViewer(QWidget):
 
                 all_contained = all(lasso_polygon.contains(Point(corner)) for corner in corners)
                 if all_contained:
-                    selected_items['aois'].append(aoi)
+                    selected_items["aois"].append(aoi)
 
         # Check features (placemarks and shapefiles)
         for feature in self.features:
@@ -1370,22 +1370,22 @@ class ImageryViewer(QWidget):
             if isinstance(feature, PlacemarkFeature):
                 if _map_mode:
                     # Use geographic coordinates directly
-                    lon = feature.geometry.get('lon')
-                    lat = feature.geometry.get('lat')
+                    lon = feature.geometry.get("lon")
+                    lat = feature.geometry.get("lat")
                     if lon is not None and lat is not None:
                         if lasso_polygon.contains(Point(lon, lat)):
-                            selected_items['features'].append(feature)
+                            selected_items["features"].append(feature)
                 else:
                     # Use pixel coordinates
-                    row = feature.geometry.get('row')
-                    col = feature.geometry.get('col')
+                    row = feature.geometry.get("row")
+                    col = feature.geometry.get("col")
                     if row is not None and col is not None:
                         if lasso_polygon.contains(Point(col, row)):
-                            selected_items['features'].append(feature)
+                            selected_items["features"].append(feature)
 
             elif isinstance(feature, ShapefileFeature):
                 # Shapefile points are geographic (lon, lat) — same coords used in map view
-                shapes = feature.geometry.get('shapes', [])
+                shapes = feature.geometry.get("shapes", [])
                 all_contained = True
                 has_points = False
 
@@ -1421,7 +1421,7 @@ class ImageryViewer(QWidget):
                         all_contained = False
 
                 if has_points and all_contained:
-                    selected_items['features'].append(feature)
+                    selected_items["features"].append(feature)
 
         # Clear lasso visual
         self._clear_lasso()
@@ -1430,11 +1430,11 @@ class ImageryViewer(QWidget):
         self.lasso_selection_completed.emit(selected_items)
 
         # Also update track selection in viewer
-        track_ids = {track.uuid for track in selected_items['tracks']}
+        track_ids = {track.uuid for track in selected_items["tracks"]}
         self.set_selected_tracks(track_ids)
 
         # Update detection selection
-        self.selected_detections = selected_items['detections']
+        self.selected_detections = selected_items["detections"]
         self._update_selected_detections_display()
 
     def on_mouse_moved(self, pos):
@@ -1459,7 +1459,7 @@ class ImageryViewer(QWidget):
                         chip_position = self.extraction_editor.get_current_chip_position()
                         if chip_position is not None:
                             chip_top, chip_left = chip_position
-                            chip_size = self.extraction_editor.working_extraction['chip_size']
+                            chip_size = self.extraction_editor.working_extraction["chip_size"]
 
                             # Convert to chip coordinates
                             chip_row = int(row - chip_top)
@@ -1639,7 +1639,7 @@ class ImageryViewer(QWidget):
         pos = (center_x - default_width // 2, center_y - default_height // 2)
         size = (default_width, default_height)
 
-        roi = pg.RectROI(pos, size, pen=pg.mkPen('y', width=2), snapSize=1.0)
+        roi = pg.RectROI(pos, size, pen=pg.mkPen("y", width=2), snapSize=1.0)
         self.plot_item.addItem(roi)
 
         # Set as drawing ROI temporarily
@@ -1686,7 +1686,7 @@ class ImageryViewer(QWidget):
             name = f"AOI {aoi_num}"
 
         # Create AOI object with integer coordinates
-        aoi = AOI(name=name, x=int(pos.x()), y=int(pos.y()), width=int(size.x()), height=int(size.y()), color='y')
+        aoi = AOI(name=name, x=int(pos.x()), y=int(pos.y()), width=int(size.x()), height=int(size.y()), color="y")
 
         # Store references
         aoi._roi_item = roi
@@ -1694,7 +1694,7 @@ class ImageryViewer(QWidget):
         self.aois.append(aoi)
 
         # Add text label
-        text_item = pg.TextItem(text=aoi.name, color='y', anchor=(0, 0))
+        text_item = pg.TextItem(text=aoi.name, color="y", anchor=(0, 0))
         text_item.setPos(pos.x(), pos.y())
         self.plot_item.addItem(text_item)
         aoi._text_item = text_item
@@ -1797,9 +1797,9 @@ class ImageryViewer(QWidget):
             # Enable/disable handles (resizing)
             for handle in aoi._roi_item.getHandles():
                 # In PyQtGraph 0.13.7, handles are Handle objects with a direct reference
-                if hasattr(handle, 'setVisible'):
+                if hasattr(handle, "setVisible"):
                     handle.setVisible(selectable)
-                elif hasattr(handle, 'item'):
+                elif hasattr(handle, "item"):
                     # Fallback for different PyQtGraph versions
                     handle.item.setVisible(selectable)
 
@@ -1910,22 +1910,22 @@ class ImageryViewer(QWidget):
             return
 
         geometry = feature.geometry
-        if not geometry or 'row' not in geometry or 'col' not in geometry:
+        if not geometry or "row" not in geometry or "col" not in geometry:
             return
 
         # In map view, use geographic coordinates if available
-        if self.map_view_mode and geometry.get('lon') is not None and geometry.get('lat') is not None:
-            x_pos = geometry['lon']
-            y_pos = geometry['lat']
+        if self.map_view_mode and geometry.get("lon") is not None and geometry.get("lat") is not None:
+            x_pos = geometry["lon"]
+            y_pos = geometry["lat"]
         else:
-            x_pos = geometry['col']
-            y_pos = geometry['row']
+            x_pos = geometry["col"]
+            y_pos = geometry["row"]
 
         color = pg.mkColor(feature.color)
 
         # Create a larger marker for the placemark
         scatter_item = pg.ScatterPlotItem(
-            x=[x_pos], y=[y_pos], size=12, pen=pg.mkPen(color, width=2), brush=pg.mkBrush(color), symbol='o'
+            x=[x_pos], y=[y_pos], size=12, pen=pg.mkPen(color, width=2), brush=pg.mkBrush(color), symbol="o"
         )
         self.plot_item.addItem(scatter_item)
         feature._plot_items.append(scatter_item)
@@ -1974,10 +1974,10 @@ class ImageryViewer(QWidget):
             return
 
         geometry = feature.geometry
-        if not geometry or 'shapes' not in geometry:
+        if not geometry or "shapes" not in geometry:
             return
 
-        shapes = geometry['shapes']
+        shapes = geometry["shapes"]
         color = pg.mkColor(feature.color)
 
         # In pixel view, batch-convert all shapefile points from geo to pixel
@@ -2030,7 +2030,7 @@ class ImageryViewer(QWidget):
 
             # Handle polygon shapes (5 = Polygon, 15 = PolygonZ, 25 = PolygonM)
             if shape_type in [5, 15, 25]:
-                parts = list(shape.parts) if hasattr(shape, 'parts') else [0]
+                parts = list(shape.parts) if hasattr(shape, "parts") else [0]
                 parts = parts + [n_points]
 
                 for i in range(len(parts) - 1):
@@ -2058,7 +2058,7 @@ class ImageryViewer(QWidget):
 
             # Handle polyline shapes (3 = PolyLine, 13 = PolyLineZ, 23 = PolyLineM)
             elif shape_type in [3, 13, 23]:
-                parts = list(shape.parts) if hasattr(shape, 'parts') else [0]
+                parts = list(shape.parts) if hasattr(shape, "parts") else [0]
                 parts = parts + [n_points]
 
                 for i in range(len(parts) - 1):
@@ -2255,8 +2255,8 @@ class ImageryViewer(QWidget):
         track_idx = np.where(frame_mask)[0][0]
 
         # Get signal mask for this track point
-        signal_mask = track.extraction_metadata['signal_masks'][track_idx]
-        chip_size = track.extraction_metadata['chip_size']
+        signal_mask = track.extraction_metadata["signal_masks"][track_idx]
+        chip_size = track.extraction_metadata["chip_size"]
 
         # Create RGBA overlay (red for signal pixels)
         overlay = np.zeros((chip_size, chip_size, 4), dtype=np.uint8)
@@ -2538,7 +2538,7 @@ class ImageryViewer(QWidget):
             # Notify parent (main window) that dialog was created
             # so it can connect to visibility signals
             parent_window = self.window()
-            if hasattr(parent_window, 'on_point_selection_dialog_created'):
+            if hasattr(parent_window, "on_point_selection_dialog_created"):
                 parent_window.on_point_selection_dialog_created()
         self.point_selection_dialog.show()
         self.point_selection_dialog.raise_()
@@ -2605,7 +2605,7 @@ class ImageryViewer(QWidget):
 
         # Get parameters from dialog
         params = self.point_selection_dialog.get_parameters()
-        mode = params.pop('mode')  # Remove mode from params to avoid duplicate keyword argument
+        mode = params.pop("mode")  # Remove mode from params to avoid duplicate keyword argument
 
         # Call refine_point with appropriate parameters
         try:
@@ -2632,7 +2632,7 @@ class ImageryViewer(QWidget):
                         # Create visual feedback item
                         if self.lasso_plot_item is None:
                             self.lasso_plot_item = pg.PlotCurveItem(
-                                pen=pg.mkPen('y', width=2, style=Qt.PenStyle.DashLine)
+                                pen=pg.mkPen("y", width=2, style=Qt.PenStyle.DashLine)
                             )
                             self.plot_item.addItem(self.lasso_plot_item)
                     else:
@@ -2761,7 +2761,7 @@ class ImageryViewer(QWidget):
                     return
 
                 chip_top, chip_left = chip_position
-                chip_size = self.extraction_editor.working_extraction['chip_size']
+                chip_size = self.extraction_editor.working_extraction["chip_size"]
 
                 # Convert click position to chip coordinates
                 chip_row = int(row - chip_top)
@@ -2776,7 +2776,7 @@ class ImageryViewer(QWidget):
             elif self.track_selection_mode:
                 # Find the closest track to the click position
                 closest_track = None
-                closest_distance = float('inf')
+                closest_distance = float("inf")
 
                 for track in self.tracks:
                     if not track.visible:
@@ -2827,7 +2827,7 @@ class ImageryViewer(QWidget):
             # Handle detection selection
             elif self.detection_selection_mode:
                 closest_detection = None
-                closest_distance = float('inf')
+                closest_distance = float("inf")
 
                 for detector in self.detectors:
                     if not detector.visible:
@@ -2855,8 +2855,8 @@ class ImageryViewer(QWidget):
                     # Apply label filter if detections panel has active filters
                     if len(rows) > 0:
                         try:
-                            if hasattr(self, 'data_manager') and self.data_manager is not None:
-                                if hasattr(self.data_manager, 'detections_panel'):
+                            if hasattr(self, "data_manager") and self.data_manager is not None:
+                                if hasattr(self.data_manager, "detections_panel"):
                                     label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(
                                         detector
                                     )
@@ -2974,10 +2974,10 @@ class ImageryViewer(QWidget):
             other_plot = pg.ScatterPlotItem(
                 x=np.array(other_frame_x),
                 y=np.array(other_frame_y),
-                pen=pg.mkPen('m', width=1),
-                brush=pg.mkBrush('m'),
+                pen=pg.mkPen("m", width=1),
+                brush=pg.mkBrush("m"),
                 size=6,  # Smaller size for other frames
-                symbol='o',
+                symbol="o",
             )
             self.plot_item.addItem(other_plot)
             plots.append(other_plot)
@@ -2987,10 +2987,10 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_x),
                 y=np.array(current_frame_y),
-                pen=pg.mkPen('m', width=2),
-                brush=pg.mkBrush('m'),
+                pen=pg.mkPen("m", width=2),
+                brush=pg.mkBrush("m"),
                 size=14,  # Larger size for current frame
-                symbol='o',
+                symbol="o",
             )
             self.plot_item.addItem(current_plot)
             plots.append(current_plot)
@@ -3035,10 +3035,10 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_x),
                 y=np.array(current_frame_y),
-                pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
-                brush=pg.mkBrush('c'),
+                pen=pg.mkPen("c", width=2),  # Cyan color to distinguish from tracks
+                brush=pg.mkBrush("c"),
                 size=14,  # Larger size for visibility
-                symbol='o',
+                symbol="o",
             )
             self.plot_item.addItem(current_plot)
             self.temp_detection_plot = current_plot
@@ -3095,10 +3095,10 @@ class ImageryViewer(QWidget):
             other_plot = pg.ScatterPlotItem(
                 x=np.array(other_frame_x),
                 y=np.array(other_frame_y),
-                pen=pg.mkPen('m', width=2),  # Dark purple border
+                pen=pg.mkPen("m", width=2),  # Dark purple border
                 brush=None,  # No fill, just border
                 size=10,  # Smaller size for other frames
-                symbol='o',
+                symbol="o",
             )
             self.plot_item.addItem(other_plot)
             plots.append(other_plot)
@@ -3108,10 +3108,10 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_x),
                 y=np.array(current_frame_y),
-                pen=pg.mkPen('m', width=3),  # Thick dark purple border
+                pen=pg.mkPen("m", width=3),  # Thick dark purple border
                 brush=None,  # No fill, just border
                 size=16,  # Larger size for current frame
-                symbol='o',
+                symbol="o",
             )
             self.plot_item.addItem(current_plot)
             plots.append(current_plot)
@@ -3185,8 +3185,8 @@ class ImageryViewer(QWidget):
 
             # Switch axes to lon/lat
             self.plot_item.invertY(False)
-            self.plot_item.setLabel('bottom', 'Longitude (deg)')
-            self.plot_item.setLabel('left', 'Latitude (deg)')
+            self.plot_item.setLabel("bottom", "Longitude (deg)")
+            self.plot_item.setLabel("left", "Latitude (deg)")
 
             # Hide the normal image display
             self.image_item.setVisible(False)
@@ -3294,8 +3294,8 @@ class ImageryViewer(QWidget):
 
             # Restore pixel coordinate axes
             self.plot_item.invertY(True)
-            self.plot_item.setLabel('bottom', '')
-            self.plot_item.setLabel('left', '')
+            self.plot_item.setLabel("bottom", "")
+            self.plot_item.setLabel("left", "")
 
             # Restore the normal image display
             self.image_item.setVisible(True)
@@ -3707,13 +3707,13 @@ class ImageryViewer(QWidget):
         """
         sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
         if sensor is None or not sensor.can_geolocate():
-            return float('nan'), float('nan')
+            return float("nan"), float("nan")
 
         earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
         rows, cols = sensor.geodetic_to_pixel(self.current_frame_number, earth_loc)
         if len(rows) > 0 and not np.isnan(rows[0]) and not np.isnan(cols[0]):
             return float(rows[0]), float(cols[0])
-        return float('nan'), float('nan')
+        return float("nan"), float("nan")
 
     def _pixel_to_map(self, row: float, col: float) -> tuple[float, float]:
         """Convert pixel (row, col) to map view coordinates (lon, lat).
@@ -3732,11 +3732,11 @@ class ImageryViewer(QWidget):
         """
         sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
         if sensor is None or not sensor.can_geolocate():
-            return float('nan'), float('nan')
+            return float("nan"), float("nan")
 
         locations = sensor.pixel_to_geodetic(self.current_frame_number, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
         if not np.isnan(lon) and not np.isnan(lat):
             return lon, lat
-        return float('nan'), float('nan')
+        return float("nan"), float("nan")

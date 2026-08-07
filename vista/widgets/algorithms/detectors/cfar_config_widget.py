@@ -38,7 +38,7 @@ class NeighborhoodVisualization(QLabel):
         super().__init__(parent)
         self.background_radius = 10
         self.ignore_radius = 3
-        self.annulus_shape = 'circular'
+        self.annulus_shape = "circular"
         self.setMinimumSize(200, 200)
         self.setMaximumSize(200, 200)
 
@@ -103,7 +103,7 @@ class NeighborhoodVisualization(QLabel):
         painter.setPen(QPen(QColor(100, 100, 200), 2))
         painter.setBrush(QColor(150, 150, 255, 100))
 
-        if self.annulus_shape == 'square':
+        if self.annulus_shape == "square":
             painter.drawRect(
                 center_x - background_size // 2, center_y - background_size // 2, background_size, background_size
             )
@@ -117,7 +117,7 @@ class NeighborhoodVisualization(QLabel):
         painter.setPen(QPen(QColor(200, 100, 100), 2))
         painter.setBrush(QColor(240, 240, 240))
 
-        if self.annulus_shape == 'square':
+        if self.annulus_shape == "square":
             painter.drawRect(center_x - ignore_size // 2, center_y - ignore_size // 2, ignore_size, ignore_size)
         else:  # circular
             painter.drawEllipse(center_x - ignore_size // 2, center_y - ignore_size // 2, ignore_size, ignore_size)
@@ -411,18 +411,18 @@ class CFARConfigWidget(QWidget):
             - 'max_area' : int (if show_area_filters is True)
         """
         params = {
-            'background_radius': self.background_spinbox.value(),
-            'ignore_radius': self.ignore_spinbox.value(),
-            'threshold_deviation': self.threshold_spinbox.value(),
-            'annulus_shape': self.shape_combo.currentData(),
+            "background_radius": self.background_spinbox.value(),
+            "ignore_radius": self.ignore_spinbox.value(),
+            "threshold_deviation": self.threshold_spinbox.value(),
+            "annulus_shape": self.shape_combo.currentData(),
         }
 
         if self.show_detection_mode:
-            params['detection_mode'] = self.mode_combo.currentData()
+            params["detection_mode"] = self.mode_combo.currentData()
 
         if self.show_area_filters:
-            params['min_area'] = self.min_area_spinbox.value()
-            params['max_area'] = self.max_area_spinbox.value()
+            params["min_area"] = self.min_area_spinbox.value()
+            params["max_area"] = self.max_area_spinbox.value()
 
         return params
 
@@ -442,30 +442,30 @@ class CFARConfigWidget(QWidget):
             - 'min_area' : int (only if show_area_filters is True)
             - 'max_area' : int (only if show_area_filters is True)
         """
-        if 'background_radius' in params:
-            self.background_spinbox.setValue(params['background_radius'])
-        if 'ignore_radius' in params:
-            self.ignore_spinbox.setValue(params['ignore_radius'])
-        if 'threshold_deviation' in params:
-            self.threshold_spinbox.setValue(params['threshold_deviation'])
+        if "background_radius" in params:
+            self.background_spinbox.setValue(params["background_radius"])
+        if "ignore_radius" in params:
+            self.ignore_spinbox.setValue(params["ignore_radius"])
+        if "threshold_deviation" in params:
+            self.threshold_spinbox.setValue(params["threshold_deviation"])
 
-        if 'annulus_shape' in params:
+        if "annulus_shape" in params:
             for i in range(self.shape_combo.count()):
-                if self.shape_combo.itemData(i) == params['annulus_shape']:
+                if self.shape_combo.itemData(i) == params["annulus_shape"]:
                     self.shape_combo.setCurrentIndex(i)
                     break
 
-        if self.show_detection_mode and 'detection_mode' in params:
+        if self.show_detection_mode and "detection_mode" in params:
             for i in range(self.mode_combo.count()):
-                if self.mode_combo.itemData(i) == params['detection_mode']:
+                if self.mode_combo.itemData(i) == params["detection_mode"]:
                     self.mode_combo.setCurrentIndex(i)
                     break
 
         if self.show_area_filters:
-            if 'min_area' in params:
-                self.min_area_spinbox.setValue(params['min_area'])
-            if 'max_area' in params:
-                self.max_area_spinbox.setValue(params['max_area'])
+            if "min_area" in params:
+                self.min_area_spinbox.setValue(params["min_area"])
+            if "max_area" in params:
+                self.max_area_spinbox.setValue(params["max_area"])
 
     def get_config(self):
         """

@@ -30,8 +30,8 @@ class SimpleThresholdWidget(BaseDetectorWidget):
             settings_name="SimpleThreshold",
             window_title="Simple Threshold Detector",
             description=description,
-            default_color='r',
-            default_marker='o',
+            default_color="r",
+            default_marker="o",
             default_marker_size=12,
         )
 
@@ -131,10 +131,10 @@ class SimpleThresholdWidget(BaseDetectorWidget):
     def build_algorithm_params(self):
         """Build parameter dictionary for Simple Threshold algorithm"""
         return {
-            'threshold': self.threshold_spinbox.value(),
-            'min_area': self.min_area_spinbox.value(),
-            'max_area': self.max_area_spinbox.value(),
-            'detection_mode': self.mode_combo.currentData(),
+            "threshold": self.threshold_spinbox.value(),
+            "min_area": self.min_area_spinbox.value(),
+            "max_area": self.max_area_spinbox.value(),
+            "detection_mode": self.mode_combo.currentData(),
         }
 
     def validate_parameters(self):

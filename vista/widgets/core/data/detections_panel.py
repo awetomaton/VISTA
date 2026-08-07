@@ -44,7 +44,7 @@ from vista.widgets.core.data.draggable_table import DraggableRowTableWidget
 from vista.widgets.core.data.labels_manager import LabelsManagerDialog
 from vista.widgets.core.data.undo_manager import UndoStack
 
-_CSV_EXTENSIONS = ('.csv',)
+_CSV_EXTENSIONS = (".csv",)
 
 
 class DetectionsPanel(QWidget):
@@ -101,12 +101,12 @@ class DetectionsPanel(QWidget):
         # Color button
         self.bulk_color_btn = QPushButton("Choose Color")
         self.bulk_color_btn.clicked.connect(self.choose_bulk_color)
-        self.bulk_color = QColor('green')  # Default color
+        self.bulk_color = QColor("green")  # Default color
         bulk_layout.addWidget(self.bulk_color_btn)
 
         # Marker dropdown
         self.bulk_marker_combo = QComboBox()
-        self.bulk_marker_combo.addItems(['o', 's', 't', 'd', '+', 'x', 'star'])
+        self.bulk_marker_combo.addItems(["o", "s", "t", "d", "+", "x", "star"])
         bulk_layout.addWidget(self.bulk_marker_combo)
 
         # Marker Size spinbox
@@ -398,7 +398,7 @@ class DetectionsPanel(QWidget):
 
                     # Labels - show unique labels for this detector (across all detections)
                     unique_labels = detector.get_unique_labels()
-                    labels_text = ', '.join(sorted(unique_labels)) if unique_labels else ''
+                    labels_text = ", ".join(sorted(unique_labels)) if unique_labels else ""
                     labels_item = QTableWidgetItem(labels_text)
                     labels_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Read-only
                     self.detections_table.setItem(row, 2, labels_item)
@@ -409,7 +409,7 @@ class DetectionsPanel(QWidget):
                     color = pg_color_to_qcolor(detector.color)
                     if not color.isValid():
                         print(f"Warning: Invalid color '{detector.color}' for detector '{detector.name}', using red")
-                        color = QColor('red')
+                        color = QColor("red")
                     color_item.setBackground(QBrush(color))
                     color_item.setData(Qt.ItemDataRole.UserRole, detector.color)  # Store original color string
                     self.detections_table.setItem(row, 3, color_item)
@@ -468,11 +468,11 @@ class DetectionsPanel(QWidget):
                 if not filter_config:
                     continue
 
-                filter_type = filter_config.get('type', 'set')
-                filter_values = filter_config.get('values')
+                filter_type = filter_config.get("type", "set")
+                filter_values = filter_config.get("values")
 
                 if col_idx == 2:  # Labels column
-                    if filter_type == 'set':
+                    if filter_type == "set":
                         no_labels_selected = "(No Labels)" in filter_values
                         label_filter_values = filter_values - {"(No Labels)"}
 
@@ -595,7 +595,7 @@ class DetectionsPanel(QWidget):
 
         # Get current filter
         current_filter = self.detection_column_filters.get(column, {})
-        current_values = current_filter.get('values', set()) if current_filter else set()
+        current_values = current_filter.get("values", set()) if current_filter else set()
 
         # Create checkboxes
         checkboxes = {}
@@ -642,10 +642,10 @@ class DetectionsPanel(QWidget):
                 if column in self.detection_column_filters:
                     del self.detection_column_filters[column]
             else:
-                self.detection_column_filters[column] = {'type': 'set', 'values': selected_values}
+                self.detection_column_filters[column] = {"type": "set", "values": selected_values}
             self.refresh_detections_table()
             # Update viewer to apply the new filter
-            if hasattr(self.viewer, 'update_detection_display'):
+            if hasattr(self.viewer, "update_detection_display"):
                 self.viewer.update_detection_display()
 
     def clear_detection_column_filter(self, column):
@@ -654,7 +654,7 @@ class DetectionsPanel(QWidget):
             del self.detection_column_filters[column]
             self.refresh_detections_table()
             # Update viewer to remove the filter
-            if hasattr(self.viewer, 'update_detection_display'):
+            if hasattr(self.viewer, "update_detection_display"):
                 self.viewer.update_detection_display()
 
     def clear_detection_filters(self):
@@ -662,7 +662,7 @@ class DetectionsPanel(QWidget):
         self.detection_column_filters.clear()
         self.refresh_detections_table()
         # Update viewer to show all detections
-        if hasattr(self.viewer, 'update_detection_display'):
+        if hasattr(self.viewer, "update_detection_display"):
             self.viewer.update_detection_display()
 
     def _on_detection_column_visibility_toggled(self):
@@ -776,7 +776,7 @@ class DetectionsPanel(QWidget):
         if not filter_config:
             return np.ones(len(detector.frames), dtype=bool)
 
-        filter_values = filter_config.get('values')
+        filter_values = filter_config.get("values")
         if not filter_values:
             return np.ones(len(detector.frames), dtype=bool)
 
@@ -1240,7 +1240,7 @@ class DetectionsPanel(QWidget):
         if checked:
             # Deactivate all other interactive modes
             main_window = self.window()
-            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+            if hasattr(main_window, "deactivate_all_interactive_modes"):
                 main_window.deactivate_all_interactive_modes(except_action="edit_detector")
 
             # Get the selected detector
@@ -1272,9 +1272,9 @@ class DetectionsPanel(QWidget):
             # Start detector editing mode
             self.viewer.start_detection_editing(detector)
             # Update main window status
-            if hasattr(self.parent(), 'parent'):
+            if hasattr(self.parent(), "parent"):
                 main_window = self.parent().parent()
-                if hasattr(main_window, 'statusBar'):
+                if hasattr(main_window, "statusBar"):
                     main_window.statusBar().showMessage(
                         f"Detector editing mode: Click to add detections or click existing detections to remove them for '{detector.name}'. Only current frame shown. Uncheck 'Edit Detector' when finished.",
                         0,
@@ -1285,12 +1285,12 @@ class DetectionsPanel(QWidget):
             if edited_detector:
                 # Refresh the panel (need to access parent's refresh method)
                 parent = self.parent()
-                if parent and hasattr(parent, 'refresh'):
+                if parent and hasattr(parent, "refresh"):
                     parent.refresh()
                 # Update main window status
-                if hasattr(self.parent(), 'parent'):
+                if hasattr(self.parent(), "parent"):
                     main_window = self.parent().parent()
-                    if hasattr(main_window, 'statusBar'):
+                    if hasattr(main_window, "statusBar"):
                         total_detections = len(edited_detector.frames)
                         unique_frames = len(np.unique(edited_detector.frames))
                         main_window.statusBar().showMessage(
@@ -1299,9 +1299,9 @@ class DetectionsPanel(QWidget):
                         )
             else:
                 # Update main window status
-                if hasattr(self.parent(), 'parent'):
+                if hasattr(self.parent(), "parent"):
                     main_window = self.parent().parent()
-                    if hasattr(main_window, 'statusBar'):
+                    if hasattr(main_window, "statusBar"):
                         main_window.statusBar().showMessage("Detector editing cancelled", 3000)
 
     def export_detections(self):
@@ -1516,7 +1516,7 @@ class DetectionsPanel(QWidget):
             self.data_changed.emit()
 
             # Update viewer display if filters are active
-            if self.detection_column_filters and hasattr(self.viewer, 'update_detection_display'):
+            if self.detection_column_filters and hasattr(self.viewer, "update_detection_display"):
                 self.viewer.update_detection_display()
 
             QMessageBox.information(
@@ -1559,16 +1559,16 @@ class DetectionsPanel(QWidget):
         detector_indices = {}
         for detector, frame, index in self.selected_detections:
             if detector.uuid not in detector_indices:
-                detector_indices[detector.uuid] = {'detector': detector, 'indices': []}
-            detector_indices[detector.uuid]['indices'].append(index)
+                detector_indices[detector.uuid] = {"detector": detector, "indices": []}
+            detector_indices[detector.uuid]["indices"].append(index)
 
         # Delete points from each detector (in reverse order to preserve indices)
         total_deleted = 0
         detectors_to_remove = []
 
         for detector_uuid, data in detector_indices.items():
-            detector = data['detector']
-            indices_to_delete = sorted(data['indices'], reverse=True)
+            detector = data["detector"]
+            indices_to_delete = sorted(data["indices"], reverse=True)
 
             # Create mask for points to keep
             keep_mask = np.ones(len(detector.frames), dtype=bool)
@@ -1688,7 +1688,7 @@ class DetectionsPanel(QWidget):
         # Get the tracks panel from the parent data manager
         parent_widget = self.parent()
         while parent_widget is not None:
-            if hasattr(parent_widget, 'tracks_panel'):
+            if hasattr(parent_widget, "tracks_panel"):
                 parent_widget.tracks_panel.refresh_tracks_table()
                 break
             parent_widget = parent_widget.parent()
@@ -1713,7 +1713,7 @@ class DetectionsPanel(QWidget):
         # Deactivate lasso mode if active - it interferes with track selection clicks
         # We don't deactivate all modes because detection selection mode should remain active
         main_window = self.window()
-        if hasattr(main_window, 'lasso_select_action') and main_window.lasso_select_action.isChecked():
+        if hasattr(main_window, "lasso_select_action") and main_window.lasso_select_action.isChecked():
             main_window.lasso_select_action.blockSignals(True)
             main_window.lasso_select_action.setChecked(False)
             main_window.lasso_select_action.blockSignals(False)
@@ -1731,7 +1731,7 @@ class DetectionsPanel(QWidget):
 
         # Show status message
         main_window = QApplication.instance().activeWindow()
-        if hasattr(main_window, 'statusBar'):
+        if hasattr(main_window, "statusBar"):
             main_window.statusBar().showMessage("Click on a track in the viewer to add selected detections to it", 0)
 
     def cancel_add_to_existing_track(self):
@@ -1750,7 +1750,7 @@ class DetectionsPanel(QWidget):
 
         # Clear status message
         main_window = QApplication.instance().activeWindow()
-        if hasattr(main_window, 'statusBar'):
+        if hasattr(main_window, "statusBar"):
             main_window.statusBar().showMessage("Add to track cancelled", 3000)
 
     def on_track_selected_for_adding_detections(self, track):
@@ -1851,7 +1851,7 @@ class DetectionsPanel(QWidget):
 
         # Turn off the toolbar action
         main_window = QApplication.instance().activeWindow()
-        if hasattr(main_window, 'select_detections_action'):
+        if hasattr(main_window, "select_detections_action"):
             main_window.select_detections_action.setChecked(False)
 
     def merge_detections(self):

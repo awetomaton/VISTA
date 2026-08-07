@@ -283,7 +283,7 @@ class OrderByDialog(QDialog):
         return result
 
 
-_CSV_EXTENSIONS = ('.csv',)
+_CSV_EXTENSIONS = (".csv",)
 
 
 class TracksPanel(QWidget):
@@ -366,12 +366,12 @@ class TracksPanel(QWidget):
         # Color button
         self.bulk_color_btn = QPushButton("Choose Color")
         self.bulk_color_btn.clicked.connect(self.choose_bulk_color)
-        self.bulk_color = QColor('green')  # Default color
+        self.bulk_color = QColor("green")  # Default color
         bulk_layout.addWidget(self.bulk_color_btn)
 
         # Marker dropdown
         self.bulk_marker_combo = QComboBox()
-        self.bulk_marker_combo.addItems(['Circle', 'Square', 'Triangle', 'Diamond', 'Plus', 'Cross', 'Star'])
+        self.bulk_marker_combo.addItems(["Circle", "Square", "Triangle", "Diamond", "Plus", "Cross", "Star"])
         bulk_layout.addWidget(self.bulk_marker_combo)
 
         # Line Width spinbox
@@ -384,7 +384,7 @@ class TracksPanel(QWidget):
 
         # Line Style dropdown
         self.bulk_line_style_combo = QComboBox()
-        self.bulk_line_style_combo.addItems(['Solid', 'Dash', 'Dot', 'Dash-Dot', 'Dash-Dot-Dot'])
+        self.bulk_line_style_combo.addItems(["Solid", "Dash", "Dot", "Dash-Dot", "Dash-Dot-Dot"])
         bulk_layout.addWidget(self.bulk_line_style_combo)
 
         # Marker Size spinbox
@@ -783,7 +783,7 @@ class TracksPanel(QWidget):
             self.tracks_table.setItem(row, 2, track_name_item)
 
             # Labels
-            labels_text = ', '.join(sorted(track.labels)) if track.labels else ''
+            labels_text = ", ".join(sorted(track.labels)) if track.labels else ""
             labels_item = QTableWidgetItem(labels_text)
             self.tracks_table.setItem(row, 3, labels_item)
 
@@ -846,9 +846,9 @@ class TracksPanel(QWidget):
             avg_snr_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             if has_extraction:
                 # Calculate average SNR from extraction metadata
-                noise_stds = track.extraction_metadata.get('noise_stds')
-                chips = track.extraction_metadata.get('chips')
-                signal_masks = track.extraction_metadata.get('signal_masks')
+                noise_stds = track.extraction_metadata.get("noise_stds")
+                chips = track.extraction_metadata.get("chips")
+                signal_masks = track.extraction_metadata.get("signal_masks")
                 if noise_stds is not None and chips is not None and signal_masks is not None:
                     # Calculate signal strength for each point
                     snrs = []
@@ -951,8 +951,8 @@ class TracksPanel(QWidget):
                 if not filter_config:
                     continue
 
-                filter_type = filter_config.get('type', 'set')
-                filter_values = filter_config.get('values')
+                filter_type = filter_config.get("type", "set")
+                filter_values = filter_config.get("values")
 
                 # Get the value for this column
                 if col_idx == 0:
@@ -963,7 +963,7 @@ class TracksPanel(QWidget):
                     value = track.name
                 elif col_idx == 3:
                     # For labels, check if any filter labels intersect with track labels
-                    if filter_type == 'set':
+                    if filter_type == "set":
                         # Check if "(No Labels)" is in filter and track has no labels
                         has_no_labels = len(track.labels) == 0
                         no_labels_selected = "(No Labels)" in filter_values
@@ -996,39 +996,39 @@ class TracksPanel(QWidget):
                     continue
 
                 # Apply filter based on type
-                if filter_type == 'set':
+                if filter_type == "set":
                     # Set-based filter (for Visible and Tracker columns)
                     if value not in filter_values:
                         include = False
                         break
-                elif filter_type == 'text':
+                elif filter_type == "text":
                     # Text-based filter (for Name column)
-                    mode = filter_values.get('mode')
-                    text = filter_values.get('text', '').lower()
+                    mode = filter_values.get("mode")
+                    text = filter_values.get("text", "").lower()
                     value_lower = value.lower()
 
-                    if mode == 'equals':
+                    if mode == "equals":
                         if value_lower != text:
                             include = False
                             break
-                    elif mode == 'contains':
+                    elif mode == "contains":
                         if text not in value_lower:
                             include = False
                             break
-                    elif mode == 'not_contains':
+                    elif mode == "not_contains":
                         if text in value_lower:
                             include = False
                             break
-                elif filter_type == 'numeric':
+                elif filter_type == "numeric":
                     # Numeric filter (for Length column)
-                    mode = filter_values.get('mode')
-                    threshold = filter_values.get('value', 0.0)
+                    mode = filter_values.get("mode")
+                    threshold = filter_values.get("value", 0.0)
 
-                    if mode == 'greater':
+                    if mode == "greater":
                         if value <= threshold:
                             include = False
                             break
-                    elif mode == 'less':
+                    elif mode == "less":
                         if value >= threshold:
                             include = False
                             break
@@ -1049,7 +1049,7 @@ class TracksPanel(QWidget):
             elif column == 2:
                 return track.name
             elif column == 3:
-                return ', '.join(sorted(track.labels)) if track.labels else ''
+                return ", ".join(sorted(track.labels)) if track.labels else ""
             elif column == 4:
                 return track.length
             elif column == 10:
@@ -1078,14 +1078,14 @@ class TracksPanel(QWidget):
         float
             The average SNR value, or -inf if not available (sorts to bottom).
         """
-        if not hasattr(track, 'extraction_metadata') or track.extraction_metadata is None:
-            return float('-inf')
+        if not hasattr(track, "extraction_metadata") or track.extraction_metadata is None:
+            return float("-inf")
 
-        noise_stds = track.extraction_metadata.get('noise_stds')
-        signal_pixels = track.extraction_metadata.get('signal_pixels')
+        noise_stds = track.extraction_metadata.get("noise_stds")
+        signal_pixels = track.extraction_metadata.get("signal_pixels")
 
         if noise_stds is None or signal_pixels is None:
-            return float('-inf')
+            return float("-inf")
 
         snrs = []
         for i, pixels in enumerate(signal_pixels):
@@ -1097,7 +1097,7 @@ class TracksPanel(QWidget):
 
         if snrs:
             return np.mean(snrs)
-        return float('-inf')
+        return float("-inf")
 
     def _get_track_sort_value(self, track, column):
         """
@@ -1122,7 +1122,7 @@ class TracksPanel(QWidget):
         elif column == 2:
             return track.name
         elif column == 3:
-            return ', '.join(sorted(track.labels)) if track.labels else ''
+            return ", ".join(sorted(track.labels)) if track.labels else ""
         elif column == 4:
             return track.length
         elif column == 10:
@@ -1392,8 +1392,8 @@ class TracksPanel(QWidget):
 
         # Get current filter
         current_filter = self.track_column_filters.get(column, {})
-        current_mode = current_filter.get('values', {}).get('mode', 'contains') if current_filter else 'contains'
-        current_text = current_filter.get('values', {}).get('text', '') if current_filter else ''
+        current_mode = current_filter.get("values", {}).get("mode", "contains") if current_filter else "contains"
+        current_text = current_filter.get("values", {}).get("text", "") if current_filter else ""
 
         # Radio buttons for filter mode
         mode_group = QButtonGroup(dialog)
@@ -1405,9 +1405,9 @@ class TracksPanel(QWidget):
         mode_group.addButton(contains_radio, 1)
         mode_group.addButton(not_contains_radio, 2)
 
-        if current_mode == 'equals':
+        if current_mode == "equals":
             equals_radio.setChecked(True)
-        elif current_mode == 'contains':
+        elif current_mode == "contains":
             contains_radio.setChecked(True)
         else:
             not_contains_radio.setChecked(True)
@@ -1443,13 +1443,13 @@ class TracksPanel(QWidget):
             else:
                 # Determine mode
                 if equals_radio.isChecked():
-                    mode = 'equals'
+                    mode = "equals"
                 elif contains_radio.isChecked():
-                    mode = 'contains'
+                    mode = "contains"
                 else:
-                    mode = 'not_contains'
+                    mode = "not_contains"
 
-                self.track_column_filters[column] = {'type': 'text', 'values': {'mode': mode, 'text': text}}
+                self.track_column_filters[column] = {"type": "text", "values": {"mode": mode, "text": text}}
             self.refresh_tracks_table()
 
     def _show_numeric_filter_dialog(self, column, column_name):
@@ -1462,8 +1462,8 @@ class TracksPanel(QWidget):
 
         # Get current filter
         current_filter = self.track_column_filters.get(column, {})
-        current_mode = current_filter.get('values', {}).get('mode', 'greater') if current_filter else 'greater'
-        current_value = current_filter.get('values', {}).get('value', 0.0) if current_filter else 0.0
+        current_mode = current_filter.get("values", {}).get("mode", "greater") if current_filter else "greater"
+        current_value = current_filter.get("values", {}).get("value", 0.0) if current_filter else 0.0
 
         # Radio buttons for filter mode
         mode_group = QButtonGroup(dialog)
@@ -1473,7 +1473,7 @@ class TracksPanel(QWidget):
         mode_group.addButton(greater_radio, 0)
         mode_group.addButton(less_radio, 1)
 
-        if current_mode == 'greater':
+        if current_mode == "greater":
             greater_radio.setChecked(True)
         else:
             less_radio.setChecked(True)
@@ -1507,9 +1507,9 @@ class TracksPanel(QWidget):
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             value = value_input.value()
-            mode = 'greater' if greater_radio.isChecked() else 'less'
+            mode = "greater" if greater_radio.isChecked() else "less"
 
-            self.track_column_filters[column] = {'type': 'numeric', 'values': {'mode': mode, 'value': value}}
+            self.track_column_filters[column] = {"type": "numeric", "values": {"mode": mode, "value": value}}
             self.refresh_tracks_table()
 
     def _show_set_filter_dialog(self, column, column_name):
@@ -1553,7 +1553,7 @@ class TracksPanel(QWidget):
 
         # Get current filter
         current_filter = self.track_column_filters.get(column, {})
-        current_values = current_filter.get('values', set()) if current_filter else set()
+        current_values = current_filter.get("values", set()) if current_filter else set()
 
         # Create checkboxes
         checkboxes = {}
@@ -1600,7 +1600,7 @@ class TracksPanel(QWidget):
                 if column in self.track_column_filters:
                     del self.track_column_filters[column]
             else:
-                self.track_column_filters[column] = {'type': 'set', 'values': selected_values}
+                self.track_column_filters[column] = {"type": "set", "values": selected_values}
             self.refresh_tracks_table()
 
     def clear_track_column_filter(self, column):
@@ -1655,7 +1655,7 @@ class TracksPanel(QWidget):
             labels_text = item.text()
             if labels_text:
                 # Parse comma-separated labels
-                track.labels = set(label.strip() for label in labels_text.split(','))
+                track.labels = set(label.strip() for label in labels_text.split(","))
             else:
                 track.labels = set()
             track.label_time = get_current_label_time()
@@ -1838,22 +1838,22 @@ class TracksPanel(QWidget):
 
         # Map marker names to symbols
         marker_map = {
-            'Circle': 'o',
-            'Square': 's',
-            'Triangle': 't',
-            'Diamond': 'd',
-            'Plus': '+',
-            'Cross': 'x',
-            'Star': 'star',
+            "Circle": "o",
+            "Square": "s",
+            "Triangle": "t",
+            "Diamond": "d",
+            "Plus": "+",
+            "Cross": "x",
+            "Star": "star",
         }
 
         # Map line style display names to Qt style names
         line_style_map = {
-            'Solid': 'SolidLine',
-            'Dash': 'DashLine',
-            'Dot': 'DotLine',
-            'Dash-Dot': 'DashDotLine',
-            'Dash-Dot-Dot': 'DashDotDotLine',
+            "Solid": "SolidLine",
+            "Dash": "DashLine",
+            "Dot": "DotLine",
+            "Dash-Dot": "DashDotLine",
+            "Dash-Dot-Dot": "DashDotDotLine",
         }
 
         # Apply to all selected tracks
@@ -1890,14 +1890,14 @@ class TracksPanel(QWidget):
                 track.invalidate_caches()  # Color affects cached pen/brush
             elif property_name == "Marker":
                 marker_name = self.bulk_marker_combo.currentText()
-                track.marker = marker_map.get(marker_name, 'o')
+                track.marker = marker_map.get(marker_name, "o")
                 track.invalidate_caches()  # Marker affects rendering
             elif property_name == "Line Width":
                 track.line_width = self.bulk_line_width_spinbox.value()
                 track.invalidate_caches()  # Line width affects cached pen
             elif property_name == "Line Style":
                 style_name = self.bulk_line_style_combo.currentText()
-                track.line_style = line_style_map.get(style_name, 'SolidLine')
+                track.line_style = line_style_map.get(style_name, "SolidLine")
                 track.invalidate_caches()  # Line style affects cached pen
             elif property_name == "Marker Size":
                 track.marker_size = self.bulk_marker_size_spinbox.value()
@@ -1963,10 +1963,10 @@ class TracksPanel(QWidget):
         combined_df = pd.concat(track_dfs, ignore_index=True)
 
         # Sort by frame to handle overlapping times
-        combined_df = combined_df.sort_values('Frames').reset_index(drop=True)
+        combined_df = combined_df.sort_values("Frames").reset_index(drop=True)
 
         # Remove duplicate frames (keep first occurrence)
-        combined_df = combined_df.drop_duplicates(subset=['Frames'], keep='first')
+        combined_df = combined_df.drop_duplicates(subset=["Frames"], keep="first")
 
         # Use styling from the first track
         first_track = tracks_to_merge[0]
@@ -1981,7 +1981,7 @@ class TracksPanel(QWidget):
             counter += 1
 
         # Update the Track column in the DataFrame to the merged name
-        combined_df['Track'] = merged_name
+        combined_df["Track"] = merged_name
 
         # Merge tracker names
         merged_tracker = " ".join(list(set([track.tracker for track in tracks_to_merge if track.tracker])))
@@ -1990,9 +1990,9 @@ class TracksPanel(QWidget):
         merged_track = Track(
             name=merged_name,
             tracker=merged_tracker,
-            frames=combined_df['Frames'].to_numpy().astype(np.int_),
-            rows=combined_df['Rows'].to_numpy(),
-            columns=combined_df['Columns'].to_numpy(),
+            frames=combined_df["Frames"].to_numpy().astype(np.int_),
+            rows=combined_df["Rows"].to_numpy(),
+            columns=combined_df["Columns"].to_numpy(),
             sensor=first_track.sensor,
             color=first_track.color,
             marker=first_track.marker,
@@ -2335,7 +2335,7 @@ class TracksPanel(QWidget):
                             break
 
         # Disable extraction buttons in map view mode (extraction is pixel-space only)
-        in_map_view = getattr(self.viewer, 'map_view_mode', False)
+        in_map_view = getattr(self.viewer, "map_view_mode", False)
         self.view_extraction_btn.setEnabled(has_extraction and not in_map_view)
         self.edit_extraction_btn.setEnabled(has_extraction and not in_map_view)
 
@@ -2438,7 +2438,7 @@ class TracksPanel(QWidget):
         if checked:
             # Deactivate all other interactive modes
             main_window = self.window()
-            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+            if hasattr(main_window, "deactivate_all_interactive_modes"):
                 main_window.deactivate_all_interactive_modes(except_action="edit_track")
 
             # Get the selected track
@@ -2471,9 +2471,9 @@ class TracksPanel(QWidget):
             # Start track editing mode
             self.viewer.start_track_editing(track)
             # Update main window status
-            if hasattr(self.parent(), 'parent'):
+            if hasattr(self.parent(), "parent"):
                 main_window = self.parent().parent()
-                if hasattr(main_window, 'statusBar'):
+                if hasattr(main_window, "statusBar"):
                     main_window.statusBar().showMessage(
                         f"Track editing mode: Click on frames to add/move track points for '{track.name}'. Uncheck 'Edit Track' when finished.",
                         0,
@@ -2484,20 +2484,20 @@ class TracksPanel(QWidget):
             if edited_track:
                 # Refresh the panel (need to access parent's refresh method)
                 parent = self.parent()
-                if parent and hasattr(parent, 'refresh'):
+                if parent and hasattr(parent, "refresh"):
                     parent.refresh()
                 # Update main window status
-                if hasattr(self.parent(), 'parent'):
+                if hasattr(self.parent(), "parent"):
                     main_window = self.parent().parent()
-                    if hasattr(main_window, 'statusBar'):
+                    if hasattr(main_window, "statusBar"):
                         main_window.statusBar().showMessage(
                             f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points", 3000
                         )
             else:
                 # Update main window status
-                if hasattr(self.parent(), 'parent'):
+                if hasattr(self.parent(), "parent"):
                     main_window = self.parent().parent()
-                    if hasattr(main_window, 'statusBar'):
+                    if hasattr(main_window, "statusBar"):
                         main_window.statusBar().showMessage("Track editing cancelled", 3000)
 
     def manage_labels(self):
@@ -2575,18 +2575,18 @@ class TracksPanel(QWidget):
         for track, results in zip(tracks, results_list):
             # Store extraction metadata in track
             track.extraction_metadata = {
-                'chip_size': results['chips'].shape[1],  # Diameter of chips
-                'chips': results['chips'],
-                'signal_masks': results['signal_masks'],
-                'noise_stds': results['noise_stds'],
+                "chip_size": results["chips"].shape[1],  # Diameter of chips
+                "chips": results["chips"],
+                "signal_masks": results["signal_masks"],
+                "noise_stds": results["noise_stds"],
             }
 
             # Update track coordinates if they were refined
-            if not np.array_equal(track.rows, results['updated_rows']) or not np.array_equal(
-                track.columns, results['updated_columns']
+            if not np.array_equal(track.rows, results["updated_rows"]) or not np.array_equal(
+                track.columns, results["updated_columns"]
             ):
-                track.rows = results['updated_rows']
-                track.columns = results['updated_columns']
+                track.rows = results["updated_rows"]
+                track.columns = results["updated_columns"]
                 track.invalidate_caches()
 
         # Refresh the table and emit data changed signal
@@ -2611,14 +2611,14 @@ class TracksPanel(QWidget):
             self.on_track_selection_changed()
 
         # Auto-enable "View Extraction" if exactly one track was extracted (not in map view)
-        in_map_view = getattr(self.viewer, 'map_view_mode', False)
+        in_map_view = getattr(self.viewer, "map_view_mode", False)
         if len(tracks) == 1 and not self.view_extraction_btn.isChecked() and not in_map_view:
             self.view_extraction_btn.setChecked(True)
             self.on_view_extraction_clicked(True)
 
         # Show status message
         main_window = self.window()
-        if hasattr(main_window, 'statusBar'):
+        if hasattr(main_window, "statusBar"):
             main_window.statusBar().showMessage(f"Successfully extracted {len(tracks)} track(s)", 3000)
 
     def on_view_extraction_clicked(self, checked):
@@ -2626,7 +2626,7 @@ class TracksPanel(QWidget):
         if checked:
             # Deactivate all other interactive modes
             main_window = self.window()
-            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+            if hasattr(main_window, "deactivate_all_interactive_modes"):
                 main_window.deactivate_all_interactive_modes(except_action="view_extraction")
 
             # Get the selected track
@@ -2662,7 +2662,7 @@ class TracksPanel(QWidget):
                 return
 
             # Update main window status
-            if hasattr(main_window, 'statusBar'):
+            if hasattr(main_window, "statusBar"):
                 main_window.statusBar().showMessage(
                     f"Viewing extraction for '{track.name}'. Signal pixels shown in red. Uncheck 'View Extraction' when finished.",
                     0,
@@ -2673,7 +2673,7 @@ class TracksPanel(QWidget):
 
             # Update main window status
             main_window = self.window()
-            if hasattr(main_window, 'statusBar'):
+            if hasattr(main_window, "statusBar"):
                 main_window.statusBar().showMessage("Extraction viewing ended", 3000)
 
     def on_edit_extraction_clicked(self, checked):
@@ -2681,7 +2681,7 @@ class TracksPanel(QWidget):
         if checked:
             # Deactivate all other interactive modes
             main_window = self.window()
-            if hasattr(main_window, 'deactivate_all_interactive_modes'):
+            if hasattr(main_window, "deactivate_all_interactive_modes"):
                 main_window.deactivate_all_interactive_modes(except_action="edit_extraction")
 
             # Get the selected track
@@ -2734,7 +2734,7 @@ class TracksPanel(QWidget):
                 return
 
             # Update main window status
-            if hasattr(main_window, 'statusBar'):
+            if hasattr(main_window, "statusBar"):
                 main_window.statusBar().showMessage(
                     f"Editing extraction for '{track.name}'. Click to paint/erase signal pixels. Use the editor panel to adjust settings.",
                     0,
@@ -2749,7 +2749,7 @@ class TracksPanel(QWidget):
 
             # Update main window status
             main_window = self.window()
-            if hasattr(main_window, 'statusBar'):
+            if hasattr(main_window, "statusBar"):
                 main_window.statusBar().showMessage("Extraction editing ended", 3000)
 
     def on_extraction_editing_ended(self):
@@ -2943,7 +2943,7 @@ class TracksPanel(QWidget):
         # Refresh the detections panel
         parent_widget = self.parent()
         while parent_widget is not None:
-            if hasattr(parent_widget, 'detections_panel'):
+            if hasattr(parent_widget, "detections_panel"):
                 parent_widget.detections_panel.refresh_detections_table()
                 break
             parent_widget = parent_widget.parent()

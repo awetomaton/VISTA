@@ -65,7 +65,7 @@ class BaseTrackingWorker(QThread):
                 return
 
             self.progress_updated.emit("Complete!")
-            self.tracking_complete.emit(track_data_list, self.config['tracker_name'])
+            self.tracking_complete.emit(track_data_list, self.config["tracker_name"])
 
         except Exception as e:
             tb_str = traceback.format_exc()
@@ -83,8 +83,8 @@ class BaseTrackingDialog(QDialog):
         settings_name="BaseTracker",
         window_title="Tracker",
         description="",
-        default_track_color='b',
-        default_track_marker='s',
+        default_track_color="b",
+        default_track_marker="s",
         default_track_line_width=2,
         default_track_marker_size=10,
     ):
@@ -232,7 +232,7 @@ class BaseTrackingDialog(QDialog):
         dict
             Dictionary of tracker configuration parameters
         """
-        config = {'tracker_name': self.name_input.currentText()}
+        config = {"tracker_name": self.name_input.currentText()}
         return config
 
     def run_tracker(self):
@@ -304,9 +304,9 @@ class BaseTrackingDialog(QDialog):
         for i, track_data in enumerate(track_data_list):
             vista_track = Track(
                 name=f"Track {i + 1}",
-                frames=track_data['frames'],
-                rows=track_data['rows'],
-                columns=track_data['columns'],
+                frames=track_data["frames"],
+                rows=track_data["rows"],
+                columns=track_data["columns"],
                 sensor=sensor,
                 tracker=tracker_name,
                 color=self.default_track_color,

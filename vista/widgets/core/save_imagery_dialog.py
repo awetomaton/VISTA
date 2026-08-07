@@ -128,8 +128,8 @@ class SaveImageryDialog(QDialog):
         if file_path:
             # Ensure file has .h5 extension
             file_path = Path(file_path)
-            if file_path.suffix not in ['.h5', '.hdf5']:
-                file_path = file_path.with_suffix('.h5')
+            if file_path.suffix not in [".h5", ".hdf5"]:
+                file_path = file_path.with_suffix(".h5")
 
             self.file_path_edit.setText(str(file_path))
 

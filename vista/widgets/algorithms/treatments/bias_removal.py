@@ -49,7 +49,7 @@ class BiasRemovalWidget(BaseTreatmentWidget):
         if self.imagery is None or self.imagery.sensor is None:
             return False, "No sensor information available."
 
-        if not hasattr(self.imagery.sensor, 'bias_images') or self.imagery.sensor.bias_images is None:
+        if not hasattr(self.imagery.sensor, "bias_images") or self.imagery.sensor.bias_images is None:
             return False, "Sensor does not have bias images. Please load bias calibration data."
 
         if len(self.imagery.sensor.bias_images) == 0:

@@ -94,7 +94,7 @@ class VistaApp:
             self.app = QApplication(sys.argv)
 
         # Set pyqtgraph configuration
-        pg.setConfigOptions(imageAxisOrder='row-major', useNumba=True)
+        pg.setConfigOptions(imageAxisOrder="row-major", useNumba=True)
 
         # Create main window with data
         self.window = VistaMainWindow(
@@ -125,7 +125,7 @@ def main():
     app = QApplication(sys.argv)
 
     # Set pyqtgraph configuration
-    pg.setConfigOptions(imageAxisOrder='row-major', useNumba=True)
+    pg.setConfigOptions(imageAxisOrder="row-major", useNumba=True)
 
     window = VistaMainWindow()
     window.show()
@@ -133,5 +133,5 @@ def main():
     sys.exit(app.exec())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

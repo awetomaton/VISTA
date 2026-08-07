@@ -39,7 +39,7 @@ def map_geodetic_to_pixel(
     ValueError
         If sensor lacks geodetic conversion capability
     """
-    if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
+    if not hasattr(sensor, "can_geolocate") or not sensor.can_geolocate():
         raise ValueError(
             "Sensor does not have geodetic conversion capability. Cannot convert lat/lon to row/col coordinates."
         )

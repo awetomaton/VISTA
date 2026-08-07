@@ -254,7 +254,7 @@ def apply_label_filter_to_data(data_object, filter_dict):
     ndarray
         numpy boolean mask array indicating which items pass the filter
     """
-    if not filter_dict or not hasattr(data_object, 'labels'):
+    if not filter_dict or not hasattr(data_object, "labels"):
         # No filters or no labels - all items pass
         return np.ones(len(data_object.frames), dtype=bool)
 

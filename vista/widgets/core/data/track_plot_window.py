@@ -27,20 +27,20 @@ class TrackPlotWindow(QWidget):
     """Modeless window for plotting track details."""
 
     # Available symbols in pyqtgraph
-    SYMBOLS = ['o', 's', 't', 'd', '+', 'x', 'star']
+    SYMBOLS = ["o", "s", "t", "d", "+", "x", "star"]
 
     # Distinct color palette for tracks/trackers
     COLORS = [
-        '#1f77b4',  # Blue
-        '#ff7f0e',  # Orange
-        '#2ca02c',  # Green
-        '#d62728',  # Red
-        '#9467bd',  # Purple
-        '#8c564b',  # Brown
-        '#e377c2',  # Pink
-        '#7f7f7f',  # Gray
-        '#bcbd22',  # Olive
-        '#17becf',  # Cyan
+        "#1f77b4",  # Blue
+        "#ff7f0e",  # Orange
+        "#2ca02c",  # Green
+        "#d62728",  # Red
+        "#9467bd",  # Purple
+        "#8c564b",  # Brown
+        "#e377c2",  # Pink
+        "#7f7f7f",  # Gray
+        "#bcbd22",  # Olive
+        "#17becf",  # Cyan
     ]
 
     def __init__(self, parent, viewer):
@@ -538,12 +538,12 @@ class TrackPlotWindow(QWidget):
         ticks = self._get_symlog_ticks(view_y_min, view_y_max)
         # Format for pyqtgraph: list of lists, where each inner list is for a tick level
         # Level 0 = major ticks, level 1 = minor ticks (empty)
-        axis = self.plot.getAxis('left')
+        axis = self.plot.getAxis("left")
         axis.setTicks([ticks, []])
 
     def _clear_custom_ticks(self):
         """Clear custom tick marks from the plot's Y-axis."""
-        axis = self.plot.getAxis('left')
+        axis = self.plot.getAxis("left")
         axis.setTicks(None)
 
     def _on_range_changed(self, _viewbox, ranges):
@@ -578,7 +578,7 @@ class TrackPlotWindow(QWidget):
 
         # Find closest point
         closest_track = None
-        closest_distance = float('inf')
+        closest_distance = float("inf")
 
         for track, x_data, y_data in self._plot_items:
             if len(x_data) == 0:
@@ -593,7 +593,7 @@ class TrackPlotWindow(QWidget):
                 closest_track = track
 
         if closest_track is not None:
-            tracker_name = self.tracker_map.get(closest_track.uuid, 'Unknown')
+            tracker_name = self.tracker_map.get(closest_track.uuid, "Unknown")
             self.hover_label.setText(f"Track: {closest_track.name}  |  Tracker: {tracker_name}")
         else:
             self.hover_label.setText("")
@@ -638,9 +638,9 @@ class TrackPlotWindow(QWidget):
     def _refresh_axis_options(self):
         """Refresh axis combo boxes based on available data"""
         # Build list of available axes for X (includes Frame/Time)
-        x_axis_options = ['Frame', 'Row', 'Column']
+        x_axis_options = ["Frame", "Row", "Column"]
         # Y-axis excludes Frame and Time (they don't make sense as dependent variables)
-        y_axis_options = ['Row', 'Column']
+        y_axis_options = ["Row", "Column"]
 
         # Check if any track has time data
         has_time = False
@@ -655,7 +655,7 @@ class TrackPlotWindow(QWidget):
                 has_time = True
 
             # Check geolocation
-            if hasattr(track.sensor, 'can_geolocate') and track.sensor.can_geolocate():
+            if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
                 has_geolocation = True
 
             # Check extraction metadata
@@ -667,17 +667,17 @@ class TrackPlotWindow(QWidget):
                 has_uncertainty = True
 
         if has_geolocation:
-            geo_options = ['ARF Azimuth (rad)', 'ARF Elevation (rad)', 'Latitude', 'Longitude']
+            geo_options = ["ARF Azimuth (rad)", "ARF Elevation (rad)", "Latitude", "Longitude"]
             x_axis_options.extend(geo_options)
             y_axis_options.extend(geo_options)
 
         if has_extraction:
-            extraction_options = ['Signal Total', 'Signal Pixels', 'Noise']
+            extraction_options = ["Signal Total", "Signal Pixels", "Noise"]
             x_axis_options.extend(extraction_options)
             y_axis_options.extend(extraction_options)
 
         if has_uncertainty:
-            uncertainty_options = ['Uncertainty Radius']
+            uncertainty_options = ["Uncertainty Radius"]
             x_axis_options.extend(uncertainty_options)
             y_axis_options.extend(uncertainty_options)
 
@@ -704,10 +704,10 @@ class TrackPlotWindow(QWidget):
         self.y_combo.blockSignals(False)
 
         # Set default axes
-        if self.x_combo.currentText() == '':
-            self.x_combo.setCurrentText('Column')
-        if self.y_combo.currentText() == '':
-            self.y_combo.setCurrentText('Row')
+        if self.x_combo.currentText() == "":
+            self.x_combo.setCurrentText("Column")
+        if self.y_combo.currentText() == "":
+            self.y_combo.setCurrentText("Row")
 
     def _get_plottable_data(self, track: Track) -> dict:
         """
@@ -728,19 +728,19 @@ class TrackPlotWindow(QWidget):
             return self._cached_data[track.uuid]
 
         data = {
-            'Frame': track.frames.astype(float),
-            'Row': track.rows,
-            'Column': track.columns,
+            "Frame": track.frames.astype(float),
+            "Row": track.rows,
+            "Column": track.columns,
         }
 
         # Add times if available
         times = track.get_times()
         if times is not None and not np.all(np.isnat(times)):
             # Convert datetime64 to float (seconds since epoch) for plotting
-            data['Time'] = times.astype('datetime64[ns]').astype(np.float64) / 1e9
+            data["Time"] = times.astype("datetime64[ns]").astype(np.float64) / 1e9
 
         # Add geolocation if sensor supports it
-        if hasattr(track.sensor, 'can_geolocate') and track.sensor.can_geolocate():
+        if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
             if isinstance(track.sensor, SampledSensor):
                 azimuths = []
                 elevations = []
@@ -781,33 +781,33 @@ class TrackPlotWindow(QWidget):
                         lats.append(np.nan)
                         lons.append(np.nan)
 
-                data['ARF Azimuth (rad)'] = np.array(azimuths)
-                data['ARF Elevation (rad)'] = np.array(elevations)
-                data['Latitude'] = np.array(lats)
-                data['Longitude'] = np.array(lons)
+                data["ARF Azimuth (rad)"] = np.array(azimuths)
+                data["ARF Elevation (rad)"] = np.array(elevations)
+                data["Latitude"] = np.array(lats)
+                data["Longitude"] = np.array(lons)
 
         # Add extraction metadata if available
         if track.extraction_metadata is not None:
-            chips = track.extraction_metadata.get('chips')
-            masks = track.extraction_metadata.get('signal_masks')
-            noise = track.extraction_metadata.get('noise_stds')
+            chips = track.extraction_metadata.get("chips")
+            masks = track.extraction_metadata.get("signal_masks")
+            noise = track.extraction_metadata.get("noise_stds")
 
             if chips is not None and masks is not None:
-                data['Signal Total'] = np.sum(chips * masks, axis=(1, 2))
-                data['Signal Pixels'] = np.sum(masks, axis=(1, 2)).astype(float)
+                data["Signal Total"] = np.sum(chips * masks, axis=(1, 2))
+                data["Signal Pixels"] = np.sum(masks, axis=(1, 2)).astype(float)
             if noise is not None:
-                data['Noise'] = noise
+                data["Noise"] = noise
 
         # Add uncertainty radius if available
         uncertainty_radius = track.get_uncertainty_radius()
         if uncertainty_radius is not None:
-            data['Uncertainty Radius'] = uncertainty_radius
+            data["Uncertainty Radius"] = uncertainty_radius
 
         # Cache the data
         self._cached_data[track.uuid] = data
         return data
 
-    def _assign_colors_and_symbols(self, color_by='track'):
+    def _assign_colors_and_symbols(self, color_by="track"):
         """
         Assign colors and symbols based on coloring mode.
 
@@ -823,7 +823,7 @@ class TrackPlotWindow(QWidget):
         """
         assignments = {}
 
-        if color_by == 'track':
+        if color_by == "track":
             # Each track gets unique color, each tracker gets unique symbol
             tracker_symbols = {}
             tracker_names = list(set(self.tracker_map.values()))
@@ -831,11 +831,11 @@ class TrackPlotWindow(QWidget):
                 tracker_symbols[tracker_name] = self.SYMBOLS[i % len(self.SYMBOLS)]
 
             for i, track in enumerate(self.tracks):
-                tracker_name = self.tracker_map.get(track.uuid, 'Unknown')
+                tracker_name = self.tracker_map.get(track.uuid, "Unknown")
                 assignments[track.uuid] = {
-                    'color': self.COLORS[i % len(self.COLORS)],
-                    'symbol': tracker_symbols.get(tracker_name, 'o'),
-                    'name': f"{track.name} ({tracker_name})",
+                    "color": self.COLORS[i % len(self.COLORS)],
+                    "symbol": tracker_symbols.get(tracker_name, "o"),
+                    "name": f"{track.name} ({tracker_name})",
                 }
         else:  # color_by == 'tracker'
             # Each tracker gets unique color, each track within tracker gets unique symbol
@@ -848,14 +848,14 @@ class TrackPlotWindow(QWidget):
                 tracker_track_indices[tracker_name] = 0
 
             for track in self.tracks:
-                tracker_name = self.tracker_map.get(track.uuid, 'Unknown')
+                tracker_name = self.tracker_map.get(track.uuid, "Unknown")
                 track_idx = tracker_track_indices.get(tracker_name, 0)
                 tracker_track_indices[tracker_name] = track_idx + 1
 
                 assignments[track.uuid] = {
-                    'color': tracker_colors.get(tracker_name, self.COLORS[0]),
-                    'symbol': self.SYMBOLS[track_idx % len(self.SYMBOLS)],
-                    'name': f"{track.name} ({tracker_name})",
+                    "color": tracker_colors.get(tracker_name, self.COLORS[0]),
+                    "symbol": self.SYMBOLS[track_idx % len(self.SYMBOLS)],
+                    "name": f"{track.name} ({tracker_name})",
                 }
 
         return assignments
@@ -881,7 +881,7 @@ class TrackPlotWindow(QWidget):
         current_frame = self.viewer.current_frame_number if self.viewer else 0
         show_complete = self.show_complete_plot.isChecked()
 
-        color_by = 'track' if self.color_by_track.isChecked() else 'tracker'
+        color_by = "track" if self.color_by_track.isChecked() else "tracker"
         assignments = self._assign_colors_and_symbols(color_by)
 
         use_symlog = self.symlog_y.isChecked()
@@ -917,17 +917,17 @@ class TrackPlotWindow(QWidget):
             # Apply symlog transform if enabled
             y_filtered = self._symlog(y_filtered_original) if use_symlog else y_filtered_original
 
-            assignment = assignments.get(track.uuid, {'color': 'g', 'symbol': 'o', 'name': track.name})
+            assignment = assignments.get(track.uuid, {"color": "g", "symbol": "o", "name": track.name})
 
             # Plot scatter with lines
-            name = assignment['name'] if self.show_legend.isChecked() else None
+            name = assignment["name"] if self.show_legend.isChecked() else None
             self.plot.plot(
                 x_filtered,
                 y_filtered,
-                pen=pg.mkPen(assignment['color'], width=2),
-                symbol=assignment['symbol'],
-                symbolPen=pg.mkPen(assignment['color']),
-                symbolBrush=pg.mkBrush(assignment['color']),
+                pen=pg.mkPen(assignment["color"], width=2),
+                symbol=assignment["symbol"],
+                symbolPen=pg.mkPen(assignment["color"]),
+                symbolBrush=pg.mkBrush(assignment["color"]),
                 symbolSize=8,
                 name=name,
             )
@@ -944,16 +944,16 @@ class TrackPlotWindow(QWidget):
                     [x_data[idx]],
                     [y_current],
                     pen=None,
-                    symbol=assignment['symbol'],
-                    symbolPen=pg.mkPen('w', width=2),
-                    symbolBrush=pg.mkBrush(assignment['color']),
+                    symbol=assignment["symbol"],
+                    symbolPen=pg.mkPen("w", width=2),
+                    symbolBrush=pg.mkBrush(assignment["color"]),
                     symbolSize=14,
                 )
 
         # Set axis labels
-        self.plot.setLabel('bottom', x_axis)
+        self.plot.setLabel("bottom", x_axis)
         y_label = f"{y_axis} (symlog)" if use_symlog else y_axis
-        self.plot.setLabel('left', y_label)
+        self.plot.setLabel("left", y_label)
 
         # Apply custom symlog ticks or clear them
         if use_symlog:
@@ -982,12 +982,12 @@ class TrackPlotWindow(QWidget):
             rows = []
             for track in self.tracks:
                 data = self._get_plottable_data(track)
-                tracker_name = self.tracker_map.get(track.uuid, 'Unknown')
+                tracker_name = self.tracker_map.get(track.uuid, "Unknown")
 
                 for i in range(len(track.frames)):
                     row = {
-                        'Tracker': tracker_name,
-                        'Track': track.name,
+                        "Tracker": tracker_name,
+                        "Track": track.name,
                     }
                     for key, values in data.items():
                         if i < len(values):
@@ -1014,7 +1014,7 @@ class TrackPlotWindow(QWidget):
             # Use pyqtgraph's export functionality
             exporter = pg.exporters.ImageExporter(self.plot.plotItem)
 
-            if file_path.lower().endswith('.svg'):
+            if file_path.lower().endswith(".svg"):
                 exporter = pg.exporters.SVGExporter(self.plot.plotItem)
 
             exporter.export(file_path)

@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 
 from vista.imagery.imagery import HAS_TORCH
 
-_HDF5_EXTENSIONS = ('.h5', '.hdf5')
+_HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 
 class ImageryPanel(QWidget):

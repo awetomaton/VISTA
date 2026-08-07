@@ -18,7 +18,7 @@ def main():
     app = QApplication(sys.argv)
 
     # Set pyqtgraph configuration
-    pg.setConfigOptions(imageAxisOrder='row-major', useNumba=True)
+    pg.setConfigOptions(imageAxisOrder="row-major", useNumba=True)
 
     window = VistaMainWindow()
     window.show()

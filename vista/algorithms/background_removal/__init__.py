@@ -8,10 +8,10 @@ from .subspace_background_removal import subspace_background_removal
 from .temporal_median import TemporalMedian
 
 __all__ = [
-    'godec',
-    'run_robust_pca',
-    'static_median_background_removal',
-    'static_subspace_background_removal',
-    'subspace_background_removal',
-    'TemporalMedian',
+    "godec",
+    "run_robust_pca",
+    "static_median_background_removal",
+    "static_subspace_background_removal",
+    "subspace_background_removal",
+    "TemporalMedian",
 ]

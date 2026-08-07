@@ -252,7 +252,7 @@ class SavitzkyGolayDialog(QDialog):
         dict
             Filter parameters
         """
-        return {'radius': self.radius_spin.value(), 'polyorder': self.polyorder_spin.value()}
+        return {"radius": self.radius_spin.value(), "polyorder": self.polyorder_spin.value()}
 
     def validate_parameters(self):
         """

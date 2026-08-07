@@ -8,10 +8,10 @@ from .subspace_background_removal_dialog import SubspaceBackgroundRemovalDialog
 from .temporal_median_widget import TemporalMedianWidget
 
 __all__ = [
-    'GoDecDialog',
-    'RobustPCADialog',
-    'StaticMedianBackgroundRemovalDialog',
-    'StaticSubspaceBackgroundRemovalDialog',
-    'SubspaceBackgroundRemovalDialog',
-    'TemporalMedianWidget',
+    "GoDecDialog",
+    "RobustPCADialog",
+    "StaticMedianBackgroundRemovalDialog",
+    "StaticSubspaceBackgroundRemovalDialog",
+    "SubspaceBackgroundRemovalDialog",
+    "TemporalMedianWidget",
 ]

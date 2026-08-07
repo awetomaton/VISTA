@@ -44,8 +44,8 @@ class PSTNNProcessingThread(QThread):
         aoi=None,
         start_frame: int = 0,
         end_frame: int = None,
-        default_color: str = 'r',
-        default_marker: str = 'o',
+        default_color: str = "r",
+        default_marker: str = "o",
         default_marker_size: int = 12,
     ):
         """
@@ -532,17 +532,17 @@ class PSTNNWidget(QDialog):
 
         # Build algorithm parameters
         algorithm_params = {
-            'patch_size': self.patch_size_spinbox.value(),
-            'stride': self.stride_spinbox.value(),
-            'lambda_param': None if self.auto_lambda.isChecked() else self.lambda_spinbox.value(),
-            'convergence_tolerance': self.convergence_spinbox.value(),
-            'max_iterations': self.max_iterations_spinbox.value(),
-            'n_skipped_singular_values': self.n_skip_spinbox.value(),
-            'min_area': self.min_area_spinbox.value(),
-            'max_area': self.max_area_spinbox.value(),
-            'use_gpu': self.use_gpu_checkbox.isChecked(),
-            'threshold_multiplier': self.threshold_spinbox.value(),
-            'detection_mode': self.detection_mode_combo.currentData(),
+            "patch_size": self.patch_size_spinbox.value(),
+            "stride": self.stride_spinbox.value(),
+            "lambda_param": None if self.auto_lambda.isChecked() else self.lambda_spinbox.value(),
+            "convergence_tolerance": self.convergence_spinbox.value(),
+            "max_iterations": self.max_iterations_spinbox.value(),
+            "n_skipped_singular_values": self.n_skip_spinbox.value(),
+            "min_area": self.min_area_spinbox.value(),
+            "max_area": self.max_area_spinbox.value(),
+            "use_gpu": self.use_gpu_checkbox.isChecked(),
+            "threshold_multiplier": self.threshold_spinbox.value(),
+            "detection_mode": self.detection_mode_combo.currentData(),
         }
 
         selected_aoi = self.aoi_combo.currentData()

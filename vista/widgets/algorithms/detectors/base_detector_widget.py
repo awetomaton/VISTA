@@ -27,8 +27,8 @@ class BaseDetectorProcessingThread(QThread):
         start_frame=0,
         end_frame=None,
         detector_name=None,
-        default_color='r',
-        default_marker='o',
+        default_color="r",
+        default_marker="o",
         default_marker_size=12,
     ):
         """
@@ -174,8 +174,8 @@ class BaseDetectorWidget(QDialog):
         settings_name="BaseDetector",
         window_title="Detector",
         description="",
-        default_color='r',
-        default_marker='o',
+        default_color="r",
+        default_marker="o",
         default_marker_size=12,
     ):
         """

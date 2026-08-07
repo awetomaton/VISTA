@@ -91,12 +91,12 @@ class Sensor:
             self.uuid = uuid.uuid4()
         self._added_imagery_uuids = []
         self._imagery_frames_dataframe = pd.DataFrame(
-            {"frames": pd.Series([], dtype=int), "times": pd.Series([], dtype='datetime64[ns]')}
+            {"frames": pd.Series([], dtype=int), "times": pd.Series([], dtype="datetime64[ns]")}
         )
 
     def __eq__(self, other):
         """Compare Sensors based on UUID"""
-        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
+        return hasattr(other, "uuid") and (self.uuid == other.uuid)
 
     def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
         """
@@ -320,25 +320,25 @@ class Sensor:
         Subclasses should call super().to_hdf5(group) and then add their own data.
         """
         # Set sensor type and identification attributes
-        group.attrs['sensor_type'] = 'Sensor'
-        group.attrs['name'] = self.name
-        group.attrs['uuid'] = str(self.uuid)
+        group.attrs["sensor_type"] = "Sensor"
+        group.attrs["name"] = self.name
+        group.attrs["uuid"] = str(self.uuid)
 
         # Create radiometric calibration subgroup
         if self.bias_images is not None or self.uniformity_gain_images is not None or self.bad_pixel_masks is not None:
-            radiometric_group = group.create_group('radiometric')
+            radiometric_group = group.create_group("radiometric")
 
             # Save bias images if present
             if self.bias_images is not None:
-                radiometric_group.create_dataset('bias_images', data=self.bias_images)
-                radiometric_group.create_dataset('bias_image_frames', data=self.bias_image_frames)
+                radiometric_group.create_dataset("bias_images", data=self.bias_images)
+                radiometric_group.create_dataset("bias_image_frames", data=self.bias_image_frames)
 
             # Save uniformity gain images if present
             if self.uniformity_gain_images is not None:
-                radiometric_group.create_dataset('uniformity_gain_images', data=self.uniformity_gain_images)
-                radiometric_group.create_dataset('uniformity_gain_image_frames', data=self.uniformity_gain_image_frames)
+                radiometric_group.create_dataset("uniformity_gain_images", data=self.uniformity_gain_images)
+                radiometric_group.create_dataset("uniformity_gain_image_frames", data=self.uniformity_gain_image_frames)
 
             # Save bad pixel masks if present
             if self.bad_pixel_masks is not None:
-                radiometric_group.create_dataset('bad_pixel_masks', data=self.bad_pixel_masks)
-                radiometric_group.create_dataset('bad_pixel_mask_frames', data=self.bad_pixel_mask_frames)
+                radiometric_group.create_dataset("bad_pixel_masks", data=self.bad_pixel_masks)
+                radiometric_group.create_dataset("bad_pixel_mask_frames", data=self.bad_pixel_mask_frames)

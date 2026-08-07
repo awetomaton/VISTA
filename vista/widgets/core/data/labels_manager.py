@@ -171,7 +171,7 @@ class LabelsManagerDialog(QDialog):
                         label_set -= deleted_labels_set
 
                 # Update viewer display if detection filters are active
-                if hasattr(self.viewer, 'update_detection_display'):
+                if hasattr(self.viewer, "update_detection_display"):
                     self.viewer.update_detection_display()
 
     @staticmethod

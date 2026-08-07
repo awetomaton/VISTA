@@ -55,7 +55,7 @@ class DraggableRowTableWidget(QTableWidget):
         drag = QDrag(self)
         mime_data = QMimeData()
         # Store the row indices in the mime data
-        mime_data.setText(','.join(str(r) for r in selected_rows))
+        mime_data.setText(",".join(str(r) for r in selected_rows))
         drag.setMimeData(mime_data)
 
         # Execute the drag
@@ -133,7 +133,7 @@ class DraggableRowTableWidget(QTableWidget):
 
         # Parse source rows from mime data
         try:
-            source_rows = [int(r) for r in event.mimeData().text().split(',')]
+            source_rows = [int(r) for r in event.mimeData().text().split(",")]
         except ValueError:
             event.ignore()
             return

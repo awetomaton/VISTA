@@ -149,7 +149,7 @@ class TrackInterpolationDialog(QDialog):
 
         # Interpolation method
         self.method_combo = QComboBox()
-        self.method_combo.addItems(['linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'])
+        self.method_combo.addItems(["linear", "nearest", "zero", "slinear", "quadratic", "cubic"])
         self.method_combo.setToolTip(
             "Interpolation method:\n"
             "  • linear: Linear interpolation (default)\n"
@@ -215,7 +215,7 @@ class TrackInterpolationDialog(QDialog):
         dict
             Interpolation parameters
         """
-        return {'method': self.method_combo.currentText()}
+        return {"method": self.method_combo.currentText()}
 
     def validate_parameters(self):
         """
@@ -313,7 +313,7 @@ class TrackInterpolationDialog(QDialog):
         self.interpolation_complete.emit(self.tracks, self.results)
 
         # Build success message with statistics
-        total_interpolated = sum(result['n_interpolated'] for result in self.results)
+        total_interpolated = sum(result["n_interpolated"] for result in self.results)
         success_msg = f"Successfully interpolated {len(self.tracks)} track(s).\n\n"
         success_msg += f"Total frames interpolated: {total_interpolated}"
 

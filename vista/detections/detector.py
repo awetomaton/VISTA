@@ -82,8 +82,8 @@ class Detector:
     description: str = ""
 
     # Styling attributes
-    color: str = 'r'  # Red by default
-    marker: str = 'o'  # Circle by default
+    color: str = "r"  # Red by default
+    marker: str = "o"  # Circle by default
     marker_size: int = 10
     line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
@@ -321,7 +321,7 @@ class Detector:
             labels_list = []
             for labels_str in df["Labels"]:
                 if pd.notna(labels_str) and labels_str:
-                    labels_list.append(set(label.strip() for label in labels_str.split(',')))
+                    labels_list.append(set(label.strip() for label in labels_str.split(",")))
                 else:
                     labels_list.append(set())
             kwargs["labels"] = labels_list
@@ -402,17 +402,17 @@ class Detector:
         labelers_column = []
         for i in range(len(self.frames)):
             if i < len(self.labels) and self.labels[i]:
-                labels_column.append(', '.join(sorted(self.labels[i])))
+                labels_column.append(", ".join(sorted(self.labels[i])))
             else:
-                labels_column.append('')
+                labels_column.append("")
             if i < len(self.label_times) and self.label_times[i] is not None:
                 label_times_column.append(self.label_times[i].isoformat())
             else:
-                label_times_column.append('')
+                label_times_column.append("")
             if i < len(self.labelers) and self.labelers[i]:
                 labelers_column.append(self.labelers[i])
             else:
-                labelers_column.append('')
+                labelers_column.append("")
 
         return pd.DataFrame(
             {

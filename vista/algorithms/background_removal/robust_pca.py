@@ -103,7 +103,7 @@ def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=100
     Y = np.zeros_like(M)  # Lagrange multiplier
 
     # Precompute norm for convergence check
-    norm_M = np.linalg.norm(M, 'fro')
+    norm_M = np.linalg.norm(M, "fro")
 
     for iteration in range(max_iter):
         # Update L: Singular value thresholding
@@ -117,7 +117,7 @@ def robust_pca_inexact_alm(M, lambda_param=None, mu=None, tol=1e-7, max_iter=100
 
         # Check convergence
         residual = M - L - S
-        rel_error = np.linalg.norm(residual, 'fro') / norm_M
+        rel_error = np.linalg.norm(residual, "fro") / norm_M
 
         # Call progress callback if provided
         if callback is not None:

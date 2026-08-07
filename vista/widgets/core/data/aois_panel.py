@@ -27,7 +27,7 @@ class AOIsPanel(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
-        self.settings = QSettings('VISTA', 'VISTA')
+        self.settings = QSettings("VISTA", "VISTA")
         self.init_ui()
 
     def init_ui(self):
@@ -114,7 +114,7 @@ class AOIsPanel(QWidget):
 
         # Select rows for AOIs that are marked as selected
         for row, aoi in enumerate(self.viewer.aois):
-            if hasattr(aoi, '_selected') and aoi._selected:
+            if hasattr(aoi, "_selected") and aoi._selected:
                 self.aois_table.selectRow(row)
 
     def on_aoi_selection_changed(self):

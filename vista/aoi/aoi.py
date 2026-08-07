@@ -22,7 +22,7 @@ class AOI:
     width: float  # Width of rectangle
     height: float  # Height of rectangle
     visible: bool = True
-    color: str = 'y'  # Yellow by default
+    color: str = "y"  # Yellow by default
     uuid: str = field(init=False, default=None)
 
     # PyQtGraph ROI item (not serialized)
@@ -38,7 +38,7 @@ class AOI:
 
     def __eq__(self, other):
         """Compare AOIs based on UUID"""
-        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
+        return hasattr(other, "uuid") and (self.uuid == other.uuid)
 
     def update_from_roi(self, roi_item: pg.RectROI):
         """
@@ -105,14 +105,14 @@ class AOI:
             name, x, y, width, height, visible, color, and uuid.
         """
         return {
-            'name': self.name,
-            'x': self.x,
-            'y': self.y,
-            'width': self.width,
-            'height': self.height,
-            'visible': self.visible,
-            'color': self.color,
-            'uuid': str(self.uuid),
+            "name": self.name,
+            "x": self.x,
+            "y": self.y,
+            "width": self.width,
+            "height": self.height,
+            "visible": self.visible,
+            "color": self.color,
+            "uuid": str(self.uuid),
         }
 
     @classmethod
@@ -132,17 +132,17 @@ class AOI:
             New AOI instance created from the dictionary data.
         """
         aoi = cls(
-            name=data['name'],
-            x=data['x'],
-            y=data['y'],
-            width=data['width'],
-            height=data['height'],
-            visible=data.get('visible', True),
-            color=data.get('color', 'y'),
+            name=data["name"],
+            x=data["x"],
+            y=data["y"],
+            width=data["width"],
+            height=data["height"],
+            visible=data.get("visible", True),
+            color=data.get("color", "y"),
         )
         # Restore UUID if present, otherwise a new one will be generated
-        if 'uuid' in data:
-            aoi.uuid = data['uuid']
+        if "uuid" in data:
+            aoi.uuid = data["uuid"]
         return aoi
 
     def to_dataframe(self) -> pd.DataFrame:

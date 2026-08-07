@@ -23,24 +23,24 @@ from .trackers import (
 
 __all__ = [
     # Core
-    'VistaMainWindow',
-    'ImageryViewer',
-    'PlaybackControls',
-    'DataManagerPanel',
-    'DataLoaderThread',
+    "VistaMainWindow",
+    "ImageryViewer",
+    "PlaybackControls",
+    "DataManagerPanel",
+    "DataLoaderThread",
     # Detectors
-    'CFARWidget',
-    'SimpleThresholdWidget',
+    "CFARWidget",
+    "SimpleThresholdWidget",
     # Background removal
-    'TemporalMedianWidget',
-    'RobustPCADialog',
-    'StaticMedianBackgroundRemovalDialog',
-    'StaticSubspaceBackgroundRemovalDialog',
+    "TemporalMedianWidget",
+    "RobustPCADialog",
+    "StaticMedianBackgroundRemovalDialog",
+    "StaticSubspaceBackgroundRemovalDialog",
     # Trackers
-    'KalmanTrackingDialog',
-    'NetworkFlowTrackingDialog',
-    'SimpleTrackingDialog',
-    'TrackletTrackingDialog',
+    "KalmanTrackingDialog",
+    "NetworkFlowTrackingDialog",
+    "SimpleTrackingDialog",
+    "TrackletTrackingDialog",
     # Enhancement
-    'CoadditionWidget',
+    "CoadditionWidget",
 ]

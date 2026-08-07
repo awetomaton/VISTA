@@ -97,8 +97,8 @@ class CFAR:
         threshold_deviation: float,
         min_area: int = 1,
         max_area: int = 1000,
-        annulus_shape: str = 'circular',
-        detection_mode: str = 'above',
+        annulus_shape: str = "circular",
+        detection_mode: str = "above",
         search_radius: int = None,
     ):
         self.background_radius = background_radius
@@ -128,7 +128,7 @@ class CFAR:
         ndarray
             2D array with 1s in the annular region, 0s elsewhere
         """
-        if self.annulus_shape == 'square':
+        if self.annulus_shape == "square":
             return self._create_square_annular_kernel()
         else:  # circular
             return self._create_circular_annular_kernel()
@@ -185,7 +185,7 @@ class CFAR:
     def _pad_image(self, image):
         """Pad image to match kernel size for valid convolution"""
         pad_size = self.background_radius
-        padded = np.pad(image, pad_size, mode='edge')
+        padded = np.pad(image, pad_size, mode="edge")
         return padded
 
     def _get_kernel_fft(self, image_shape):
@@ -262,15 +262,15 @@ class CFAR:
         local_std = local_std[pad_size:-pad_size, pad_size:-pad_size]
 
         # Apply threshold based on detection mode
-        if self.detection_mode == 'above':
+        if self.detection_mode == "above":
             # Detect pixels brighter than threshold
             threshold = local_mean + self.threshold_deviation * local_std
             binary = image > threshold
-        elif self.detection_mode == 'below':
+        elif self.detection_mode == "below":
             # Detect pixels darker than threshold
             threshold = local_mean - self.threshold_deviation * local_std
             binary = image < threshold
-        elif self.detection_mode == 'both':
+        elif self.detection_mode == "both":
             # Detect pixels deviating from mean in either direction
             deviation = np.abs(image - local_mean)
             threshold = self.threshold_deviation * local_std
@@ -301,7 +301,7 @@ class CFAR:
             for region in valid_regions:
                 centroid = region.weighted_centroid
 
-                if self.annulus_shape == 'circular':
+                if self.annulus_shape == "circular":
                     dist = np.sqrt((centroid[0] - center_row) ** 2 + (centroid[1] - center_col) ** 2)
                 else:  # square
                     dist = max(abs(centroid[0] - center_row), abs(centroid[1] - center_col))
@@ -363,7 +363,7 @@ class CFAR:
 
         # Pad chip to accommodate kernel
         pad_size = self.background_radius
-        padded_chip = np.pad(chip_clean, pad_size, mode='edge')
+        padded_chip = np.pad(chip_clean, pad_size, mode="edge")
 
         # Prepare kernel FFT for padded chip shape
         kernel_shifted = fft.ifftshift(self.kernel)
@@ -425,7 +425,7 @@ class CFAR:
                     for region in regions:
                         centroid = region.weighted_centroid
 
-                        if self.annulus_shape == 'circular':
+                        if self.annulus_shape == "circular":
                             dist = np.sqrt((centroid[0] - center_row) ** 2 + (centroid[1] - center_col) ** 2)
                         else:  # square
                             dist = max(abs(centroid[0] - center_row), abs(centroid[1] - center_col))

@@ -121,14 +121,14 @@ class SavitzkyGolayFilter:
                 self.track.rows,
                 window_length=window_length,
                 polyorder=self.polyorder,
-                mode='interp',  # Interpolate at boundaries
+                mode="interp",  # Interpolate at boundaries
             )
 
             smoothed_columns = savgol_filter(
                 self.track.columns,
                 window_length=window_length,
                 polyorder=self.polyorder,
-                mode='interp',  # Interpolate at boundaries
+                mode="interp",  # Interpolate at boundaries
             )
         except Exception as e:
             raise ValueError(f"Savitzky-Golay filtering failed: {str(e)}")
@@ -156,9 +156,9 @@ class SavitzkyGolayFilter:
 
         # Return results
         return {
-            'smoothed_track': smoothed_track,
-            'original_rows': original_rows,
-            'original_columns': original_columns,
-            'smoothed_rows': smoothed_rows,
-            'smoothed_columns': smoothed_columns,
+            "smoothed_track": smoothed_track,
+            "original_rows": original_rows,
+            "original_columns": original_columns,
+            "smoothed_rows": smoothed_rows,
+            "smoothed_columns": smoothed_columns,
         }

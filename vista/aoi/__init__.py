@@ -2,4 +2,4 @@
 
 from .aoi import AOI
 
-__all__ = ['AOI']
+__all__ = ["AOI"]

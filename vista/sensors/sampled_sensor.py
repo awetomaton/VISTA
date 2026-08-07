@@ -200,7 +200,7 @@ class SampledSensor(Sensor):
           range and linear extrapolation outside the range
         """
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype('datetime64[ns]').astype(np.float64)
+        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
 
         # Handle single-position case (stationary sensor)
         if self.positions.shape[1] == 1:
@@ -209,14 +209,14 @@ class SampledSensor(Sensor):
 
         # Multi-position case: use interpolation/extrapolation
         # Convert sample times to numeric values
-        sample_times_ns = self.times.astype('datetime64[ns]').astype(np.float64)
+        sample_times_ns = self.times.astype("datetime64[ns]").astype(np.float64)
 
         # Create interpolators for each coordinate (x, y, z)
         # fill_value='extrapolate' enables linear extrapolation outside the range
         interpolated_positions = np.zeros((3, len(times)))
 
         for i in range(3):
-            interpolator = interp1d(sample_times_ns, self.positions[i, :], kind='linear', fill_value='extrapolate')
+            interpolator = interp1d(sample_times_ns, self.positions[i, :], kind="linear", fill_value="extrapolate")
             interpolated_positions[i, :] = interpolator(query_times_ns)
 
         return interpolated_positions
@@ -493,33 +493,33 @@ class SampledSensor(Sensor):
         super().to_hdf5(group)
 
         # Override sensor type
-        group.attrs['sensor_type'] = 'SampledSensor'
+        group.attrs["sensor_type"] = "SampledSensor"
 
         # Save position data
         if self.positions is not None and self.times is not None:
-            position_group = group.create_group('position')
-            position_group.create_dataset('positions', data=self.positions)
+            position_group = group.create_group("position")
+            position_group.create_dataset("positions", data=self.positions)
 
             # Convert times to unix nanoseconds
-            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            position_group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            position_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
 
         # Save ARF geolocation polynomials
         if self.can_geolocate():
-            geolocation_group = group.create_group('geolocation')
-            geolocation_group.create_dataset('poly_pixel_to_arf_azimuth', data=self.poly_pixel_to_arf_azimuth)
-            geolocation_group.create_dataset('poly_pixel_to_arf_elevation', data=self.poly_pixel_to_arf_elevation)
-            geolocation_group.create_dataset('poly_arf_to_row', data=self.poly_arf_to_row)
-            geolocation_group.create_dataset('poly_arf_to_col', data=self.poly_arf_to_col)
-            geolocation_group.create_dataset('pointing', data=self.pointing)
-            geolocation_group.create_dataset('frames', data=self.frames)
+            geolocation_group = group.create_group("geolocation")
+            geolocation_group.create_dataset("poly_pixel_to_arf_azimuth", data=self.poly_pixel_to_arf_azimuth)
+            geolocation_group.create_dataset("poly_pixel_to_arf_elevation", data=self.poly_pixel_to_arf_elevation)
+            geolocation_group.create_dataset("poly_arf_to_row", data=self.poly_arf_to_row)
+            geolocation_group.create_dataset("poly_arf_to_col", data=self.poly_arf_to_col)
+            geolocation_group.create_dataset("pointing", data=self.pointing)
+            geolocation_group.create_dataset("frames", data=self.frames)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
         if self.radiometric_gain is not None:
-            if 'radiometric' in group:
-                radiometric_group = group['radiometric']
+            if "radiometric" in group:
+                radiometric_group = group["radiometric"]
             else:
-                radiometric_group = group.create_group('radiometric')
+                radiometric_group = group.create_group("radiometric")
 
-            radiometric_group.create_dataset('radiometric_gain', data=self.radiometric_gain)
-            radiometric_group.create_dataset('radiometric_gain_frames', data=self.frames)
+            radiometric_group.create_dataset("radiometric_gain", data=self.radiometric_gain)
+            radiometric_group.create_dataset("radiometric_gain_frames", data=self.frames)

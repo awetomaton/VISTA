@@ -195,15 +195,15 @@ class ImageryProjector:
             # Interpolate coarse coordinate maps to full resolution using map_coordinates
             fy = np.linspace(0, coarse_h - 1, output_height)
             fx = np.linspace(0, coarse_w - 1, output_width)
-            fy_grid, fx_grid = np.meshgrid(fy, fx, indexing='ij')
+            fy_grid, fx_grid = np.meshgrid(fy, fx, indexing="ij")
             interp_coords = np.array([fy_grid.ravel(), fx_grid.ravel()])
 
-            src_rows = map_coordinates(c_rows_clean, interp_coords, order=1, mode='nearest')
-            src_cols = map_coordinates(c_cols_clean, interp_coords, order=1, mode='nearest')
+            src_rows = map_coordinates(c_rows_clean, interp_coords, order=1, mode="nearest")
+            src_cols = map_coordinates(c_cols_clean, interp_coords, order=1, mode="nearest")
 
             # Restore NaN where the coarse grid had invalid points
             if np.any(nan_mask):
-                validity = map_coordinates((~nan_mask).astype(np.float64), interp_coords, order=1, mode='nearest')
+                validity = map_coordinates((~nan_mask).astype(np.float64), interp_coords, order=1, mode="nearest")
                 invalid = validity < 0.5
                 src_rows[invalid] = np.nan
                 src_cols[invalid] = np.nan
@@ -307,7 +307,7 @@ class ImageryProjector:
         coords = np.array([src_rows, src_cols])
 
         # Bilinear interpolation; pixels outside bounds get cval=np.nan
-        projected_flat = map_coordinates(work_image, coords, order=1, mode='constant', cval=np.nan)
+        projected_flat = map_coordinates(work_image, coords, order=1, mode="constant", cval=np.nan)
 
         # Mask out-of-bounds pixels that map_coordinates might have interpolated at the boundary
         work_h, work_w = work_image.shape
@@ -325,7 +325,7 @@ class ImageryProjector:
 
     def project_frame_gpu(
         self,
-        gpu_image: 'torch.Tensor',
+        gpu_image: "torch.Tensor",
         frame: int,
         output_bbox: tuple[float, float, float, float],
         output_width: int,
@@ -452,7 +452,7 @@ class ImageryProjector:
         src_tensor = work_image.unsqueeze(0).unsqueeze(0).float()
 
         # grid_sample with bilinear interpolation
-        result = F.grid_sample(src_tensor, grid_tensor, mode='bilinear', padding_mode='zeros', align_corners=True)
+        result = F.grid_sample(src_tensor, grid_tensor, mode="bilinear", padding_mode="zeros", align_corners=True)
 
         # Convert back to numpy
         projected = result.squeeze().cpu().numpy().astype(np.float32)

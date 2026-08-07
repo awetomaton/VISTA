@@ -106,15 +106,15 @@ class Track:
     columns: NDArray[np.float64]
     sensor: Sensor
     # Styling attributes
-    color: str = 'g'  # Green by default
-    marker: str = 'o'  # Circle by default
+    color: str = "g"  # Green by default
+    marker: str = "o"  # Circle by default
     line_width: int = 2
     marker_size: int = 12
     visible: bool = True
     tail_length: int = 0  # 0 means show all history, >0 means show only last N frames
     complete: bool = False  # If True, show complete track regardless of current frame and override tail_length
     show_line: bool = True  # If True, show line connecting track points
-    line_style: str = 'SolidLine'  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
+    line_style: str = "SolidLine"  # Line style: 'SolidLine', 'DashLine', 'DotLine', 'DashDotLine', 'DashDotDotLine'
     labels: set[str] = field(default_factory=set)  # Set of labels for this track
     label_time: Optional[datetime.datetime] = None  # UTC timestamp labels were last applied
     labeler: Optional[str] = None  # Username of the person who last applied labels
@@ -158,10 +158,10 @@ class Track:
             # Slice extraction metadata if present
             if track_slice.extraction_metadata is not None:
                 track_slice.extraction_metadata = {
-                    'chip_size': track_slice.extraction_metadata['chip_size'],
-                    'chips': track_slice.extraction_metadata['chips'][s],
-                    'signal_masks': track_slice.extraction_metadata['signal_masks'][s],
-                    'noise_stds': track_slice.extraction_metadata['noise_stds'][s],
+                    "chip_size": track_slice.extraction_metadata["chip_size"],
+                    "chips": track_slice.extraction_metadata["chips"][s],
+                    "signal_masks": track_slice.extraction_metadata["signal_masks"][s],
+                    "noise_stds": track_slice.extraction_metadata["noise_stds"][s],
                 }
 
             # Slice uncertainty data if present
@@ -315,11 +315,11 @@ class Track:
 
         # Map string style to Qt constant
         style_map = {
-            'SolidLine': Qt.PenStyle.SolidLine,
-            'DashLine': Qt.PenStyle.DashLine,
-            'DotLine': Qt.PenStyle.DotLine,
-            'DashDotLine': Qt.PenStyle.DashDotLine,
-            'DashDotDotLine': Qt.PenStyle.DashDotDotLine,
+            "SolidLine": Qt.PenStyle.SolidLine,
+            "DashLine": Qt.PenStyle.DashLine,
+            "DotLine": Qt.PenStyle.DotLine,
+            "DashDotLine": Qt.PenStyle.DashDotLine,
+            "DashDotDotLine": Qt.PenStyle.DashDotDotLine,
         }
         qt_style = style_map.get(actual_style, Qt.PenStyle.SolidLine)
 
@@ -447,7 +447,7 @@ class Track:
         indices = np.searchsorted(sensor_imagery_frames, self.frames)
 
         # Create output array filled with NaT
-        track_times = np.full(len(self.frames), np.datetime64('NaT'), dtype='datetime64[ns]')
+        track_times = np.full(len(self.frames), np.datetime64("NaT"), dtype="datetime64[ns]")
 
         # Clip so we can safely index; out-of-bounds entries are caught by in_bounds
         in_bounds = indices < len(sensor_imagery_frames)
@@ -542,7 +542,7 @@ class Track:
                 labels_str = str(
                     labels_str
                 )  # Make sure labels are parsed as a string even if they're something like `1`
-                kwargs["labels"] = set(label.strip() for label in labels_str.split(','))
+                kwargs["labels"] = set(label.strip() for label in labels_str.split(","))
             else:
                 kwargs["labels"] = set()
         if "Label Time" in df.columns:
@@ -621,7 +621,7 @@ class Track:
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no row/column. "
                     "Sensor required for geodetic-to-pixel mapping."
                 )
-            if not hasattr(sensor, 'can_geolocate') or not sensor.can_geolocate():
+            if not hasattr(sensor, "can_geolocate") or not sensor.can_geolocate():
                 raise ValueError(
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
                     "does not support geolocation."
@@ -639,10 +639,10 @@ class Track:
             )
 
         # Enable show_uncertainty by default if uncertainty data is present
-        if 'covariance_00' in kwargs and 'covariance_01' in kwargs and 'covariance_11' in kwargs:
+        if "covariance_00" in kwargs and "covariance_01" in kwargs and "covariance_11" in kwargs:
             # Only set to True if not already explicitly set
-            if 'show_uncertainty' not in kwargs:
-                kwargs['show_uncertainty'] = True
+            if "show_uncertainty" not in kwargs:
+                kwargs["show_uncertainty"] = True
 
         track = cls(name=name, frames=frames, rows=rows, columns=columns, sensor=sensor, **kwargs)
 
@@ -686,10 +686,10 @@ class Track:
         extraction_metadata_copy = None
         if self.extraction_metadata is not None:
             extraction_metadata_copy = {
-                'chip_size': self.extraction_metadata['chip_size'],
-                'chips': self.extraction_metadata['chips'].copy(),
-                'signal_masks': self.extraction_metadata['signal_masks'].copy(),
-                'noise_stds': self.extraction_metadata['noise_stds'].copy(),
+                "chip_size": self.extraction_metadata["chip_size"],
+                "chips": self.extraction_metadata["chips"].copy(),
+                "signal_masks": self.extraction_metadata["signal_masks"].copy(),
+                "noise_stds": self.extraction_metadata["noise_stds"].copy(),
             }
 
         track_copy = self.__class__(
@@ -745,9 +745,9 @@ class Track:
             "Complete": self.complete,
             "Show Line": self.show_line,
             "Line Style": self.line_style,
-            "Labels": ', '.join(sorted(self.labels)) if self.labels else '',
-            "Label Time": self.label_time.isoformat() if self.label_time is not None else '',
-            "Labeler": self.labeler or '',
+            "Labels": ", ".join(sorted(self.labels)) if self.labels else "",
+            "Label Time": self.label_time.isoformat() if self.label_time is not None else "",
+            "Labeler": self.labeler or "",
         }
 
         # Include geolocation if possible
@@ -759,7 +759,7 @@ class Track:
 
             # Single vectorized call for altitude
             locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
-            data["Altitude (km)"] = np.asarray(locations.height.to('km').value)
+            data["Altitude (km)"] = np.asarray(locations.height.to("km").value)
         else:
             # Sensor cannot geolocate - fill with NaN
             data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
@@ -769,13 +769,13 @@ class Track:
         # Include times if possible
         track_times = self.get_times()
         if track_times is not None:
-            data["Times"] = pd.to_datetime(track_times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+            data["Times"] = pd.to_datetime(track_times).strftime("%Y-%m-%dT%H:%M:%S.%f")
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:
-            chips = self.extraction_metadata.get('chips')
-            masks = self.extraction_metadata.get('signal_masks')
-            noise = self.extraction_metadata.get('noise_stds')
+            chips = self.extraction_metadata.get("chips")
+            masks = self.extraction_metadata.get("signal_masks")
+            noise = self.extraction_metadata.get("noise_stds")
 
             if chips is not None and masks is not None:
                 data["Signal Total"] = np.sum(chips * masks, axis=(1, 2))

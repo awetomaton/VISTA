@@ -174,7 +174,7 @@ class Imagery:
         return self.images.shape[0]
 
     def __eq__(self, other):
-        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
+        return hasattr(other, "uuid") and (self.uuid == other.uuid)
 
     def __str__(self):
         return self.__repr__()
@@ -510,23 +510,23 @@ class Imagery:
         Sensor data should be written separately using sensor.to_hdf5()
         """
         # Set imagery attributes
-        group.attrs['name'] = self.name
-        group.attrs['description'] = self.description
-        group.attrs['uuid'] = str(self.uuid)
-        group.attrs['row_offset'] = self.row_offset
-        group.attrs['column_offset'] = self.column_offset
+        group.attrs["name"] = self.name
+        group.attrs["description"] = self.description
+        group.attrs["uuid"] = str(self.uuid)
+        group.attrs["row_offset"] = self.row_offset
+        group.attrs["column_offset"] = self.column_offset
 
         # Save image data with chunking
-        group.create_dataset('images', data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
+        group.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
 
         # Save frames
-        group.create_dataset('frames', data=self.frames)
+        group.create_dataset("frames", data=self.frames)
 
         # Save times if present
         if self.times is not None:
             # Convert datetime64 to unix nanoseconds
-            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
 
 
 def save_imagery_hdf5(file_path: Union[str, pathlib.Path], sensor_imagery_map: dict[str, list[Imagery]]):
@@ -569,13 +569,13 @@ def save_imagery_hdf5(file_path: Union[str, pathlib.Path], sensor_imagery_map: d
     """
     file_path = pathlib.Path(file_path)
 
-    with h5py.File(file_path, 'w') as f:
+    with h5py.File(file_path, "w") as f:
         # Set root attributes
-        f.attrs['format_version'] = '1.7'
-        f.attrs['created'] = str(np.datetime64('now').astype(str))
+        f.attrs["format_version"] = "1.7"
+        f.attrs["created"] = str(np.datetime64("now").astype(str))
 
         # Create sensors group
-        sensors_group = f.create_group('sensors')
+        sensors_group = f.create_group("sensors")
 
         # Iterate through sensor names and their imagery
         for sensor_name, imagery_list in sensor_imagery_map.items():
@@ -592,7 +592,7 @@ def save_imagery_hdf5(file_path: Union[str, pathlib.Path], sensor_imagery_map: d
             sensor.to_hdf5(sensor_group)
 
             # Create imagery subgroup
-            imagery_group = sensor_group.create_group('imagery')
+            imagery_group = sensor_group.create_group("imagery")
 
             # Save each imagery dataset
             for imagery in imagery_list:

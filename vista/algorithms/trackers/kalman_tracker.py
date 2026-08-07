@@ -144,11 +144,11 @@ def run_kalman_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration
-    process_noise = config['process_noise']
-    measurement_noise = config['measurement_noise']
-    gating_distance = config['gating_distance']
-    min_detections = config['min_detections']
-    delete_threshold = config['delete_threshold']
+    process_noise = config["process_noise"]
+    measurement_noise = config["measurement_noise"]
+    gating_distance = config["gating_distance"]
+    min_detections = config["min_detections"]
+    delete_threshold = config["delete_threshold"]
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -274,9 +274,9 @@ def run_kalman_tracker(detectors, config):
         frames_array = np.array(track.frames, dtype=np.int_)
 
         track_data = {
-            'frames': frames_array,
-            'rows': rows,
-            'columns': columns,
+            "frames": frames_array,
+            "rows": rows,
+            "columns": columns,
         }
         track_data_list.append(track_data)
 

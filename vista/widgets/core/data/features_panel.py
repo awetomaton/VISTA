@@ -27,7 +27,7 @@ class FeaturesPanel(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
-        self.settings = QSettings('VISTA', 'VISTA')
+        self.settings = QSettings("VISTA", "VISTA")
         self.init_ui()
 
     def init_ui(self):
@@ -85,7 +85,7 @@ class FeaturesPanel(QWidget):
         self.features_table.blockSignals(True)
         self.features_table.setRowCount(0)
 
-        if hasattr(self.viewer, 'features'):
+        if hasattr(self.viewer, "features"):
             for row, feature in enumerate(self.viewer.features):
                 self.features_table.insertRow(row)
 
@@ -196,14 +196,14 @@ class FeaturesPanel(QWidget):
             if placemark_data:
                 # Create placemark feature
                 feature = PlacemarkFeature(
-                    name=placemark_data['name'],
+                    name=placemark_data["name"],
                     feature_type="placemark",
                     geometry={
-                        'row': placemark_data['row'],
-                        'col': placemark_data['col'],
-                        'lat': placemark_data.get('lat'),
-                        'lon': placemark_data.get('lon'),
-                        'alt': placemark_data.get('alt'),
+                        "row": placemark_data["row"],
+                        "col": placemark_data["col"],
+                        "lat": placemark_data.get("lat"),
+                        "lon": placemark_data.get("lon"),
+                        "alt": placemark_data.get("alt"),
                     },
                 )
 

@@ -265,15 +265,15 @@ class TrackExtractionDialog(QDialog):
 
         # Combine all parameters
         return {
-            'chip_radius': self.chip_radius_spin.value(),
-            'search_radius': search_radius,
-            'background_radius': cfar_params['background_radius'],
-            'ignore_radius': cfar_params['ignore_radius'],
-            'threshold_deviation': cfar_params['threshold_deviation'],
-            'annulus_shape': cfar_params['annulus_shape'],
-            'detection_mode': cfar_params['detection_mode'],
-            'update_centroids': self.update_centroids_check.isChecked(),
-            'max_centroid_shift': self.max_centroid_shift_spin.value(),
+            "chip_radius": self.chip_radius_spin.value(),
+            "search_radius": search_radius,
+            "background_radius": cfar_params["background_radius"],
+            "ignore_radius": cfar_params["ignore_radius"],
+            "threshold_deviation": cfar_params["threshold_deviation"],
+            "annulus_shape": cfar_params["annulus_shape"],
+            "detection_mode": cfar_params["detection_mode"],
+            "update_centroids": self.update_centroids_check.isChecked(),
+            "max_centroid_shift": self.max_centroid_shift_spin.value(),
         }
 
     def validate_parameters(self):
@@ -286,8 +286,8 @@ class TrackExtractionDialog(QDialog):
             (is_valid, error_message)
         """
         cfar_params = self.cfar_widget.get_config()
-        background_radius = cfar_params['background_radius']
-        ignore_radius = cfar_params['ignore_radius']
+        background_radius = cfar_params["background_radius"]
+        ignore_radius = cfar_params["ignore_radius"]
 
         if ignore_radius >= background_radius:
             return False, "Ignore radius must be less than background radius."

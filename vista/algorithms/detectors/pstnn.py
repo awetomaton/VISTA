@@ -91,7 +91,7 @@ class PSTNN:
         max_area: int = 1000,
         use_gpu: bool = False,
         threshold_multiplier: float = 5.0,
-        detection_mode: str = 'both',
+        detection_mode: str = "both",
     ):
         self.patch_size = patch_size
         self.stride = stride
@@ -129,7 +129,7 @@ class PSTNN:
         pad_h = (self.stride - (height % self.stride)) % self.stride
         pad_w = (self.stride - (width % self.stride)) % self.stride
         if pad_h > 0 or pad_w > 0:
-            images_padded = np.pad(images, ((0, 0), (0, pad_h), (0, pad_w)), mode='reflect')
+            images_padded = np.pad(images, ((0, 0), (0, pad_h), (0, pad_w)), mode="reflect")
         else:
             images_padded = images
 
@@ -166,14 +166,14 @@ class PSTNN:
             Array of detection centroid column coordinates (float64)
         """
         # Threshold based on detection mode
-        if self.detection_mode == 'bright':
+        if self.detection_mode == "bright":
             # Detect only positive (bright) sparse values
             mean_val = np.mean(target_image)
             std_val = np.std(target_image)
             threshold = mean_val + self.threshold_multiplier * std_val
             binary = target_image > threshold
             intensity_image = np.maximum(target_image, 0)
-        elif self.detection_mode == 'dark':
+        elif self.detection_mode == "dark":
             # Detect only negative (dark) sparse values
             negated = -target_image
             mean_val = np.mean(negated)
@@ -419,7 +419,7 @@ class PSTNN:
 
         # Move to GPU if requested
         if self.use_gpu and HAS_TORCH:
-            device = torch.device('cuda')
+            device = torch.device("cuda")
             D_tensor = torch.from_numpy(D).float().to(device)
 
             # Initialize variables

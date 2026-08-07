@@ -36,8 +36,8 @@ def map_times_to_frames(
         return np.array([], dtype=np.int_)
 
     # Convert to numeric for comparison (nanoseconds since epoch)
-    track_times_ns = track_times.astype('datetime64[ns]').astype(np.int64)
-    imagery_times_ns = imagery_times.astype('datetime64[ns]').astype(np.int64)
+    track_times_ns = track_times.astype("datetime64[ns]").astype(np.int64)
+    imagery_times_ns = imagery_times.astype("datetime64[ns]").astype(np.int64)
 
     # For each track time, find the nearest imagery time before it
     frames = np.empty(len(track_times), dtype=np.int_)

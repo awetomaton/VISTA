@@ -93,8 +93,8 @@ class TrackExtraction:
         background_radius: int,
         ignore_radius: int,
         threshold_deviation: float,
-        annulus_shape: str = 'circular',
-        detection_mode: str = 'above',
+        annulus_shape: str = "circular",
+        detection_mode: str = "above",
         search_radius: int = None,
         update_centroids: bool = False,
         max_centroid_shift: float = np.inf,
@@ -282,9 +282,9 @@ class TrackExtraction:
                     updated_columns[i] = col + centroid_offset_col
 
         return {
-            'chips': chips,
-            'signal_masks': signal_masks,
-            'noise_stds': noise_stds,
-            'updated_rows': updated_rows,
-            'updated_columns': updated_columns,
+            "chips": chips,
+            "signal_masks": signal_masks,
+            "noise_stds": noise_stds,
+            "updated_rows": updated_rows,
+            "updated_columns": updated_columns,
         }

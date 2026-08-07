@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-_HDF5_EXTENSIONS = ('.h5', '.hdf5')
+_HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 
 class SensorsPanel(QWidget):
@@ -108,7 +108,7 @@ class SensorsPanel(QWidget):
         self.sensors_table.blockSignals(False)
 
         # Select the row for the currently selected sensor
-        if hasattr(self, 'selected_sensor') and self.selected_sensor is not None:
+        if hasattr(self, "selected_sensor") and self.selected_sensor is not None:
             for row, sensor in enumerate(self.viewer.sensors):
                 if sensor == self.selected_sensor:
                     self.sensors_table.selectRow(row)

@@ -29,14 +29,14 @@ def pg_color_to_qcolor(color_str):
     """
     # Map pyqtgraph single-letter colors to Qt colors
     color_map = {
-        'r': 'red',
-        'g': 'green',
-        'b': 'blue',
-        'c': 'cyan',
-        'm': 'magenta',
-        'y': 'yellow',
-        'k': 'black',
-        'w': 'white',
+        "r": "red",
+        "g": "green",
+        "b": "blue",
+        "c": "cyan",
+        "m": "magenta",
+        "y": "yellow",
+        "k": "black",
+        "w": "white",
     }
 
     # Convert if it's a single letter, otherwise use as-is
@@ -72,22 +72,22 @@ def qcolor_to_pg_color(qcolor):
     """
     # Map Qt colors back to pyqtgraph single-letter codes (preferred)
     color_map = {
-        'red': 'r',
-        '#ff0000': 'r',
-        'green': 'g',
-        '#008000': 'g',
-        'blue': 'b',
-        '#0000ff': 'b',
-        'cyan': 'c',
-        '#00ffff': 'c',
-        'magenta': 'm',
-        '#ff00ff': 'm',
-        'yellow': 'y',
-        '#ffff00': 'y',
-        'black': 'k',
-        '#000000': 'k',
-        'white': 'w',
-        '#ffffff': 'w',
+        "red": "r",
+        "#ff0000": "r",
+        "green": "g",
+        "#008000": "g",
+        "blue": "b",
+        "#0000ff": "b",
+        "cyan": "c",
+        "#00ffff": "c",
+        "magenta": "m",
+        "#ff00ff": "m",
+        "yellow": "y",
+        "#ffff00": "y",
+        "black": "k",
+        "#000000": "k",
+        "white": "w",
+        "#ffffff": "w",
     }
 
     # Try by name first

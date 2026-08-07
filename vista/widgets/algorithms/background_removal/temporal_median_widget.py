@@ -76,7 +76,7 @@ class TemporalMedianWidget(BaseBackgroundRemovalWidget):
 
     def build_algorithm_params(self):
         """Build parameter dictionary for Temporal Median algorithm"""
-        return {'background': self.background_spinbox.value(), 'offset': self.offset_spinbox.value()}
+        return {"background": self.background_spinbox.value(), "offset": self.offset_spinbox.value()}
 
     def set_parameters_enabled(self, enabled):
         """Enable or disable parameter widgets"""

@@ -239,8 +239,8 @@ def run_simple_tracker(detectors, config):
     >>> print(f"Found {len(tracks)} tracks")
     """
     # Extract configuration with smart defaults
-    tracker_name = config.get('tracker_name', 'Simple Tracker')
-    min_track_length = config.get('min_track_length', 5)
+    tracker_name = config.get("tracker_name", "Simple Tracker")
+    min_track_length = config.get("min_track_length", 5)
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -255,8 +255,8 @@ def run_simple_tracker(detectors, config):
             all_detections_list.append(pos)
 
     # Auto-compute search radius if not provided
-    if 'max_search_radius' in config and config['max_search_radius'] is not None:
-        max_search_radius = config['max_search_radius']
+    if "max_search_radius" in config and config["max_search_radius"] is not None:
+        max_search_radius = config["max_search_radius"]
     else:
         # Estimate based on nearest-neighbor distances in detections
         if len(all_detections_list) > 10:
@@ -281,8 +281,8 @@ def run_simple_tracker(detectors, config):
             max_search_radius = 30.0
 
     # Auto-compute max age if not provided
-    if 'max_age' in config and config['max_age'] is not None:
-        max_age = config['max_age']
+    if "max_age" in config and config["max_age"] is not None:
+        max_age = config["max_age"]
     else:
         # Estimate based on detection density
         frames = sorted(detections_by_frame.keys())
@@ -381,9 +381,9 @@ def run_simple_tracker(detectors, config):
         frames_array = np.array(track.frames, dtype=np.int_)
 
         track_data = {
-            'frames': frames_array,
-            'rows': positions[:, 1],  # y
-            'columns': positions[:, 0],  # x
+            "frames": frames_array,
+            "rows": positions[:, 1],  # y
+            "columns": positions[:, 0],  # x
         }
         track_data_list.append(track_data)
 

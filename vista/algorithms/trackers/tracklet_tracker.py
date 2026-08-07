@@ -174,16 +174,16 @@ def run_tracklet_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration with smart defaults
-    tracker_name = config.get('tracker_name', 'Tracklet Tracker')
-    initial_search_radius = config.get('initial_search_radius', 10.0)
-    max_velocity_change = config.get('max_velocity_change', 5.0)
-    min_tracklet_length = config.get('min_tracklet_length', 3)
-    max_consecutive_misses = config.get('max_consecutive_misses', 2)
-    min_detection_rate = config.get('min_detection_rate', 0.6)
-    max_linking_gap = config.get('max_linking_gap', 10)
-    linking_search_radius = config.get('linking_search_radius', 30.0)
-    smoothness_weight = config.get('smoothness_weight', 1.0)
-    min_track_length = config.get('min_track_length', 5)
+    tracker_name = config.get("tracker_name", "Tracklet Tracker")
+    initial_search_radius = config.get("initial_search_radius", 10.0)
+    max_velocity_change = config.get("max_velocity_change", 5.0)
+    min_tracklet_length = config.get("min_tracklet_length", 3)
+    max_consecutive_misses = config.get("max_consecutive_misses", 2)
+    min_detection_rate = config.get("min_detection_rate", 0.6)
+    max_linking_gap = config.get("max_linking_gap", 10)
+    linking_search_radius = config.get("linking_search_radius", 30.0)
+    smoothness_weight = config.get("smoothness_weight", 1.0)
+    min_track_length = config.get("min_track_length", 5)
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -425,9 +425,9 @@ def run_tracklet_tracker(detectors, config):
         positions = positions[sort_idx]
 
         track_data = {
-            'frames': frames_array,
-            'rows': positions[:, 1],  # y
-            'columns': positions[:, 0],  # x
+            "frames": frames_array,
+            "rows": positions[:, 1],  # y
+            "columns": positions[:, 0],  # x
         }
         track_data_list.append(track_data)
 

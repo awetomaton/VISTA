@@ -29,8 +29,8 @@ class PlacemarkDialog(QDialog):
 
         # Check if geolocation is available
         self.can_geolocate = False
-        if self.viewer.imagery and hasattr(self.viewer.imagery, 'sensor'):
-            if self.viewer.imagery.sensor and hasattr(self.viewer.imagery.sensor, 'can_geolocate'):
+        if self.viewer.imagery and hasattr(self.viewer.imagery, "sensor"):
+            if self.viewer.imagery.sensor and hasattr(self.viewer.imagery.sensor, "can_geolocate"):
                 self.can_geolocate = self.viewer.imagery.sensor.can_geolocate()
 
         self.init_ui()
@@ -174,7 +174,7 @@ class PlacemarkDialog(QDialog):
                 except Exception as e:
                     print(f"Warning: Could not convert pixel to geodetic: {e}")
 
-            return {'name': name, 'row': row, 'col': col, 'lat': lat, 'lon': lon, 'alt': alt}
+            return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
         else:
             # Using geodetic coordinates
             lat = self.lat_spinbox.value()
@@ -199,7 +199,7 @@ class PlacemarkDialog(QDialog):
                     )
                     return None
 
-                return {'name': name, 'row': row, 'col': col, 'lat': lat, 'lon': lon, 'alt': alt}
+                return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
             except Exception as e:
                 QMessageBox.critical(
                     self, "Conversion Error", f"Failed to convert geodetic to pixel coordinates:\n{str(e)}"

@@ -44,7 +44,7 @@ def refine_verbatim(row, col, imagery, frame_index):
     return row, col
 
 
-def refine_peak(row, col, imagery, frame_index, radius=5, detection_mode='bright'):
+def refine_peak(row, col, imagery, frame_index, radius=5, detection_mode="bright"):
     """
     Peak mode: Find the most extreme pixel within a radius.
 
@@ -102,9 +102,9 @@ def refine_peak(row, col, imagery, frame_index, radius=5, detection_mode='bright
     search_region = frame_data[row_min:row_max, col_min:col_max]
 
     # Find the most extreme pixel based on detection mode
-    if detection_mode == 'dark':
+    if detection_mode == "dark":
         peak_idx = np.unravel_index(np.argmin(search_region), search_region.shape)
-    elif detection_mode == 'both':
+    elif detection_mode == "both":
         deviation = np.abs(search_region - np.mean(search_region))
         peak_idx = np.unravel_index(np.argmax(deviation), search_region.shape)
     else:
@@ -126,7 +126,7 @@ def refine_cfar(
     background_radius=10,
     ignore_radius=3,
     threshold_deviation=3.0,
-    annulus_shape='circular',
+    annulus_shape="circular",
     search_radius=50,
 ):
     """
@@ -206,7 +206,7 @@ def refine_cfar(
             min_area=1,  # Accept any size for point refinement
             max_area=10000,
             annulus_shape=annulus_shape,
-            detection_mode='above',  # Typically looking for bright pixels
+            detection_mode="above",  # Typically looking for bright pixels
             search_radius=search_radius,
         )
 
@@ -236,7 +236,7 @@ def refine_cfar(
         return row, col
 
 
-def refine_point(row, col, imagery, frame_index, mode='verbatim', **kwargs):
+def refine_point(row, col, imagery, frame_index, mode="verbatim", **kwargs):
     """
     Refine a clicked point location based on the specified mode.
 
@@ -288,18 +288,18 @@ def refine_point(row, col, imagery, frame_index, mode='verbatim', **kwargs):
     If an unknown mode is specified, falls back to 'verbatim' mode and prints
     a warning message.
     """
-    if mode == 'verbatim':
+    if mode == "verbatim":
         return refine_verbatim(row, col, imagery, frame_index)
-    elif mode == 'peak':
-        radius = kwargs.get('radius', 5)
-        detection_mode = kwargs.get('detection_mode', 'bright')
+    elif mode == "peak":
+        radius = kwargs.get("radius", 5)
+        detection_mode = kwargs.get("detection_mode", "bright")
         return refine_peak(row, col, imagery, frame_index, radius, detection_mode)
-    elif mode == 'cfar':
-        background_radius = kwargs.get('background_radius', 10)
-        ignore_radius = kwargs.get('ignore_radius', 3)
-        threshold_deviation = kwargs.get('threshold_deviation', 3.0)
-        annulus_shape = kwargs.get('annulus_shape', 'circular')
-        search_radius = kwargs.get('search_radius', 50)
+    elif mode == "cfar":
+        background_radius = kwargs.get("background_radius", 10)
+        ignore_radius = kwargs.get("ignore_radius", 3)
+        threshold_deviation = kwargs.get("threshold_deviation", 3.0)
+        annulus_shape = kwargs.get("annulus_shape", "circular")
+        search_radius = kwargs.get("search_radius", 50)
         return refine_cfar(
             row,
             col,

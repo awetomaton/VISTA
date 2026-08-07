@@ -206,7 +206,7 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
 
         # Line style dropdown
         self.ellipse_style_combo = QComboBox()
-        self.ellipse_style_combo.addItems(['Solid', 'Dash', 'Dot', 'Dash-Dot', 'Dash-Dot-Dot'])
+        self.ellipse_style_combo.addItems(["Solid", "Dash", "Dot", "Dash-Dot", "Dash-Dot-Dot"])
         self.ellipse_style_combo.setToolTip("Line style for uncertainty ellipses.\nDefault: Dash")
         uncertainty_layout.addRow("Line Style:", self.ellipse_style_combo)
 
@@ -244,14 +244,14 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         """Load settings from QSettings"""
         # Map internal style names to display names
         style_map = {
-            'SolidLine': 'Solid',
-            'DashLine': 'Dash',
-            'DotLine': 'Dot',
-            'DashDotLine': 'Dash-Dot',
-            'DashDotDotLine': 'Dash-Dot-Dot',
+            "SolidLine": "Solid",
+            "DashLine": "Dash",
+            "DotLine": "Dot",
+            "DashDotLine": "Dash-Dot",
+            "DashDotDotLine": "Dash-Dot-Dot",
         }
         internal_style = self.settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
-        display_style = style_map.get(internal_style, 'Dash')
+        display_style = style_map.get(internal_style, "Dash")
         self.ellipse_style_combo.setCurrentText(display_style)
 
         self.ellipse_width_spinbox.setValue(self.settings.value("tracks/uncertainty_line_width", 1, type=int))
@@ -261,14 +261,14 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         """Save settings to QSettings"""
         # Map display names back to internal style names
         style_map = {
-            'Solid': 'SolidLine',
-            'Dash': 'DashLine',
-            'Dot': 'DotLine',
-            'Dash-Dot': 'DashDotLine',
-            'Dash-Dot-Dot': 'DashDotDotLine',
+            "Solid": "SolidLine",
+            "Dash": "DashLine",
+            "Dot": "DotLine",
+            "Dash-Dot": "DashDotLine",
+            "Dash-Dot-Dot": "DashDotDotLine",
         }
         display_style = self.ellipse_style_combo.currentText()
-        internal_style = style_map.get(display_style, 'DashLine')
+        internal_style = style_map.get(display_style, "DashLine")
         self.settings.setValue("tracks/uncertainty_line_style", internal_style)
 
         self.settings.setValue("tracks/uncertainty_line_width", self.ellipse_width_spinbox.value())

@@ -2,4 +2,4 @@
 
 from .coaddition_widget import CoadditionWidget
 
-__all__ = ['CoadditionWidget']
+__all__ = ["CoadditionWidget"]

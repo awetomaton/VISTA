@@ -874,18 +874,18 @@ class VistaMainWindow(QMainWindow):
     def on_lasso_selection_completed(self, selected_items):
         """Handle lasso selection completion"""
         # Update track table selection
-        if selected_items['tracks']:
+        if selected_items["tracks"]:
             self.data_manager.tabs.setCurrentIndex(2)  # Switch to tracks tab
-            track_uuids = {track.uuid for track in selected_items['tracks']}
+            track_uuids = {track.uuid for track in selected_items["tracks"]}
             self.data_manager.tracks_panel.select_tracks_by_uuid(track_uuids)
 
         # Update detection selection in panel
-        if selected_items['detections']:
-            self.data_manager.detections_panel.on_detections_selected_in_viewer(selected_items['detections'])
+        if selected_items["detections"]:
+            self.data_manager.detections_panel.on_detections_selected_in_viewer(selected_items["detections"])
 
         # Update feature selection in panel
-        if selected_items['features']:
-            self.data_manager.features_panel.select_features(selected_items['features'])
+        if selected_items["features"]:
+            self.data_manager.features_panel.select_features(selected_items["features"])
 
         # Show status message
         self.statusBar().showMessage(
@@ -922,7 +922,7 @@ class VistaMainWindow(QMainWindow):
 
             # Create and start loader thread (no modal dialog - progress shown in imagery panel)
             self.statusBar().showMessage("Loading imagery", 4000)
-            self.loader_thread = DataLoaderThread(file_path, 'imagery')
+            self.loader_thread = DataLoaderThread(file_path, "imagery")
             self.loader_thread.imagery_available.connect(self.on_imagery_available)
             self.loader_thread.imagery_block_loaded.connect(self.on_imagery_block_loaded)
             self.loader_thread.imagery_load_complete.connect(self.on_imagery_load_complete)
@@ -1187,7 +1187,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.detections_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, 'detections', 'csv', sensor=self.detections_selected_sensor)
+        self.loader_thread = DataLoaderThread(file_path, "detections", "csv", sensor=self.detections_selected_sensor)
         self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -1304,7 +1304,7 @@ class VistaMainWindow(QMainWindow):
                     )
                     if (
                         selected_sensor
-                        and hasattr(selected_sensor, 'can_geolocate')
+                        and hasattr(selected_sensor, "can_geolocate")
                         and selected_sensor.can_geolocate()
                     ):
                         mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
@@ -1390,7 +1390,7 @@ class VistaMainWindow(QMainWindow):
 
         # Create and start loader thread
         self.loader_thread = DataLoaderThread(
-            file_path, 'tracks', 'csv', sensor=self.tracks_selected_sensor, imagery=self.tracks_selected_imagery
+            file_path, "tracks", "csv", sensor=self.tracks_selected_sensor, imagery=self.tracks_selected_imagery
         )
         self.loader_thread.tracks_loaded.connect(self.on_tracks_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
@@ -1544,7 +1544,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.aois_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, 'aois', 'csv')
+        self.loader_thread = DataLoaderThread(file_path, "aois", "csv")
         self.loader_thread.aois_loaded.connect(self.on_aois_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -1646,8 +1646,8 @@ class VistaMainWindow(QMainWindow):
                     feature = ShapefileFeature(
                         name=shapefile_name,
                         feature_type="shapefile",
-                        geometry={'shapes': sf.shapes(), 'records': sf.records(), 'fields': sf.fields},
-                        properties={'file_path': str(file_path)},
+                        geometry={"shapes": sf.shapes(), "records": sf.records(), "fields": sf.fields},
+                        properties={"file_path": str(file_path)},
                     )
 
                     # Add to viewer
@@ -1685,13 +1685,13 @@ class VistaMainWindow(QMainWindow):
                     df = pd.read_csv(file_path)
 
                     # Check required columns
-                    if 'Name' not in df.columns:
+                    if "Name" not in df.columns:
                         errors.append(f"{Path(file_path).name}: Missing 'Name' column")
                         continue
 
                     # Determine coordinate system
-                    has_pixel = 'Row' in df.columns and 'Column' in df.columns
-                    has_geodetic = 'Latitude' in df.columns and 'Longitude' in df.columns
+                    has_pixel = "Row" in df.columns and "Column" in df.columns
+                    has_geodetic = "Latitude" in df.columns and "Longitude" in df.columns
 
                     if not has_pixel and not has_geodetic:
                         errors.append(
@@ -1704,7 +1704,7 @@ class VistaMainWindow(QMainWindow):
                         if not self.viewer.imagery:
                             errors.append(f"{Path(file_path).name}: Geodetic coordinates require loaded imagery")
                             continue
-                        if not hasattr(self.viewer.imagery, 'sensor') or not self.viewer.imagery.sensor:
+                        if not hasattr(self.viewer.imagery, "sensor") or not self.viewer.imagery.sensor:
                             errors.append(f"{Path(file_path).name}: Imagery has no sensor for coordinate conversion")
                             continue
                         if not self.viewer.imagery.sensor.can_geolocate():
@@ -1714,16 +1714,16 @@ class VistaMainWindow(QMainWindow):
                     # Process each placemark
                     for idx, row_data in df.iterrows():
                         try:
-                            name = str(row_data['Name'])
+                            name = str(row_data["Name"])
 
                             if has_pixel:
                                 # Use pixel coordinates
-                                row = float(row_data['Row'])
-                                col = float(row_data['Column'])
+                                row = float(row_data["Row"])
+                                col = float(row_data["Column"])
 
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
-                                if self.viewer.imagery and hasattr(self.viewer.imagery, 'sensor'):
+                                if self.viewer.imagery and hasattr(self.viewer.imagery, "sensor"):
                                     if self.viewer.imagery.sensor and self.viewer.imagery.sensor.can_geolocate():
                                         try:
                                             frame = self.viewer.current_frame_number
@@ -1738,9 +1738,9 @@ class VistaMainWindow(QMainWindow):
 
                             else:
                                 # Use geodetic coordinates and convert to pixel
-                                lat = float(row_data['Latitude'])
-                                lon = float(row_data['Longitude'])
-                                alt = float(row_data.get('Altitude', 0.0))
+                                lat = float(row_data["Latitude"])
+                                lon = float(row_data["Longitude"])
+                                alt = float(row_data.get("Altitude", 0.0))
 
                                 frame = self.viewer.current_frame_number
                                 location = EarthLocation(
@@ -1760,7 +1760,7 @@ class VistaMainWindow(QMainWindow):
                             feature = PlacemarkFeature(
                                 name=name,
                                 feature_type="placemark",
-                                geometry={'row': row, 'col': col, 'lat': lat, 'lon': lon, 'alt': alt},
+                                geometry={"row": row, "col": col, "lat": lat, "lon": lon, "alt": alt},
                             )
 
                             # Add to viewer
@@ -2649,7 +2649,7 @@ class VistaMainWindow(QMainWindow):
 
         # Update each track with interpolated data
         for original_track, results in zip(original_tracks, results_list):
-            interpolated_track = results['interpolated_track']
+            interpolated_track = results["interpolated_track"]
 
             # Update the original track with interpolated data
             original_track.frames = interpolated_track.frames
@@ -2741,7 +2741,7 @@ class VistaMainWindow(QMainWindow):
 
         # Update each track with smoothed data
         for original_track, results in zip(original_tracks, results_list):
-            smoothed_track = results['smoothed_track']
+            smoothed_track = results["smoothed_track"]
 
             # Update the original track with smoothed data
             original_track.rows = smoothed_track.rows
