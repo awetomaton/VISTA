@@ -694,7 +694,7 @@ class ImageryViewer(QWidget):
         self.update_overlays()
 
     def update_overlays(self):
-        """Update track and detection overlays for current frame"""
+        """Update track, detection, and known sources overlays for current frame"""
         # Get current frame number
         frame_num = self.current_frame_number
 
@@ -996,6 +996,9 @@ class ImageryViewer(QWidget):
         # Update selected detections highlighting
         if self.detection_selection_mode:
             self._update_selected_detections_display()
+
+        # Update known sources displays
+        self._rerender_known_sources()
 
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
@@ -2116,10 +2119,6 @@ class ImageryViewer(QWidget):
             self.known_sources.remove(source)
 
     def _render_known_source(self, source):
-        # TODO: this only runs when adding a known source
-        # Need to make it run when a sensor is loaded in as well
-        # in case you load the sources before the image files
-        # also need to rerender when changing frames, etc.
         if self.imagery is None:
             return
 
@@ -2138,6 +2137,12 @@ class ImageryViewer(QWidget):
         )
         self.plot_item.addItem(scatter_item)
         source._plot_item = scatter_item
+
+    def _rerender_known_sources(self):
+        for source in self.known_sources:
+            if source._plot_item:
+                self.plot_item.removeItem(source._plot_item)
+            self._render_known_source(source)
         
     def start_track_creation(self):
         """Start track creation mode"""
