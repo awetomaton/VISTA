@@ -1945,17 +1945,17 @@ class VistaMainWindow(QMainWindow):
         msg.setWindowTitle("About VISTA")
         msg.setIconPixmap(self.icons.about.pixmap(64, 64))
         msg.setText(
-            f"<h2>VISTA</h2>"
-            f"<p>Visual Imagery Software Tool for Analysis</p>"
+            "<h2>VISTA</h2>"
+            "<p>Visual Imagery Software Tool for Analysis</p>"
             f"<p>Version {vista.__version__}</p>"
-            f"<p>An Open-Source project created by <a href='https://www.awetomaton.com/'>Awetomaton Ltd</a> for the GEOINT community.</p>"
+            "<p>An Open-Source project created by <a href='https://www.awetomaton.com/'>Awetomaton Ltd</a> for the GEOINT community.</p>"
         )
         msg.setInformativeText(
-            f"<b>Point of Contact</b><br>"
+            "<b>Point of Contact</b><br>"
             f"{vista.__author__}<br>"
             f"<a href='mailto:{vista.__email__}'>{vista.__email__}</a><br><br>"
-            f"<b>License</b><br>"
-            f"<a href='https://github.com/awetomaton/VISTA/blob/main/LICENSE'>MIT License &copy; 2026 Awetomaton Ltd</a><br>"
+            "<b>License</b><br>"
+            "<a href='https://github.com/awetomaton/VISTA/blob/main/LICENSE'>MIT License &copy; 2026 Awetomaton Ltd</a><br>"
         )
         msg.exec()
 
