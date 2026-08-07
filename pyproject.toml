@@ -8,7 +8,9 @@ dynamic = ["version"]
 description = "A PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays"
 readme = "readme.md"
 license = { text = "MIT" }
-authors = [{ name = "Stephen Hartzell", email = "shartzell@awetomaton.com" }]
+authors = [
+    { name = "Stephen Hartzell", email = "shartzell@awetomaton.com" },
+]
 maintainers = [
     { name = "Stephen Hartzell", email = "shartzell@awetomaton.com" },
 ]
@@ -50,8 +52,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["torch"]
-dev = ["pytest>=7.0", "pytest-qt", "ruff~=0.16.0"]
+gpu = [
+    "torch"
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-qt", 
+    "ruff~=0.16.0",
+]
 docs = [
     "sphinx>=7.0,<9.0",
     "furo>=2024.1.29",
@@ -82,7 +90,6 @@ line-length = 120
 extend-exclude = ["notebooks", "docs", "scripts"]
 
 [tool.ruff.lint]
-# We will add these back one at a time as we address the lints.
 select = ["E", "F", "W", "I"]
 ignore = [
     "E501", # Line too long. Let formatter wrap lines.
