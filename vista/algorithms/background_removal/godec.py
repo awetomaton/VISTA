@@ -101,7 +101,16 @@ def _hard_threshold(tensor, card):
     return tensor * (tensor.abs() >= threshold)
 
 
-def _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback, frame_block_size, block_overlap_frames):
+def _godec_blocked(
+    images,
+    rank,
+    sparsity,
+    max_iter,
+    power_iters,
+    callback,
+    frame_block_size,
+    block_overlap_frames,
+):
     """
     Run GoDec in overlapping frame blocks and combine results.
 
@@ -262,7 +271,14 @@ def godec(
     # Dispatch to blocked processing if frame_block_size is set
     if frame_block_size is not None:
         return _godec_blocked(
-            images, rank, sparsity, max_iter, power_iters, callback, frame_block_size, block_overlap_frames
+            images,
+            rank,
+            sparsity,
+            max_iter,
+            power_iters,
+            callback,
+            frame_block_size,
+            block_overlap_frames,
         )
 
     num_frames, height, width = images.shape

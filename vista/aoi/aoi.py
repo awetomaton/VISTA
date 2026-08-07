@@ -73,7 +73,12 @@ class AOI:
             are the top-left coordinates, and x_max and y_max are the
             bottom-right coordinates.
         """
-        return (self.x, self.y, self.x + self.width, self.y + self.height)
+        return (
+            self.x,
+            self.y,
+            self.x + self.width,
+            self.y + self.height,
+        )
 
     def contains_point(self, x: float, y: float) -> bool:
         """

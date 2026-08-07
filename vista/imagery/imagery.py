@@ -529,7 +529,10 @@ class Imagery:
             group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
 
 
-def save_imagery_hdf5(file_path: Union[str, pathlib.Path], sensor_imagery_map: dict[str, list[Imagery]]):
+def save_imagery_hdf5(
+    file_path: Union[str, pathlib.Path],
+    sensor_imagery_map: dict[str, list[Imagery]],
+):
     """
     Save imagery data to HDF5 file with hierarchical sensor/imagery structure.
 

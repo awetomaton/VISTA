@@ -216,7 +216,12 @@ class SampledSensor(Sensor):
         interpolated_positions = np.zeros((3, len(times)))
 
         for i in range(3):
-            interpolator = interp1d(sample_times_ns, self.positions[i, :], kind="linear", fill_value="extrapolate")
+            interpolator = interp1d(
+                sample_times_ns,
+                self.positions[i, :],
+                kind="linear",
+                fill_value="extrapolate",
+            )
             interpolated_positions[i, :] = interpolator(query_times_ns)
 
         return interpolated_positions
@@ -324,24 +329,37 @@ class SampledSensor(Sensor):
 
                 # Gather pixels belonging to this frame
                 point_mask = frame == uframe
-                intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows[point_mask], columns[point_mask])
+                intersections = self._pixel_to_geodetic_single_frame(
+                    frame_idx,
+                    rows[point_mask],
+                    columns[point_mask],
+                )
                 all_intersections[:, point_mask] = intersections
 
             return EarthLocation.from_geocentric(
-                x=all_intersections[0] * units.km, y=all_intersections[1] * units.km, z=all_intersections[2] * units.km
+                x=all_intersections[0] * units.km,
+                y=all_intersections[1] * units.km,
+                z=all_intersections[2] * units.km,
             )
 
         # Single frame path (original fast path)
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
             invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+            return EarthLocation.from_geocentric(
+                x=invalid,
+                y=invalid,
+                z=invalid,
+                unit=units.km,
+            )
 
         frame_idx = np.where(frame_mask)[0][0]
         intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
 
         return EarthLocation.from_geocentric(
-            x=intersections[0] * units.km, y=intersections[1] * units.km, z=intersections[2] * units.km
+            x=intersections[0] * units.km,
+            y=intersections[1] * units.km,
+            z=intersections[2] * units.km,
         )
 
     def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -458,7 +476,10 @@ class SampledSensor(Sensor):
                 frame_idx = np.where(sensor_mask)[0][0]
 
                 point_mask = frame == uframe
-                r, c = self._geodetic_to_pixel_single_frame(frame_idx, target_ecef[:, point_mask])
+                r, c = self._geodetic_to_pixel_single_frame(
+                    frame_idx,
+                    target_ecef[:, point_mask],
+                )
                 all_rows[point_mask] = r
                 all_cols[point_mask] = c
 

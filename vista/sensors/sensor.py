@@ -91,7 +91,10 @@ class Sensor:
             self.uuid = uuid.uuid4()
         self._added_imagery_uuids = []
         self._imagery_frames_dataframe = pd.DataFrame(
-            {"frames": pd.Series([], dtype=int), "times": pd.Series([], dtype="datetime64[ns]")}
+            {
+                "frames": pd.Series([], dtype=int),
+                "times": pd.Series([], dtype="datetime64[ns]"),
+            }
         )
 
     def __eq__(self, other):

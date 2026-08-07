@@ -5,7 +5,9 @@ from numpy.typing import NDArray
 
 
 def map_times_to_frames(
-    track_times: NDArray[np.datetime64], imagery_times: NDArray[np.datetime64], imagery_frames: NDArray[np.int_]
+    track_times: NDArray[np.datetime64],
+    imagery_times: NDArray[np.datetime64],
+    imagery_frames: NDArray[np.int_],
 ) -> NDArray[np.int_]:
     """
     Map track times to imagery frames using nearest time before track time.

@@ -107,10 +107,18 @@ class TrackInterpolation:
         # Create interpolation functions for rows and columns
         try:
             row_interp = interp1d(
-                existing_frames, existing_rows, kind=self.method, assume_sorted=False, fill_value="extrapolate"
+                existing_frames,
+                existing_rows,
+                kind=self.method,
+                assume_sorted=False,
+                fill_value="extrapolate",
             )
             col_interp = interp1d(
-                existing_frames, existing_columns, kind=self.method, assume_sorted=False, fill_value="extrapolate"
+                existing_frames,
+                existing_columns,
+                kind=self.method,
+                assume_sorted=False,
+                fill_value="extrapolate",
             )
         except Exception as e:
             raise ValueError(f"Interpolation failed: {str(e)}")

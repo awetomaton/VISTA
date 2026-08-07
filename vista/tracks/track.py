@@ -629,7 +629,11 @@ class Track:
             initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
             # Map geodetic to pixel using sensor
             rows, columns = map_geodetic_to_pixel(
-                df["Latitude (deg)"].to_numpy(), initial_lons, df["Altitude (km)"].to_numpy(), frames, sensor
+                df["Latitude (deg)"].to_numpy(),
+                initial_lons,
+                df["Altitude (km)"].to_numpy(),
+                frames,
+                sensor,
             )
         else:
             raise ValueError(
@@ -643,7 +647,14 @@ class Track:
             if "show_uncertainty" not in kwargs:
                 kwargs["show_uncertainty"] = True
 
-        track = cls(name=name, frames=frames, rows=rows, columns=columns, sensor=sensor, **kwargs)
+        track = cls(
+            name=name,
+            frames=frames,
+            rows=rows,
+            columns=columns,
+            sensor=sensor,
+            **kwargs,
+        )
 
         # Pre-populate geodetic cache if coords were available in the dataframe
         if initial_lons is not None and initial_lats is not None:

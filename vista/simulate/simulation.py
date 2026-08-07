@@ -111,7 +111,9 @@ class Simulation:
         """
         # Compute sensor position in ECEF (above center lat/lon at specified altitude)
         scene_center = EarthLocation.from_geodetic(
-            lon=self.center_lon * units.deg, lat=self.center_lat * units.deg, height=self.sensor_altitude_km * units.km
+            lon=self.center_lon * units.deg,
+            lat=self.center_lat * units.deg,
+            height=self.sensor_altitude_km * units.km,
         )
         sensor_pos = np.array(
             [

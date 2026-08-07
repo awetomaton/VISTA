@@ -143,18 +143,39 @@ def run_network_flow_tracker(detectors, config):
 
             cost = -link_benefit + distance_penalty + gap_penalty + smoothness_penalty
 
-            edges.append({"from": det_i["id"], "to": det_j["id"], "cost": cost, "type": "link"})
+            edges.append(
+                {
+                    "from": det_i["id"],
+                    "to": det_j["id"],
+                    "cost": cost,
+                    "type": "link",
+                }
+            )
 
     # 2. Source-to-detection edges (track initiation)
     # Use entrance_cost as-is (positive)
     # The cost should be large enough that linking is preferred over starting new tracks
     for det in all_detections:
-        edges.append({"from": "source", "to": det["id"], "cost": entrance_cost, "type": "entrance"})
+        edges.append(
+            {
+                "from": "source",
+                "to": det["id"],
+                "cost": entrance_cost,
+                "type": "entrance",
+            }
+        )
 
     # 3. Detection-to-sink edges (track termination)
     # Use exit_cost as-is (positive)
     for det in all_detections:
-        edges.append({"from": det["id"], "to": "sink", "cost": exit_cost, "type": "exit"})
+        edges.append(
+            {
+                "from": det["id"],
+                "to": "sink",
+                "cost": exit_cost,
+                "type": "exit",
+            }
+        )
 
     # Solve minimum-cost flow using successive shortest path
     # Each detection can only be used once (flow capacity = 1)

@@ -165,7 +165,14 @@ def run_robust_pca(images, lambda_param=None, tol=1e-7, max_iter=1000, callback=
     M = images.reshape(num_frames, height * width).T
 
     # Apply Robust PCA
-    L, S = robust_pca_inexact_alm(M, lambda_param=lambda_param, mu=None, tol=tol, max_iter=max_iter, callback=callback)
+    L, S = robust_pca_inexact_alm(
+        M,
+        lambda_param=lambda_param,
+        mu=None,
+        tol=tol,
+        max_iter=max_iter,
+        callback=callback,
+    )
 
     # Reshape back to image sequences
     background_images = L.T.reshape(num_frames, height, width).astype(np.float32)

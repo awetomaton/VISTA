@@ -35,7 +35,14 @@ class KalmanTrack:
     def predict(self, dt=1.0):
         """Predict next state using constant velocity model"""
         # State transition matrix
-        F = np.array([[1, dt, 0, 0], [0, 1, 0, 0], [0, 0, 1, dt], [0, 0, 0, 1]])
+        F = np.array(
+            [
+                [1, dt, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, dt],
+                [0, 0, 0, 1],
+            ]
+        )
 
         # Process noise covariance
         Q = (
@@ -57,7 +64,12 @@ class KalmanTrack:
     def update(self, detection_pos, frame):
         """Update state with new detection"""
         # Measurement matrix (measure position only)
-        H = np.array([[1, 0, 0, 0], [0, 0, 1, 0]])
+        H = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 0, 1, 0],
+            ]
+        )
 
         # Measurement noise
         R = np.eye(2) * self.measurement_noise
@@ -98,7 +110,12 @@ class KalmanTrack:
     def mahalanobis_distance(self, detection_pos):
         """Compute Mahalanobis distance to detection"""
         # Measurement matrix
-        H = np.array([[1, 0, 0, 0], [0, 0, 1, 0]])
+        H = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 0, 1, 0],
+            ]
+        )
 
         # Predicted measurement
         z_pred = H @ self.state
@@ -219,7 +236,13 @@ def run_kalman_tracker(detectors, config):
         # Initiate new tentative tracks from unassociated detections
         for i, detection in enumerate(detections):
             if i not in associated_detections:
-                new_track = KalmanTrack(detection, frame, process_noise, measurement_noise, next_track_id)
+                new_track = KalmanTrack(
+                    detection,
+                    frame,
+                    process_noise,
+                    measurement_noise,
+                    next_track_id,
+                )
                 tentative_tracks.append(new_track)
                 next_track_id += 1
 
