@@ -6,6 +6,7 @@
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from .known_source import KnownSource
+from vista.transforms.earth_intersection import los_to_earth
 
 from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
@@ -135,7 +136,7 @@ class Satellites(KnownSource):
     def get_pixels(self, sensor: Sensor, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
         Return the pixel positions of the satellites for the provided sensor and frame number(s)
-        Satellites which are off-frame have NaN locations
+        Satellites which are off-frame or behind the Earth have NaN locations
 
         Parameters
         ----------
@@ -155,14 +156,27 @@ class Satellites(KnownSource):
         _, times = sensor.get_imagery_frames_and_times()
         times = times[frame]
 
-        # geodetic locations for the satellites at those times
-        locs = self.get_geodetics(times)
+        # geodetic positions for the satellites at those times
+        satellite_positions = self.get_geodetics(times)
 
-        # TODO: check if pixels are within bounds of image
-        # TODO: check if satellite is on the other side of the earth via intersection along LOS
+        # check if satellite is on the other side of the earth via intersection along LOS
+        sensor_positions = sensor.get_positions(np.atleast_1d(times))
+        dx = satellite_positions.x.to(u.km).value - sensor_positions[0]
+        dy = satellite_positions.y.to(u.km).value - sensor_positions[1]
+        dz = satellite_positions.z.to(u.km).value - sensor_positions[2]
+        # normalize for los_to_earth function
+        los_sensor_to_sats = np.array([dx, dy, dz]) / np.sqrt(dx**2 + dy**2 + dz**2)
+        # calculate intersection of los from sensor to satellites with the Earth
+        d, intersection = los_to_earth(sensor_positions, los_sensor_to_sats)
+        # if intersection distance is farther than the satellite, los from sensor
+        # to satellite does not intersect the earth
+        d[d**2 > dx**2 + dy**2 + dz**2] = np.nan
+        # values which are not nan are the ones that are blocked by the earth
+        # set their satellite positions to nan, as we don't care about their pixel positions
+        satellite_positions[~np.isnan(d)] = np.nan
 
         # convert from ECEF to ARF to pixels
-        rows, columns = sensor.geodetic_to_pixel(frame, locs)
+        rows, columns = sensor.geodetic_to_pixel(frame, satellite_positions)
 
         # Only display objects within the image frame
         # TODO: Handle when there's a cropped image
