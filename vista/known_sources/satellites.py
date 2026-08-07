@@ -108,7 +108,7 @@ class Satellites(KnownSource):
         Parameters
         ----------
         times : NDArray[np.datetime64]
-            Array of times for which to retrieve sensor positions
+            Array of times for which to retrieve positions
             
         Returns
         -------
