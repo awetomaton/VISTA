@@ -3,17 +3,14 @@
 
 """
 
-from vista.imagery.imagery import Imagery
-from vista.sensors.sensor import Sensor
 from .known_source import KnownSource
-from vista.transforms.earth_intersection import los_to_earth
 
 from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
 from astropy import units as u
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple, Union
+from typing import Union
 from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
@@ -101,14 +98,14 @@ class Satellites(KnownSource):
         self.num_satellites = len(satellites.values())
         self.satellites = SatrecArray(list(satellites.values()))
 
-    def get_geodetics(self, times: NDArray[np.datetime64]) -> EarthLocation:
+    def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
         Return an EarthLocation containing the positions of the satellites at the provided times
 
         Parameters
         ----------
-        times : NDArray[np.datetime64]
-            Array of times for which to retrieve positions
+        times : np.datetime64 | NDArray[np.datetime64] | astropy.time.Time
+            Time or array of times for which to retrieve positions
             
         Returns
         -------
@@ -141,59 +138,3 @@ class Satellites(KnownSource):
 
         # unpack cartesian xyz coordinates into xyz arguments
         return EarthLocation(*ecef_coords.cartesian.xyz)
-
-    def get_pixels(self, sensor: Sensor, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
-        """
-        Return the pixel positions of the satellites for the provided sensor and frame number(s)
-        Satellites which are off-frame or behind the Earth have NaN locations
-
-        Parameters
-        ----------
-        sensor : Sensor
-            The sensor whose imagery we want to project the satellites onto
-        frame : int, NDArray
-            The frame number(s) to project onto
-        
-        Returns
-        -------
-        rows : NDArray
-            Row coordinates of satellite positions in the frame(s)
-        cols : NDArray
-            Column coordinates of satellite positions in the frame(s)
-        """
-        # get times for the desired frame(s)
-        _, times = sensor.get_imagery_frames_and_times()
-        times = times[frame]
-
-        # geodetic positions for the satellites at those times
-        satellite_positions = self.get_geodetics(times)
-
-        # check if satellite is on the other side of the earth via intersection along LOS
-        sensor_positions = sensor.get_positions(np.atleast_1d(times))
-        dx = satellite_positions.x.to(u.km).value - sensor_positions[0]
-        dy = satellite_positions.y.to(u.km).value - sensor_positions[1]
-        dz = satellite_positions.z.to(u.km).value - sensor_positions[2]
-        # normalize for los_to_earth function
-        los_sensor_to_sats = np.array([dx, dy, dz]) / np.sqrt(dx**2 + dy**2 + dz**2)
-        # calculate intersection of los from sensor to satellites with the Earth
-        d, intersection = los_to_earth(sensor_positions, los_sensor_to_sats)
-        # if intersection distance is farther than the satellite, los from sensor
-        # to satellite does not intersect the earth
-        d[d**2 > dx**2 + dy**2 + dz**2] = np.nan
-        # values which are not nan are the ones that are blocked by the earth
-        # set their satellite positions to nan, as we don't care about their pixel positions
-        satellite_positions[~np.isnan(d)] = np.nan
-
-        # convert from ECEF to ARF to pixels
-        rows, columns = sensor.geodetic_to_pixel(frame, satellite_positions)
-
-        # Only display objects within the image frame
-        # TODO: Handle when there's a cropped image
-        _, max_rows, max_cols = imagery.images.shape
-        # where is the valid region...
-        where = (rows >= 0) & (rows <= max_rows + 1) & (columns >= 0) & (columns <= max_cols + 1)
-        # ... so negate it to set invalid pixels to nan
-        rows[~where] = np.nan
-        columns[~where] = np.nan
-
-        return rows, columns
