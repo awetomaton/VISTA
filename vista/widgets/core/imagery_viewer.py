@@ -2135,6 +2135,20 @@ class ImageryViewer(QWidget):
         rows = rows[where]
         columns = columns[where]
 
+        symbols = {
+            'satellites': 'o',
+            'stars': 'star'
+        }
+        if source.source_type == 'stars':
+            V_mags = source.V_magnitudes[where]
+            if V_mags.shape[0] > 0:
+                V_min = np.min(V_mags)
+                V_max = np.max(V_mags)
+                size = (V_max - V_mags + V_min + 1) / (V_max - V_min + 1) * 5
+            else:
+                size = V_mags
+        else:
+            size = 3
         # Create a small marker for the sources
         scatter_item = pg.ScatterPlotItem(
             x=columns, y=rows,

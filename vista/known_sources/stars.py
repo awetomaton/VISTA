@@ -37,7 +37,7 @@ class Stars(KnownSource):
         # TODO: figure out which catalogs to allow
         self._download_hipparcos()
 
-    def _download_hipparcos(self, V_max: int=5, V_min: int=-100):
+    def _download_hipparcos(self, V_max: int=7, V_min: int=-100):
         """
         Queries Hipparcos for all-sky stars brighter than V_max and fainter than V_min
             (values are magnitudes in the Johnson V band between 500 and 600 nm)
@@ -72,7 +72,7 @@ class Stars(KnownSource):
         # which suggests it is a small enough value we can probably ignore it
         # TODO: But, see https://arxiv.org/pdf/1507.02105 for more thorough discussion
         # perhaps incorporate parallex errors as well somehow instead?
-        stars[stars['Plx'] <= 0] = 10**-9 # since units are already milli-arcsec, this value is 1 pico-arcsecond
+        stars[stars['Plx'] <= 0] = 10**-9 # since units are already milli-arcsec, this value is 1 pico-arcsec
         
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars['Plx'])
@@ -91,6 +91,7 @@ class Stars(KnownSource):
             equinox='J1991.25',
             obstime=Time('1991.25', format='jyear')
         )
+        self.V_magnitudes = stars['Hpmag']
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
