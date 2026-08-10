@@ -32,7 +32,18 @@ class Stars(KnownSource):
         """
         super().__init__(name, "stars")
         self.num_stars = 0
-        self.stars = None
+        # empty SkyCoord object
+        self.stars = SkyCoord(
+            ra=[] * u.deg,
+            dec=[] * u.deg,
+            # proper motions need to be in same units
+            pm_ra_cosdec=[] * u.mas/u.yr,
+            pm_dec=[] * u.mas/u.yr,
+            distance=[] * u.pc,
+            frame='icrs',
+            equinox='J2000.0',
+            obstime=Time('2000.0', format='jyear')
+        )
 
         # TODO: figure out which catalogs to allow
         self._download_hipparcos()
@@ -112,8 +123,8 @@ class Stars(KnownSource):
         times = Time(times)
 
         # stars is a (num_stars, 3) array
-        # need to add a time axis for the transform
-        ecef_coords = self.stars[:,None].transform_to(ITRS(obstime=times))
+        # need to add a time axis to propogate motion to desired times
+        ecef_coords = self.stars[:,None].apply_space_motion(times).transform_to(ITRS(obstime=times))
         # but we can squeeze missing axes after
         ecef_coords = ecef_coords.squeeze()
 
