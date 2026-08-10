@@ -114,7 +114,7 @@ class Stars(KnownSource):
         # stars is a (num_stars, 3) array
         # need to add a time axis for the transform
         ecef_coords = self.stars[:,None].transform_to(ITRS(obstime=times))
-        # but we can squeeze missing coordinates after
+        # but we can squeeze missing axes after
         ecef_coords = ecef_coords.squeeze()
 
         # unpack cartesian xyz coordinates into xyz arguments

@@ -2152,10 +2152,10 @@ class ImageryViewer(QWidget):
         # Create a small marker for the sources
         scatter_item = pg.ScatterPlotItem(
             x=columns, y=rows,
-            size=3,
-            pen=pg.mkPen(color, width=2),
+            size=size,
+            pen=pg.mkPen(color, width=1),
             brush=pg.mkBrush(color),
-            symbol='o'
+            symbol=symbols[source.source_type]
         )
         self.plot_item.addItem(scatter_item)
         source._plot_item = scatter_item
