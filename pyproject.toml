@@ -37,6 +37,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "astropy",
+    "astroquery",
     "darkdetect",
     "h5py",
     "numpy",
