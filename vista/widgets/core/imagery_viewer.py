@@ -2123,7 +2123,11 @@ class ImageryViewer(QWidget):
             return
 
         # TODO: make color editable for each different source
-        color = pg.mkColor('g')
+        colors = {
+            'satellites': 'g',
+            'stars': 'y',
+        }
+        color = pg.mkColor(colors[source.source_type])
 
         rows, columns = source.get_pixels(self.imagery.sensor, self.imagery, self.current_frame_number)
 
