@@ -2130,6 +2130,10 @@ class ImageryViewer(QWidget):
         color = pg.mkColor(colors[source.source_type])
 
         rows, columns = source.get_pixels(self.imagery.sensor, self.imagery, self.current_frame_number)
+        # mask out NaN pixel locations
+        where = np.isfinite(rows) & np.isfinite(columns)
+        rows = rows[where]
+        columns = columns[where]
 
         # Create a small marker for the sources
         scatter_item = pg.ScatterPlotItem(
