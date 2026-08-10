@@ -77,6 +77,7 @@ class Stars(KnownSource):
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars['Plx'])
 
+        self.name = "Hipparcos stars"
         self.num_stars = len(stars)
         self.stars = SkyCoord(
             ra=stars['RArad'],
