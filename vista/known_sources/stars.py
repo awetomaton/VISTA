@@ -67,12 +67,12 @@ class Stars(KnownSource):
         # Extract Astropy Table from the TableList result
         stars = query_results[0]
 
-        # set negative parallaxes to 0
+        # set negative or 0 parallaxes to small value
         # typically, negative parallaxes means the measurement is dominated by noise
         # which suggests it is a small enough value we can probably ignore it
         # TODO: But, see https://arxiv.org/pdf/1507.02105 for more thorough discussion
-        # this will raise a divide by zero runtime warning
-        stars[stars['Plx'] < 0] = 0
+        # perhaps incorporate parallex errors as well somehow instead?
+        stars[stars['Plx'] <= 0] = 10**-9 # since units are already milli-arcsec, this value is 1 pico-arcsecond
         
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars['Plx'])
