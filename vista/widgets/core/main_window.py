@@ -238,6 +238,10 @@ class VistaMainWindow(QMainWindow):
         load_satellites_action.triggered.connect(self.load_satellites_file)
         file_menu.addAction(load_satellites_action)
 
+        load_stars_action = QAction("Load Stars (Astroquery)", self)
+        load_stars_action.triggered.connect(self.load_stars_file)
+        file_menu.addAction(load_stars_action)
+
         file_menu.addSeparator()
 
         simulate_action = QAction("Simulate", self)
@@ -1948,6 +1952,61 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Loaded {satellites.num_satellites} Satellite(s)", 3000)
+
+    # TODO: Handle loading stars via astroquery and/or via file input
+    # do both? pick one?
+    def load_stars_file(self):
+        """Load stars via Astroquery"""
+        # Start loading the first file
+        self._load_next_stars_file()
+
+    def _load_next_stars_file(self):
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        # Create and start loader thread
+        # loading via astroquery for now, so no file name or type
+        self.loader_thread = DataLoaderThread(None, 'stars', None)
+        self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_stars_file_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_stars_file_loaded(self):
+        """Handle completion of a single Stars load"""
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # All files loaded, close progress dialog
+        self.on_loading_finished()
+
+        # Update status with total count
+        self.statusBar().showMessage(f"Loaded Stars via astroquery", 3000)
+
+    def on_stars_loaded(self, stars):
+        """Handle Stars loaded in background thread"""
+        # stars is a single object
+        self.viewer.add_known_source(stars)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Loaded {stars.num_stars} Star(s)", 3000)
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""
