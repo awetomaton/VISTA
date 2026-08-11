@@ -121,6 +121,10 @@ class Stars(KnownSource):
         EarthLocation
             Astropy EarthLocation object containing geodetic coordinates
         """
+        # quick return if no stars exist
+        if self.num_stars == 0:
+            return EarthLocation([], [], [])
+        
         # TODO: cache results for specific times (frames)?
 
         times = Time(times)
