@@ -8,6 +8,7 @@ from .known_source import KnownSource
 from astropy.coordinates import Distance, EarthLocation, ITRS, SkyCoord
 from astropy.time import Time
 from astropy import units as u
+from astroquery.gaia import Gaia
 from astroquery.vizier import Vizier
 import numpy as np
 from numpy.typing import NDArray
@@ -50,13 +51,12 @@ class Stars(KnownSource):
         if catalog == "Hipparcos":
             self._download_hipparcos()
         elif catalog == "Gaia":
-            # TODO: Implement Gaia catalog loading
-            pass
+            self._download_gaia()
 
     def _download_hipparcos(self, V_max: int=7, V_min: int=-100):
         """
         Queries Hipparcos for all-sky stars brighter than V_max and fainter than V_min
-            (values are magnitudes in the Johnson V band between 500 and 600 nm)
+            (values are magnitudes in the Hipparcos Hp band)
 
         Parameters
         ----------
@@ -65,10 +65,10 @@ class Stars(KnownSource):
         V_min : int, default=-100
             Brightness limit (more negative = brighter)
         """
-        # We get the Hipparcos ID, RA, RA proper motion, Dec, Dec proper motion, parallax,
-        # V band magnitude, and B-V magnitude
+        # We get the Hipparcos ID, RA, RA proper motion, Dec, Dec proper motion,
+        # parallax, parallex error, and Hp band magnitude
         # Uses the 2007 reduction (https://cdsarc.cds.unistra.fr/viz-bin/cat/I/311#/article)
-        v_engine = Vizier(columns=['HIP', 'RArad', 'pmRA', 'DErad', 'pmDE', 'Plx', 'e_Plx', 'Hpmag', 'B-V'],
+        v_engine = Vizier(columns=['HIP', 'RArad', 'pmRA', 'DErad', 'pmDE', 'Plx', 'e_Plx', 'Hpmag'],
                           catalog=['I/311/hip2'],
                           column_filters={'Hpmag': f'<={V_max} & >={V_min}'})
         v_engine.ROW_LIMIT = -1  # Fetch all matching rows without truncation limits
@@ -106,6 +106,62 @@ class Stars(KnownSource):
             obstime=Time('1991.25', format='jyear')
         )
         self.V_magnitudes = stars['Hpmag']
+
+    def _download_gaia(self, V_max: int=7, V_min: int=-100):
+        """
+        Queries Gaia for all-sky stars brighter than V_max and fainter than V_min
+            (values are magnitudes in the Gaia G band)
+
+        Parameters
+        ----------
+        V_max : int, default=5
+            Faintness limit (more positive = fainter)
+        V_min : int, default=-100
+            Brightness limit (more negative = brighter)
+        """
+
+        # We get the Gaia ID, RA, RA proper motion, Dec, Dec proper motion,
+        # parallax, parallex error, and G band magnitude
+        adql_query = f"""
+            SELECT source_id, ra, pmra, dec, pmdec, parallax, parallax_error, phot_g_mean_mag
+            FROM gaiadr3.gaia_source
+            WHERE phot_g_mean_mag < {V_max}
+            AND phot_g_mean_mag > {V_min}
+        """
+        job = Gaia.launch_job_async(adql_query)
+        query_results = job.get_results()
+
+        # Verify that the query contains results
+        if len(query_results) == 0:
+            #TODO: raise error of some sort?
+            return
+            
+        # Gaia result is already the table we need
+        stars = query_results
+
+        # Stars with relative parallax errors > 0.2 likely do not give reliable 
+        # distances (and are likely far enough away to not matter), so we ignore their parallax
+        # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
+        # since units are already milli-arcsec, we set to a small value of 1 micro-arcsec
+        stars[stars['parallax_error'] >= 0.2 * stars['parallax']] = 10**-3 
+        # convert the parallaxes into Astropy Distances
+        star_distances = Distance(parallax=stars['parallax'])
+
+        self.name = "Gaia stars"
+        self.num_stars = len(stars)
+        self.stars = SkyCoord(
+            ra=stars['ra'],
+            dec=stars['dec'],
+            # proper motions need to be in same units
+            pm_ra_cosdec=stars['pmra'].to(u.mas/u.yr) * np.cos(stars['dec']),
+            pm_dec=stars['pmdec'].to(u.mas/u.yr),
+            distance=star_distances,
+            frame='icrs',
+            # Gaia dr3 epoch
+            equinox='J2016.0',
+            obstime=Time('2016.0', format='jyear')
+        )
+        self.V_magnitudes = stars['phot_g_mean_mag']
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
