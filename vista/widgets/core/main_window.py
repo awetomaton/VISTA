@@ -243,7 +243,7 @@ class VistaMainWindow(QMainWindow):
 
         for catalog in ["Hipparcos", "Gaia"]:
             action = QAction(catalog, self)
-            action.triggered.connect(lambda _: self.load_stars_astroquery(catalog))
+            action.triggered.connect(lambda _, name=catalog: self.load_stars_astroquery(name))
             load_stars_menu.addAction(action)
 
         file_menu.addSeparator()
