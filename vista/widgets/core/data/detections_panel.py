@@ -5,7 +5,7 @@ import traceback
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
     QApplication,
@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
+from vista.widgets.core.data.data_panel import DataPanel
 from vista.widgets.core.data.delegates import (
     ColorDelegate,
     LabelsDelegate,
@@ -47,16 +48,12 @@ from vista.widgets.core.data.undo_manager import UndoStack
 _CSV_EXTENSIONS = (".csv",)
 
 
-class DetectionsPanel(QWidget):
+class DetectionsPanel(DataPanel):
     """Panel for managing detections"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
-    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
-
     def __init__(self, viewer):
-        super().__init__()
+        super().__init__(viewer)
         self.settings = QSettings("VISTA", "DataManager")
-        self.viewer = viewer
         self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
         self.waiting_for_track_selection = False  # Flag when waiting for user to select track
         self.init_ui()
@@ -1271,38 +1268,25 @@ class DetectionsPanel(QWidget):
 
             # Start detector editing mode
             self.viewer.start_detection_editing(detector)
-            # Update main window status
-            if hasattr(self.parent(), "parent"):
-                main_window = self.parent().parent()
-                if hasattr(main_window, "statusBar"):
-                    main_window.statusBar().showMessage(
-                        f"Detector editing mode: Click to add detections or click existing detections to remove them for '{detector.name}'. Only current frame shown. Uncheck 'Edit Detector' when finished.",
-                        0,
-                    )
+            self.status_message.emit(
+                "Detector editing mode: Click to add detections or click existing detections to remove them for "
+                f"'{detector.name}'. Only current frame shown. Uncheck 'Edit Detector' when finished.",
+                0,
+            )
         else:
             # Finish detector editing
             edited_detector = self.viewer.finish_detection_editing()
             if edited_detector:
-                # Refresh the panel (need to access parent's refresh method)
-                parent = self.parent()
-                if parent and hasattr(parent, "refresh"):
-                    parent.refresh()
-                # Update main window status
-                if hasattr(self.parent(), "parent"):
-                    main_window = self.parent().parent()
-                    if hasattr(main_window, "statusBar"):
-                        total_detections = len(edited_detector.frames)
-                        unique_frames = len(np.unique(edited_detector.frames))
-                        main_window.statusBar().showMessage(
-                            f"Detector '{edited_detector.name}' updated with {total_detections} detections across {unique_frames} frames",
-                            3000,
-                        )
+                self.refresh_detections_table()
+                total_detections = len(edited_detector.frames)
+                unique_frames = len(np.unique(edited_detector.frames))
+                self.status_message.emit(
+                    f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
+                    f"{unique_frames} frames",
+                    3000,
+                )
             else:
-                # Update main window status
-                if hasattr(self.parent(), "parent"):
-                    main_window = self.parent().parent()
-                    if hasattr(main_window, "statusBar"):
-                        main_window.statusBar().showMessage("Detector editing cancelled", 3000)
+                self.status_message.emit("Detector editing cancelled", 3000)
 
     def export_detections(self):
         """Export selected detections to CSV file"""
@@ -1730,9 +1714,7 @@ class DetectionsPanel(QWidget):
         self.add_to_existing_track_btn.clicked.connect(self.cancel_add_to_existing_track)
 
         # Show status message
-        main_window = QApplication.instance().activeWindow()
-        if hasattr(main_window, "statusBar"):
-            main_window.statusBar().showMessage("Click on a track in the viewer to add selected detections to it", 0)
+        self.status_message.emit("Click on a track in the viewer to add selected detections to it", 0)
 
     def cancel_add_to_existing_track(self):
         """Cancel adding detections to an existing track"""
@@ -1749,9 +1731,7 @@ class DetectionsPanel(QWidget):
         self.add_to_existing_track_btn.clicked.connect(self.start_add_to_existing_track)
 
         # Clear status message
-        main_window = QApplication.instance().activeWindow()
-        if hasattr(main_window, "statusBar"):
-            main_window.statusBar().showMessage("Add to track cancelled", 3000)
+        self.status_message.emit("Add to track cancelled", 3000)
 
     def on_track_selected_for_adding_detections(self, track):
         """Handle track selection when adding detections to existing track"""

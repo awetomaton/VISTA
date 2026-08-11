@@ -1,6 +1,6 @@
 """Features panel for data manager"""
 
-from PyQt6.QtCore import QSettings, Qt, pyqtSignal
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -15,18 +15,16 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.features import PlacemarkFeature
+from vista.widgets.core.data.data_panel import DataPanel
 
 from .placemark_dialog import PlacemarkDialog
 
 
-class FeaturesPanel(QWidget):
+class FeaturesPanel(DataPanel):
     """Panel for managing persistent features (shapefiles, placemarks, etc.)"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
-
     def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
         self.settings = QSettings("VISTA", "VISTA")
         self.init_ui()
 

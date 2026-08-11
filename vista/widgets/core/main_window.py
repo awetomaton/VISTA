@@ -136,6 +136,17 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
         self.data_manager.sensors_panel.cancel_sensor_loading_requested.connect(self.on_cancel_sensor_loading)
 
+        # Route panel status messages to the status bar
+        for panel in (
+            self.data_manager.sensors_panel,
+            self.data_manager.imagery_panel,
+            self.data_manager.tracks_panel,
+            self.data_manager.detections_panel,
+            self.data_manager.aois_panel,
+            self.data_manager.features_panel,
+        ):
+            panel.status_message.connect(self.statusBar().showMessage)
+
         # Connect sensor selection to map view state updates
         self.data_manager.sensors_panel.sensor_selected.connect(lambda _sensor: self._update_map_view_action_state())
 
