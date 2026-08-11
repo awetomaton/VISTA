@@ -19,16 +19,17 @@ class Stars(KnownSource):
     Class to hold star data, converting to positions as necessary
     """
 
-    # TODO: don't restrict myself to just the Hipparcos catalog?
-
-    def __init__(self, name: str):
+    def __init__(self, name: str, catalog: Union[str, None] = None):
         """
         Create a Stars object
 
         Parameters
         ----------
         name : str
-            Name of the Stars object (e.g. 'Hipparcos stars', 'GAIA stars', etc.)
+            Name of the Stars object (e.g. 'Hipparcos stars', 'Gaia stars', etc.)
+        catalog : str, None
+            Name of the catalog to query
+            Value must be one of ["Hipparcos", "Gaia"]
         """
         super().__init__(name, "stars")
         self.num_stars = 0
@@ -45,8 +46,11 @@ class Stars(KnownSource):
             obstime=Time('2000.0', format='jyear')
         )
 
-        # TODO: figure out which catalogs to allow
-        self._download_hipparcos()
+        if catalog == "Hipparcos":
+            self._download_hipparcos()
+        elif catalog == "Gaia":
+            # TODO: Implement Gaia catalog loading
+            pass
 
     def _download_hipparcos(self, V_max: int=7, V_min: int=-100):
         """
