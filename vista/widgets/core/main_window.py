@@ -238,9 +238,13 @@ class VistaMainWindow(QMainWindow):
         load_satellites_action.triggered.connect(self.load_satellites_file)
         file_menu.addAction(load_satellites_action)
 
-        load_stars_action = QAction("Load Stars (Astroquery)", self)
-        load_stars_action.triggered.connect(self.load_stars_file)
-        file_menu.addAction(load_stars_action)
+        # various catalogs to add stars via astroquery
+        load_stars_menu = file_menu.addMenu("Load Stars (Astroquery)")
+
+        for catalog in ["Hipparcos", "Gaia"]:
+            action = QAction(catalog, self)
+            action.triggered.connect(lambda _: self.load_stars_astroquery(catalog))
+            load_stars_menu.addAction(action)
 
         file_menu.addSeparator()
 
@@ -1955,24 +1959,22 @@ class VistaMainWindow(QMainWindow):
 
     # TODO: Handle loading stars via astroquery and/or via file input
     # do both? pick one?
-    def load_stars_file(self):
+    def load_stars_astroquery(self, catalog):
         """Load stars via Astroquery"""
-        # Start loading the first file
-        self._load_next_stars_file()
-
-    def _load_next_stars_file(self):
+        
         # Ensure any previous loader thread has finished before starting a new one
         if self.loader_thread is not None and self.loader_thread.isRunning():
             self.loader_thread.wait()
 
         # Create and start loader thread
-        # loading via astroquery for now, so no file name or type
-        self.loader_thread = DataLoaderThread(None, 'stars', None)
+        # loading via astroquery has no file type
+        # but we use the catalog name as the file path
+        self.loader_thread = DataLoaderThread(catalog, 'stars', None)
         self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
         self.loader_thread.progress_updated.connect(self.on_loading_progress)
-        self.loader_thread.finished.connect(self._on_stars_file_loaded)
+        self.loader_thread.finished.connect(self._on_stars_astroquery_loaded)
 
         # Connect cancel button to thread cancellation
         if self.progress_dialog:
@@ -1984,7 +1986,7 @@ class VistaMainWindow(QMainWindow):
 
         self.loader_thread.start()
 
-    def _on_stars_file_loaded(self):
+    def _on_stars_astroquery_loaded(self):
         """Handle completion of a single Stars load"""
 
         # Clean up thread reference

@@ -574,7 +574,7 @@ class DataLoaderThread(QThread):
 
         # Name for the stars object is astroquery
         # but will update once the actual query goes through
-        stars = Stars("astroquery")
+        stars = Stars("astroquery", catalog=self.file_path)
 
         # Emit the created stars
         self.stars_loaded.emit(stars)
