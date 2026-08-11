@@ -45,6 +45,7 @@ class Stars(KnownSource):
             equinox='J2000.0',
             obstime=Time('2000.0', format='jyear')
         )
+        self.V_magnitudes = np.array([])
 
         if catalog == "Hipparcos":
             self._download_hipparcos()
