@@ -63,7 +63,7 @@ class Stars(KnownSource):
         # We get the Hipparcos ID, RA, RA proper motion, Dec, Dec proper motion, parallax,
         # V band magnitude, and B-V magnitude
         # Uses the 2007 reduction (https://cdsarc.cds.unistra.fr/viz-bin/cat/I/311#/article)
-        v_engine = Vizier(columns=['HIP', 'RArad', 'pmRA', 'DErad', 'pmDE', 'Plx', 'Hpmag', 'B-V'],
+        v_engine = Vizier(columns=['HIP', 'RArad', 'pmRA', 'DErad', 'pmDE', 'Plx', 'e_Plx', 'Hpmag', 'B-V'],
                           catalog=['I/311/hip2'],
                           column_filters={'Hpmag': f'<={V_max} & >={V_min}'})
         v_engine.ROW_LIMIT = -1  # Fetch all matching rows without truncation limits
@@ -78,13 +78,11 @@ class Stars(KnownSource):
         # Extract Astropy Table from the TableList result
         stars = query_results[0]
 
-        # set negative or 0 parallaxes to small value
-        # typically, negative parallaxes means the measurement is dominated by noise
-        # which suggests it is a small enough value we can probably ignore it
-        # TODO: But, see https://arxiv.org/pdf/1507.02105 for more thorough discussion
-        # perhaps incorporate parallex errors as well somehow instead?
-        stars[stars['Plx'] <= 0] = 10**-9 # since units are already milli-arcsec, this value is 1 pico-arcsec
-        
+        # Stars with relative parallax errors > 0.2 likely do not give reliable 
+        # distances (and are likely far enough away to not matter), so we ignore their parallax
+        # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
+        # since units are already milli-arcsec, we set to a small value of 1 micro-arcsec
+        stars[stars['e_Plx'] >= 0.2 * stars['Plx']] = 10**-3 
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars['Plx'])
 
