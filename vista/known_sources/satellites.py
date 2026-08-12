@@ -3,7 +3,7 @@
 
 """
 
-from .known_source import KnownSource
+from .known_source import KnownSources
 
 from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
 from astropy.time import Time
@@ -14,7 +14,7 @@ from typing import Union
 from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
-class Satellites(KnownSource):
+class Satellites(KnownSources):
     """
     Class to hold satellite TLE data, converting to positions as necessary
     """

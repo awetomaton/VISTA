@@ -16,11 +16,11 @@ from typing import Tuple, Union
 import uuid
 
 
-class KnownSource():
+class KnownSources():
     """
     Base class for known sources like stars, planets, asteroids, satellites, etc.
-    It is anticipated, but not required, that subclasses are implemented which
-    contain *groupings* of sources, i.e. an array of satellites, an array of stars, etc.
+    It is expected that subclasses are implemented which contain *groups* of self-similar
+    sources loaded together, i.e. an array of satellites, an array of stars, etc.
 
     Attributes
     ----------

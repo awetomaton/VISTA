@@ -16,7 +16,7 @@ from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
-from vista.known_sources.known_source import KnownSource
+from vista.known_sources.known_source import KnownSources
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
@@ -2110,7 +2110,7 @@ class ImageryViewer(QWidget):
             self.known_sources.append(source)
             self._render_known_source(source)
 
-    def remove_known_source(self, source: KnownSource):
+    def remove_known_source(self, source: KnownSources):
         if source in self.known_sources:
             # Remove from plot
             if source._plot_item:

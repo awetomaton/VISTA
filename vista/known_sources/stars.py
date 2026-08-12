@@ -3,7 +3,7 @@
 
 """
 
-from .known_source import KnownSource
+from .known_source import KnownSources
 
 from astropy.coordinates import Distance, EarthLocation, ITRS, SkyCoord
 from astropy.time import Time
@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 from typing import Union
 
 
-class Stars(KnownSource):
+class Stars(KnownSources):
     """
     Class to hold star data, converting to positions as necessary
     """
