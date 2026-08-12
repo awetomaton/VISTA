@@ -125,8 +125,8 @@ class Stars(KnownSources):
         adql_query = f"""
             SELECT source_id, ra, pmra, dec, pmdec, parallax, parallax_error, phot_g_mean_mag
             FROM gaiadr3.gaia_source
-            WHERE phot_g_mean_mag < {V_max}
-            AND phot_g_mean_mag > {V_min}
+            WHERE phot_g_mean_mag <= {V_max}
+            AND phot_g_mean_mag >= {V_min}
         """
         job = Gaia.launch_job_async(adql_query)
         query_results = job.get_results()
@@ -138,6 +138,11 @@ class Stars(KnownSources):
             
         # Gaia result is already the table we need
         stars = query_results
+        # fill in missing values
+        stars['pmra'] = stars['pmra'].filled(0.0)
+        stars['pmdec'] = stars['pmdec'].filled(0.0)
+        stars['parallax'] = stars['parallax'].filled(0.0)
+        stars['parallax_error'] = stars['parallax_error'].filled(0.0)
 
         # Stars with relative parallax errors > 0.2 likely do not give reliable 
         # distances (and are likely far enough away to not matter), so we ignore their parallax
