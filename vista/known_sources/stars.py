@@ -3,7 +3,7 @@
 
 """
 
-from .known_source import KnownSources
+from .known_sources import KnownSources
 
 from astropy.coordinates import Distance, EarthLocation, ITRS, SkyCoord
 from astropy.time import Time

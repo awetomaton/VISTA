@@ -16,7 +16,7 @@ from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
-from vista.known_sources.known_source import KnownSources
+from vista.known_sources.known_sources import KnownSources
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
