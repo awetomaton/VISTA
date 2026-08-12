@@ -35,7 +35,6 @@ class Satellites(KnownSources):
             Data can optionally be loaded later with the load_tle_file function
         """
         super().__init__(name, "satellites")
-        self.num_satellites = 0
         self.satellites = SatrecArray([]) # empty satellites array
 
         if file_path is not None:
@@ -95,7 +94,7 @@ class Satellites(KnownSources):
             sat = Satrec.twoline2rv(l1, l2)
             satellites[name] = sat
 
-        self.num_satellites = len(satellites.values())
+        self.source_names = list(satellites.keys())
         self.satellites = SatrecArray(list(satellites.values()))
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:

@@ -1955,7 +1955,7 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager
         self.data_manager.refresh()
 
-        self.statusBar().showMessage(f"Loaded {satellites.num_satellites} Satellite(s)", 3000)
+        self.statusBar().showMessage(f"Loaded {len(satellites.satellites)} Satellite(s)", 3000)
 
     # TODO: Handle loading stars via astroquery and/or via file input
     # do both? pick one?
@@ -2008,7 +2008,7 @@ class VistaMainWindow(QMainWindow):
         # Refresh data manager
         self.data_manager.refresh()
 
-        self.statusBar().showMessage(f"Loaded {stars.num_stars} Star(s)", 3000)
+        self.statusBar().showMessage(f"Loaded {len(stars.stars)} Star(s)", 3000)
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""

@@ -33,7 +33,6 @@ class Stars(KnownSources):
             Value must be one of ["Hipparcos", "Gaia"]
         """
         super().__init__(name, "stars")
-        self.num_stars = 0
         # empty SkyCoord object
         self.stars = SkyCoord(
             ra=[] * u.deg,
@@ -92,7 +91,7 @@ class Stars(KnownSources):
         star_distances = Distance(parallax=stars['Plx'])
 
         self.name = "Hipparcos stars"
-        self.num_stars = len(stars)
+        self.source_names = [f'HIP {id}' for id in stars['HIP']]
         self.stars = SkyCoord(
             ra=stars['RArad'],
             dec=stars['DErad'],
@@ -153,7 +152,7 @@ class Stars(KnownSources):
         star_distances = Distance(parallax=stars['parallax'])
 
         self.name = "Gaia stars"
-        self.num_stars = len(stars)
+        self.source_names = [f'Gaia DR3 {id}' for id in stars['source_id']]
         self.stars = SkyCoord(
             ra=stars['ra'],
             dec=stars['dec'],
@@ -183,7 +182,7 @@ class Stars(KnownSources):
             Astropy EarthLocation object containing geodetic coordinates
         """
         # quick return if no stars exist
-        if self.num_stars == 0:
+        if len(self.stars) == 0:
             return EarthLocation([], [], [])
         
         # TODO: cache results for specific times (frames)?

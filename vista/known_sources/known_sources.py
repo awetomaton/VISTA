@@ -35,6 +35,7 @@ class KnownSources():
     def __init__(self, name: str, source_type: str):
         self.name = name
         self.source_type = source_type
+        self.source_names = []
         self.uuid = uuid.uuid4()
         self._plot_item = None  # reference to the actual displayed item in the viewer
 
