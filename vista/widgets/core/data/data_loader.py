@@ -38,7 +38,7 @@ class DataLoaderThread(QThread):
     tracks_loaded = pyqtSignal(list)  # Emits list of Track objects with tracker attribute set
     aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
     satellites_loaded = pyqtSignal(object)  # Emits Satellites object
-    stars_loaded = pyqtSignal(object)
+    stars_loaded = pyqtSignal(object) # Emits Stars object
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
