@@ -246,6 +246,10 @@ class VistaMainWindow(QMainWindow):
             action.triggered.connect(lambda _, name=catalog: self.load_stars_astroquery(name))
             load_stars_menu.addAction(action)
 
+        load_solar_system_bodies_action = QAction("Load Solar System Bodies (Astropy)", self)
+        load_solar_system_bodies_action.triggered.connect(self.load_solar_system_bodies_astropy)
+        file_menu.addAction(load_solar_system_bodies_action)
+
         file_menu.addSeparator()
 
         simulate_action = QAction("Simulate", self)
@@ -2008,6 +2012,57 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.refresh()
 
         self.statusBar().showMessage(f"Loaded {len(stars.source_names)} Star(s)", 3000)
+
+    def load_solar_system_bodies_astropy(self):
+        """Load solar system bodies via Astropy"""
+                
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        # Create and start loader thread
+        # loading via astropy has no file path or type
+        self.loader_thread = DataLoaderThread(None, 'solar system bodies', None)
+        self.loader_thread.solar_system_bodies_loaded.connect(self.on_solar_system_bodies_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_solar_system_bodies_astropy_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_solar_system_bodies_astropy_loaded(self):
+        """Handle completion of a single SolarSystemBodies load"""
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # All files loaded, close progress dialog
+        self.on_loading_finished()
+
+        # Update status with total count
+        self.statusBar().showMessage(f"Loaded Solar System Bodies via astropy", 3000)
+
+    def on_solar_system_bodies_loaded(self, bodies):
+        """Handle SolarSystemBodies loaded in background thread"""
+        # bodies is a single object
+        self.viewer.add_known_source(bodies)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        # plural message here as I know there are multiple planets included
+        self.statusBar().showMessage(f"Loaded {len(bodies.source_names)} Solar System Bodies", 3000)
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""

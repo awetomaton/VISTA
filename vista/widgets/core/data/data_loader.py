@@ -13,6 +13,7 @@ from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.known_sources.satellites import Satellites
 from vista.known_sources.stars import Stars
+from vista.known_sources.solar_system_bodies import SolarSystemBodies
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
@@ -38,7 +39,8 @@ class DataLoaderThread(QThread):
     tracks_loaded = pyqtSignal(list)  # Emits list of Track objects with tracker attribute set
     aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
     satellites_loaded = pyqtSignal(object)  # Emits Satellites object
-    stars_loaded = pyqtSignal(object) # Emits Stars object
+    stars_loaded = pyqtSignal(object)  # Emits Stars object
+    solar_system_bodies_loaded = pyqtSignal(object)  # Emits SolarSystemBodies object
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
@@ -87,6 +89,8 @@ class DataLoaderThread(QThread):
                 self._load_satellites_tle()
             elif self.data_type == "stars":
                 self._load_stars_astroquery()
+            elif self.data_type == "solar system bodies":
+                self._load_solar_system_bodies_astropy()
             else:
                 self.error_occurred.emit(f"Unknown data type: {self.data_type}")
         except Exception as e:
@@ -578,3 +582,11 @@ class DataLoaderThread(QThread):
 
         # Emit the created stars
         self.stars_loaded.emit(stars)
+
+    def _load_solar_system_bodies_astropy(self):
+        """Load stars via astroquery"""
+
+        bodies = SolarSystemBodies()
+
+        # Emit the created solar system bodies
+        self.solar_system_bodies_loaded.emit(bodies)
