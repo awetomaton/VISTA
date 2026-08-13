@@ -234,12 +234,15 @@ class VistaMainWindow(QMainWindow):
         load_placemarks_action.triggered.connect(self.load_placemarks_file)
         file_menu.addAction(load_placemarks_action)
 
+        # Known Sources submenu
+        load_known_sources_menu = file_menu.addMenu("Load Known Sources")
+
         load_satellites_action = QAction("Load Satellites (TLE)", self)
         load_satellites_action.triggered.connect(self.load_satellites_file)
-        file_menu.addAction(load_satellites_action)
+        load_known_sources_menu.addAction(load_satellites_action)
 
         # various catalogs to add stars via astroquery
-        load_stars_menu = file_menu.addMenu("Load Stars (Astroquery)")
+        load_stars_menu = load_known_sources_menu.addMenu("Load Stars (Astroquery)")
 
         for catalog in ["Hipparcos", "Gaia"]:
             action = QAction(catalog, self)
@@ -248,7 +251,7 @@ class VistaMainWindow(QMainWindow):
 
         load_solar_system_bodies_action = QAction("Load Solar System Bodies (Astropy)", self)
         load_solar_system_bodies_action.triggered.connect(self.load_solar_system_bodies_astropy)
-        file_menu.addAction(load_solar_system_bodies_action)
+        load_known_sources_menu.addAction(load_solar_system_bodies_action)
 
         file_menu.addSeparator()
 
