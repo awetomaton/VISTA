@@ -5,6 +5,7 @@
 
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.tracks.track import Track
 from vista.transforms.earth_intersection import los_to_earth
 
 from astropy.coordinates import EarthLocation
@@ -43,6 +44,11 @@ class KnownSources():
         self.source_names = []
         self.uuid = uuid.uuid4()
         self._plot_item = None  # reference to the actual displayed item in the viewer
+
+        # parameters for Tracks
+        self._color = 'g'
+        self._marker = 'o'
+        self._marker_size = 5
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
@@ -118,3 +124,61 @@ class KnownSources():
         columns[~where] = np.nan
 
         return rows, columns
+
+    def _get_slices(self, values):
+        """
+        Given a list of values, find the slices that give groupings of non-nan values
+        e.g.,   given [nan, 2, 3, nan, 5, 6, 7, nan, 9, nan],
+                return [[1:3], [4:7], [8:9]]
+        """
+        # 1. Create a boolean mask for NaNs
+        is_nan = np.isnan(values)
+        # 2. Pad with True at the edges to catch groups touching the ends
+        padded = np.concatenate(([True], is_nan, [True]))
+        # 3. Find transition points (indices where True/False changes)
+        changes = np.nonzero(np.diff(padded))[0]
+        # 4. Generate slice objects
+        slices = []
+        for start, end in zip(changes[0::2], changes[1::2]):
+            slices.append(slice(start, end))
+        return slices
+
+    def create_tracks(self, imagery: Imagery) -> list[Track]:
+        """
+        Create a list of Tracks for the sources for the provided imagery
+        Ignores positions which are off-frame or behind the Earth
+        Sources which reappear after passing behind the Earth will therefore have multiple tracks
+
+        Parameters
+        ----------
+        imagery: Imagery
+            The imagery we want to create tracks for
+        
+        Returns
+        -------
+        tracks : list[Tracks]
+            list of Track objects
+        """
+
+        tracks = []
+
+        rows = []
+        columns = []
+        for frame in imagery.frames:
+            r, c = self.get_pixels(imagery.sensor, imagery, frame)
+            rows.append(r)
+            columns.append(c)
+        # after looping over frames, rows and columns have shape (num_frames, num_sources)
+        # transpose so each source has a row and column
+        rows = np.array(rows).T
+        columns = np.array(columns).T
+
+        for source, source_type, row, column in zip(self.source_names, self.source_types, rows, columns):
+            slices = self._get_slices(row) # columns should have the same valid slices
+            for slice in slices:
+                track = Track(name=source, frames=imagery.frames[slice], 
+                              rows=row[slice], columns=column[slice], sensor=imagery.sensor,
+                              color=self._color, marker=self._marker, marker_size=self._marker_size,
+                              tracker=self.name, labels={source_type})
+                tracks.append(track)
+        return tracks

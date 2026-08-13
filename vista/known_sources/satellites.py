@@ -45,6 +45,8 @@ class Satellites(KnownSources):
         if file_path is not None:
             self.load_tle_file(file_path)
 
+        self._marker = 'x'
+
     def _parse_tle_blocks(self, lines):
         """Generates (name, line1, line2) tuples from raw TLE lines."""
         # TODO: decide what format to use for names

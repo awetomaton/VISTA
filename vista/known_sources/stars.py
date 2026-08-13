@@ -62,6 +62,9 @@ class Stars(KnownSources):
         elif catalog == "Gaia":
             self._download_gaia()
 
+        self._color = 'y'
+        self._marker = 'star'
+
     def _download_hipparcos(self, V_max: int=7, V_min: int=-100):
         """
         Queries Hipparcos for all-sky stars brighter than V_max and fainter than V_min
