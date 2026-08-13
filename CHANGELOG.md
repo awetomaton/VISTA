@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.4] - 2026-8-XX
+
+Major thanks to [@nolanking90] for the contributions that made this release possible!
+
+### Improvements
+
+ - 🔧 Fixed issues in TOML formatting specifications and dependencies.
+ - 🛠️ Added github actions workflow to check formatting for PRs upon push to main
+
 ## [1.12.3] - 2026-6-26
 
 ### Improvements
