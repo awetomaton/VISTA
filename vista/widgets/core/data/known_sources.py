@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSettings
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QHeaderView, QHBoxLayout, QPushButton, QTableWidget, 
-    QTableWidgetItem, QVBoxLayout, QWidget
+    QTableWidgetItem, QVBoxLayout, QWidget, QMessageBox
 )
 
 
@@ -30,6 +30,12 @@ class KnownSourcesPanel(QWidget):
         self.delete_known_sources_btn = QPushButton("Delete Selected")
         self.delete_known_sources_btn.clicked.connect(self.delete_selected_known_sources)
         button_layout.addWidget(self.delete_known_sources_btn)
+
+        # Create tracks button
+        self.create_tracks_btn = QPushButton("Create Tracks")
+        self.create_tracks_btn.clicked.connect(self.create_tracks)
+        self.create_tracks_btn.setToolTip("Create tracks in the currently selected imagery for the selected source(s)")
+        button_layout.addWidget(self.create_tracks_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -104,6 +110,47 @@ class KnownSourcesPanel(QWidget):
                     if source.uuid == known_source_uuid:
                         source.name = new_name
                         break
+
+    def create_tracks(self):
+        known_sources = []
+
+        # Get selected rows from the table
+        selected_rows = set(index.row() for index in self.known_sources_table.selectedIndexes())
+
+        # Collect Known Sources from selected rows
+        for row in selected_rows:
+            name_item = self.known_sources_table.item(row, 0)  # Name column
+            if name_item:
+                known_source_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+                # Find the Known Source by UUID
+                for source in self.viewer.known_sources:
+                    if source.uuid == known_source_uuid:
+                        known_sources.append(source)
+                        break
+
+        # Create the tracks
+        total_tracks = 0
+        for source in known_sources:
+            if self.viewer.imagery is not None:
+                tracks = source.create_tracks(self.viewer.imagery)
+                self.viewer.add_tracks(tracks)
+                total_tracks += len(tracks)
+
+        # Explicitly refresh the tracks table to show the new tracks
+        # Get the tracks panel from the parent data manager
+        parent_widget = self.parent()
+        while parent_widget is not None:
+            if hasattr(parent_widget, 'tracks_panel'):
+                parent_widget.tracks_panel.refresh_tracks_table()
+                break
+            parent_widget = parent_widget.parent()
+
+        self.data_changed.emit()
+
+        QMessageBox.information(
+            self, "Tracks Created",
+            f"Created {total_tracks} Track(s) from {len(known_sources)} Known Source(s)."
+        )
 
     def delete_selected_known_sources(self):
         """Delete Known Sources that are selected in the table"""
