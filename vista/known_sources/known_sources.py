@@ -43,7 +43,6 @@ class KnownSources():
         self.source_types = []
         self.source_names = []
         self.uuid = uuid.uuid4()
-        self._plot_item = None  # reference to the actual displayed item in the viewer
 
         # parameters for Tracks
         self._color = 'g'

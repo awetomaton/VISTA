@@ -997,9 +997,6 @@ class ImageryViewer(QWidget):
         if self.detection_selection_mode:
             self._update_selected_detections_display()
 
-        # Update known sources displays
-        self._rerender_known_sources()
-
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
         self.detectors.append(detector)
@@ -2108,67 +2105,11 @@ class ImageryViewer(QWidget):
     def add_known_source(self, source):
         if source not in self.known_sources:
             self.known_sources.append(source)
-            self._render_known_source(source)
 
     def remove_known_source(self, source: KnownSources):
         if source in self.known_sources:
-            # Remove from plot
-            if source._plot_item:
-                self.plot_item.removeItem(source._plot_item)
-                source._plot_item = None
             self.known_sources.remove(source)
 
-    def _render_known_source(self, source):
-        # TODO: remove this function and associated functions
-        return
-    
-        if self.imagery is None:
-            return
-
-        # TODO: make color editable for each different source
-        colors = {
-            'satellites': 'g',
-            'stars': 'y',
-        }
-        color = pg.mkColor(colors[source.source_type])
-
-        rows, columns = source.get_pixels(self.imagery.sensor, self.imagery, self.current_frame_number)
-        # mask out NaN pixel locations
-        where = np.isfinite(rows) & np.isfinite(columns)
-        rows = rows[where]
-        columns = columns[where]
-
-        symbols = {
-            'satellites': 'o',
-            'stars': 'star'
-        }
-        if source.source_type == 'stars':
-            V_mags = source.V_magnitudes[where]
-            if V_mags.shape[0] > 0:
-                V_min = np.min(V_mags)
-                V_max = np.max(V_mags)
-                size = (V_max - V_mags + V_min + 1) / (V_max - V_min + 1) * 5
-            else:
-                size = V_mags
-        else:
-            size = 3
-        # Create a small marker for the sources
-        scatter_item = pg.ScatterPlotItem(
-            x=columns, y=rows,
-            size=size,
-            pen=pg.mkPen(color, width=1),
-            brush=pg.mkBrush(color),
-            symbol=symbols[source.source_type]
-        )
-        self.plot_item.addItem(scatter_item)
-        source._plot_item = scatter_item
-
-    def _rerender_known_sources(self):
-        for source in self.known_sources:
-            if source._plot_item:
-                self.plot_item.removeItem(source._plot_item)
-            self._render_known_source(source)
-        
     def start_track_creation(self):
         """Start track creation mode"""
         self.track_creation_mode = True
