@@ -1,10 +1,11 @@
+import pathlib
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-import pathlib
-from astropy.coordinates import EarthLocation
 from astropy import units
-from dataclasses import dataclass
-from typing import Union, Optional, Tuple, List
+from astropy.coordinates import EarthLocation
 from PIL import Image
 from scipy.ndimage import shift
 
@@ -75,17 +76,18 @@ class Simulation:
     def _generate_times(self) -> np.ndarray:
         """Generate times for imagery frames based on frame rate"""
         if self.start_time is None:
-            start_time = np.datetime64('now', 'us')
+            start_time = np.datetime64("now", "us")
         else:
             start_time = self.start_time
 
         # Generate times with microsecond precision
         time_delta_us = int(1_000_000 / self.frame_rate)  # microseconds per frame
-        times = np.array([start_time + np.timedelta64(i * time_delta_us, 'us')
-                         for i in range(self.frames)])
+        times = np.array([start_time + np.timedelta64(i * time_delta_us, "us") for i in range(self.frames)])
         return times
 
-    def _generate_arf_polynomials(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _generate_arf_polynomials(
+        self,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Generate synthetic ARF polynomial coefficients for geolocation conversions.
 
@@ -111,13 +113,15 @@ class Simulation:
         scene_center = EarthLocation.from_geodetic(
             lon=self.center_lon * units.deg,
             lat=self.center_lat * units.deg,
-            height=self.sensor_altitude_km * units.km
+            height=self.sensor_altitude_km * units.km,
         )
-        sensor_pos = np.array([
-            scene_center.geocentric[0].to(units.km).value,
-            scene_center.geocentric[1].to(units.km).value,
-            scene_center.geocentric[2].to(units.km).value
-        ])
+        sensor_pos = np.array(
+            [
+                scene_center.geocentric[0].to(units.km).value,
+                scene_center.geocentric[1].to(units.km).value,
+                scene_center.geocentric[2].to(units.km).value,
+            ]
+        )
 
         # Sensor pointing: toward Earth center (nadir pointing)
         # Pointing vector is from sensor toward Earth center, normalized
@@ -174,8 +178,14 @@ class Simulation:
         poly_arf_to_row = np.tile(row_coeffs.reshape(1, -1), (self.frames, 1))
         poly_arf_to_col = np.tile(col_coeffs.reshape(1, -1), (self.frames, 1))
 
-        return (sensor_positions, pointing, poly_pixel_to_arf_azimuth, poly_pixel_to_arf_elevation,
-                poly_arf_to_row, poly_arf_to_col)
+        return (
+            sensor_positions,
+            pointing,
+            poly_pixel_to_arf_azimuth,
+            poly_pixel_to_arf_elevation,
+            poly_arf_to_row,
+            poly_arf_to_col,
+        )
 
     def _generate_bias_images(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -199,8 +209,7 @@ class Simulation:
             y = np.linspace(0, 4 * np.pi, self.rows)
             xx, yy = np.meshgrid(x, y)
             pattern = self.bias_pattern_scale * (
-                np.sin(xx) * np.cos(yy) +
-                0.5 * np.sin(2 * xx + np.pi / 4) * np.cos(2 * yy - np.pi / 3)
+                np.sin(xx) * np.cos(yy) + 0.5 * np.sin(2 * xx + np.pi / 4) * np.cos(2 * yy - np.pi / 3)
             )
 
             # Add random fixed-pattern noise
@@ -232,9 +241,7 @@ class Simulation:
             # Create radial falloff pattern (common in imaging systems)
             center_row, center_col = self.rows / 2, self.columns / 2
             row_indices, col_indices = np.meshgrid(
-                np.arange(self.rows) - center_row,
-                np.arange(self.columns) - center_col,
-                indexing='ij'
+                np.arange(self.rows) - center_row, np.arange(self.columns) - center_col, indexing="ij"
             )
 
             # Distance from center
@@ -242,7 +249,7 @@ class Simulation:
             max_distance = np.sqrt(center_row**2 + center_col**2)
 
             # Radial falloff: higher gain in center, lower at edges
-            radial_variation = 1.0 - 0.2 * (distance / max_distance)**2
+            radial_variation = 1.0 - 0.2 * (distance / max_distance) ** 2
 
             # Add smooth column-wise variations (vignetting)
             col_variation = 1.0 - 0.1 * np.cos(2 * np.pi * col_indices / self.columns)
@@ -291,9 +298,11 @@ class Simulation:
                 cluster_row = np.random.randint(1, self.rows - 1)
                 cluster_col = np.random.randint(1, self.columns - 1)
                 # Mark 3x3 cluster as bad
-                bad_pixel_masks[i,
-                              max(0, cluster_row-1):min(self.rows, cluster_row+2),
-                              max(0, cluster_col-1):min(self.columns, cluster_col+2)] = 1.0
+                bad_pixel_masks[
+                    i,
+                    max(0, cluster_row - 1) : min(self.rows, cluster_row + 2),
+                    max(0, cluster_col - 1) : min(self.columns, cluster_col + 2),
+                ] = 1.0
 
         # Generate frame numbers where each mask becomes applicable
         bad_pixel_mask_frames = np.linspace(0, self.frames, self.num_bad_pixel_masks + 1)[:-1].astype(np.int32)
@@ -314,9 +323,7 @@ class Simulation:
         # Generate radiometric gain values (one per frame)
         # Use Gaussian distribution around the mean with specified std
         radiometric_gains = np.random.normal(
-            self.radiometric_gain_mean,
-            self.radiometric_gain_std,
-            size=self.frames
+            self.radiometric_gain_mean, self.radiometric_gain_std, size=self.frames
         ).astype(np.float32)
 
         # Ensure all gains are positive
@@ -324,7 +331,7 @@ class Simulation:
 
         return radiometric_gains
 
-    def save(self, dir = Union[str, pathlib.Path], save_geodetic_tracks=False, save_times_only=False):
+    def save(self, dir=Union[str, pathlib.Path], save_geodetic_tracks=False, save_times_only=False):
         """
         Save simulation data to directory
 
@@ -350,18 +357,18 @@ class Simulation:
             # Map frame numbers to times
             times = []
             for idx, row in tracks_df.iterrows():
-                frame = int(row['Frames'])
+                frame = int(row["Frames"])
                 # Find the time for this frame
                 frame_idx = np.where(self.imagery.frames == frame)[0]
                 if len(frame_idx) > 0:
                     times.append(self.imagery.times[frame_idx[0]])
                 else:
-                    times.append(np.datetime64('NaT'))  # Not a time
-            tracks_df['Times'] = pd.to_datetime(times).strftime('%Y-%m-%dT%H:%M:%S.%f')
+                    times.append(np.datetime64("NaT"))  # Not a time
+            tracks_df["Times"] = pd.to_datetime(times).strftime("%Y-%m-%dT%H:%M:%S.%f")
 
             # If save_times_only, remove Frames column
             if save_times_only:
-                tracks_df = tracks_df.drop(columns=['Frames'])
+                tracks_df = tracks_df.drop(columns=["Frames"])
 
         # If requested, convert pixel coordinates to geodetic
         if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None:
@@ -372,11 +379,11 @@ class Simulation:
 
             for idx, row in tracks_df.iterrows():
                 # Get frame (might be in Times column if save_times_only)
-                if 'Frames' in tracks_df.columns:
-                    frame = int(row['Frames'])
+                if "Frames" in tracks_df.columns:
+                    frame = int(row["Frames"])
                 else:
                     # Need to map time back to frame
-                    time_str = row['Times']
+                    time_str = row["Times"]
                     time_dt = pd.to_datetime(time_str)
                     frame_idx = np.where(self.imagery.times == time_dt)[0]
                     if len(frame_idx) > 0:
@@ -384,25 +391,21 @@ class Simulation:
                     else:
                         frame = 0  # Default to first frame
 
-                pixel_row = row['Rows']
-                pixel_col = row['Columns']
+                pixel_row = row["Rows"]
+                pixel_col = row["Columns"]
 
                 # Use sensor's pixel_to_geodetic method
-                location = self.imagery.sensor.pixel_to_geodetic(
-                    frame,
-                    np.array([pixel_row]),
-                    np.array([pixel_col])
-                )
+                location = self.imagery.sensor.pixel_to_geodetic(frame, np.array([pixel_row]), np.array([pixel_col]))
                 latitudes.append(location.lat.deg[0])
                 longitudes.append(location.lon.deg[0])
-                altitudes.append(location.height.to('m').value[0])
+                altitudes.append(location.height.to("m").value[0])
 
-            tracks_df['Latitude'] = latitudes
-            tracks_df['Longitude'] = longitudes
-            tracks_df['Altitude'] = altitudes
+            tracks_df["Latitude"] = latitudes
+            tracks_df["Longitude"] = longitudes
+            tracks_df["Altitude"] = altitudes
 
             # Remove pixel coordinates to test geodetic-only loading
-            tracks_df = tracks_df.drop(columns=['Rows', 'Columns'])
+            tracks_df = tracks_df.drop(columns=["Rows", "Columns"])
 
         tracks_df.to_csv(dir / "tracks.csv", index=False)
 
@@ -425,31 +428,31 @@ class Simulation:
             times = self._generate_times()
 
         # Create sensor with calibration data
-        sensor_kwargs = {
-            'name': f"{self.name} Sensor"
-        }
+        sensor_kwargs = {"name": f"{self.name} Sensor"}
 
         # Default sensor position at origin (will be overwritten if geodetic enabled)
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
-        sensor_times = np.array([times[0] if times is not None else np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
+        sensor_times = np.array(
+            [times[0] if times is not None else np.datetime64("2000-01-01T00:00:00")], dtype="datetime64[ns]"
+        )
 
         # Add bias images if enabled
         if self.enable_bias_images:
             bias_images, bias_image_frames = self._generate_bias_images()
-            sensor_kwargs['bias_images'] = bias_images
-            sensor_kwargs['bias_image_frames'] = bias_image_frames
+            sensor_kwargs["bias_images"] = bias_images
+            sensor_kwargs["bias_image_frames"] = bias_image_frames
 
         # Add uniformity gain images if enabled
         if self.enable_uniformity_gain:
             uniformity_gain_images, uniformity_gain_image_frames = self._generate_uniformity_gain_images()
-            sensor_kwargs['uniformity_gain_images'] = uniformity_gain_images
-            sensor_kwargs['uniformity_gain_image_frames'] = uniformity_gain_image_frames
+            sensor_kwargs["uniformity_gain_images"] = uniformity_gain_images
+            sensor_kwargs["uniformity_gain_image_frames"] = uniformity_gain_image_frames
 
         # Add bad pixel masks if enabled
         if self.enable_bad_pixel_masks:
             bad_pixel_masks, bad_pixel_mask_frames = self._generate_bad_pixel_masks()
-            sensor_kwargs['bad_pixel_masks'] = bad_pixel_masks
-            sensor_kwargs['bad_pixel_mask_frames'] = bad_pixel_mask_frames
+            sensor_kwargs["bad_pixel_masks"] = bad_pixel_masks
+            sensor_kwargs["bad_pixel_mask_frames"] = bad_pixel_mask_frames
 
         # Add ARF geolocation polynomials to sensor if enabled
         pointing = None
@@ -458,8 +461,14 @@ class Simulation:
         poly_arf_to_row = None
         poly_arf_to_col = None
         if self.enable_geodetic:
-            (sensor_positions, pointing, poly_pixel_to_arf_azimuth, poly_pixel_to_arf_elevation,
-             poly_arf_to_row, poly_arf_to_col) = self._generate_arf_polynomials()
+            (
+                sensor_positions,
+                pointing,
+                poly_pixel_to_arf_azimuth,
+                poly_pixel_to_arf_elevation,
+                poly_arf_to_row,
+                poly_arf_to_col,
+            ) = self._generate_arf_polynomials()
 
         # Add radiometric gain if enabled
         radiometric_gain = None
@@ -477,13 +486,13 @@ class Simulation:
             poly_arf_to_row=poly_arf_to_row,
             poly_arf_to_col=poly_arf_to_col,
             radiometric_gain=radiometric_gain,
-            **sensor_kwargs
+            **sensor_kwargs,
         )
 
         # Initialize images with earth background if enabled
         if self.enable_earth_background:
             # Load earth image from file path and convert to grayscale
-            earth_img = Image.open(EARTH_IMAGE).convert('L')  # 'L' mode is grayscale
+            earth_img = Image.open(EARTH_IMAGE).convert("L")  # 'L' mode is grayscale
             earth_array = np.array(earth_img, dtype=np.float32)
 
             # Get earth image dimensions
@@ -516,10 +525,7 @@ class Simulation:
                 base_col = jitter_margin
 
             # Extract base window from earth image (without jitter)
-            base_window = earth_array[
-                base_row:base_row + self.rows,
-                base_col:base_col + self.columns
-            ]
+            base_window = earth_array[base_row : base_row + self.rows, base_col : base_col + self.columns]
 
             # Generate random jitter for each frame and apply sub-pixel shifts
             for f in range(self.frames):
@@ -531,8 +537,7 @@ class Simulation:
                 # Apply sub-pixel shift to the base window using scipy.ndimage.shift
                 # shift expects [row_shift, col_shift] order
                 # Use order=3 (cubic interpolation) for smooth sub-pixel shifts
-                shifted_window = shift(base_window, [jitter_row, jitter_col],
-                                      order=3, mode='constant', cval=0.0)
+                shifted_window = shift(base_window, [jitter_row, jitter_col], order=3, mode="constant", cval=0.0)
 
                 # Store the shifted window
                 images[f] = shifted_window * self.earth_scale
@@ -551,20 +556,20 @@ class Simulation:
             columns = np.empty((0,))
             for f in range(self.frames):
                 false_detections = np.random.randint(*self.detection_false_alarm_range)
-                frames = np.concatenate((frames, np.array(false_detections*[f])))
-                rows = np.concatenate((rows, self.rows*np.random.rand(1, false_detections).squeeze()))
-                columns = np.concatenate((columns, self.columns*np.random.rand(1, false_detections).squeeze()))
+                frames = np.concatenate((frames, np.array(false_detections * [f])))
+                rows = np.concatenate((rows, self.rows * np.random.rand(1, false_detections).squeeze()))
+                columns = np.concatenate((columns, self.columns * np.random.rand(1, false_detections).squeeze()))
 
             self.detectors.append(
                 Detector(
-                    name = f"Detector {d}",
-                    frames = frames,
-                    rows = rows,
-                    columns = columns,
-                    sensor = sensor,
+                    name=f"Detector {d}",
+                    frames=frames,
+                    rows=rows,
+                    columns=columns,
+                    sensor=sensor,
                 )
             )
-        
+
         # Create the tracks with spurious detections
         column_grid, row_grid = np.meshgrid(np.arange(self.columns), np.arange(self.rows))
         self.tracks = []
@@ -574,15 +579,15 @@ class Simulation:
         for tracker_index in range(self.num_trackers):
             tracker_name = f"Tracker {tracker_index}"
             for track_index in range(int(np.random.randint(*self.num_tracks_range))):
-                intensity_walk = RandomWalk(self.track_intensity_range[0] + Δintensity_range*np.random.rand())
+                intensity_walk = RandomWalk(self.track_intensity_range[0] + Δintensity_range * np.random.rand())
                 intensity_walk.std_Δt_ratio = 0.1
                 intensity_walk.min_walk, intensity_walk.max_walk = self.track_intensity_range
-                track_intensity_sigma = self.track_intensity_sigma_range[0] + Δtrack_intensity_sigma*np.random.rand()
+                track_intensity_sigma = self.track_intensity_sigma_range[0] + Δtrack_intensity_sigma * np.random.rand()
 
-                θ_walk = RandomWalk(2*np.pi*np.random.rand())
+                θ_walk = RandomWalk(2 * np.pi * np.random.rand())
                 θ_walk.std_Δt_ratio = self.track_θ_std
 
-                starting_speed = self.track_speed_range[1] + Δtrack_speed*np.random.rand()
+                starting_speed = self.track_speed_range[1] + Δtrack_speed * np.random.rand()
                 speed_walk = RandomWalk(starting_speed)
                 speed_walk.std_Δt_ratio = self.track_speed_std
                 speed_walk.min_walk, speed_walk.max_walk = self.track_speed_range
@@ -609,16 +614,18 @@ class Simulation:
                     θ = θ_walk.walk(1.0)
                     intensity = intensity_walk.walk(1.0)
 
-                    row += np.sin(θ)*speed
-                    column += np.cos(θ)*speed
+                    row += np.sin(θ) * speed
+                    column += np.cos(θ) * speed
 
                     # Add track point intensity to imagery
-                    track_point_image = intensity*np.exp(-(
-                        ((column_grid - column)**2 / (2 * track_intensity_sigma**2)) + 
-                        ((row_grid - row)**2 / (2 * track_intensity_sigma**2))
-                    ))
+                    track_point_image = intensity * np.exp(
+                        -(
+                            ((column_grid - column) ** 2 / (2 * track_intensity_sigma**2))
+                            + ((row_grid - row) ** 2 / (2 * track_intensity_sigma**2))
+                        )
+                    )
                     images[f] += track_point_image
-                    
+
                     frames[i] = f
                     rows[i] = row
                     columns[i] = column
@@ -634,14 +641,10 @@ class Simulation:
 
                     # Generate random variances (diagonal elements)
                     var_row = np.random.uniform(
-                        self.uncertainty_sigma_range[0]**2,
-                        self.uncertainty_sigma_range[1]**2,
-                        size=track_life
+                        self.uncertainty_sigma_range[0] ** 2, self.uncertainty_sigma_range[1] ** 2, size=track_life
                     )
                     var_col = np.random.uniform(
-                        self.uncertainty_sigma_range[0]**2,
-                        self.uncertainty_sigma_range[1]**2,
-                        size=track_life
+                        self.uncertainty_sigma_range[0] ** 2, self.uncertainty_sigma_range[1] ** 2, size=track_life
                     )
 
                     # Generate random rotation angles to create off-diagonal correlation
@@ -685,5 +688,3 @@ class Simulation:
             sensor=sensor,
             times=times,
         )
-    
-    

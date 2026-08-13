@@ -1,17 +1,18 @@
 """Background data loading using QThread to prevent UI blocking"""
+
+import uuid
 from pathlib import Path
 
 import h5py
 import numpy as np
 import pandas as pd
 from PyQt6.QtCore import QThread, pyqtSignal
-import uuid
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
-from vista.sensors.sensor import Sensor
 from vista.sensors.sampled_sensor import SampledSensor
+from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 
 
@@ -38,7 +39,7 @@ class DataLoaderThread(QThread):
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
 
-    def __init__(self, file_path, data_type, file_format='hdf5', sensor=None, imagery=None):
+    def __init__(self, file_path, data_type, file_format="hdf5", sensor=None, imagery=None):
         """
         Initialize the data loader thread
 
@@ -70,13 +71,13 @@ class DataLoaderThread(QThread):
     def run(self):
         """Execute the data loading in background thread"""
         try:
-            if self.data_type == 'imagery':
+            if self.data_type == "imagery":
                 self._load_imagery()
-            elif self.data_type == 'detections':
+            elif self.data_type == "detections":
                 self._load_detections_csv()
-            elif self.data_type == 'tracks':
+            elif self.data_type == "tracks":
                 self._load_tracks_csv()
-            elif self.data_type == 'aois':
+            elif self.data_type == "aois":
                 self._load_aois_csv()
             else:
                 self.error_occurred.emit(f"Unknown data type: {self.data_type}")
@@ -85,9 +86,9 @@ class DataLoaderThread(QThread):
 
     def _load_imagery(self):
         """Load imagery from HDF5 file (supports both 1.5 and 1.6 formats)"""
-        with h5py.File(self.file_path, 'r') as f:
+        with h5py.File(self.file_path, "r") as f:
             # Detect format version
-            if 'sensors' in f:
+            if "sensors" in f:
                 # New 1.6+ hierarchical format
                 self._load_imagery_v16(f)
             else:
@@ -101,11 +102,11 @@ class DataLoaderThread(QThread):
             "Deprecated File Format",
             "The 1.5 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
             "Please re-save your imagery files using the new 1.7 format:\n"
-            "File > Save Imagery (HDF5)"
+            "File > Save Imagery (HDF5)",
         )
 
-        images_dataset = f['images']
-        frames = f['frames'][:]
+        images_dataset = f["images"]
+        frames = f["frames"][:]
 
         # Load the row and columns offsets
         row_offset = images_dataset.attrs.get("row_offset", 0)
@@ -113,17 +114,17 @@ class DataLoaderThread(QThread):
 
         # Load time data
         times = None
-        if 'unix_nanoseconds' in f:
+        if "unix_nanoseconds" in f:
             # version 1.7+ format with combined nanoseconds
-            unix_nanoseconds = f['unix_nanoseconds'][:]
-            times = unix_nanoseconds.astype('datetime64[ns]')
-        elif 'unix_time' in f and 'unix_fine_time' in f:
+            unix_nanoseconds = f["unix_nanoseconds"][:]
+            times = unix_nanoseconds.astype("datetime64[ns]")
+        elif "unix_time" in f and "unix_fine_time" in f:
             # version 1.5 format with split fields (backward compatibility)
-            unix_time = f['unix_time'][:]
-            unix_fine_time = f['unix_fine_time'][:]
+            unix_time = f["unix_time"][:]
+            unix_fine_time = f["unix_fine_time"][:]
             # Combine into total nanoseconds and convert to datetime64[ns]
             total_nanoseconds = unix_time.astype(np.int64) * 1_000_000_000 + unix_fine_time.astype(np.int64)
-            times = total_nanoseconds.astype('datetime64[ns]')
+            times = total_nanoseconds.astype("datetime64[ns]")
 
         # Note: version 1.5 format used lat/lon polynomials which are no longer supported.
         # Geolocation will not be available for version 1.5 files.
@@ -132,13 +133,13 @@ class DataLoaderThread(QThread):
             return
 
         # Load radiometric calibration data if present
-        radiometric_gain = f.get('radiometric_gain', None)
-        bias_images = f.get('bias_images', None)
-        bias_image_frames = f.get('bias_image_frames', None)
-        uniformity_gain_images = f.get('uniformity_gain_images', None)
-        uniformity_gain_image_frames = f.get('uniformity_gain_image_frames', None)
-        bad_pixel_masks = f.get('bad_pixel_masks', None)
-        bad_pixel_mask_frames = f.get('bad_pixel_mask_frames', None)
+        radiometric_gain = f.get("radiometric_gain", None)
+        bias_images = f.get("bias_images", None)
+        bias_image_frames = f.get("bias_image_frames", None)
+        uniformity_gain_images = f.get("uniformity_gain_images", None)
+        uniformity_gain_image_frames = f.get("uniformity_gain_image_frames", None)
+        bad_pixel_masks = f.get("bad_pixel_masks", None)
+        bad_pixel_mask_frames = f.get("bad_pixel_mask_frames", None)
 
         if radiometric_gain is not None:
             radiometric_gain = radiometric_gain[:]
@@ -155,12 +156,12 @@ class DataLoaderThread(QThread):
         # Create SampledSensor with dummy position data (no geolocation for 1.5 files)
         sensor_positions = np.array([[0.0], [0.0], [0.0]])
         sensor_times = np.array(
-            [times[0] if times is not None and len(times) > 0 else np.datetime64('2000-01-01T00:00:00')],
-            dtype='datetime64[ns]'
+            [times[0] if times is not None and len(times) > 0 else np.datetime64("2000-01-01T00:00:00")],
+            dtype="datetime64[ns]",
         )
 
         sensor = SampledSensor(
-            name=f"Unknown {SampledSensor._instance_count+1}",
+            name=f"Unknown {SampledSensor._instance_count + 1}",
             positions=sensor_positions,
             times=sensor_times,
             frames=frames,
@@ -193,7 +194,7 @@ class DataLoaderThread(QThread):
     def _load_imagery_v16(self, f: h5py.File):
         """Load imagery from 1.6+ hierarchical HDF5 format"""
 
-        sensors_group = f['sensors']
+        sensors_group = f["sensors"]
 
         for sensor_name in sensors_group.keys():
             sensor_group = sensors_group[sensor_name]
@@ -205,8 +206,8 @@ class DataLoaderThread(QThread):
                 return
 
             # Load imagery for this sensor
-            if 'imagery' in sensor_group:
-                imagery_group = sensor_group['imagery']
+            if "imagery" in sensor_group:
+                imagery_group = sensor_group["imagery"]
 
                 for imagery_name in imagery_group.keys():
                     img_group = imagery_group[imagery_name]
@@ -219,9 +220,9 @@ class DataLoaderThread(QThread):
 
     def _load_sensor_from_group(self, sensor_group: h5py.Group):
         """Load a Sensor or SampledSensor from an HDF5 group"""
-        sensor_type = sensor_group.attrs.get('sensor_type', 'Sensor')
-        sensor_name = sensor_group.attrs.get('name', 'Unknown Sensor')
-        sensor_uuid = sensor_group.attrs.get('uuid', None)
+        sensor_type = sensor_group.attrs.get("sensor_type", "Sensor")
+        sensor_name = sensor_group.attrs.get("name", "Unknown Sensor")
+        sensor_uuid = sensor_group.attrs.get("uuid", None)
 
         # Load radiometric calibration data
         bias_images = None
@@ -233,40 +234,40 @@ class DataLoaderThread(QThread):
         radiometric_gain = None
         radiometric_gain_frames = None
 
-        if 'radiometric' in sensor_group:
-            rad_group = sensor_group['radiometric']
-            if 'bias_images' in rad_group:
-                bias_images = rad_group['bias_images'][:]
-                bias_image_frames = rad_group['bias_image_frames'][:]
-            if 'uniformity_gain_images' in rad_group:
-                uniformity_gain_images = rad_group['uniformity_gain_images'][:]
-                uniformity_gain_image_frames = rad_group['uniformity_gain_image_frames'][:]
-            if 'bad_pixel_masks' in rad_group:
-                bad_pixel_masks = rad_group['bad_pixel_masks'][:]
-                bad_pixel_mask_frames = rad_group['bad_pixel_mask_frames'][:]
-            if 'radiometric_gain' in rad_group:
-                radiometric_gain = rad_group['radiometric_gain'][:]
-                radiometric_gain_frames = rad_group['radiometric_gain_frames'][:]
+        if "radiometric" in sensor_group:
+            rad_group = sensor_group["radiometric"]
+            if "bias_images" in rad_group:
+                bias_images = rad_group["bias_images"][:]
+                bias_image_frames = rad_group["bias_image_frames"][:]
+            if "uniformity_gain_images" in rad_group:
+                uniformity_gain_images = rad_group["uniformity_gain_images"][:]
+                uniformity_gain_image_frames = rad_group["uniformity_gain_image_frames"][:]
+            if "bad_pixel_masks" in rad_group:
+                bad_pixel_masks = rad_group["bad_pixel_masks"][:]
+                bad_pixel_mask_frames = rad_group["bad_pixel_mask_frames"][:]
+            if "radiometric_gain" in rad_group:
+                radiometric_gain = rad_group["radiometric_gain"][:]
+                radiometric_gain_frames = rad_group["radiometric_gain_frames"][:]
 
-        if sensor_type == 'SampledSensor':
+        if sensor_type == "SampledSensor":
             # Load position data
             positions = None
             times = None
-            if 'position' in sensor_group:
-                pos_group = sensor_group['position']
-                positions = pos_group['positions'][:]
+            if "position" in sensor_group:
+                pos_group = sensor_group["position"]
+                positions = pos_group["positions"][:]
 
                 # Load times
-                if 'unix_nanoseconds' in pos_group:
+                if "unix_nanoseconds" in pos_group:
                     # version 1.7+ format with combined nanoseconds
-                    unix_nanoseconds = pos_group['unix_nanoseconds'][:]
-                    times = unix_nanoseconds.astype('datetime64[ns]')
-                elif 'unix_times' in pos_group and 'unix_fine_times' in pos_group:
+                    unix_nanoseconds = pos_group["unix_nanoseconds"][:]
+                    times = unix_nanoseconds.astype("datetime64[ns]")
+                elif "unix_times" in pos_group and "unix_fine_times" in pos_group:
                     # version 1.6 format with split fields (backward compatibility)
-                    unix_times = pos_group['unix_times'][:]
-                    unix_fine_times = pos_group['unix_fine_times'][:]
+                    unix_times = pos_group["unix_times"][:]
+                    unix_fine_times = pos_group["unix_fine_times"][:]
                     total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
-                    times = total_nanoseconds.astype('datetime64[ns]')
+                    times = total_nanoseconds.astype("datetime64[ns]")
 
             # Load ARF geolocation polynomials
             pointing = None
@@ -276,16 +277,16 @@ class DataLoaderThread(QThread):
             poly_arf_to_col = None
             frames = None
 
-            if 'geolocation' in sensor_group:
-                geo_group = sensor_group['geolocation']
+            if "geolocation" in sensor_group:
+                geo_group = sensor_group["geolocation"]
                 # Load ARF polynomials if present
-                if 'poly_pixel_to_arf_azimuth' in geo_group:
-                    poly_pixel_to_arf_azimuth = geo_group['poly_pixel_to_arf_azimuth'][:]
-                    poly_pixel_to_arf_elevation = geo_group['poly_pixel_to_arf_elevation'][:]
-                    poly_arf_to_row = geo_group['poly_arf_to_row'][:]
-                    poly_arf_to_col = geo_group['poly_arf_to_col'][:]
-                    pointing = geo_group['pointing'][:]
-                    frames = geo_group['frames'][:]
+                if "poly_pixel_to_arf_azimuth" in geo_group:
+                    poly_pixel_to_arf_azimuth = geo_group["poly_pixel_to_arf_azimuth"][:]
+                    poly_pixel_to_arf_elevation = geo_group["poly_pixel_to_arf_elevation"][:]
+                    poly_arf_to_row = geo_group["poly_arf_to_row"][:]
+                    poly_arf_to_col = geo_group["poly_arf_to_col"][:]
+                    pointing = geo_group["pointing"][:]
+                    frames = geo_group["frames"][:]
             if frames is None and radiometric_gain_frames is not None:
                 # Use radiometric gain frames if geolocation frames not available
                 frames = radiometric_gain_frames
@@ -293,7 +294,7 @@ class DataLoaderThread(QThread):
             # If no position data, create dummy position
             if positions is None or times is None:
                 positions = np.array([[0.0], [0.0], [0.0]])
-                times = np.array([np.datetime64('2000-01-01T00:00:00')], dtype='datetime64[ns]')
+                times = np.array([np.datetime64("2000-01-01T00:00:00")], dtype="datetime64[ns]")
 
             # If no frames, create dummy frames
             if frames is None:
@@ -338,37 +339,37 @@ class DataLoaderThread(QThread):
     def _load_imagery_from_group(self, img_group: h5py.Group, sensor):
         """Load an Imagery object from an HDF5 group with incremental image loading"""
         # Load attributes
-        name = img_group.attrs.get('name', 'Unknown')
-        description = img_group.attrs.get('description', '')
-        imagery_uuid = img_group.attrs.get('uuid', None)
-        row_offset = img_group.attrs.get('row_offset', 0)
-        column_offset = img_group.attrs.get('column_offset', 0)
+        name = img_group.attrs.get("name", "Unknown")
+        description = img_group.attrs.get("description", "")
+        imagery_uuid = img_group.attrs.get("uuid", None)
+        row_offset = img_group.attrs.get("row_offset", 0)
+        column_offset = img_group.attrs.get("column_offset", 0)
 
         # Load metadata first (fast)
-        frames = img_group['frames'][:]
+        frames = img_group["frames"][:]
 
         # Load times if present
         times = None
-        if 'unix_nanoseconds' in img_group:
+        if "unix_nanoseconds" in img_group:
             # version 1.7+ format with combined nanoseconds
-            unix_nanoseconds = img_group['unix_nanoseconds'][:]
-            times = unix_nanoseconds.astype('datetime64[ns]')
-        elif 'unix_times' in img_group and 'unix_fine_times' in img_group:
+            unix_nanoseconds = img_group["unix_nanoseconds"][:]
+            times = unix_nanoseconds.astype("datetime64[ns]")
+        elif "unix_times" in img_group and "unix_fine_times" in img_group:
             # Emit deprecation warning to be shown in a dialog
             self.warning_occurred.emit(
                 "Deprecated File Format",
                 "The 1.6 HDF5 imagery format is deprecated and will be removed in a future version of VISTA.\n\n"
                 "Please re-save your imagery files using the new 1.7 format:\n"
-                "File > Save Imagery (HDF5)"
+                "File > Save Imagery (HDF5)",
             )
             # version 1.6 format with split fields (backward compatibility)
-            unix_times = img_group['unix_times'][:]
-            unix_fine_times = img_group['unix_fine_times'][:]
+            unix_times = img_group["unix_times"][:]
+            unix_fine_times = img_group["unix_fine_times"][:]
             total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
-            times = total_nanoseconds.astype('datetime64[ns]')
+            times = total_nanoseconds.astype("datetime64[ns]")
 
         # Pre-allocate images array with zeros (safe if cancelled mid-load)
-        images_dataset = img_group['images']
+        images_dataset = img_group["images"]
         images = np.zeros(images_dataset.shape, dtype=np.float32)
 
         imagery = Imagery(
@@ -390,8 +391,9 @@ class DataLoaderThread(QThread):
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset, sensor)
 
-    def _load_images_incrementally(self, imagery: Imagery, images_dataset: h5py.Dataset, sensor,
-                                     image_dataset_slice=None):
+    def _load_images_incrementally(
+        self, imagery: Imagery, images_dataset: h5py.Dataset, sensor, image_dataset_slice=None
+    ):
         """Load images block-by-block, emitting signals so the UI can display frames as they arrive.
 
         Parameters
@@ -431,7 +433,7 @@ class DataLoaderThread(QThread):
 
         images_dataset.read_direct(
             images,
-            source_sel=np.s_[source_offset:source_offset + first_end],
+            source_sel=np.s_[source_offset : source_offset + first_end],
             dest_sel=np.s_[0:first_end],
         )
         imagery.loaded_frame_count = first_end
@@ -448,7 +450,7 @@ class DataLoaderThread(QThread):
             end_idx = min(start_idx + block_size, num_images)
             images_dataset.read_direct(
                 images,
-                source_sel=np.s_[source_offset + start_idx:source_offset + end_idx],
+                source_sel=np.s_[source_offset + start_idx : source_offset + end_idx],
                 dest_sel=np.s_[start_idx:end_idx],
             )
             imagery.loaded_frame_count = end_idx
@@ -467,8 +469,8 @@ class DataLoaderThread(QThread):
         detectors = []
 
         # Group by detector name if column exists
-        if 'Detector' in df.columns:
-            detector_groups = df.groupby('Detector')
+        if "Detector" in df.columns:
+            detector_groups = df.groupby("Detector")
             self.progress_updated.emit("Loading detections...", 0, len(detector_groups))
 
             for idx, (detector_name, group_df) in enumerate(detector_groups):
@@ -497,8 +499,8 @@ class DataLoaderThread(QThread):
 
         tracks = []
 
-        if 'Track' in df.columns:
-            track_groups = df.groupby('Track')
+        if "Track" in df.columns:
+            track_groups = df.groupby("Track")
             self.progress_updated.emit("Loading tracks...", 0, len(track_groups))
 
             for idx, (track_name, track_df) in enumerate(track_groups):
@@ -537,7 +539,7 @@ class DataLoaderThread(QThread):
                 return  # Exit early if cancelled
 
             # Get single row as DataFrame
-            row_df = df.iloc[idx:idx+1]
+            row_df = df.iloc[idx : idx + 1]
             aoi = AOI.from_dataframe(row_df)
             aois.append(aoi)
 

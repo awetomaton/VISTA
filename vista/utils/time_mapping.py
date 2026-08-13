@@ -1,4 +1,5 @@
 """Utility functions for mapping times to frames"""
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -6,7 +7,7 @@ from numpy.typing import NDArray
 def map_times_to_frames(
     track_times: NDArray[np.datetime64],
     imagery_times: NDArray[np.datetime64],
-    imagery_frames: NDArray[np.int_]
+    imagery_frames: NDArray[np.int_],
 ) -> NDArray[np.int_]:
     """
     Map track times to imagery frames using nearest time before track time.
@@ -37,8 +38,8 @@ def map_times_to_frames(
         return np.array([], dtype=np.int_)
 
     # Convert to numeric for comparison (nanoseconds since epoch)
-    track_times_ns = track_times.astype('datetime64[ns]').astype(np.int64)
-    imagery_times_ns = imagery_times.astype('datetime64[ns]').astype(np.int64)
+    track_times_ns = track_times.astype("datetime64[ns]").astype(np.int64)
+    imagery_times_ns = imagery_times.astype("datetime64[ns]").astype(np.int64)
 
     # For each track time, find the nearest imagery time before it
     frames = np.empty(len(track_times), dtype=np.int_)
@@ -50,8 +51,7 @@ def map_times_to_frames(
         if not np.any(mask):
             # Track time is before all imagery times
             raise ValueError(
-                f"Track time {track_times[i]} is before all imagery times. "
-                f"First imagery time: {imagery_times[0]}"
+                f"Track time {track_times[i]} is before all imagery times. First imagery time: {imagery_times[0]}"
             )
 
         # Get the closest time before track time

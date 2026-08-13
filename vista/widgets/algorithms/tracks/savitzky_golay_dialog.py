@@ -1,10 +1,21 @@
 """Dialog for configuring and running Savitzky-Golay track filtering"""
+
 import traceback
+
 from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QMessageBox,
-    QProgressBar, QPushButton, QSpinBox, QVBoxLayout
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
 )
+
 from vista.algorithms.tracks.savitzky_golay import SavitzkyGolayFilter
 
 
@@ -40,10 +51,7 @@ class SavitzkyGolayThread(QThread):
         """Execute the filtering algorithm in background thread"""
         try:
             # Create the filtering algorithm instance
-            filter_obj = SavitzkyGolayFilter(
-                track=self.track,
-                **self.filter_params
-            )
+            filter_obj = SavitzkyGolayFilter(track=self.track, **self.filter_params)
 
             # Run filtering
             results = filter_obj()
@@ -244,10 +252,7 @@ class SavitzkyGolayDialog(QDialog):
         dict
             Filter parameters
         """
-        return {
-            'radius': self.radius_spin.value(),
-            'polyorder': self.polyorder_spin.value()
-        }
+        return {"radius": self.radius_spin.value(), "polyorder": self.polyorder_spin.value()}
 
     def validate_parameters(self):
         """
@@ -364,11 +369,7 @@ class SavitzkyGolayDialog(QDialog):
         # Show success message
         success_msg = f"Successfully filtered {len(self.tracks)} track(s)."
 
-        QMessageBox.information(
-            self,
-            "Filtering Complete",
-            success_msg
-        )
+        QMessageBox.information(self, "Filtering Complete", success_msg)
 
     def on_cancel_clicked(self):
         """Handle Cancel button click"""

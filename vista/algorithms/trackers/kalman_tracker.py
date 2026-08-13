@@ -1,4 +1,5 @@
 """Multi-object tracker implementation for VISTA"""
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
@@ -34,20 +35,27 @@ class KalmanTrack:
     def predict(self, dt=1.0):
         """Predict next state using constant velocity model"""
         # State transition matrix
-        F = np.array([
-            [1, dt, 0,  0],
-            [0,  1, 0,  0],
-            [0,  0, 1, dt],
-            [0,  0, 0,  1]
-        ])
+        F = np.array(
+            [
+                [1, dt, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, dt],
+                [0, 0, 0, 1],
+            ]
+        )
 
         # Process noise covariance
-        Q = np.array([
-            [dt**4/4, dt**3/2, 0,        0],
-            [dt**3/2, dt**2,   0,        0],
-            [0,       0,       dt**4/4,  dt**3/2],
-            [0,       0,       dt**3/2,  dt**2]
-        ]) * self.process_noise
+        Q = (
+            np.array(
+                [
+                    [dt**4 / 4, dt**3 / 2, 0, 0],
+                    [dt**3 / 2, dt**2, 0, 0],
+                    [0, 0, dt**4 / 4, dt**3 / 2],
+                    [0, 0, dt**3 / 2, dt**2],
+                ]
+            )
+            * self.process_noise
+        )
 
         # Predict
         self.state = F @ self.state
@@ -56,10 +64,12 @@ class KalmanTrack:
     def update(self, detection_pos, frame):
         """Update state with new detection"""
         # Measurement matrix (measure position only)
-        H = np.array([
-            [1, 0, 0, 0],
-            [0, 0, 1, 0]
-        ])
+        H = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 0, 1, 0],
+            ]
+        )
 
         # Measurement noise
         R = np.eye(2) * self.measurement_noise
@@ -100,10 +110,12 @@ class KalmanTrack:
     def mahalanobis_distance(self, detection_pos):
         """Compute Mahalanobis distance to detection"""
         # Measurement matrix
-        H = np.array([
-            [1, 0, 0, 0],
-            [0, 0, 1, 0]
-        ])
+        H = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 0, 1, 0],
+            ]
+        )
 
         # Predicted measurement
         z_pred = H @ self.state
@@ -149,11 +161,11 @@ def run_kalman_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration
-    process_noise = config['process_noise']
-    measurement_noise = config['measurement_noise']
-    gating_distance = config['gating_distance']
-    min_detections = config['min_detections']
-    delete_threshold = config['delete_threshold']
+    process_noise = config["process_noise"]
+    measurement_noise = config["measurement_noise"]
+    gating_distance = config["gating_distance"]
+    min_detections = config["min_detections"]
+    delete_threshold = config["delete_threshold"]
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -225,8 +237,11 @@ def run_kalman_tracker(detectors, config):
         for i, detection in enumerate(detections):
             if i not in associated_detections:
                 new_track = KalmanTrack(
-                    detection, frame, process_noise,
-                    measurement_noise, next_track_id
+                    detection,
+                    frame,
+                    process_noise,
+                    measurement_noise,
+                    next_track_id,
                 )
                 tentative_tracks.append(new_track)
                 next_track_id += 1
@@ -282,9 +297,9 @@ def run_kalman_tracker(detectors, config):
         frames_array = np.array(track.frames, dtype=np.int_)
 
         track_data = {
-            'frames': frames_array,
-            'rows': rows,
-            'columns': columns,
+            "frames": frames_array,
+            "rows": rows,
+            "columns": columns,
         }
         track_data_list.append(track_data)
 

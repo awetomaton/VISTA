@@ -3,18 +3,22 @@
 The Imagery object in this class can be subclassed by third-party objects to implement their own logic including
 file readers and pixel-to-geodetic conversions
 """
+
+import pathlib
+import uuid
 from dataclasses import dataclass, field
+from typing import Optional, Union
+
 import h5py
 import numpy as np
 from numpy.typing import NDArray
-import pathlib
-from typing import Union, Optional
-import uuid
+
 from vista.aoi import AOI
 from vista.sensors.sensor import Sensor
 
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -115,6 +119,7 @@ class Imagery:
     - Geodetic conversion requires valid polynomial coefficients for the frame of interest
     - Calibration frame arrays define ranges: frame N applies until frame N+1 starts
     """
+
     name: str
     images: NDArray[np.float32]
     frames: NDArray[np.int_]
@@ -150,7 +155,7 @@ class Imagery:
             self.column_offset = 0
         self.uuid = uuid.uuid4()
         self.sensor.add_imagery(self)
-    
+
     def __getitem__(self, s):
         if isinstance(s, (list, np.ndarray, slice)):
             # Handle slice objects
@@ -164,13 +169,13 @@ class Imagery:
             return imagery_slice
         else:
             raise TypeError("Invalid index or slice type. Use slice, list, or numpy array.")
-        
+
     def __len__(self):
         return self.images.shape[0]
-    
+
     def __eq__(self, other):
-        return hasattr(other, 'uuid') and (self.uuid == other.uuid)
-    
+        return hasattr(other, "uuid") and (self.uuid == other.uuid)
+
     def __str__(self):
         return self.__repr__()
 
@@ -187,7 +192,7 @@ class Imagery:
         """Return the subset of frame numbers that have been loaded so far."""
         if self.loaded_frame_count is None:
             return self.frames
-        return self.frames[:self.loaded_frame_count]
+        return self.frames[: self.loaded_frame_count]
 
     @property
     def has_gpu_images(self):
@@ -302,6 +307,7 @@ class Imagery:
         device = "cuda:0"
         try:
             from PyQt6.QtCore import QSettings
+
             settings = QSettings("Vista", "VistaApp")
             device = settings.value("gpu/device", "cuda:0", type=str)
         except (ImportError, RuntimeError):
@@ -364,14 +370,14 @@ class Imagery:
         The numpy images array and GPU tensor (if present) are shared by reference, not copied.
         """
         imagery_copy = self.__class__(
-            name = self.name + f" (copy)",
-            images = self.images,
-            frames = self.frames,
-            sensor = self.sensor,
-            row_offset = self.row_offset,
-            column_offset = self.column_offset,
-            times = self.times,
-            description = self.description,
+            name=self.name + " (copy)",
+            images=self.images,
+            frames=self.frames,
+            sensor=self.sensor,
+            row_offset=self.row_offset,
+            column_offset=self.column_offset,
+            times=self.times,
+            description=self.description,
         )
         imagery_copy._gpu_images = self._gpu_images
         imagery_copy._gpu_device = self._gpu_device
@@ -409,6 +415,7 @@ class Imagery:
 
         try:
             from PyQt6.QtCore import QSettings
+
             settings = QSettings("Vista", "VistaApp")
             min_percentile = settings.value("imagery/histogram_min_percentile", 1.0, type=float)
             max_percentile = settings.value("imagery/histogram_max_percentile", 99.0, type=float)
@@ -437,7 +444,7 @@ class Imagery:
             # Remove zero values since there are often many of these values
             nonzero_image = image[image != 0]
 
-            # Compute data range 
+            # Compute data range
             if nonzero_image.size > 0:
                 hist_min = np.percentile(nonzero_image, min_percentile)
                 hist_max = np.percentile(nonzero_image, max_percentile)
@@ -481,7 +488,7 @@ class Imagery:
         imagery_aoi._gpu_device = None
 
         return imagery_aoi
-    
+
     def to_hdf5(self, group: h5py.Group):
         """
         Save imagery data to an HDF5 group.
@@ -503,28 +510,28 @@ class Imagery:
         Sensor data should be written separately using sensor.to_hdf5()
         """
         # Set imagery attributes
-        group.attrs['name'] = self.name
-        group.attrs['description'] = self.description
-        group.attrs['uuid'] = str(self.uuid)
-        group.attrs['row_offset'] = self.row_offset
-        group.attrs['column_offset'] = self.column_offset
+        group.attrs["name"] = self.name
+        group.attrs["description"] = self.description
+        group.attrs["uuid"] = str(self.uuid)
+        group.attrs["row_offset"] = self.row_offset
+        group.attrs["column_offset"] = self.column_offset
 
         # Save image data with chunking
-        group.create_dataset('images', data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
+        group.create_dataset("images", data=self.images, chunks=(1, self.images.shape[1], self.images.shape[2]))
 
         # Save frames
-        group.create_dataset('frames', data=self.frames)
+        group.create_dataset("frames", data=self.frames)
 
         # Save times if present
         if self.times is not None:
             # Convert datetime64 to unix nanoseconds
-            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
 
 
 def save_imagery_hdf5(
     file_path: Union[str, pathlib.Path],
-    sensor_imagery_map: dict[str, list[Imagery]]
+    sensor_imagery_map: dict[str, list[Imagery]],
 ):
     """
     Save imagery data to HDF5 file with hierarchical sensor/imagery structure.
@@ -565,13 +572,13 @@ def save_imagery_hdf5(
     """
     file_path = pathlib.Path(file_path)
 
-    with h5py.File(file_path, 'w') as f:
+    with h5py.File(file_path, "w") as f:
         # Set root attributes
-        f.attrs['format_version'] = '1.7'
-        f.attrs['created'] = str(np.datetime64('now').astype(str))
+        f.attrs["format_version"] = "1.7"
+        f.attrs["created"] = str(np.datetime64("now").astype(str))
 
         # Create sensors group
-        sensors_group = f.create_group('sensors')
+        sensors_group = f.create_group("sensors")
 
         # Iterate through sensor names and their imagery
         for sensor_name, imagery_list in sensor_imagery_map.items():
@@ -588,7 +595,7 @@ def save_imagery_hdf5(
             sensor.to_hdf5(sensor_group)
 
             # Create imagery subgroup
-            imagery_group = sensor_group.create_group('imagery')
+            imagery_group = sensor_group.create_group("imagery")
 
             # Save each imagery dataset
             for imagery in imagery_list:

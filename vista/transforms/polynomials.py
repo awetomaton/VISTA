@@ -63,10 +63,7 @@ def fit_2d_polynomial(x, y, f, order):
 
     # Validate input shapes
     if len(x) != len(y) or len(x) != len(f):
-        raise ValueError(
-            f"Input arrays must have the same length. "
-            f"Got x: {len(x)}, y: {len(y)}, f: {len(f)}"
-        )
+        raise ValueError(f"Input arrays must have the same length. Got x: {len(x)}, y: {len(y)}, f: {len(f)}")
 
     n_points = len(x)
     n_coeffs = (order + 1) * (order + 2) // 2
@@ -74,8 +71,7 @@ def fit_2d_polynomial(x, y, f, order):
     # Check for sufficient data points
     if n_points < n_coeffs:
         raise ValueError(
-            f"Insufficient data points for order {order} polynomial. "
-            f"Need at least {n_coeffs} points, got {n_points}"
+            f"Insufficient data points for order {order} polynomial. Need at least {n_coeffs} points, got {n_points}"
         )
 
     # Build design matrix
@@ -87,7 +83,7 @@ def fit_2d_polynomial(x, y, f, order):
     for degree in range(order + 1):
         for x_power in range(degree, -1, -1):
             y_power = degree - x_power
-            A[:, coeff_idx] = (x ** x_power) * (y ** y_power)
+            A[:, coeff_idx] = (x**x_power) * (y**y_power)
             coeff_idx += 1
 
     # Column-scale the design matrix for numerical stability.
@@ -167,8 +163,7 @@ def evaluate_2d_polynomial(coeffs, x, y, order=None):
         sqrt_disc = np.sqrt(discriminant)
         if sqrt_disc != int(sqrt_disc):
             raise ValueError(
-                f"Invalid number of coefficients ({n_coeffs}). "
-                f"Must be (n+1)*(n+2)/2 for some non-negative integer n."
+                f"Invalid number of coefficients ({n_coeffs}). Must be (n+1)*(n+2)/2 for some non-negative integer n."
             )
         order = int((-3 + sqrt_disc) / 2)
 
@@ -176,17 +171,13 @@ def evaluate_2d_polynomial(coeffs, x, y, order=None):
         expected_coeffs = (order + 1) * (order + 2) // 2
         if expected_coeffs != n_coeffs:
             raise ValueError(
-                f"Invalid number of coefficients ({n_coeffs}). "
-                f"Must be (n+1)*(n+2)/2 for some non-negative integer n."
+                f"Invalid number of coefficients ({n_coeffs}). Must be (n+1)*(n+2)/2 for some non-negative integer n."
             )
 
     # Verify coefficient count matches specified order
     expected_coeffs = (order + 1) * (order + 2) // 2
     if len(coeffs) != expected_coeffs:
-        raise ValueError(
-            f"For order {order}, expected {expected_coeffs} coefficients, "
-            f"but got {len(coeffs)}"
-        )
+        raise ValueError(f"For order {order}, expected {expected_coeffs} coefficients, but got {len(coeffs)}")
 
     # Evaluate polynomial
     result = np.zeros_like(x * y)  # Ensures proper broadcasting
@@ -197,8 +188,7 @@ def evaluate_2d_polynomial(coeffs, x, y, order=None):
         # For each degree, iterate through powers of x from high to low
         for x_power in range(degree, -1, -1):
             y_power = degree - x_power
-            result = result + coeffs[coeff_idx] * (x ** x_power) * (y ** y_power)
+            result = result + coeffs[coeff_idx] * (x**x_power) * (y**y_power)
             coeff_idx += 1
 
     return result
-

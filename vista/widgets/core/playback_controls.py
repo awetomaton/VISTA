@@ -1,10 +1,19 @@
 """PlaybackControls widget for controlling imagery playback"""
+
+from PyQt6.QtCore import QElapsedTimer, Qt, QTimer
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QSlider, QLabel, QSpinBox, QCheckBox, QDial, QApplication
+    QApplication,
+    QCheckBox,
+    QDial,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSlider,
+    QSpinBox,
+    QStyle,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
-from PyQt6.QtWidgets import QStyle
 
 
 class PlaybackControls(QWidget):
@@ -42,7 +51,7 @@ class PlaybackControls(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)  # left, top, right, bottom
-        #layout.setSpacing(3)  # Reduce spacing between slider_section and button_layout
+        # layout.setSpacing(3)  # Reduce spacing between slider_section and button_layout
 
         # Frame slider and info layout
         slider_section = QVBoxLayout()
@@ -59,7 +68,7 @@ class PlaybackControls(QWidget):
         # Frame and time info underneath
         info_layout = QHBoxLayout()
         info_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self.frame_label = QLabel("Frame: 0 / 0")
         self.time_label = QLabel("")  # Will show ISO time when available
 
@@ -425,5 +434,3 @@ class PlaybackControls(QWidget):
     def frame_changed(self, frame_index):
         """Override this method to handle frame changes"""
         pass
-
-

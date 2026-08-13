@@ -4,9 +4,10 @@ Track interpolation algorithm for filling missing frames in trajectories.
 This module provides the TrackInterpolation class which fills gaps in track data
 by interpolating missing frames between existing track points.
 """
+
 import numpy as np
-from numpy.typing import NDArray
 from scipy.interpolate import interp1d
+
 from vista.tracks.track import Track
 
 
@@ -44,7 +45,7 @@ class TrackInterpolation:
     >>> interpolated_track = results['interpolated_track']
     """
 
-    def __init__(self, track: Track, method: str = 'linear'):
+    def __init__(self, track: Track, method: str = "linear"):
         """
         Initialize the track interpolation algorithm.
 
@@ -97,10 +98,10 @@ class TrackInterpolation:
         # If no missing frames, return a copy of the original track
         if len(missing_frames) == 0:
             return {
-                'interpolated_track': self.track.copy(),
-                'original_frames': existing_frames.copy(),
-                'interpolated_frames': np.array([], dtype=np.int_),
-                'n_interpolated': 0
+                "interpolated_track": self.track.copy(),
+                "original_frames": existing_frames.copy(),
+                "interpolated_frames": np.array([], dtype=np.int_),
+                "n_interpolated": 0,
             }
 
         # Create interpolation functions for rows and columns
@@ -110,14 +111,14 @@ class TrackInterpolation:
                 existing_rows,
                 kind=self.method,
                 assume_sorted=False,
-                fill_value='extrapolate'
+                fill_value="extrapolate",
             )
             col_interp = interp1d(
                 existing_frames,
                 existing_columns,
                 kind=self.method,
                 assume_sorted=False,
-                fill_value='extrapolate'
+                fill_value="extrapolate",
             )
         except Exception as e:
             raise ValueError(f"Interpolation failed: {str(e)}")
@@ -149,8 +150,8 @@ class TrackInterpolation:
 
         # Return results
         return {
-            'interpolated_track': interpolated_track,
-            'original_frames': existing_frames.copy(),
-            'interpolated_frames': missing_frames,
-            'n_interpolated': len(missing_frames)
+            "interpolated_track": interpolated_track,
+            "original_frames": existing_frames.copy(),
+            "interpolated_frames": missing_frames,
+            "n_interpolated": len(missing_frames),
         }

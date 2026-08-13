@@ -1,4 +1,5 @@
 """Cache for projected VISTA imagery keyed by imagery UUID, frame, and zoom level."""
+
 import collections
 from typing import Optional
 

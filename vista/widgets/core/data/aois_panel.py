@@ -1,12 +1,21 @@
 """AOIs panel for data manager"""
+
 import pathlib
 
 import pandas as pd
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QFileDialog, QHeaderView, QHBoxLayout, QLabel, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QFileDialog,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 
@@ -18,7 +27,7 @@ class AOIsPanel(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
-        self.settings = QSettings('VISTA', 'VISTA')
+        self.settings = QSettings("VISTA", "VISTA")
         self.init_ui()
 
     def init_ui(self):
@@ -42,16 +51,16 @@ class AOIsPanel(QWidget):
         layout.addLayout(button_layout)
 
         # Help text
-        help_label = QLabel("Select row(s) to move and resize AOIs in the viewer. De-select (ctrl/cmd + click) to disable manipulation.")
+        help_label = QLabel(
+            "Select row(s) to move and resize AOIs in the viewer. De-select (ctrl/cmd + click) to disable manipulation."
+        )
         help_label.setWordWrap(True)
         layout.addWidget(help_label)
 
         # AOIs table
         self.aois_table = QTableWidget()
         self.aois_table.setColumnCount(2)
-        self.aois_table.setHorizontalHeaderLabels([
-            "Name", "Bounds (x, y, w, h)"
-        ])
+        self.aois_table.setHorizontalHeaderLabels(["Name", "Bounds (x, y, w, h)"])
 
         # Enable row selection via vertical header
         self.aois_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -105,7 +114,7 @@ class AOIsPanel(QWidget):
 
         # Select rows for AOIs that are marked as selected
         for row, aoi in enumerate(self.viewer.aois):
-            if hasattr(aoi, '_selected') and aoi._selected:
+            if hasattr(aoi, "_selected") and aoi._selected:
                 self.aois_table.selectRow(row)
 
     def on_aoi_selection_changed(self):
@@ -215,14 +224,6 @@ class AOIsPanel(QWidget):
 
                 # Build success message
                 message = f"Exported {num_aois} AOI(s) to:\n{file_path}"
-                QMessageBox.information(
-                    self,
-                    "Success",
-                    message
-                )
+                QMessageBox.information(self, "Success", message)
             except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Export Error",
-                    f"Failed to export AOIs:\n{str(e)}"
-                )
+                QMessageBox.critical(self, "Export Error", f"Failed to export AOIs:\n{str(e)}")

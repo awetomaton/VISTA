@@ -1,12 +1,23 @@
 """Dialog for configuring and running Robust PCA background removal"""
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QGroupBox, QFormLayout,
-    QDoubleSpinBox, QMessageBox, QProgressBar,
-    QSpinBox, QCheckBox, QComboBox
-)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
+
 import traceback
+
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+)
 
 from vista.algorithms.background_removal.robust_pca import run_robust_pca
 
@@ -86,7 +97,7 @@ class RobustPCAProcessingThread(QThread):
                 return
 
             # Use Imagery slicing for frame range
-            imagery_subset = self.imagery[self.start_frame:self.end_frame]
+            imagery_subset = self.imagery[self.start_frame : self.end_frame]
 
             # Apply AOI if selected
             if self.aoi:
@@ -107,7 +118,7 @@ class RobustPCAProcessingThread(QThread):
                 lambda_param=self.lambda_param,
                 tol=self.tolerance,
                 max_iter=self.max_iter,
-                callback=self._iteration_callback
+                callback=self._iteration_callback,
             )
 
             if self._cancelled:
@@ -118,18 +129,26 @@ class RobustPCAProcessingThread(QThread):
 
             # Create background Imagery object using metadata from processed imagery
             background_imagery = imagery_to_process.copy()
-            background_imagery.name = f"{self.imagery.name} - Background" + (f" (AOI: {self.aoi.name})" if self.aoi else "")
+            background_imagery.name = f"{self.imagery.name} - Background" + (
+                f" (AOI: {self.aoi.name})" if self.aoi else ""
+            )
             background_imagery.images = background_images
-            background_imagery.description = f"Low-rank background component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
+            background_imagery.description = (
+                f"Low-rank background component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
+            )
 
             if self._cancelled:
                 return
 
             # Create foreground Imagery object
             foreground_imagery = imagery_to_process.copy()
-            foreground_imagery.name = f"{self.imagery.name} - Foreground (RPCA)" + (f" (AOI: {self.aoi.name})" if self.aoi else "")
+            foreground_imagery.name = f"{self.imagery.name} - Foreground (RPCA)" + (
+                f" (AOI: {self.aoi.name})" if self.aoi else ""
+            )
             foreground_imagery.images = foreground_images
-            foreground_imagery.description = f"Sparse foreground component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
+            foreground_imagery.description = (
+                f"Sparse foreground component from Robust PCA (frames {self.start_frame}-{self.end_frame})"
+            )
 
             # Switch to determinate progress for histogram computation
             total_histograms = len(background_imagery.images) + len(foreground_imagery.images)
@@ -395,7 +414,7 @@ class RobustPCADialog(QDialog):
                 self,
                 "No Imagery",
                 "No imagery is currently loaded. Please load imagery first.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -485,7 +504,7 @@ class RobustPCADialog(QDialog):
             self,
             "Processing Complete",
             f"Robust PCA decomposition complete.\nAdded: {', '.join(added_items)}",
-            QMessageBox.StandardButton.Ok
+            QMessageBox.StandardButton.Ok,
         )
 
         # Close the dialog
@@ -549,7 +568,7 @@ class RobustPCADialog(QDialog):
                 "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
 
             if reply == QMessageBox.StandardButton.Yes:

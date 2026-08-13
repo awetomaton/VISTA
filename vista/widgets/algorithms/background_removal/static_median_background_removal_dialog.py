@@ -1,4 +1,5 @@
 """Dialog for configuring and running static (non-sliding) median background removal."""
+
 from vista.algorithms.background_removal.static_median_background_removal import (
     static_median_background_removal,
 )

@@ -1,9 +1,8 @@
 """Feature data model for placemarks, shapefiles, and other persistent overlays"""
+
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
-
-import pyqtgraph as pg
 
 
 @dataclass
@@ -19,7 +18,7 @@ class Feature:
     feature_type: str  # e.g., "shapefile", "placemark", "polygon", "line", "point"
     geometry: Any  # Geometry data (varies by type)
     visible: bool = True
-    color: str = 'y'  # Yellow by default
+    color: str = "y"  # Yellow by default
     uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     # PyQtGraph plot item (not serialized)
@@ -48,12 +47,12 @@ class Feature:
             geometry, visible, color, and uuid. Suitable for JSON serialization.
         """
         return {
-            'name': self.name,
-            'feature_type': self.feature_type,
-            'geometry': self.geometry,
-            'visible': self.visible,
-            'color': self.color,
-            'uuid': self.uuid
+            "name": self.name,
+            "feature_type": self.feature_type,
+            "geometry": self.geometry,
+            "visible": self.visible,
+            "color": self.color,
+            "uuid": self.uuid,
         }
 
     @classmethod
@@ -74,12 +73,12 @@ class Feature:
             is not provided, a new UUID is generated.
         """
         return cls(
-            name=data['name'],
-            feature_type=data['feature_type'],
-            geometry=data['geometry'],
-            visible=data.get('visible', True),
-            color=data.get('color', 'y'),
-            uuid=data.get('uuid', str(uuid.uuid4()))
+            name=data["name"],
+            feature_type=data["feature_type"],
+            geometry=data["geometry"],
+            visible=data.get("visible", True),
+            color=data.get("color", "y"),
+            uuid=data.get("uuid", str(uuid.uuid4())),
         )
 
 

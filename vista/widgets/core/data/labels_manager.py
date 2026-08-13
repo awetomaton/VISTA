@@ -1,7 +1,17 @@
 """Labels manager"""
+
 from PyQt6.QtCore import QSettings
-from PyQt6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,  QVBoxLayout)
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QListWidget
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 from vista.utils.labels_fixture import load_labels_from_fixture
 
@@ -108,11 +118,9 @@ class LabelsManagerDialog(QDialog):
             return
 
         # Check if label already exists (case-insensitive)
-        existing_labels = [self.labels_list.item(i).text().lower()
-                          for i in range(self.labels_list.count())]
+        existing_labels = [self.labels_list.item(i).text().lower() for i in range(self.labels_list.count())]
         if label_text.lower() in existing_labels:
-            QMessageBox.warning(self, "Duplicate Label",
-                              f"Label '{label_text}' already exists.")
+            QMessageBox.warning(self, "Duplicate Label", f"Label '{label_text}' already exists.")
             return
 
         # Add to list
@@ -137,9 +145,10 @@ class LabelsManagerDialog(QDialog):
         # Confirm deletion
         label_names = [item.text() for item in selected_items]
         reply = QMessageBox.question(
-            self, "Delete Labels",
+            self,
+            "Delete Labels",
             f"Delete {len(label_names)} label(s)?\n\n" + "\n".join(label_names),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
@@ -162,7 +171,7 @@ class LabelsManagerDialog(QDialog):
                         label_set -= deleted_labels_set
 
                 # Update viewer display if detection filters are active
-                if hasattr(self.viewer, 'update_detection_display'):
+                if hasattr(self.viewer, "update_detection_display"):
                     self.viewer.update_detection_display()
 
     @staticmethod

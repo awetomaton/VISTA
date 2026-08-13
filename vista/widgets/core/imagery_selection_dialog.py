@@ -1,9 +1,7 @@
 """Dialog for selecting imagery for time-based track mapping"""
-from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QListWidget,
-    QPushButton, QHBoxLayout, QMessageBox
-)
+
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QListWidget, QMessageBox, QPushButton, QVBoxLayout
 
 
 class ImagerySelectionDialog(QDialog):
@@ -44,17 +42,25 @@ class ImagerySelectionDialog(QDialog):
         # Build explanation based on what conversions are needed
         explanation_parts = []
         if self.needs_time_mapping and self.needs_geodetic_mapping:
-            explanation_parts.append("The track CSV contains times but no frame numbers, and geodetic coordinates (Lat/Lon/Alt) but no pixel coordinates (Row/Column).")
+            explanation_parts.append(
+                "The track CSV contains times but no frame numbers, and geodetic coordinates (Lat/Lon/Alt) but no pixel coordinates (Row/Column)."
+            )
             explanation_parts.append("Please select an imagery dataset to map:")
             explanation_parts.append("  • Track times to frame numbers")
             explanation_parts.append("  • Geodetic coordinates to pixel coordinates")
         elif self.needs_time_mapping:
             explanation_parts.append("The track CSV contains times but no frame numbers.")
-            explanation_parts.append("Please select an imagery dataset with times defined to map track times to frame numbers.")
+            explanation_parts.append(
+                "Please select an imagery dataset with times defined to map track times to frame numbers."
+            )
             explanation_parts.append("Track times will be mapped to the nearest imagery time before each track time.")
         elif self.needs_geodetic_mapping:
-            explanation_parts.append("The track CSV contains geodetic coordinates (Lat/Lon/Alt) but no pixel coordinates (Row/Column).")
-            explanation_parts.append("Please select an imagery dataset with geodetic conversion capability to map geodetic coordinates to pixel coordinates.")
+            explanation_parts.append(
+                "The track CSV contains geodetic coordinates (Lat/Lon/Alt) but no pixel coordinates (Row/Column)."
+            )
+            explanation_parts.append(
+                "Please select an imagery dataset with geodetic conversion capability to map geodetic coordinates to pixel coordinates."
+            )
 
         info_text = "\n\n".join(explanation_parts)
         info_label = QLabel(info_text)
@@ -69,8 +75,9 @@ class ImagerySelectionDialog(QDialog):
         for imagery in self.imageries:
             # Check if imagery meets requirements
             has_times = imagery.times is not None
-            has_geodetic_conversion = (imagery.poly_lat_lon_to_row is not None and
-                                      imagery.poly_lat_lon_to_col is not None)
+            has_geodetic_conversion = (
+                imagery.poly_lat_lon_to_row is not None and imagery.poly_lat_lon_to_col is not None
+            )
 
             # Determine if this imagery is suitable
             is_suitable = True
@@ -142,11 +149,7 @@ class ImagerySelectionDialog(QDialog):
             self.selected_imagery = current_item.data(Qt.ItemDataRole.UserRole)
             super().accept()
         else:
-            QMessageBox.warning(
-                self,
-                "No Selection",
-                "Please select an imagery dataset."
-            )
+            QMessageBox.warning(self, "No Selection", "Please select an imagery dataset.")
 
     def get_selected_imagery(self):
         """

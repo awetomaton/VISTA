@@ -11,10 +11,12 @@ the background estimate for the frame being processed.
 When tiling is enabled, each frame is divided into non-overlapping square tiles that
 are processed independently, reducing the per-SVD matrix size.
 """
+
 import numpy as np
 
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -304,5 +306,4 @@ def subspace_background_removal(images, rank=5, window_size=25, gap_size=3, tile
             if not callback(t + 1, num_frames):
                 raise InterruptedError("Processing cancelled by user")
 
-    return (background_flat.reshape(num_frames, height, width),
-            foreground_flat.reshape(num_frames, height, width))
+    return (background_flat.reshape(num_frames, height, width), foreground_flat.reshape(num_frames, height, width))

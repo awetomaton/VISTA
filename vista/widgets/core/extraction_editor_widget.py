@@ -1,11 +1,22 @@
 """Extraction editor floating widget for fine-tuning track extraction"""
+
 import numpy as np
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QButtonGroup, QCheckBox, QDialog, QFormLayout,
-    QGroupBox, QHBoxLayout, QLabel, QPushButton, QRadioButton, QSpinBox, QVBoxLayout
+    QButtonGroup,
+    QCheckBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QVBoxLayout,
 )
 from skimage.measure import label, regionprops
+
 from vista.algorithms.detectors.cfar import CFAR
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
 
@@ -58,7 +69,7 @@ class ExtractionEditorWidget(QDialog):
             show_area_filters=False,
             show_detection_mode=False,
             settings_prefix="ExtractionEditor/CFAR",
-            show_group_box=True
+            show_group_box=True,
         )
         layout.addWidget(self.cfar_widget)
 
@@ -162,10 +173,10 @@ class ExtractionEditorWidget(QDialog):
             raise ValueError("Track has no extraction metadata")
 
         self.working_extraction = {
-            'chip_size': track.extraction_metadata['chip_size'],
-            'chips': track.extraction_metadata['chips'].copy(),
-            'signal_masks': track.extraction_metadata['signal_masks'].copy(),
-            'noise_stds': track.extraction_metadata['noise_stds'].copy(),
+            "chip_size": track.extraction_metadata["chip_size"],
+            "chips": track.extraction_metadata["chips"].copy(),
+            "signal_masks": track.extraction_metadata["signal_masks"].copy(),
+            "noise_stds": track.extraction_metadata["noise_stds"].copy(),
         }
 
         # Find track point index for current frame
@@ -209,24 +220,24 @@ class ExtractionEditorWidget(QDialog):
             return
 
         # Get current chip and CFAR parameters
-        chip = self.working_extraction['chips'][self.current_track_idx]
+        chip = self.working_extraction["chips"][self.current_track_idx]
         cfar_params = self.cfar_widget.get_config()
 
         # Create CFAR detector instance
         cfar = CFAR(
-            background_radius=cfar_params['background_radius'],
-            ignore_radius=cfar_params['ignore_radius'],
-            threshold_deviation=cfar_params['threshold_deviation'],
-            annulus_shape=cfar_params['annulus_shape'],
-            search_radius=None  # No search radius filtering in editor
+            background_radius=cfar_params["background_radius"],
+            ignore_radius=cfar_params["ignore_radius"],
+            threshold_deviation=cfar_params["threshold_deviation"],
+            annulus_shape=cfar_params["annulus_shape"],
+            search_radius=None,  # No search radius filtering in editor
         )
 
         # Use CFAR to detect signal pixels
         signal_mask, noise_std = cfar.process_chip(chip)
 
         # Update working extraction
-        self.working_extraction['signal_masks'][self.current_track_idx] = signal_mask
-        self.working_extraction['noise_stds'][self.current_track_idx] = noise_std
+        self.working_extraction["signal_masks"][self.current_track_idx] = signal_mask
+        self.working_extraction["noise_stds"][self.current_track_idx] = noise_std
 
         # Emit signal to update viewer
         self.signal_mask_updated.emit()
@@ -256,8 +267,8 @@ class ExtractionEditorWidget(QDialog):
         if self.working_extraction is None:
             return
 
-        chip_size = self.working_extraction['chip_size']
-        signal_mask = self.working_extraction['signal_masks'][self.current_track_idx]
+        chip_size = self.working_extraction["chip_size"]
+        signal_mask = self.working_extraction["signal_masks"][self.current_track_idx]
 
         # Determine action
         if is_drag:
@@ -297,8 +308,8 @@ class ExtractionEditorWidget(QDialog):
         if self.working_extraction is None:
             return
 
-        chip = self.working_extraction['chips'][self.current_track_idx]
-        signal_mask = self.working_extraction['signal_masks'][self.current_track_idx]
+        chip = self.working_extraction["chips"][self.current_track_idx]
+        signal_mask = self.working_extraction["signal_masks"][self.current_track_idx]
 
         # Compute weighted centroid
         row_offset, col_offset = self._compute_weighted_centroid(chip, signal_mask)
@@ -327,7 +338,7 @@ class ExtractionEditorWidget(QDialog):
         centroid = largest_region.weighted_centroid
 
         # Convert to offset from chip center
-        chip_center = self.working_extraction['chip_size'] // 2
+        chip_center = self.working_extraction["chip_size"] // 2
         row_offset = centroid[0] + 0.5 - chip_center
         col_offset = centroid[1] + 0.5 - chip_center
 
@@ -338,8 +349,8 @@ class ExtractionEditorWidget(QDialog):
         if self.track is None or self.working_extraction is None:
             return
 
-        chip = self.working_extraction['chips'][self.current_track_idx]
-        signal_mask = self.working_extraction['signal_masks'][self.current_track_idx]
+        chip = self.working_extraction["chips"][self.current_track_idx]
+        signal_mask = self.working_extraction["signal_masks"][self.current_track_idx]
 
         row_offset, col_offset = self._compute_weighted_centroid(chip, signal_mask)
 
@@ -388,7 +399,7 @@ class ExtractionEditorWidget(QDialog):
         """
         if self.working_extraction is None:
             return None
-        return self.working_extraction['signal_masks'][self.current_track_idx]
+        return self.working_extraction["signal_masks"][self.current_track_idx]
 
     def get_current_chip_position(self):
         """
@@ -402,7 +413,7 @@ class ExtractionEditorWidget(QDialog):
         if self.track is None or self.working_extraction is None:
             return None
 
-        chip_size = self.working_extraction['chip_size']
+        chip_size = self.working_extraction["chip_size"]
         radius = chip_size // 2
 
         track_row = self.track.rows[self.current_track_idx]

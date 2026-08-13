@@ -1,4 +1,5 @@
 """Dialog for configuring and running the Simple tracker"""
+
 from PyQt6.QtWidgets import QDoubleSpinBox, QSpinBox
 
 from vista.algorithms.trackers import run_simple_tracker
@@ -28,10 +29,10 @@ class SimpleTrackingDialog(BaseTrackingDialog):
             settings_name="SimpleTracker",
             window_title="Simple Tracker",
             description=description,
-            default_track_color='g',
-            default_track_marker='o',
+            default_track_color="g",
+            default_track_marker="o",
             default_track_line_width=2,
-            default_track_marker_size=10
+            default_track_marker_size=10,
         )
 
     def add_algorithm_parameters(self, main_layout):
@@ -87,12 +88,12 @@ class SimpleTrackingDialog(BaseTrackingDialog):
     def build_config(self):
         """Build configuration dictionary for Simple tracker"""
         config = super().build_config()
-        config['min_track_length'] = self.min_track_length.value()
+        config["min_track_length"] = self.min_track_length.value()
 
         # Only include if not auto (0)
         if self.max_search_radius.value() > 0:
-            config['max_search_radius'] = self.max_search_radius.value()
+            config["max_search_radius"] = self.max_search_radius.value()
         if self.max_age.value() > 0:
-            config['max_age'] = self.max_age.value()
+            config["max_age"] = self.max_age.value()
 
         return config

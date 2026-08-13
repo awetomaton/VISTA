@@ -1,4 +1,5 @@
 """Dialog for configuring and running the Network Flow tracker"""
+
 from PyQt6.QtWidgets import QDoubleSpinBox, QSpinBox
 
 from vista.algorithms.trackers import run_network_flow_tracker
@@ -28,10 +29,10 @@ class NetworkFlowTrackingDialog(BaseTrackingDialog):
             settings_name="NetworkFlowTracker",
             window_title="Network Flow Tracker",
             description=description,
-            default_track_color='g',
-            default_track_marker='o',
+            default_track_color="g",
+            default_track_marker="o",
             default_track_line_width=2,
-            default_track_marker_size=10
+            default_track_marker_size=10,
         )
 
     def add_algorithm_parameters(self, main_layout):
@@ -115,9 +116,9 @@ class NetworkFlowTrackingDialog(BaseTrackingDialog):
     def build_config(self):
         """Build configuration dictionary for Network Flow tracker"""
         config = super().build_config()
-        config['max_gap'] = self.max_gap.value()
-        config['max_distance'] = self.max_distance.value()
-        config['entrance_cost'] = self.entrance_cost.value()
-        config['exit_cost'] = self.exit_cost.value()
-        config['min_track_length'] = self.min_track_length.value()
+        config["max_gap"] = self.max_gap.value()
+        config["max_distance"] = self.max_distance.value()
+        config["entrance_cost"] = self.entrance_cost.value()
+        config["exit_cost"] = self.exit_cost.value()
+        config["min_track_length"] = self.min_track_length.value()
         return config

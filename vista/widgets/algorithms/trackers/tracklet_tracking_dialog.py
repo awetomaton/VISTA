@@ -1,5 +1,6 @@
 """Dialog for configuring and running the Tracklet tracker"""
-from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox, QFormLayout, QSpinBox
+
+from PyQt6.QtWidgets import QDoubleSpinBox, QFormLayout, QGroupBox, QSpinBox
 
 from vista.algorithms.trackers import run_tracklet_tracker
 from vista.widgets.algorithms.trackers.base_tracker_dialog import BaseTrackingDialog
@@ -28,10 +29,10 @@ class TrackletTrackingDialog(BaseTrackingDialog):
             settings_name="TrackletTracker",
             window_title="Tracklet Tracker",
             description=description,
-            default_track_color='g',
-            default_track_marker='o',
+            default_track_color="g",
+            default_track_marker="o",
             default_track_line_width=2,
-            default_track_marker_size=10
+            default_track_marker_size=10,
         )
 
     def add_algorithm_parameters(self, main_layout):
@@ -209,18 +210,18 @@ class TrackletTrackingDialog(BaseTrackingDialog):
         config = super().build_config()
 
         # Stage 1 parameters
-        config['initial_search_radius'] = self.initial_search_radius.value()
-        config['max_velocity_change'] = self.max_velocity_change.value()
-        config['min_tracklet_length'] = self.min_tracklet_length.value()
-        config['max_consecutive_misses'] = self.max_consecutive_misses.value()
-        config['min_detection_rate'] = self.min_detection_rate.value()
+        config["initial_search_radius"] = self.initial_search_radius.value()
+        config["max_velocity_change"] = self.max_velocity_change.value()
+        config["min_tracklet_length"] = self.min_tracklet_length.value()
+        config["max_consecutive_misses"] = self.max_consecutive_misses.value()
+        config["min_detection_rate"] = self.min_detection_rate.value()
 
         # Stage 2 parameters
-        config['max_linking_gap'] = self.max_linking_gap.value()
-        config['linking_search_radius'] = self.linking_search_radius.value()
-        config['smoothness_weight'] = self.smoothness_weight.value()
+        config["max_linking_gap"] = self.max_linking_gap.value()
+        config["linking_search_radius"] = self.linking_search_radius.value()
+        config["smoothness_weight"] = self.smoothness_weight.value()
 
         # Output parameters
-        config['min_track_length'] = self.min_track_length.value()
+        config["min_track_length"] = self.min_track_length.value()
 
         return config

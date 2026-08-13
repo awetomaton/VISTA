@@ -1,5 +1,6 @@
 """Custom QTableWidget with row drag-and-drop reordering support."""
-from PyQt6.QtCore import pyqtSignal, Qt, QMimeData
+
+from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QPainter, QPen
 from PyQt6.QtWidgets import QAbstractItemView, QTableWidget
 
@@ -54,7 +55,7 @@ class DraggableRowTableWidget(QTableWidget):
         drag = QDrag(self)
         mime_data = QMimeData()
         # Store the row indices in the mime data
-        mime_data.setText(','.join(str(r) for r in selected_rows))
+        mime_data.setText(",".join(str(r) for r in selected_rows))
         drag.setMimeData(mime_data)
 
         # Execute the drag
@@ -132,7 +133,7 @@ class DraggableRowTableWidget(QTableWidget):
 
         # Parse source rows from mime data
         try:
-            source_rows = [int(r) for r in event.mimeData().text().split(',')]
+            source_rows = [int(r) for r in event.mimeData().text().split(",")]
         except ValueError:
             event.ignore()
             return

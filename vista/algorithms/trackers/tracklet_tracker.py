@@ -7,6 +7,7 @@ This tracker uses a two-stage approach optimized for scenarios with:
 Stage 1: Form high-confidence tracklets using strict association criteria
 Stage 2: Link tracklets based on velocity extrapolation and smoothness
 """
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
@@ -22,7 +23,7 @@ class Tracklet:
 
         # Track quality metrics for "m out of n" logic
         self.hits = 1  # Number of actual detections
-        self.age = 1   # Total frames since creation
+        self.age = 1  # Total frames since creation
         self.consecutive_misses = 0  # Consecutive frames without detection
 
     def add_detection(self, detection_pos, frame):
@@ -173,16 +174,15 @@ def run_tracklet_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration with smart defaults
-    tracker_name = config.get('tracker_name', 'Tracklet Tracker')
-    initial_search_radius = config.get('initial_search_radius', 10.0)
-    max_velocity_change = config.get('max_velocity_change', 5.0)
-    min_tracklet_length = config.get('min_tracklet_length', 3)
-    max_consecutive_misses = config.get('max_consecutive_misses', 2)
-    min_detection_rate = config.get('min_detection_rate', 0.6)
-    max_linking_gap = config.get('max_linking_gap', 10)
-    linking_search_radius = config.get('linking_search_radius', 30.0)
-    smoothness_weight = config.get('smoothness_weight', 1.0)
-    min_track_length = config.get('min_track_length', 5)
+    initial_search_radius = config.get("initial_search_radius", 10.0)
+    max_velocity_change = config.get("max_velocity_change", 5.0)
+    min_tracklet_length = config.get("min_tracklet_length", 3)
+    max_consecutive_misses = config.get("max_consecutive_misses", 2)
+    min_detection_rate = config.get("min_detection_rate", 0.6)
+    max_linking_gap = config.get("max_linking_gap", 10)
+    linking_search_radius = config.get("linking_search_radius", 30.0)
+    smoothness_weight = config.get("smoothness_weight", 1.0)
+    min_track_length = config.get("min_track_length", 5)
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -210,8 +210,7 @@ def run_tracklet_tracker(detectors, config):
 
         if len(active_tracklets) > 0 and len(detections) > 0:
             # Build cost matrix for tracklet-detection association
-            cost_matrix = np.full((len(active_tracklets), len(detections)),
-                                 initial_search_radius * 2)
+            cost_matrix = np.full((len(active_tracklets), len(detections)), initial_search_radius * 2)
 
             for i, tracklet in enumerate(active_tracklets):
                 for j, detection in enumerate(detections):
@@ -425,9 +424,9 @@ def run_tracklet_tracker(detectors, config):
         positions = positions[sort_idx]
 
         track_data = {
-            'frames': frames_array,
-            'rows': positions[:, 1],  # y
-            'columns': positions[:, 0],  # x
+            "frames": frames_array,
+            "rows": positions[:, 1],  # y
+            "columns": positions[:, 0],  # x
         }
         track_data_list.append(track_data)
 
