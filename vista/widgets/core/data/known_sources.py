@@ -117,6 +117,15 @@ class KnownSourcesPanel(QWidget):
         # Get selected rows from the table
         selected_rows = set(index.row() for index in self.known_sources_table.selectedIndexes())
 
+        # early return if no sources selected
+        if not selected_rows:
+            return
+        
+        # early return if no imagery selected
+        if self.viewer.imagery is None:
+            QMessageBox.warning(self, "No Imagery", f"Please load Imagery before creating Tracks.")
+            return
+
         # Collect Known Sources from selected rows
         for row in selected_rows:
             name_item = self.known_sources_table.item(row, 0)  # Name column
@@ -131,10 +140,9 @@ class KnownSourcesPanel(QWidget):
         # Create the tracks
         total_tracks = 0
         for source in known_sources:
-            if self.viewer.imagery is not None:
-                tracks = source.create_tracks(self.viewer.imagery)
-                self.viewer.add_tracks(tracks)
-                total_tracks += len(tracks)
+            tracks = source.create_tracks(self.viewer.imagery)
+            self.viewer.add_tracks(tracks)
+            total_tracks += len(tracks)
 
         # Explicitly refresh the tracks table to show the new tracks
         # Get the tracks panel from the parent data manager
@@ -158,6 +166,10 @@ class KnownSourcesPanel(QWidget):
 
         # Get selected rows from the table
         selected_rows = set(index.row() for index in self.known_sources_table.selectedIndexes())
+
+        # early return if no sources selected
+        if not selected_rows:
+            return
 
         # Collect Known Sources from selected rows
         for row in selected_rows:
