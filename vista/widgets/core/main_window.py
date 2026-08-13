@@ -1879,7 +1879,7 @@ class VistaMainWindow(QMainWindow):
         last_dir = self.settings.value("last_satellites_dir", "")
 
         file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "Load Satellites", last_dir, "TLE Files (*.tle)"
+            self, "Load Satellites", last_dir, "TLE Files (*.tle *.txt)"
         )
 
         if file_paths:

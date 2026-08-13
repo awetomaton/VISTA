@@ -56,7 +56,7 @@ class DataLoaderThread(QThread):
         data_type : str
             Type of data to load ('imagery', 'detections', 'tracks', 'aois', 'satellites', 'stars')
         file_format : str, optional
-            Format of the file ('hdf5', 'csv', or 'tle'), by default 'hdf5'
+            Format of the file ('hdf5', 'csv', 'tle', or 'txt'), by default 'hdf5'
         sensor : Sensor, optional
             Optional Sensor object for track/detection association and geodetic mapping, by default None
         imagery : Imagery, optional
