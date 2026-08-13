@@ -1,8 +1,9 @@
 """Utilities for resolving the current labeler name and label timestamps."""
+
 import datetime
 import getpass
-from PyQt6.QtCore import QSettings
 
+from PyQt6.QtCore import QSettings
 
 LABELER_SETTINGS_KEY = "user/labeler_name"
 

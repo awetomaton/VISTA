@@ -8,6 +8,7 @@ Compared to the sliding ``TemporalMedian`` variant, this is appropriate for
 non-moving transient events where one or more quiescent periods can be used
 to model the background.
 """
+
 import numpy as np
 
 
@@ -50,11 +51,8 @@ def static_median_background_removal(background_images, target_images, callback=
     """
     if background_images.ndim != 3 or target_images.ndim != 3:
         raise ValueError("background_images and target_images must be 3D arrays.")
-    if (background_images.shape[1] != target_images.shape[1] or
-            background_images.shape[2] != target_images.shape[2]):
-        raise ValueError(
-            "background_images and target_images must have the same height and width."
-        )
+    if background_images.shape[1] != target_images.shape[1] or background_images.shape[2] != target_images.shape[2]:
+        raise ValueError("background_images and target_images must have the same height and width.")
     if background_images.shape[0] == 0:
         raise ValueError("background_images must contain at least one frame.")
 

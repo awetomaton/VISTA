@@ -1,4 +1,5 @@
 """Widget for configuring and running the CFAR detector algorithm"""
+
 from vista.algorithms.detectors.cfar import CFAR
 from vista.widgets.algorithms.detectors.base_detector_widget import BaseDetectorWidget
 from vista.widgets.algorithms.detectors.cfar_config_widget import CFARConfigWidget
@@ -27,19 +28,15 @@ class CFARWidget(BaseDetectorWidget):
             settings_name="CFAR",
             window_title="CFAR Detector",
             description=description,
-            default_color='r',
-            default_marker='o',
-            default_marker_size=12
+            default_color="r",
+            default_marker="o",
+            default_marker_size=12,
         )
 
     def add_algorithm_parameters(self, layout):
         """Add CFAR-specific parameters"""
         # CFAR configuration widget (with all CFAR-specific parameters)
-        self.cfar_config = CFARConfigWidget(
-            show_visualization=True,
-            show_area_filters=True,
-            show_detection_mode=True
-        )
+        self.cfar_config = CFARConfigWidget(show_visualization=True, show_area_filters=True, show_detection_mode=True)
         layout.addWidget(self.cfar_config)
 
     def load_settings(self):
@@ -47,13 +44,13 @@ class CFARWidget(BaseDetectorWidget):
         super().load_settings()
         # Load CFAR parameters
         cfar_params = {
-            'background_radius': self.settings.value("background_radius", 10, type=int),
-            'ignore_radius': self.settings.value("ignore_radius", 3, type=int),
-            'threshold_deviation': self.settings.value("threshold_deviation", 3.0, type=float),
-            'min_area': self.settings.value("min_area", 1, type=int),
-            'max_area': self.settings.value("max_area", 1000, type=int),
-            'annulus_shape': self.settings.value("annulus_shape", "circular"),
-            'detection_mode': self.settings.value("detection_mode", "above"),
+            "background_radius": self.settings.value("background_radius", 10, type=int),
+            "ignore_radius": self.settings.value("ignore_radius", 3, type=int),
+            "threshold_deviation": self.settings.value("threshold_deviation", 3.0, type=float),
+            "min_area": self.settings.value("min_area", 1, type=int),
+            "max_area": self.settings.value("max_area", 1000, type=int),
+            "annulus_shape": self.settings.value("annulus_shape", "circular"),
+            "detection_mode": self.settings.value("detection_mode", "above"),
         }
         self.cfar_config.set_parameters(cfar_params)
 
@@ -62,38 +59,38 @@ class CFARWidget(BaseDetectorWidget):
         super().save_settings()
         # Save CFAR parameters
         cfar_params = self.cfar_config.get_parameters()
-        self.settings.setValue("background_radius", cfar_params['background_radius'])
-        self.settings.setValue("ignore_radius", cfar_params['ignore_radius'])
-        self.settings.setValue("threshold_deviation", cfar_params['threshold_deviation'])
-        self.settings.setValue("min_area", cfar_params['min_area'])
-        self.settings.setValue("max_area", cfar_params['max_area'])
-        self.settings.setValue("annulus_shape", cfar_params['annulus_shape'])
-        self.settings.setValue("detection_mode", cfar_params['detection_mode'])
+        self.settings.setValue("background_radius", cfar_params["background_radius"])
+        self.settings.setValue("ignore_radius", cfar_params["ignore_radius"])
+        self.settings.setValue("threshold_deviation", cfar_params["threshold_deviation"])
+        self.settings.setValue("min_area", cfar_params["min_area"])
+        self.settings.setValue("max_area", cfar_params["max_area"])
+        self.settings.setValue("annulus_shape", cfar_params["annulus_shape"])
+        self.settings.setValue("detection_mode", cfar_params["detection_mode"])
 
     def build_algorithm_params(self):
         """Build parameter dictionary for CFAR algorithm"""
         cfar_params = self.cfar_config.get_parameters()
         return {
-            'background_radius': cfar_params['background_radius'],
-            'ignore_radius': cfar_params['ignore_radius'],
-            'threshold_deviation': cfar_params['threshold_deviation'],
-            'min_area': cfar_params['min_area'],
-            'max_area': cfar_params['max_area'],
-            'annulus_shape': cfar_params['annulus_shape'],
-            'detection_mode': cfar_params['detection_mode']
+            "background_radius": cfar_params["background_radius"],
+            "ignore_radius": cfar_params["ignore_radius"],
+            "threshold_deviation": cfar_params["threshold_deviation"],
+            "min_area": cfar_params["min_area"],
+            "max_area": cfar_params["max_area"],
+            "annulus_shape": cfar_params["annulus_shape"],
+            "detection_mode": cfar_params["detection_mode"],
         }
 
     def validate_parameters(self):
         """Validate parameters before running"""
         cfar_params = self.cfar_config.get_parameters()
-        min_area = cfar_params['min_area']
-        max_area = cfar_params['max_area']
+        min_area = cfar_params["min_area"]
+        max_area = cfar_params["max_area"]
 
         if min_area > max_area:
             return False, "Minimum area must be less than or equal to maximum area."
 
-        background_radius = cfar_params['background_radius']
-        ignore_radius = cfar_params['ignore_radius']
+        background_radius = cfar_params["background_radius"]
+        ignore_radius = cfar_params["ignore_radius"]
 
         if ignore_radius >= background_radius:
             return False, "Ignore radius must be less than background radius."

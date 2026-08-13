@@ -1,19 +1,20 @@
 """ImageryViewer widget for displaying imagery with overlays"""
+
+import os
+import time
+
+import numpy as np
+import pyqtgraph as pg
 from astropy import units
 from astropy.coordinates import EarthLocation
-import numpy as np
-import os
-import pyqtgraph as pg
-from shapely.geometry import Point, Polygon
-import time
-from PyQt6.QtCore import Qt, QRectF, QSettings, QTimer, pyqtSignal
+from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QVBoxLayout, QWidget
+from shapely.geometry import Point, Polygon
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
-from vista.features import PlacemarkFeature
-from vista.features import ShapefileFeature
+from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
@@ -25,14 +26,14 @@ from vista.wms.wms_client import WMSClient, WMSTileCache
 from vista.wms.wms_tile_fetcher import WMSTileFetcherThread
 
 # Performance monitoring (enabled via environment variable)
-ENABLE_PERF_MONITORING = os.environ.get('VISTA_PERF_MONITOR', '0') == '1'
+ENABLE_PERF_MONITORING = os.environ.get("VISTA_PERF_MONITOR", "0") == "1"
 
 
 class CustomViewBox(pg.ViewBox):
     """Custom ViewBox to add Draw AOI to context menu"""
 
     def __init__(self, *args, **kwargs):
-        self.imagery_viewer = kwargs.pop('imagery_viewer', None)
+        self.imagery_viewer = kwargs.pop("imagery_viewer", None)
         super().__init__(*args, **kwargs)
 
     def raiseContextMenu(self, ev):
@@ -181,22 +182,22 @@ class ImageryViewer(QWidget):
 
         # Map view mode state
         self.map_view_mode = False
-        self.wms_image_item = None           # pg.ImageItem for WMS basemap tiles
-        self.projected_image_item = None     # pg.ImageItem for projected VISTA imagery
-        self.wms_client = None               # WMSClient instance
-        self.wms_tile_cache = None           # WMSTileCache instance
-        self.wms_fetcher_thread = None       # WMSTileFetcherThread (background)
-        self.projection_cache = None         # ProjectionCache instance
-        self.imagery_projector = None        # ImageryProjector for current sensor
-        self.imagery_opacity = {}            # imagery.uuid -> float (0.0 to 1.0)
+        self.wms_image_item = None  # pg.ImageItem for WMS basemap tiles
+        self.projected_image_item = None  # pg.ImageItem for projected VISTA imagery
+        self.wms_client = None  # WMSClient instance
+        self.wms_tile_cache = None  # WMSTileCache instance
+        self.wms_fetcher_thread = None  # WMSTileFetcherThread (background)
+        self.projection_cache = None  # ProjectionCache instance
+        self.imagery_projector = None  # ImageryProjector for current sensor
+        self.imagery_opacity = {}  # imagery.uuid -> float (0.0 to 1.0)
         self._map_view_debounce_timer = None  # QTimer for debouncing pan/zoom
-        self._wms_composite = None           # Current composited WMS basemap array
-        self._wms_composite_bbox = None      # Bounding box of current composite
-        self._current_zoom_level = None      # Current WMS zoom level
-        self._pending_tiles = []             # Tiles received during a fetch cycle
-        self._pending_tile_bbox = None       # View bbox for the pending tile fetch
-        self._imagery_footprint = None       # Cached imagery footprint bbox
-        self._wms_total_tiles = 0            # Total tiles expected in current fetch
+        self._wms_composite = None  # Current composited WMS basemap array
+        self._wms_composite_bbox = None  # Bounding box of current composite
+        self._current_zoom_level = None  # Current WMS zoom level
+        self._pending_tiles = []  # Tiles received during a fetch cycle
+        self._pending_tile_bbox = None  # View bbox for the pending tile fetch
+        self._imagery_footprint = None  # Cached imagery footprint bbox
+        self._wms_total_tiles = 0  # Total tiles expected in current fetch
 
         # Persistent settings (avoid constructing QSettings on every frame)
         self.settings = QSettings("Vista", "VistaApp")
@@ -231,20 +232,20 @@ class ImageryViewer(QWidget):
         self.plot_item = self.graphics_layout.addPlot(row=0, col=0, viewBox=custom_vb)
         self.plot_item.setAspectLocked(True)
         self.plot_item.invertY(True)
-        #self.plot_item.hideAxis('left')
-        #self.plot_item.hideAxis('bottom')
+        # self.plot_item.hideAxis('left')
+        # self.plot_item.hideAxis('bottom')
 
         # Create image item with OpenGL acceleration enabled
         self.image_item = pg.ImageItem(useOpenGL=True)
         self.plot_item.addItem(self.image_item)
 
         # Create geolocation text overlay using TextItem positioned in scene coordinates
-        self.geolocation_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
+        self.geolocation_text = pg.TextItem(text="", color="yellow", anchor=(1, 1))
         self.geolocation_text.setVisible(False)
         self.plot_item.addItem(self.geolocation_text, ignoreBounds=True)
 
         # Create pixel value text overlay using TextItem positioned in scene coordinates
-        self.pixel_value_text = pg.TextItem(text="", color='yellow', anchor=(1, 1))
+        self.pixel_value_text = pg.TextItem(text="", color="yellow", anchor=(1, 1))
         self.pixel_value_text.setVisible(False)
         self.plot_item.addItem(self.pixel_value_text, ignoreBounds=True)
 
@@ -268,7 +269,7 @@ class ImageryViewer(QWidget):
         self.hist_widget.setMaximumHeight(150)
 
         # Create HistogramLUTItem and set it to horizontal orientation
-        self.histogram = pg.HistogramLUTItem(orientation='horizontal')
+        self.histogram = pg.HistogramLUTItem(orientation="horizontal")
         self.hist_widget.addItem(self.histogram)
 
         # Link the histogram to the image item
@@ -286,7 +287,7 @@ class ImageryViewer(QWidget):
         except TypeError:
             # Signal not connected yet, ignore
             pass
-        
+
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
         layout.addWidget(self.hist_widget)
@@ -342,8 +343,11 @@ class ImageryViewer(QWidget):
                     frame = imagery.frames[frame_index]
                     img_shape = imagery.images[frame_index].shape
                     self._imagery_footprint = self.imagery_projector.compute_footprint(
-                        frame, img_shape[0], img_shape[1],
-                        imagery.row_offset, imagery.column_offset,
+                        frame,
+                        img_shape[0],
+                        img_shape[1],
+                        imagery.row_offset,
+                        imagery.column_offset,
                     )
                 # Apply opacity
                 if self.projected_image_item is not None:
@@ -409,15 +413,14 @@ class ImageryViewer(QWidget):
                             self.ewma_background = current_image.copy()
                         else:
                             self.ewma_background = (
-                                ewma_alpha * current_image
-                                + (1.0 - ewma_alpha) * self.ewma_background
+                                ewma_alpha * current_image + (1.0 - ewma_alpha) * self.ewma_background
                             )
 
                     # Display filtered image if background model exists
                     if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
                         self.ewma_image = current_image - self.ewma_background
                         ewma_active = True
-                
+
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
                     if ewma_active:
@@ -436,7 +439,7 @@ class ImageryViewer(QWidget):
                 user_histogram_bounds = None
                 if self.imagery.uuid in self.user_histogram_bounds:
                     user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
-                
+
                 if ewma_active:
                     min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
                     max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
@@ -450,7 +453,7 @@ class ImageryViewer(QWidget):
                     # Remove zero values since there are often many of these values
                     nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
 
-                    # Compute data range 
+                    # Compute data range
                     if user_histogram_bounds is None:
                         if nonzero_downsampled_display_image.size > 0:
                             hist_min = np.percentile(nonzero_downsampled_display_image, min_percentile)
@@ -488,9 +491,7 @@ class ImageryViewer(QWidget):
                     elif self.imagery.default_histogram_bounds is None and len(hist_x) > 0:
                         self.histogram.setLevels(hist_x[0], hist_x[-1])
                     else:
-                        self.histogram.setLevels(
-                            *self.imagery.default_histogram_bounds[image_index]
-                        )
+                        self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
 
                 # Explicitly sync levels to the image item. histogram.setLevels() goes through
                 # LinearRegionItem.setRegion() which skips the signal if the region values haven't
@@ -529,7 +530,7 @@ class ImageryViewer(QWidget):
             if len(self.perf_frame_times) >= 60:
                 avg_time = np.mean(self.perf_frame_times)
                 fps = 1.0 / avg_time if avg_time > 0 else 0
-                print(f"[PERF] Frame update: {avg_time*1000:.2f}ms avg, {fps:.1f} FPS (last 60 frames)")
+                print(f"[PERF] Frame update: {avg_time * 1000:.2f}ms avg, {fps:.1f} FPS (last 60 frames)")
                 self.perf_frame_times = []
         self.ignore_changing_histogram_levels = False
 
@@ -630,7 +631,7 @@ class ImageryViewer(QWidget):
         self.ewma_filter_enabled = enabled
         if self.projection_cache is not None:
             self.projection_cache.invalidate_imagery(self.imagery.uuid)
-        
+
         # Reset EWMA state
         self.ewma_background = None
         self.ewma_image = None
@@ -733,8 +734,8 @@ class ImageryViewer(QWidget):
             # Apply label filter if detections panel has active filters
             if np.any(det_mask):
                 try:
-                    if hasattr(self, 'data_manager') and self.data_manager is not None:
-                        if hasattr(self.data_manager, 'detections_panel'):
+                    if hasattr(self, "data_manager") and self.data_manager is not None:
+                        if hasattr(self.data_manager, "detections_panel"):
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
                             det_mask &= label_mask
                 except AttributeError:
@@ -750,11 +751,12 @@ class ImageryViewer(QWidget):
                     plot_x, plot_y = detector.columns[det_mask], detector.rows[det_mask]
 
                 scatter.setData(
-                    x=plot_x, y=plot_y,
+                    x=plot_x,
+                    y=plot_y,
                     pen=detector.get_pen(),  # Use cached pen
                     brush=None,
                     size=detector.marker_size,
-                    symbol=detector.marker
+                    symbol=detector.marker,
                 )
             else:
                 scatter.setData(x=[], y=[])  # No data at this frame or filtered out
@@ -827,8 +829,9 @@ class ImageryViewer(QWidget):
                 # Update track path with entire track (only if show_line is True)
                 if track.show_line:
                     path.setData(
-                        x=path_x, y=path_y,
-                        pen=track.get_pen(width=line_width)  # Use cached pen
+                        x=path_x,
+                        y=path_y,
+                        pen=track.get_pen(width=line_width),  # Use cached pen
                     )
                 else:
                     path.setData(x=[], y=[])  # Hide line
@@ -842,11 +845,12 @@ class ImageryViewer(QWidget):
                     else:
                         mx, my = [track.columns[idx]], [track.rows[idx]]
                     marker.setData(
-                        x=mx, y=my,
+                        x=mx,
+                        y=my,
                         pen=track.get_pen(width=2),  # Use cached pen
                         brush=track.get_brush(),  # Use cached brush
                         size=marker_size,
-                        symbol=track.marker
+                        symbol=track.marker,
                     )
                 else:
                     marker.setData(x=[], y=[])  # No current position
@@ -864,8 +868,9 @@ class ImageryViewer(QWidget):
                     # Update track path (only if show_line is True)
                     if track.show_line:
                         path.setData(
-                            x=path_x, y=path_y,
-                            pen=track.get_pen(width=line_width)  # Use cached pen
+                            x=path_x,
+                            y=path_y,
+                            pen=track.get_pen(width=line_width),  # Use cached pen
                         )
                     else:
                         path.setData(x=[], y=[])  # Hide line
@@ -879,11 +884,12 @@ class ImageryViewer(QWidget):
                         else:
                             mx, my = [track.columns[idx]], [track.rows[idx]]
                         marker.setData(
-                            x=mx, y=my,
+                            x=mx,
+                            y=my,
                             pen=track.get_pen(width=2),  # Use cached pen
                             brush=track.get_brush(),  # Use cached brush
                             size=marker_size,
-                            symbol=track.marker
+                            symbol=track.marker,
                         )
                     else:
                         marker.setData(x=[], y=[])  # No current position
@@ -937,10 +943,14 @@ class ImageryViewer(QWidget):
                             # Create ellipse bounding rectangle
                             # Center at (col, row), size (2*semi_major, 2*semi_minor)
                             # Note: QGraphicsEllipseItem expects width/height in axis-aligned orientation
-                            ellipse = QGraphicsEllipseItem(QRectF(
-                                col - scaled_semi_major, row - scaled_semi_minor,
-                                2 * scaled_semi_major, 2 * scaled_semi_minor
-                            ))
+                            ellipse = QGraphicsEllipseItem(
+                                QRectF(
+                                    col - scaled_semi_major,
+                                    row - scaled_semi_minor,
+                                    2 * scaled_semi_major,
+                                    2 * scaled_semi_minor,
+                                )
+                            )
 
                             # Set rotation around center
                             ellipse.setTransformOriginPoint(col, row)
@@ -1023,6 +1033,7 @@ class ImageryViewer(QWidget):
         This method is deprecated. Use add_tracks() instead.
         """
         import warnings
+
         warnings.warn("add_tracker() is deprecated. Use add_tracks() instead.", DeprecationWarning, stacklevel=2)
         for track in tracker.tracks:
             track.tracker = tracker.name
@@ -1127,11 +1138,18 @@ class ImageryViewer(QWidget):
     def update_cursor(self):
         """Update cursor based on enabled interactive modes"""
         # Check if any interactive mode is active that requires a crosshair cursor
-        if (self.geolocation_enabled or self.pixel_value_enabled or
-            self.track_creation_mode or self.track_editing_mode or
-            self.detection_creation_mode or self.detection_editing_mode or
-            self.track_selection_mode or self.detection_selection_mode or
-            self.extraction_editing_mode or self.lasso_selection_mode):
+        if (
+            self.geolocation_enabled
+            or self.pixel_value_enabled
+            or self.track_creation_mode
+            or self.track_editing_mode
+            or self.detection_creation_mode
+            or self.detection_editing_mode
+            or self.track_selection_mode
+            or self.detection_selection_mode
+            or self.extraction_editing_mode
+            or self.lasso_selection_mode
+        ):
             self.graphics_layout.setCursor(Qt.CursorShape.CrossCursor)
         else:
             self.graphics_layout.setCursor(Qt.CursorShape.ArrowCursor)
@@ -1228,12 +1246,7 @@ class ImageryViewer(QWidget):
         lasso_polygon = Polygon(self.lasso_points)
 
         # Find contained items
-        selected_items = {
-            'tracks': [],
-            'detections': [],
-            'aois': [],
-            'features': []
-        }
+        selected_items = {"tracks": [], "detections": [], "aois": [], "features": []}
 
         _map_mode = self.map_view_mode
 
@@ -1266,7 +1279,7 @@ class ImageryViewer(QWidget):
                     break
 
             if all_contained:
-                selected_items['tracks'].append(track)
+                selected_items["tracks"].append(track)
 
         # Check detections (visible detections based on complete mode)
         for detector in self.detectors:
@@ -1290,8 +1303,8 @@ class ImageryViewer(QWidget):
             # Apply label filter if detections panel has active filters
             if len(rows) > 0:
                 try:
-                    if hasattr(self, 'data_manager') and self.data_manager is not None:
-                        if hasattr(self.data_manager, 'detections_panel'):
+                    if hasattr(self, "data_manager") and self.data_manager is not None:
+                        if hasattr(self.data_manager, "detections_panel"):
                             label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
                             if detector.complete:
                                 # For complete mode, just apply label filter
@@ -1329,7 +1342,7 @@ class ImageryViewer(QWidget):
                 if not np.isnan(x) and not np.isnan(y) and lasso_polygon.contains(Point(x, y)):
                     # Store as (detector, frame, original_index)
                     detection_frame = detector.frames[indices[i]]
-                    selected_items['detections'].append((detector, int(detection_frame), int(indices[i])))
+                    selected_items["detections"].append((detector, int(detection_frame), int(indices[i])))
 
         # Check AOIs (wholly contained = ALL 4 corners inside) — skip in map view (AOIs are pixel-space)
         if not _map_mode:
@@ -1342,12 +1355,12 @@ class ImageryViewer(QWidget):
                     (aoi.x, aoi.y),
                     (aoi.x + aoi.width, aoi.y),
                     (aoi.x + aoi.width, aoi.y + aoi.height),
-                    (aoi.x, aoi.y + aoi.height)
+                    (aoi.x, aoi.y + aoi.height),
                 ]
 
                 all_contained = all(lasso_polygon.contains(Point(corner)) for corner in corners)
                 if all_contained:
-                    selected_items['aois'].append(aoi)
+                    selected_items["aois"].append(aoi)
 
         # Check features (placemarks and shapefiles)
         for feature in self.features:
@@ -1357,22 +1370,22 @@ class ImageryViewer(QWidget):
             if isinstance(feature, PlacemarkFeature):
                 if _map_mode:
                     # Use geographic coordinates directly
-                    lon = feature.geometry.get('lon')
-                    lat = feature.geometry.get('lat')
+                    lon = feature.geometry.get("lon")
+                    lat = feature.geometry.get("lat")
                     if lon is not None and lat is not None:
                         if lasso_polygon.contains(Point(lon, lat)):
-                            selected_items['features'].append(feature)
+                            selected_items["features"].append(feature)
                 else:
                     # Use pixel coordinates
-                    row = feature.geometry.get('row')
-                    col = feature.geometry.get('col')
+                    row = feature.geometry.get("row")
+                    col = feature.geometry.get("col")
                     if row is not None and col is not None:
                         if lasso_polygon.contains(Point(col, row)):
-                            selected_items['features'].append(feature)
+                            selected_items["features"].append(feature)
 
             elif isinstance(feature, ShapefileFeature):
                 # Shapefile points are geographic (lon, lat) — same coords used in map view
-                shapes = feature.geometry.get('shapes', [])
+                shapes = feature.geometry.get("shapes", [])
                 all_contained = True
                 has_points = False
 
@@ -1399,9 +1412,7 @@ class ImageryViewer(QWidget):
                         shape_lengths.append(len(shape.points))
 
                     if has_points and self.selected_sensor and self.selected_sensor.can_geolocate():
-                        px_x, px_y = self._shapefile_geo_to_pixel(
-                            np.array(all_lons), np.array(all_lats)
-                        )
+                        px_x, px_y = self._shapefile_geo_to_pixel(np.array(all_lons), np.array(all_lats))
                         for x, y in zip(px_x, px_y):
                             if np.isnan(x) or np.isnan(y) or not lasso_polygon.contains(Point(x, y)):
                                 all_contained = False
@@ -1410,7 +1421,7 @@ class ImageryViewer(QWidget):
                         all_contained = False
 
                 if has_points and all_contained:
-                    selected_items['features'].append(feature)
+                    selected_items["features"].append(feature)
 
         # Clear lasso visual
         self._clear_lasso()
@@ -1419,11 +1430,11 @@ class ImageryViewer(QWidget):
         self.lasso_selection_completed.emit(selected_items)
 
         # Also update track selection in viewer
-        track_ids = {track.uuid for track in selected_items['tracks']}
+        track_ids = {track.uuid for track in selected_items["tracks"]}
         self.set_selected_tracks(track_ids)
 
         # Update detection selection
-        self.selected_detections = selected_items['detections']
+        self.selected_detections = selected_items["detections"]
         self._update_selected_detections_display()
 
     def on_mouse_moved(self, pos):
@@ -1448,7 +1459,7 @@ class ImageryViewer(QWidget):
                         chip_position = self.extraction_editor.get_current_chip_position()
                         if chip_position is not None:
                             chip_top, chip_left = chip_position
-                            chip_size = self.extraction_editor.working_extraction['chip_size']
+                            chip_size = self.extraction_editor.working_extraction["chip_size"]
 
                             # Convert to chip coordinates
                             chip_row = int(row - chip_top)
@@ -1489,9 +1500,7 @@ class ImageryViewer(QWidget):
 
             if self.pixel_value_enabled and self.imagery.sensor.can_geolocate():
                 # Reverse-project (lon, lat) to pixel coordinates to read pixel value
-                earth_loc = EarthLocation.from_geodetic(
-                    lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m
-                )
+                earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
                 # Get current frame
                 valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
                 if len(valid_indices) > 0:
@@ -1501,8 +1510,12 @@ class ImageryViewer(QWidget):
                     row_int = int(np.round(src_rows[0])) - self.imagery.row_offset
                     col_int = int(np.round(src_cols[0])) - self.imagery.column_offset
                     img_shape = self.imagery.images[0].shape
-                    if (0 <= row_int < img_shape[0] and 0 <= col_int < img_shape[1]
-                            and not np.isnan(src_rows[0]) and not np.isnan(src_cols[0])):
+                    if (
+                        0 <= row_int < img_shape[0]
+                        and 0 <= col_int < img_shape[1]
+                        and not np.isnan(src_rows[0])
+                        and not np.isnan(src_cols[0])
+                    ):
                         pixel_value = self.imagery.images[image_index, row_int, col_int]
                         text = f"({col_int}, {row_int}: {pixel_value:.2f})"
                         self.pixel_value_text.setText(text)
@@ -1623,10 +1636,10 @@ class ImageryViewer(QWidget):
         center_y = int(view_rect.center().y())
 
         # Create ROI at center of view with integer coordinates
-        pos = (center_x - default_width//2, center_y - default_height//2)
+        pos = (center_x - default_width // 2, center_y - default_height // 2)
         size = (default_width, default_height)
 
-        roi = pg.RectROI(pos, size, pen=pg.mkPen('y', width=2), snapSize=1.0)
+        roi = pg.RectROI(pos, size, pen=pg.mkPen("y", width=2), snapSize=1.0)
         self.plot_item.addItem(roi)
 
         # Set as drawing ROI temporarily
@@ -1649,8 +1662,7 @@ class ImageryViewer(QWidget):
         new_size = (max(1, int(round(size.x()))), max(1, int(round(size.y()))))
 
         # Only update if changed to avoid unnecessary updates
-        if (new_pos[0] != pos.x() or new_pos[1] != pos.y() or
-            new_size[0] != size.x() or new_size[1] != size.y()):
+        if new_pos[0] != pos.x() or new_pos[1] != pos.y() or new_size[0] != size.x() or new_size[1] != size.y():
             roi.setPos(new_pos, finish=False)
             roi.setSize(new_size, finish=False)
 
@@ -1674,14 +1686,7 @@ class ImageryViewer(QWidget):
             name = f"AOI {aoi_num}"
 
         # Create AOI object with integer coordinates
-        aoi = AOI(
-            name=name,
-            x=int(pos.x()),
-            y=int(pos.y()),
-            width=int(size.x()),
-            height=int(size.y()),
-            color='y'
-        )
+        aoi = AOI(name=name, x=int(pos.x()), y=int(pos.y()), width=int(size.x()), height=int(size.y()), color="y")
 
         # Store references
         aoi._roi_item = roi
@@ -1689,7 +1694,7 @@ class ImageryViewer(QWidget):
         self.aois.append(aoi)
 
         # Add text label
-        text_item = pg.TextItem(text=aoi.name, color='y', anchor=(0, 0))
+        text_item = pg.TextItem(text=aoi.name, color="y", anchor=(0, 0))
         text_item.setPos(pos.x(), pos.y())
         self.plot_item.addItem(text_item)
         aoi._text_item = text_item
@@ -1726,8 +1731,7 @@ class ImageryViewer(QWidget):
         new_height = max(1, int(round(size.y())))
 
         # Check if we need to snap (avoid unnecessary updates)
-        needs_snap = (new_x != pos.x() or new_y != pos.y() or
-                     new_width != size.x() or new_height != size.y())
+        needs_snap = new_x != pos.x() or new_y != pos.y() or new_width != size.x() or new_height != size.y()
 
         if needs_snap:
             # Temporarily block signals to avoid recursion
@@ -1793,9 +1797,9 @@ class ImageryViewer(QWidget):
             # Enable/disable handles (resizing)
             for handle in aoi._roi_item.getHandles():
                 # In PyQtGraph 0.13.7, handles are Handle objects with a direct reference
-                if hasattr(handle, 'setVisible'):
+                if hasattr(handle, "setVisible"):
                     handle.setVisible(selectable)
-                elif hasattr(handle, 'item'):
+                elif hasattr(handle, "item"):
                     # Fallback for different PyQtGraph versions
                     handle.item.setVisible(selectable)
 
@@ -1906,26 +1910,22 @@ class ImageryViewer(QWidget):
             return
 
         geometry = feature.geometry
-        if not geometry or 'row' not in geometry or 'col' not in geometry:
+        if not geometry or "row" not in geometry or "col" not in geometry:
             return
 
         # In map view, use geographic coordinates if available
-        if self.map_view_mode and geometry.get('lon') is not None and geometry.get('lat') is not None:
-            x_pos = geometry['lon']
-            y_pos = geometry['lat']
+        if self.map_view_mode and geometry.get("lon") is not None and geometry.get("lat") is not None:
+            x_pos = geometry["lon"]
+            y_pos = geometry["lat"]
         else:
-            x_pos = geometry['col']
-            y_pos = geometry['row']
+            x_pos = geometry["col"]
+            y_pos = geometry["row"]
 
         color = pg.mkColor(feature.color)
 
         # Create a larger marker for the placemark
         scatter_item = pg.ScatterPlotItem(
-            x=[x_pos], y=[y_pos],
-            size=12,
-            pen=pg.mkPen(color, width=2),
-            brush=pg.mkBrush(color),
-            symbol='o'
+            x=[x_pos], y=[y_pos], size=12, pen=pg.mkPen(color, width=2), brush=pg.mkBrush(color), symbol="o"
         )
         self.plot_item.addItem(scatter_item)
         feature._plot_items.append(scatter_item)
@@ -1936,9 +1936,7 @@ class ImageryViewer(QWidget):
         self.plot_item.addItem(text_item)
         feature._plot_items.append(text_item)
 
-    def _shapefile_geo_to_pixel(
-        self, all_lons: np.ndarray, all_lats: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def _shapefile_geo_to_pixel(self, all_lons: np.ndarray, all_lats: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Convert shapefile geographic coordinates to pixel coordinates.
 
         Uses the current sensor and frame to project (lon, lat) to (col, row).
@@ -1962,9 +1960,7 @@ class ImageryViewer(QWidget):
             lat=all_lats * units.deg,
             height=0 * units.m,
         )
-        rows, cols = self.selected_sensor.geodetic_to_pixel(
-            self.current_frame_number, earth_locs
-        )
+        rows, cols = self.selected_sensor.geodetic_to_pixel(self.current_frame_number, earth_locs)
         return cols, rows
 
     def _render_shapefile(self, feature):
@@ -1978,10 +1974,10 @@ class ImageryViewer(QWidget):
             return
 
         geometry = feature.geometry
-        if not geometry or 'shapes' not in geometry:
+        if not geometry or "shapes" not in geometry:
             return
 
-        shapes = geometry['shapes']
+        shapes = geometry["shapes"]
         color = pg.mkColor(feature.color)
 
         # In pixel view, batch-convert all shapefile points from geo to pixel
@@ -2018,8 +2014,8 @@ class ImageryViewer(QWidget):
                 display_y = coords[:, 1]
             elif pixel_coords_map is not None:
                 # Use pre-computed pixel coords
-                display_x = pixel_coords_map[0][flat_idx:flat_idx + n_points]
-                display_y = pixel_coords_map[1][flat_idx:flat_idx + n_points]
+                display_x = pixel_coords_map[0][flat_idx : flat_idx + n_points]
+                display_y = pixel_coords_map[1][flat_idx : flat_idx + n_points]
             else:
                 # No sensor available — skip rendering
                 flat_idx += n_points
@@ -2034,7 +2030,7 @@ class ImageryViewer(QWidget):
 
             # Handle polygon shapes (5 = Polygon, 15 = PolygonZ, 25 = PolygonM)
             if shape_type in [5, 15, 25]:
-                parts = list(shape.parts) if hasattr(shape, 'parts') else [0]
+                parts = list(shape.parts) if hasattr(shape, "parts") else [0]
                 parts = parts + [n_points]
 
                 for i in range(len(parts) - 1):
@@ -2062,7 +2058,7 @@ class ImageryViewer(QWidget):
 
             # Handle polyline shapes (3 = PolyLine, 13 = PolyLineZ, 23 = PolyLineM)
             elif shape_type in [3, 13, 23]:
-                parts = list(shape.parts) if hasattr(shape, 'parts') else [0]
+                parts = list(shape.parts) if hasattr(shape, "parts") else [0]
                 parts = parts + [n_points]
 
                 for i in range(len(parts) - 1):
@@ -2088,10 +2084,7 @@ class ImageryViewer(QWidget):
                 y = display_y[valid]
                 if len(x) > 0:
                     scatter_item = pg.ScatterPlotItem(
-                        x=x, y=y,
-                        size=8,
-                        pen=pg.mkPen(color, width=2),
-                        brush=pg.mkBrush(color)
+                        x=x, y=y, size=8, pen=pg.mkPen(color, width=2), brush=pg.mkBrush(color)
                     )
                     self.plot_item.addItem(scatter_item)
                     feature._plot_items.append(scatter_item)
@@ -2102,10 +2095,7 @@ class ImageryViewer(QWidget):
                 y = display_y[valid]
                 if len(x) > 0:
                     scatter_item = pg.ScatterPlotItem(
-                        x=x, y=y,
-                        size=8,
-                        pen=pg.mkPen(color, width=2),
-                        brush=pg.mkBrush(color)
+                        x=x, y=y, size=8, pen=pg.mkPen(color, width=2), brush=pg.mkBrush(color)
                     )
                     self.plot_item.addItem(scatter_item)
                     feature._plot_items.append(scatter_item)
@@ -2166,7 +2156,7 @@ class ImageryViewer(QWidget):
                 frames=frames,
                 rows=rows,
                 columns=columns,
-                sensor=self.selected_sensor
+                sensor=self.selected_sensor,
             )
 
             self.current_track_data = {}
@@ -2265,8 +2255,8 @@ class ImageryViewer(QWidget):
         track_idx = np.where(frame_mask)[0][0]
 
         # Get signal mask for this track point
-        signal_mask = track.extraction_metadata['signal_masks'][track_idx]
-        chip_size = track.extraction_metadata['chip_size']
+        signal_mask = track.extraction_metadata["signal_masks"][track_idx]
+        chip_size = track.extraction_metadata["chip_size"]
 
         # Create RGBA overlay (red for signal pixels)
         overlay = np.zeros((chip_size, chip_size, 4), dtype=np.uint8)
@@ -2485,7 +2475,7 @@ class ImageryViewer(QWidget):
                 frames=np.array(frames_list, dtype=np.int_),
                 rows=np.array(rows_list),
                 columns=np.array(columns_list),
-                sensor=self.selected_sensor
+                sensor=self.selected_sensor,
             )
 
             self.current_detection_data = {}
@@ -2548,7 +2538,7 @@ class ImageryViewer(QWidget):
             # Notify parent (main window) that dialog was created
             # so it can connect to visibility signals
             parent_window = self.window()
-            if hasattr(parent_window, 'on_point_selection_dialog_created'):
+            if hasattr(parent_window, "on_point_selection_dialog_created"):
                 parent_window.on_point_selection_dialog_created()
         self.point_selection_dialog.show()
         self.point_selection_dialog.raise_()
@@ -2615,13 +2605,11 @@ class ImageryViewer(QWidget):
 
         # Get parameters from dialog
         params = self.point_selection_dialog.get_parameters()
-        mode = params.pop('mode')  # Remove mode from params to avoid duplicate keyword argument
+        mode = params.pop("mode")  # Remove mode from params to avoid duplicate keyword argument
 
         # Call refine_point with appropriate parameters
         try:
-            refined_row, refined_col = refine_point(
-                row, col, self.imagery, frame_index, mode=mode, **params
-            )
+            refined_row, refined_col = refine_point(row, col, self.imagery, frame_index, mode=mode, **params)
             return refined_row, refined_col
         except Exception as e:
             # If refinement fails, return original coordinates
@@ -2644,7 +2632,7 @@ class ImageryViewer(QWidget):
                         # Create visual feedback item
                         if self.lasso_plot_item is None:
                             self.lasso_plot_item = pg.PlotCurveItem(
-                                pen=pg.mkPen('y', width=2, style=Qt.PenStyle.DashLine)
+                                pen=pg.mkPen("y", width=2, style=Qt.PenStyle.DashLine)
                             )
                             self.plot_item.addItem(self.lasso_plot_item)
                     else:
@@ -2654,10 +2642,15 @@ class ImageryViewer(QWidget):
             return
 
         # Only handle left clicks in creation/editing/selection mode
-        if not (self.track_creation_mode or self.track_editing_mode or
-                self.detection_creation_mode or self.detection_editing_mode or
-                self.track_selection_mode or self.detection_selection_mode or
-                self.extraction_editing_mode):
+        if not (
+            self.track_creation_mode
+            or self.track_editing_mode
+            or self.detection_creation_mode
+            or self.detection_editing_mode
+            or self.track_selection_mode
+            or self.detection_selection_mode
+            or self.extraction_editing_mode
+        ):
             return
 
         if event.button() != Qt.MouseButton.LeftButton:
@@ -2694,9 +2687,9 @@ class ImageryViewer(QWidget):
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
                         ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
-                        distance = np.sqrt((col - ex_lon)**2 + (row - ex_lat)**2)
+                        distance = np.sqrt((col - ex_lon) ** 2 + (row - ex_lat) ** 2)
                     else:
-                        distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+                        distance = np.sqrt((col - existing_col) ** 2 + (row - existing_row) ** 2)
 
                     # If click is near the existing point, remove it
                     if distance < tolerance:
@@ -2734,9 +2727,9 @@ class ImageryViewer(QWidget):
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
                         ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
-                        distance = np.sqrt((col - ex_lon)**2 + (row - ex_lat)**2)
+                        distance = np.sqrt((col - ex_lon) ** 2 + (row - ex_lat) ** 2)
                     else:
-                        distance = np.sqrt((col - existing_col)**2 + (row - existing_row)**2)
+                        distance = np.sqrt((col - existing_col) ** 2 + (row - existing_row) ** 2)
 
                     # If click is near an existing point, remove it
                     if distance < tolerance:
@@ -2768,7 +2761,7 @@ class ImageryViewer(QWidget):
                     return
 
                 chip_top, chip_left = chip_position
-                chip_size = self.extraction_editor.working_extraction['chip_size']
+                chip_size = self.extraction_editor.working_extraction["chip_size"]
 
                 # Convert click position to chip coordinates
                 chip_row = int(row - chip_top)
@@ -2783,7 +2776,7 @@ class ImageryViewer(QWidget):
             elif self.track_selection_mode:
                 # Find the closest track to the click position
                 closest_track = None
-                closest_distance = float('inf')
+                closest_distance = float("inf")
 
                 for track in self.tracks:
                     if not track.visible:
@@ -2811,11 +2804,11 @@ class ImageryViewer(QWidget):
                         else:
                             track_x = track.columns[frame_mask]
                             track_y = track.rows[frame_mask]
-                        distances = np.sqrt((track_x - col)**2 + (track_y - row)**2)
+                        distances = np.sqrt((track_x - col) ** 2 + (track_y - row) ** 2)
                     else:
                         visible_cols = track.columns[frame_mask]
                         visible_rows = track.rows[frame_mask]
-                        distances = np.sqrt((visible_cols - col)**2 + (visible_rows - row)**2)
+                        distances = np.sqrt((visible_cols - col) ** 2 + (visible_rows - row) ** 2)
 
                     valid = ~np.isnan(distances)
                     if not np.any(valid):
@@ -2834,7 +2827,7 @@ class ImageryViewer(QWidget):
             # Handle detection selection
             elif self.detection_selection_mode:
                 closest_detection = None
-                closest_distance = float('inf')
+                closest_distance = float("inf")
 
                 for detector in self.detectors:
                     if not detector.visible:
@@ -2862,9 +2855,11 @@ class ImageryViewer(QWidget):
                     # Apply label filter if detections panel has active filters
                     if len(rows) > 0:
                         try:
-                            if hasattr(self, 'data_manager') and self.data_manager is not None:
-                                if hasattr(self.data_manager, 'detections_panel'):
-                                    label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(detector)
+                            if hasattr(self, "data_manager") and self.data_manager is not None:
+                                if hasattr(self.data_manager, "detections_panel"):
+                                    label_mask = self.data_manager.detections_panel.get_filtered_detection_mask(
+                                        detector
+                                    )
                                     if detector.complete:
                                         # For complete mode, just apply label filter
                                         if np.any(label_mask):
@@ -2898,9 +2893,9 @@ class ImageryViewer(QWidget):
                             det_x, det_y = geodetic[0][indices], geodetic[1][indices]
                         else:
                             det_x, det_y = cols, rows
-                        distances = np.sqrt((det_x - col)**2 + (det_y - row)**2)
+                        distances = np.sqrt((det_x - col) ** 2 + (det_y - row) ** 2)
                     else:
-                        distances = np.sqrt((cols - col)**2 + (rows - row)**2)
+                        distances = np.sqrt((cols - col) ** 2 + (rows - row) ** 2)
 
                     valid = ~np.isnan(distances)
                     if not np.any(valid):
@@ -2979,10 +2974,10 @@ class ImageryViewer(QWidget):
             other_plot = pg.ScatterPlotItem(
                 x=np.array(other_frame_x),
                 y=np.array(other_frame_y),
-                pen=pg.mkPen('m', width=1),
-                brush=pg.mkBrush('m'),
+                pen=pg.mkPen("m", width=1),
+                brush=pg.mkBrush("m"),
                 size=6,  # Smaller size for other frames
-                symbol='o'
+                symbol="o",
             )
             self.plot_item.addItem(other_plot)
             plots.append(other_plot)
@@ -2992,10 +2987,10 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_x),
                 y=np.array(current_frame_y),
-                pen=pg.mkPen('m', width=2),
-                brush=pg.mkBrush('m'),
+                pen=pg.mkPen("m", width=2),
+                brush=pg.mkBrush("m"),
                 size=14,  # Larger size for current frame
-                symbol='o'
+                symbol="o",
             )
             self.plot_item.addItem(current_plot)
             plots.append(current_plot)
@@ -3040,10 +3035,10 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_x),
                 y=np.array(current_frame_y),
-                pen=pg.mkPen('c', width=2),  # Cyan color to distinguish from tracks
-                brush=pg.mkBrush('c'),
+                pen=pg.mkPen("c", width=2),  # Cyan color to distinguish from tracks
+                brush=pg.mkBrush("c"),
                 size=14,  # Larger size for visibility
-                symbol='o'
+                symbol="o",
             )
             self.plot_item.addItem(current_plot)
             self.temp_detection_plot = current_plot
@@ -3100,10 +3095,10 @@ class ImageryViewer(QWidget):
             other_plot = pg.ScatterPlotItem(
                 x=np.array(other_frame_x),
                 y=np.array(other_frame_y),
-                pen=pg.mkPen('m', width=2),  # Dark purple border
+                pen=pg.mkPen("m", width=2),  # Dark purple border
                 brush=None,  # No fill, just border
                 size=10,  # Smaller size for other frames
-                symbol='o'
+                symbol="o",
             )
             self.plot_item.addItem(other_plot)
             plots.append(other_plot)
@@ -3113,10 +3108,10 @@ class ImageryViewer(QWidget):
             current_plot = pg.ScatterPlotItem(
                 x=np.array(current_frame_x),
                 y=np.array(current_frame_y),
-                pen=pg.mkPen('m', width=3),  # Thick dark purple border
+                pen=pg.mkPen("m", width=3),  # Thick dark purple border
                 brush=None,  # No fill, just border
                 size=16,  # Larger size for current frame
-                symbol='o'
+                symbol="o",
             )
             self.plot_item.addItem(current_plot)
             plots.append(current_plot)
@@ -3157,9 +3152,11 @@ class ImageryViewer(QWidget):
             max_proj = settings.value("wms/projection_cache_size", 16384, type=int)
             new_client = WMSClient.from_settings(settings)
             # Clear tile cache if server URL changed (tiles from different servers can't mix)
-            if (self.wms_client is not None
-                    and self.wms_client.url_template != new_client.url_template
-                    and self.wms_tile_cache is not None):
+            if (
+                self.wms_client is not None
+                and self.wms_client.url_template != new_client.url_template
+                and self.wms_tile_cache is not None
+            ):
                 self.wms_tile_cache.clear()
             self.wms_client = new_client
             if self.wms_tile_cache is None:
@@ -3176,8 +3173,11 @@ class ImageryViewer(QWidget):
             frame = self.imagery.frames[0]
             img_shape = self.imagery.images[0].shape
             self._imagery_footprint = self.imagery_projector.compute_footprint(
-                frame, img_shape[0], img_shape[1],
-                self.imagery.row_offset, self.imagery.column_offset,
+                frame,
+                img_shape[0],
+                img_shape[1],
+                self.imagery.row_offset,
+                self.imagery.column_offset,
             )
             if self._imagery_footprint is None:
                 self.map_view_mode = False
@@ -3185,8 +3185,8 @@ class ImageryViewer(QWidget):
 
             # Switch axes to lon/lat
             self.plot_item.invertY(False)
-            self.plot_item.setLabel('bottom', 'Longitude (deg)')
-            self.plot_item.setLabel('left', 'Latitude (deg)')
+            self.plot_item.setLabel("bottom", "Longitude (deg)")
+            self.plot_item.setLabel("left", "Latitude (deg)")
 
             # Hide the normal image display
             self.image_item.setVisible(False)
@@ -3294,8 +3294,8 @@ class ImageryViewer(QWidget):
 
             # Restore pixel coordinate axes
             self.plot_item.invertY(True)
-            self.plot_item.setLabel('bottom', '')
-            self.plot_item.setLabel('left', '')
+            self.plot_item.setLabel("bottom", "")
+            self.plot_item.setLabel("left", "")
 
             # Restore the normal image display
             self.image_item.setVisible(True)
@@ -3393,14 +3393,12 @@ class ImageryViewer(QWidget):
         self.wms_status_changed.emit(f"Loading map tiles (0/{self._wms_total_tiles})...")
 
         # Start background fetch
-        self.wms_fetcher_thread = WMSTileFetcherThread(
-            self.wms_client, self.wms_tile_cache, tile_coords, zoom_level
-        )
+        self.wms_fetcher_thread = WMSTileFetcherThread(self.wms_client, self.wms_tile_cache, tile_coords, zoom_level)
         self.wms_fetcher_thread.tile_fetched.connect(self._on_wms_tile_fetched)
         self.wms_fetcher_thread.all_tiles_fetched.connect(self._on_all_wms_tiles_fetched)
         self.wms_fetcher_thread.error_occurred.connect(self._on_wms_error)
         self.wms_fetcher_thread.start()
-        
+
         # Display filtered image if background model exists
         if self.ewma_image is not None:
             self._update_projected_imagery(image=self.ewma_image)
@@ -3504,7 +3502,7 @@ class ImageryViewer(QWidget):
             cw = min(dst_w - sx, composite_w - cx)
             ch = min(dst_h - sy, composite_h - cy)
             if cw > 0 and ch > 0:
-                composite[cy:cy + ch, cx:cx + cw] = resized_arr[sy:sy + ch, sx:sx + cw]
+                composite[cy : cy + ch, cx : cx + cw] = resized_arr[sy : sy + ch, sx : sx + cw]
 
         # Convert to RGB float for pyqtgraph (0-1 range)
         composite_rgb = composite.astype(np.float32) / 255.0
@@ -3518,9 +3516,7 @@ class ImageryViewer(QWidget):
 
             # Scale from pixel space to degree space (uniform ppd)
             scale = 1.0 / ppd
-            self.wms_image_item.setTransform(
-                pg.QtGui.QTransform().scale(scale, scale)
-            )
+            self.wms_image_item.setTransform(pg.QtGui.QTransform().scale(scale, scale))
             self.wms_image_item.setPos(all_lon_min, all_lat_min)
 
         self._pending_tiles = []
@@ -3609,9 +3605,7 @@ class ImageryViewer(QWidget):
         zoom_level = self._current_zoom_level if self._current_zoom_level is not None else 0
 
         # Check projection cache
-        cached = self.projection_cache.get(
-            self.imagery.uuid, frame, zoom_level, output_bbox
-        )
+        cached = self.projection_cache.get(self.imagery.uuid, frame, zoom_level, output_bbox)
         if cached is not None:
             projected = cached
         else:
@@ -3621,14 +3615,17 @@ class ImageryViewer(QWidget):
             # Always use CPU projection — the bottleneck is sensor.geodetic_to_pixel()
             # which runs on CPU regardless, so the GPU path only adds transfer overhead.
             projected = self.imagery_projector.project_frame_cpu(
-                image, frame, output_bbox, output_width, output_height,
-                self.imagery.row_offset, self.imagery.column_offset,
+                image,
+                frame,
+                output_bbox,
+                output_width,
+                output_height,
+                self.imagery.row_offset,
+                self.imagery.column_offset,
             )
 
             # Cache the result
-            self.projection_cache.put(
-                self.imagery.uuid, frame, zoom_level, output_bbox, projected
-            )
+            self.projection_cache.put(self.imagery.uuid, frame, zoom_level, output_bbox, projected)
 
         # Display the projected image
         self.projected_image_item.setImage(projected, autoLevels=False)
@@ -3636,9 +3633,7 @@ class ImageryViewer(QWidget):
         # Position and scale the projected image to cover output_bbox
         scale_x = (output_bbox[2] - output_bbox[0]) / max(1, projected.shape[1])
         scale_y = (output_bbox[3] - output_bbox[1]) / max(1, projected.shape[0])
-        self.projected_image_item.setTransform(
-            pg.QtGui.QTransform().scale(scale_x, scale_y)
-        )
+        self.projected_image_item.setTransform(pg.QtGui.QTransform().scale(scale_x, scale_y))
         self.projected_image_item.setPos(output_bbox[0], output_bbox[1])
 
         # Apply opacity
@@ -3656,8 +3651,12 @@ class ImageryViewer(QWidget):
             Opacity value from 0.0 (transparent) to 1.0 (opaque).
         """
         self.imagery_opacity[imagery_uuid] = opacity
-        if (self.map_view_mode and self.projected_image_item is not None
-                and self.imagery is not None and self.imagery.uuid == imagery_uuid):
+        if (
+            self.map_view_mode
+            and self.projected_image_item is not None
+            and self.imagery is not None
+            and self.imagery.uuid == imagery_uuid
+        ):
             self.projected_image_item.setOpacity(opacity)
 
     def _project_overlay_coords(
@@ -3708,15 +3707,13 @@ class ImageryViewer(QWidget):
         """
         sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
         if sensor is None or not sensor.can_geolocate():
-            return float('nan'), float('nan')
+            return float("nan"), float("nan")
 
-        earth_loc = EarthLocation.from_geodetic(
-            lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m
-        )
+        earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
         rows, cols = sensor.geodetic_to_pixel(self.current_frame_number, earth_loc)
         if len(rows) > 0 and not np.isnan(rows[0]) and not np.isnan(cols[0]):
             return float(rows[0]), float(cols[0])
-        return float('nan'), float('nan')
+        return float("nan"), float("nan")
 
     def _pixel_to_map(self, row: float, col: float) -> tuple[float, float]:
         """Convert pixel (row, col) to map view coordinates (lon, lat).
@@ -3735,13 +3732,11 @@ class ImageryViewer(QWidget):
         """
         sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
         if sensor is None or not sensor.can_geolocate():
-            return float('nan'), float('nan')
+            return float("nan"), float("nan")
 
-        locations = sensor.pixel_to_geodetic(
-            self.current_frame_number, np.array([row]), np.array([col])
-        )
+        locations = sensor.pixel_to_geodetic(self.current_frame_number, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
         if not np.isnan(lon) and not np.isnan(lat):
             return lon, lat
-        return float('nan'), float('nan')
+        return float("nan"), float("nan")

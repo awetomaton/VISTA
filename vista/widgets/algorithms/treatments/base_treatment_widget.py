@@ -1,12 +1,10 @@
 """Base classes for treatment widgets to reduce code duplication"""
+
 import traceback
 
 import numpy as np
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from PyQt6.QtWidgets import (
-    QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar,
-    QPushButton, QVBoxLayout
-)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
 from vista.widgets.utils.algorithm_utils import create_aoi_selector
 
@@ -90,9 +88,7 @@ class BaseTreatmentThread(QThread):
                     return  # Exit early if cancelled
 
                 # Process this frame (implemented by subclass)
-                processed_images[i] = self.process_frame(
-                    temp_imagery.images[i], i, frame
-                )
+                processed_images[i] = self.process_frame(temp_imagery.images[i], i, frame)
 
                 # Emit progress
                 self.progress_updated.emit(i + 1, len(temp_imagery), "Treating frames...")
@@ -117,11 +113,7 @@ class BaseTreatmentThread(QThread):
                     return  # Exit early if cancelled
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
-                self.progress_updated.emit(
-                    i + 1,
-                    len(temp_imagery),
-                    "Computing histograms..."
-                )
+                self.progress_updated.emit(i + 1, len(temp_imagery), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -142,8 +134,7 @@ class BaseTreatmentWidget(QDialog):
     # Signal emitted when processing is complete
     imagery_processed = pyqtSignal(object)  # Emits processed Imagery object
 
-    def __init__(self, parent=None, imagery=None, aois=None, window_title="Treatment",
-                 description=""):
+    def __init__(self, parent=None, imagery=None, aois=None, window_title="Treatment", description=""):
         """
         Initialize the base treatment configuration widget.
 
@@ -280,19 +271,14 @@ class BaseTreatmentWidget(QDialog):
                 self,
                 "No Imagery",
                 "No imagery is currently loaded. Please load imagery first.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
         # Validate sensor requirements
         is_valid, error_message = self.validate_sensor_requirements()
         if not is_valid:
-            QMessageBox.warning(
-                self,
-                "Sensor Requirements Not Met",
-                error_message,
-                QMessageBox.StandardButton.Ok
-            )
+            QMessageBox.warning(self, "Sensor Requirements Not Met", error_message, QMessageBox.StandardButton.Ok)
             return
 
         # Get parameters
@@ -406,7 +392,7 @@ class BaseTreatmentWidget(QDialog):
                 "Processing in Progress",
                 "Processing is still in progress. Are you sure you want to cancel and close?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
 
             if reply == QMessageBox.StandardButton.Yes:

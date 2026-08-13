@@ -5,11 +5,10 @@ This module provides a reusable Qt widget for configuring CFAR (Constant False A
 detection parameters. The widget can be used in multiple contexts including full-frame
 detection and point refinement during track/detection creation.
 """
+
 from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QColor, QPainter, QPen
-from PyQt6.QtWidgets import (
-    QComboBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
-)
+from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
 
 
 class NeighborhoodVisualization(QLabel):
@@ -39,7 +38,7 @@ class NeighborhoodVisualization(QLabel):
         super().__init__(parent)
         self.background_radius = 10
         self.ignore_radius = 3
-        self.annulus_shape = 'circular'
+        self.annulus_shape = "circular"
         self.setMinimumSize(200, 200)
         self.setMaximumSize(200, 200)
 
@@ -104,19 +103,13 @@ class NeighborhoodVisualization(QLabel):
         painter.setPen(QPen(QColor(100, 100, 200), 2))
         painter.setBrush(QColor(150, 150, 255, 100))
 
-        if self.annulus_shape == 'square':
+        if self.annulus_shape == "square":
             painter.drawRect(
-                center_x - background_size // 2,
-                center_y - background_size // 2,
-                background_size,
-                background_size
+                center_x - background_size // 2, center_y - background_size // 2, background_size, background_size
             )
         else:  # circular
             painter.drawEllipse(
-                center_x - background_size // 2,
-                center_y - background_size // 2,
-                background_size,
-                background_size
+                center_x - background_size // 2, center_y - background_size // 2, background_size, background_size
             )
 
         # Draw ignore region (inner radius)
@@ -124,31 +117,16 @@ class NeighborhoodVisualization(QLabel):
         painter.setPen(QPen(QColor(200, 100, 100), 2))
         painter.setBrush(QColor(240, 240, 240))
 
-        if self.annulus_shape == 'square':
-            painter.drawRect(
-                center_x - ignore_size // 2,
-                center_y - ignore_size // 2,
-                ignore_size,
-                ignore_size
-            )
+        if self.annulus_shape == "square":
+            painter.drawRect(center_x - ignore_size // 2, center_y - ignore_size // 2, ignore_size, ignore_size)
         else:  # circular
-            painter.drawEllipse(
-                center_x - ignore_size // 2,
-                center_y - ignore_size // 2,
-                ignore_size,
-                ignore_size
-            )
+            painter.drawEllipse(center_x - ignore_size // 2, center_y - ignore_size // 2, ignore_size, ignore_size)
 
         # Draw center pixel
         pixel_size = int(scale)
         painter.setPen(QPen(QColor(255, 0, 0), 2))
         painter.setBrush(QColor(255, 100, 100))
-        painter.drawRect(
-            center_x - pixel_size // 2,
-            center_y - pixel_size // 2,
-            pixel_size,
-            pixel_size
-        )
+        painter.drawRect(center_x - pixel_size // 2, center_y - pixel_size // 2, pixel_size, pixel_size)
 
         # Draw labels
         painter.setPen(QColor(0, 0, 0))
@@ -214,8 +192,15 @@ class CFARConfigWidget(QWidget):
         Visualization widget (if show_visualization)
     """
 
-    def __init__(self, parent=None, show_visualization=True, show_area_filters=True,
-                 show_detection_mode=True, settings_prefix=None, show_group_box=False):
+    def __init__(
+        self,
+        parent=None,
+        show_visualization=True,
+        show_area_filters=True,
+        show_detection_mode=True,
+        settings_prefix=None,
+        show_group_box=False,
+    ):
         super().__init__(parent)
         self.show_visualization = show_visualization
         self.show_area_filters = show_area_filters
@@ -304,8 +289,7 @@ class CFARConfigWidget(QWidget):
         ignore_layout = QHBoxLayout()
         ignore_label = QLabel("Ignore Radius:")
         ignore_label.setToolTip(
-            "Inner radius to exclude from neighborhood.\n"
-            "Pixels within this radius are excluded from statistics."
+            "Inner radius to exclude from neighborhood.\nPixels within this radius are excluded from statistics."
         )
         self.ignore_spinbox = QSpinBox()
         self.ignore_spinbox.setMinimum(0)
@@ -345,8 +329,7 @@ class CFARConfigWidget(QWidget):
             min_area_layout = QHBoxLayout()
             min_area_label = QLabel("Minimum Area (pixels):")
             min_area_label.setToolTip(
-                "Minimum area of detection in pixels.\n"
-                "Detections smaller than this are filtered out."
+                "Minimum area of detection in pixels.\nDetections smaller than this are filtered out."
             )
             self.min_area_spinbox = QSpinBox()
             self.min_area_spinbox.setMinimum(1)
@@ -362,8 +345,7 @@ class CFARConfigWidget(QWidget):
             max_area_layout = QHBoxLayout()
             max_area_label = QLabel("Maximum Area (pixels):")
             max_area_label.setToolTip(
-                "Maximum area of detection in pixels.\n"
-                "Detections larger than this are filtered out."
+                "Maximum area of detection in pixels.\nDetections larger than this are filtered out."
             )
             self.max_area_spinbox = QSpinBox()
             self.max_area_spinbox.setMinimum(1)
@@ -393,10 +375,7 @@ class CFARConfigWidget(QWidget):
             viz_layout.addWidget(viz_label)
 
             self.neighborhood_viz = NeighborhoodVisualization()
-            self.neighborhood_viz.set_radii(
-                self.background_spinbox.value(),
-                self.ignore_spinbox.value()
-            )
+            self.neighborhood_viz.set_radii(self.background_spinbox.value(), self.ignore_spinbox.value())
             viz_layout.addWidget(self.neighborhood_viz)
             viz_layout.addStretch()
 
@@ -412,13 +391,8 @@ class CFARConfigWidget(QWidget):
         shape is modified. Only active if show_visualization is True.
         """
         if self.show_visualization:
-            self.neighborhood_viz.set_radii(
-                self.background_spinbox.value(),
-                self.ignore_spinbox.value()
-            )
-            self.neighborhood_viz.set_shape(
-                self.shape_combo.currentData()
-            )
+            self.neighborhood_viz.set_radii(self.background_spinbox.value(), self.ignore_spinbox.value())
+            self.neighborhood_viz.set_shape(self.shape_combo.currentData())
 
     def get_parameters(self):
         """
@@ -437,18 +411,18 @@ class CFARConfigWidget(QWidget):
             - 'max_area' : int (if show_area_filters is True)
         """
         params = {
-            'background_radius': self.background_spinbox.value(),
-            'ignore_radius': self.ignore_spinbox.value(),
-            'threshold_deviation': self.threshold_spinbox.value(),
-            'annulus_shape': self.shape_combo.currentData(),
+            "background_radius": self.background_spinbox.value(),
+            "ignore_radius": self.ignore_spinbox.value(),
+            "threshold_deviation": self.threshold_spinbox.value(),
+            "annulus_shape": self.shape_combo.currentData(),
         }
 
         if self.show_detection_mode:
-            params['detection_mode'] = self.mode_combo.currentData()
+            params["detection_mode"] = self.mode_combo.currentData()
 
         if self.show_area_filters:
-            params['min_area'] = self.min_area_spinbox.value()
-            params['max_area'] = self.max_area_spinbox.value()
+            params["min_area"] = self.min_area_spinbox.value()
+            params["max_area"] = self.max_area_spinbox.value()
 
         return params
 
@@ -468,30 +442,30 @@ class CFARConfigWidget(QWidget):
             - 'min_area' : int (only if show_area_filters is True)
             - 'max_area' : int (only if show_area_filters is True)
         """
-        if 'background_radius' in params:
-            self.background_spinbox.setValue(params['background_radius'])
-        if 'ignore_radius' in params:
-            self.ignore_spinbox.setValue(params['ignore_radius'])
-        if 'threshold_deviation' in params:
-            self.threshold_spinbox.setValue(params['threshold_deviation'])
+        if "background_radius" in params:
+            self.background_spinbox.setValue(params["background_radius"])
+        if "ignore_radius" in params:
+            self.ignore_spinbox.setValue(params["ignore_radius"])
+        if "threshold_deviation" in params:
+            self.threshold_spinbox.setValue(params["threshold_deviation"])
 
-        if 'annulus_shape' in params:
+        if "annulus_shape" in params:
             for i in range(self.shape_combo.count()):
-                if self.shape_combo.itemData(i) == params['annulus_shape']:
+                if self.shape_combo.itemData(i) == params["annulus_shape"]:
                     self.shape_combo.setCurrentIndex(i)
                     break
 
-        if self.show_detection_mode and 'detection_mode' in params:
+        if self.show_detection_mode and "detection_mode" in params:
             for i in range(self.mode_combo.count()):
-                if self.mode_combo.itemData(i) == params['detection_mode']:
+                if self.mode_combo.itemData(i) == params["detection_mode"]:
                     self.mode_combo.setCurrentIndex(i)
                     break
 
         if self.show_area_filters:
-            if 'min_area' in params:
-                self.min_area_spinbox.setValue(params['min_area'])
-            if 'max_area' in params:
-                self.max_area_spinbox.setValue(params['max_area'])
+            if "min_area" in params:
+                self.min_area_spinbox.setValue(params["min_area"])
+            if "max_area" in params:
+                self.max_area_spinbox.setValue(params["max_area"])
 
     def get_config(self):
         """
@@ -545,15 +519,9 @@ class CFARConfigWidget(QWidget):
 
         prefix = self.settings_prefix
 
-        self.background_spinbox.setValue(
-            self.settings.value(f"{prefix}/background_radius", 10, type=int)
-        )
-        self.ignore_spinbox.setValue(
-            self.settings.value(f"{prefix}/ignore_radius", 3, type=int)
-        )
-        self.threshold_spinbox.setValue(
-            self.settings.value(f"{prefix}/threshold_deviation", 3.0, type=float)
-        )
+        self.background_spinbox.setValue(self.settings.value(f"{prefix}/background_radius", 10, type=int))
+        self.ignore_spinbox.setValue(self.settings.value(f"{prefix}/ignore_radius", 3, type=int))
+        self.threshold_spinbox.setValue(self.settings.value(f"{prefix}/threshold_deviation", 3.0, type=float))
 
         annulus_shape = self.settings.value(f"{prefix}/annulus_shape", "circular")
         for i in range(self.shape_combo.count()):
@@ -571,12 +539,8 @@ class CFARConfigWidget(QWidget):
 
         # Load area filters if applicable
         if self.show_area_filters:
-            self.min_area_spinbox.setValue(
-                self.settings.value(f"{prefix}/min_area", 1, type=int)
-            )
-            self.max_area_spinbox.setValue(
-                self.settings.value(f"{prefix}/max_area", 1000, type=int)
-            )
+            self.min_area_spinbox.setValue(self.settings.value(f"{prefix}/min_area", 1, type=int))
+            self.max_area_spinbox.setValue(self.settings.value(f"{prefix}/max_area", 1000, type=int))
 
     def save_settings(self):
         """

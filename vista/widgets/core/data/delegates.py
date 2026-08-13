@@ -1,10 +1,21 @@
 """Custom delegates for table editing in data manager"""
-from PyQt6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QLabel, QScrollArea, QSpinBox, QStyle,
-    QStyledItemDelegate, QVBoxLayout, QWidget
-)
-from PyQt6.QtCore import Qt, QSettings
+
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QBrush, QColor
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QLabel,
+    QScrollArea,
+    QSpinBox,
+    QStyle,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class ColorDelegate(QStyledItemDelegate):
@@ -17,21 +28,21 @@ class ColorDelegate(QStyledItemDelegate):
         if item is None:
             # For QTableWidget, we need to access it differently
             table = parent.parent()
-            if hasattr(table, 'item'):
+            if hasattr(table, "item"):
                 item = table.item(index.row(), index.column())
 
         # Try to get current color from the item's background
-        current_color = QColor('white')
-        if item and hasattr(item, 'background'):
+        current_color = QColor("white")
+        if item and hasattr(item, "background"):
             bg = item.background()
-            if bg and hasattr(bg, 'color'):
+            if bg and hasattr(bg, "color"):
                 current_color = bg.color()
 
         color = QColorDialog.getColor(current_color, parent, "Select Color")
 
         if color.isValid():
             # Update the item's background color
-            if item and hasattr(item, 'setBackground'):
+            if item and hasattr(item, "setBackground"):
                 item.setBackground(QBrush(color))
 
         return None  # Don't create an editor widget
@@ -43,7 +54,7 @@ class ColorDelegate(QStyledItemDelegate):
         if color and isinstance(color, QBrush):
             color = color.color()
         elif not color:
-            color = QColor('white')
+            color = QColor("white")
 
         # Fill the entire cell with the actual color
         painter.fillRect(option.rect, color)
@@ -62,15 +73,7 @@ class ColorDelegate(QStyledItemDelegate):
 class MarkerDelegate(QStyledItemDelegate):
     """Delegate for marker selection"""
 
-    MARKERS = {
-        'Circle': 'o',
-        'Square': 's',
-        'Triangle': 't',
-        'Diamond': 'd',
-        'Plus': '+',
-        'Cross': 'x',
-        'Star': 'star'
-    }
+    MARKERS = {"Circle": "o", "Square": "s", "Triangle": "t", "Diamond": "d", "Plus": "+", "Cross": "x", "Star": "star"}
 
     def createEditor(self, parent, option, index):
         combo = QComboBox(parent)
@@ -109,11 +112,11 @@ class LineStyleDelegate(QStyledItemDelegate):
     """Delegate for line style selection"""
 
     LINE_STYLES = {
-        'Solid': 'SolidLine',
-        'Dash': 'DashLine',
-        'Dot': 'DotLine',
-        'Dash-Dot': 'DashDotLine',
-        'Dash-Dot-Dot': 'DashDotDotLine'
+        "Solid": "SolidLine",
+        "Dash": "DashLine",
+        "Dot": "DotLine",
+        "Dash-Dot": "DashDotLine",
+        "Dash-Dot-Dot": "DashDotDotLine",
     }
 
     def createEditor(self, parent, option, index):
@@ -170,7 +173,7 @@ class LabelsDelegate(QStyledItemDelegate):
         # Get current labels from the cell (comma-separated string)
         current_text = index.data(Qt.ItemDataRole.DisplayRole)
         if current_text:
-            current_labels = set(label.strip() for label in current_text.split(','))
+            current_labels = set(label.strip() for label in current_text.split(","))
         else:
             current_labels = set()
 
@@ -187,11 +190,11 @@ class LabelsDelegate(QStyledItemDelegate):
             selected_labels = dialog.get_selected_labels()
             # Update the item directly
             table = parent.parent()
-            if hasattr(table, 'item'):
+            if hasattr(table, "item"):
                 item = table.item(index.row(), index.column())
                 if item:
                     # Convert set to sorted comma-separated string
-                    labels_text = ', '.join(sorted(selected_labels)) if selected_labels else ''
+                    labels_text = ", ".join(sorted(selected_labels)) if selected_labels else ""
                     item.setText(labels_text)
 
         return None  # Don't create an editor widget
@@ -250,9 +253,7 @@ class LabelsSelectionDialog(QDialog):
             layout.addWidget(no_labels_label)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)

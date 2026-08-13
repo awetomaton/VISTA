@@ -1,11 +1,20 @@
 """Dialog for saving imagery data to HDF5 files with sensor/imagery selection"""
 
 from pathlib import Path
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QTreeWidget, QTreeWidgetItem,
-    QVBoxLayout, QMessageBox
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
 )
 
 from vista.imagery.imagery import save_imagery_hdf5
@@ -80,10 +89,7 @@ class SaveImageryDialog(QDialog):
         layout.addLayout(file_layout)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save |
-            QDialogButtonBox.StandardButton.Cancel
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -100,9 +106,7 @@ class SaveImageryDialog(QDialog):
             # Create sensor item
             sensor_item = QTreeWidgetItem(self.tree)
             sensor_item.setText(0, f"{sensor_name} (Sensor)")
-            sensor_item.setFlags(
-                sensor_item.flags() | Qt.ItemFlag.ItemIsUserCheckable
-            )
+            sensor_item.setFlags(sensor_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             sensor_item.setCheckState(0, Qt.CheckState.Checked)
             self.sensor_items[sensor_name] = sensor_item
 
@@ -110,9 +114,7 @@ class SaveImageryDialog(QDialog):
             for imagery in imagery_list:
                 imagery_item = QTreeWidgetItem(sensor_item)
                 imagery_item.setText(0, imagery.name)
-                imagery_item.setFlags(
-                    imagery_item.flags() | Qt.ItemFlag.ItemIsUserCheckable
-                )
+                imagery_item.setFlags(imagery_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 imagery_item.setCheckState(0, Qt.CheckState.Checked)
                 self.imagery_items[str(imagery.uuid)] = imagery_item
 
@@ -121,18 +123,13 @@ class SaveImageryDialog(QDialog):
 
     def browse_file(self):
         """Open file dialog to choose output file"""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Imagery Data",
-            "",
-            "HDF5 Files (*.h5 *.hdf5)"
-        )
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Imagery Data", "", "HDF5 Files (*.h5 *.hdf5)")
 
         if file_path:
             # Ensure file has .h5 extension
             file_path = Path(file_path)
-            if file_path.suffix not in ['.h5', '.hdf5']:
-                file_path = file_path.with_suffix('.h5')
+            if file_path.suffix not in [".h5", ".hdf5"]:
+                file_path = file_path.with_suffix(".h5")
 
             self.file_path_edit.setText(str(file_path))
 
@@ -171,10 +168,7 @@ class SaveImageryDialog(QDialog):
         file_path = self.file_path_edit.text().strip()
         if not file_path:
             QMessageBox.warning(
-                self,
-                "No File Selected",
-                "Please select an output file location.",
-                QMessageBox.StandardButton.Ok
+                self, "No File Selected", "Please select an output file location.", QMessageBox.StandardButton.Ok
             )
             return
 
@@ -186,7 +180,7 @@ class SaveImageryDialog(QDialog):
                 self,
                 "No Data Selected",
                 "Please select at least one sensor with imagery to save.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             return
 
@@ -197,14 +191,11 @@ class SaveImageryDialog(QDialog):
                 self,
                 "Save Successful",
                 f"Imagery data saved successfully to:\n{file_path}",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.StandardButton.Ok,
             )
             super().accept()
 
         except Exception as e:
             QMessageBox.critical(
-                self,
-                "Save Failed",
-                f"Failed to save imagery data:\n\n{str(e)}",
-                QMessageBox.StandardButton.Ok
+                self, "Save Failed", f"Failed to save imagery data:\n\n{str(e)}", QMessageBox.StandardButton.Ok
             )

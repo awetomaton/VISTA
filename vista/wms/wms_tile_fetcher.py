@@ -1,4 +1,5 @@
 """Non-blocking QThread for fetching map tiles"""
+
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from vista.wms.wms_client import TileCoord, WMSClient, WMSTile, WMSTileCache

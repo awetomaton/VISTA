@@ -1,12 +1,13 @@
 """Vista widgets package"""
+
 # Core widgets
-from .core import VistaMainWindow, ImageryViewer, PlaybackControls
-from .core.data import DataManagerPanel, DataLoaderThread
+from .core import ImageryViewer, PlaybackControls, VistaMainWindow
+from .core.data import DataLoaderThread, DataManagerPanel
 
 __all__ = [
-    'VistaMainWindow',
-    'ImageryViewer',
-    'PlaybackControls',
-    'DataManagerPanel',
-    'DataLoaderThread',
+    "VistaMainWindow",
+    "ImageryViewer",
+    "PlaybackControls",
+    "DataManagerPanel",
+    "DataLoaderThread",
 ]

@@ -7,17 +7,24 @@ supports geodetic coordinate conversion using ARF (Attitude Reference Frame) pol
 radiometric gain calibration.
 """
 
-import h5py
-from astropy.coordinates import EarthLocation
-from astropy import units
 from dataclasses import dataclass
-from scipy.interpolate import interp1d
 from typing import Optional, Tuple, Union
+
+import h5py
 import numpy as np
+from astropy import units
+from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
+from scipy.interpolate import interp1d
 
 from vista.sensors.sensor import Sensor
-from vista.transforms import cartesian_to_spherical, evaluate_2d_polynomial, get_arf_transform, los_to_earth, spherical_to_cartesian
+from vista.transforms import (
+    cartesian_to_spherical,
+    evaluate_2d_polynomial,
+    get_arf_transform,
+    los_to_earth,
+    spherical_to_cartesian,
+)
 
 
 @dataclass(eq=False)
@@ -101,6 +108,7 @@ class SampledSensor(Sensor):
     >>> # Returns same position for any query time
     >>> pos = sensor_static.get_positions(query_times)
     """
+
     positions: Optional[NDArray[np.float64]] = None
     times: Optional[NDArray[np.datetime64]] = None
     frames: Optional[NDArray[np.int64]] = None
@@ -162,12 +170,14 @@ class SampledSensor(Sensor):
             True if sensor has all required ARF geolocation data: pointing vectors
             and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
-        return (self.pointing is not None and
-                self.poly_pixel_to_arf_azimuth is not None and
-                self.poly_pixel_to_arf_elevation is not None and
-                self.poly_arf_to_row is not None and
-                self.poly_arf_to_col is not None)
-    
+        return (
+            self.pointing is not None
+            and self.poly_pixel_to_arf_azimuth is not None
+            and self.poly_pixel_to_arf_elevation is not None
+            and self.poly_arf_to_row is not None
+            and self.poly_arf_to_col is not None
+        )
+
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
         Return sensor positions for given times via interpolation/extrapolation.
@@ -190,7 +200,7 @@ class SampledSensor(Sensor):
           range and linear extrapolation outside the range
         """
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype('datetime64[ns]').astype(np.float64)
+        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
 
         # Handle single-position case (stationary sensor)
         if self.positions.shape[1] == 1:
@@ -199,7 +209,7 @@ class SampledSensor(Sensor):
 
         # Multi-position case: use interpolation/extrapolation
         # Convert sample times to numeric values
-        sample_times_ns = self.times.astype('datetime64[ns]').astype(np.float64)
+        sample_times_ns = self.times.astype("datetime64[ns]").astype(np.float64)
 
         # Create interpolators for each coordinate (x, y, z)
         # fill_value='extrapolate' enables linear extrapolation outside the range
@@ -209,8 +219,8 @@ class SampledSensor(Sensor):
             interpolator = interp1d(
                 sample_times_ns,
                 self.positions[i, :],
-                kind='linear',
-                fill_value='extrapolate'
+                kind="linear",
+                fill_value="extrapolate",
             )
             interpolated_positions[i, :] = interpolator(query_times_ns)
 
@@ -250,7 +260,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         sensor_pointing = self.pointing[:, frame_idx]
 
@@ -320,21 +330,28 @@ class SampledSensor(Sensor):
                 # Gather pixels belonging to this frame
                 point_mask = frame == uframe
                 intersections = self._pixel_to_geodetic_single_frame(
-                    frame_idx, rows[point_mask], columns[point_mask]
+                    frame_idx,
+                    rows[point_mask],
+                    columns[point_mask],
                 )
                 all_intersections[:, point_mask] = intersections
 
             return EarthLocation.from_geocentric(
                 x=all_intersections[0] * units.km,
                 y=all_intersections[1] * units.km,
-                z=all_intersections[2] * units.km
+                z=all_intersections[2] * units.km,
             )
 
         # Single frame path (original fast path)
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
             invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+            return EarthLocation.from_geocentric(
+                x=invalid,
+                y=invalid,
+                z=invalid,
+                unit=units.km,
+            )
 
         frame_idx = np.where(frame_mask)[0][0]
         intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
@@ -342,9 +359,9 @@ class SampledSensor(Sensor):
         return EarthLocation.from_geocentric(
             x=intersections[0] * units.km,
             y=intersections[1] * units.km,
-            z=intersections[2] * units.km
+            z=intersections[2] * units.km,
         )
-    
+
     def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert ECEF target positions to pixel coordinates for a single frame index.
@@ -368,7 +385,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx:time_idx + 1])[:, 0]
+            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         # Compute line-of-sight vectors from sensor to targets
         los_vectors = target_ecef - sensor_pos.reshape(3, 1)
@@ -436,11 +453,13 @@ class SampledSensor(Sensor):
             return invalid, invalid
 
         # Convert geodetic → ECEF Cartesian (km) once for all points
-        target_ecef = np.array([
-            loc.geocentric[0].to(units.km).value,
-            loc.geocentric[1].to(units.km).value,
-            loc.geocentric[2].to(units.km).value
-        ])
+        target_ecef = np.array(
+            [
+                loc.geocentric[0].to(units.km).value,
+                loc.geocentric[1].to(units.km).value,
+                loc.geocentric[2].to(units.km).value,
+            ]
+        )
         if target_ecef.ndim == 1:
             target_ecef = target_ecef.reshape(3, 1)
 
@@ -458,7 +477,8 @@ class SampledSensor(Sensor):
 
                 point_mask = frame == uframe
                 r, c = self._geodetic_to_pixel_single_frame(
-                    frame_idx, target_ecef[:, point_mask]
+                    frame_idx,
+                    target_ecef[:, point_mask],
                 )
                 all_rows[point_mask] = r
                 all_cols[point_mask] = c
@@ -494,33 +514,33 @@ class SampledSensor(Sensor):
         super().to_hdf5(group)
 
         # Override sensor type
-        group.attrs['sensor_type'] = 'SampledSensor'
+        group.attrs["sensor_type"] = "SampledSensor"
 
         # Save position data
         if self.positions is not None and self.times is not None:
-            position_group = group.create_group('position')
-            position_group.create_dataset('positions', data=self.positions)
+            position_group = group.create_group("position")
+            position_group.create_dataset("positions", data=self.positions)
 
             # Convert times to unix nanoseconds
-            unix_nanoseconds = self.times.astype('datetime64[ns]').astype(np.int64)
-            position_group.create_dataset('unix_nanoseconds', data=unix_nanoseconds)
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            position_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
 
         # Save ARF geolocation polynomials
         if self.can_geolocate():
-            geolocation_group = group.create_group('geolocation')
-            geolocation_group.create_dataset('poly_pixel_to_arf_azimuth', data=self.poly_pixel_to_arf_azimuth)
-            geolocation_group.create_dataset('poly_pixel_to_arf_elevation', data=self.poly_pixel_to_arf_elevation)
-            geolocation_group.create_dataset('poly_arf_to_row', data=self.poly_arf_to_row)
-            geolocation_group.create_dataset('poly_arf_to_col', data=self.poly_arf_to_col)
-            geolocation_group.create_dataset('pointing', data=self.pointing)
-            geolocation_group.create_dataset('frames', data=self.frames)
+            geolocation_group = group.create_group("geolocation")
+            geolocation_group.create_dataset("poly_pixel_to_arf_azimuth", data=self.poly_pixel_to_arf_azimuth)
+            geolocation_group.create_dataset("poly_pixel_to_arf_elevation", data=self.poly_pixel_to_arf_elevation)
+            geolocation_group.create_dataset("poly_arf_to_row", data=self.poly_arf_to_row)
+            geolocation_group.create_dataset("poly_arf_to_col", data=self.poly_arf_to_col)
+            geolocation_group.create_dataset("pointing", data=self.pointing)
+            geolocation_group.create_dataset("frames", data=self.frames)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
         if self.radiometric_gain is not None:
-            if 'radiometric' in group:
-                radiometric_group = group['radiometric']
+            if "radiometric" in group:
+                radiometric_group = group["radiometric"]
             else:
-                radiometric_group = group.create_group('radiometric')
+                radiometric_group = group.create_group("radiometric")
 
-            radiometric_group.create_dataset('radiometric_gain', data=self.radiometric_gain)
-            radiometric_group.create_dataset('radiometric_gain_frames', data=self.frames)
+            radiometric_group.create_dataset("radiometric_gain", data=self.radiometric_gain)
+            radiometric_group.create_dataset("radiometric_gain_frames", data=self.frames)

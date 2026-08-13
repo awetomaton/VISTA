@@ -1,12 +1,22 @@
 """Features panel for data manager"""
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+
+from PyQt6.QtCore import QSettings, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QCheckBox, QHeaderView, QHBoxLayout, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QCheckBox,
+    QHBoxLayout,
+    QHeaderView,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from .placemark_dialog import PlacemarkDialog
+
 from vista.features import PlacemarkFeature
+
+from .placemark_dialog import PlacemarkDialog
 
 
 class FeaturesPanel(QWidget):
@@ -17,7 +27,7 @@ class FeaturesPanel(QWidget):
     def __init__(self, viewer):
         super().__init__()
         self.viewer = viewer
-        self.settings = QSettings('VISTA', 'VISTA')
+        self.settings = QSettings("VISTA", "VISTA")
         self.init_ui()
 
     def init_ui(self):
@@ -43,9 +53,7 @@ class FeaturesPanel(QWidget):
         # Features table
         self.features_table = QTableWidget()
         self.features_table.setColumnCount(3)
-        self.features_table.setHorizontalHeaderLabels([
-            "Visible", "Name", "Type"
-        ])
+        self.features_table.setHorizontalHeaderLabels(["Visible", "Name", "Type"])
 
         # Enable row selection via vertical header
         self.features_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -77,16 +85,14 @@ class FeaturesPanel(QWidget):
         self.features_table.blockSignals(True)
         self.features_table.setRowCount(0)
 
-        if hasattr(self.viewer, 'features'):
+        if hasattr(self.viewer, "features"):
             for row, feature in enumerate(self.viewer.features):
                 self.features_table.insertRow(row)
 
                 # Visible checkbox
                 checkbox = QCheckBox()
                 checkbox.setChecked(feature.visible)
-                checkbox.stateChanged.connect(
-                    lambda state, f=feature: self.on_feature_visibility_changed(f, state)
-                )
+                checkbox.stateChanged.connect(lambda state, f=feature: self.on_feature_visibility_changed(f, state))
                 # Center the checkbox in the cell
                 checkbox_widget = QWidget()
                 checkbox_layout = QHBoxLayout(checkbox_widget)
@@ -109,7 +115,7 @@ class FeaturesPanel(QWidget):
 
     def on_feature_visibility_changed(self, feature, state):
         """Handle feature visibility checkbox changes"""
-        feature.visible = (state == Qt.CheckState.Checked.value)
+        feature.visible = state == Qt.CheckState.Checked.value
         self.viewer.update_feature_display(feature)
 
     def on_feature_cell_changed(self, row, column):
@@ -179,11 +185,7 @@ class FeaturesPanel(QWidget):
 
         # Check if we have imagery
         if not self.viewer.imagery:
-            QMessageBox.warning(
-                self,
-                "No Imagery",
-                "Please load imagery before creating placemarks."
-            )
+            QMessageBox.warning(self, "No Imagery", "Please load imagery before creating placemarks.")
             return
 
         # Open dialog
@@ -194,15 +196,15 @@ class FeaturesPanel(QWidget):
             if placemark_data:
                 # Create placemark feature
                 feature = PlacemarkFeature(
-                    name=placemark_data['name'],
+                    name=placemark_data["name"],
                     feature_type="placemark",
                     geometry={
-                        'row': placemark_data['row'],
-                        'col': placemark_data['col'],
-                        'lat': placemark_data.get('lat'),
-                        'lon': placemark_data.get('lon'),
-                        'alt': placemark_data.get('alt')
-                    }
+                        "row": placemark_data["row"],
+                        "col": placemark_data["col"],
+                        "lat": placemark_data.get("lat"),
+                        "lon": placemark_data.get("lon"),
+                        "alt": placemark_data.get("alt"),
+                    },
                 )
 
                 # Add to viewer

@@ -1,4 +1,5 @@
 """Widget for configuring and running the Simple Threshold detector algorithm"""
+
 from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QSpinBox
 
 from vista.algorithms.detectors.threshold import SimpleThreshold
@@ -29,9 +30,9 @@ class SimpleThresholdWidget(BaseDetectorWidget):
             settings_name="SimpleThreshold",
             window_title="Simple Threshold Detector",
             description=description,
-            default_color='r',
-            default_marker='o',
-            default_marker_size=12
+            default_color="r",
+            default_marker="o",
+            default_marker_size=12,
         )
 
     def add_algorithm_parameters(self, layout):
@@ -79,8 +80,7 @@ class SimpleThresholdWidget(BaseDetectorWidget):
         min_area_layout = QHBoxLayout()
         min_area_label = QLabel("Minimum Area (pixels):")
         min_area_label.setToolTip(
-            "Minimum area of detection in pixels.\n"
-            "Detections smaller than this are filtered out."
+            "Minimum area of detection in pixels.\nDetections smaller than this are filtered out."
         )
         self.min_area_spinbox = QSpinBox()
         self.min_area_spinbox.setMinimum(1)
@@ -95,10 +95,7 @@ class SimpleThresholdWidget(BaseDetectorWidget):
         # Maximum area parameter
         max_area_layout = QHBoxLayout()
         max_area_label = QLabel("Maximum Area (pixels):")
-        max_area_label.setToolTip(
-            "Maximum area of detection in pixels.\n"
-            "Detections larger than this are filtered out."
-        )
+        max_area_label.setToolTip("Maximum area of detection in pixels.\nDetections larger than this are filtered out.")
         self.max_area_spinbox = QSpinBox()
         self.max_area_spinbox.setMinimum(1)
         self.max_area_spinbox.setMaximum(100000)
@@ -134,10 +131,10 @@ class SimpleThresholdWidget(BaseDetectorWidget):
     def build_algorithm_params(self):
         """Build parameter dictionary for Simple Threshold algorithm"""
         return {
-            'threshold': self.threshold_spinbox.value(),
-            'min_area': self.min_area_spinbox.value(),
-            'max_area': self.max_area_spinbox.value(),
-            'detection_mode': self.mode_combo.currentData()
+            "threshold": self.threshold_spinbox.value(),
+            "min_area": self.min_area_spinbox.value(),
+            "max_area": self.max_area_spinbox.value(),
+            "detection_mode": self.mode_combo.currentData(),
         }
 
     def validate_parameters(self):

@@ -1,10 +1,19 @@
 """Dialog for creating placemarks"""
-from astropy.coordinates import EarthLocation
-from astropy import units
+
 import numpy as np
+from astropy import units
+from astropy.coordinates import EarthLocation
 from PyQt6.QtWidgets import (
-    QButtonGroup, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QLineEdit, QMessageBox, QRadioButton, QVBoxLayout
+    QButtonGroup,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QLineEdit,
+    QMessageBox,
+    QRadioButton,
+    QVBoxLayout,
 )
 
 
@@ -20,8 +29,8 @@ class PlacemarkDialog(QDialog):
 
         # Check if geolocation is available
         self.can_geolocate = False
-        if self.viewer.imagery and hasattr(self.viewer.imagery, 'sensor'):
-            if self.viewer.imagery.sensor and hasattr(self.viewer.imagery.sensor, 'can_geolocate'):
+        if self.viewer.imagery and hasattr(self.viewer.imagery, "sensor"):
+            if self.viewer.imagery.sensor and hasattr(self.viewer.imagery.sensor, "can_geolocate"):
                 self.can_geolocate = self.viewer.imagery.sensor.can_geolocate()
 
         self.init_ui()
@@ -157,11 +166,7 @@ class PlacemarkDialog(QDialog):
             if self.can_geolocate:
                 try:
                     frame = self.viewer.current_frame_number
-                    location = self.viewer.imagery.sensor.pixel_to_geodetic(
-                        frame,
-                        np.array([row]),
-                        np.array([col])
-                    )
+                    location = self.viewer.imagery.sensor.pixel_to_geodetic(frame, np.array([row]), np.array([col]))
                     # Handle both scalar and array returns
                     lat = np.atleast_1d(location.lat.deg)[0]
                     lon = np.atleast_1d(location.lon.deg)[0]
@@ -169,14 +174,7 @@ class PlacemarkDialog(QDialog):
                 except Exception as e:
                     print(f"Warning: Could not convert pixel to geodetic: {e}")
 
-            return {
-                'name': name,
-                'row': row,
-                'col': col,
-                'lat': lat,
-                'lon': lon,
-                'alt': alt
-            }
+            return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
         else:
             # Using geodetic coordinates
             lat = self.lat_spinbox.value()
@@ -186,11 +184,7 @@ class PlacemarkDialog(QDialog):
             # Convert to pixel coordinates
             try:
                 frame = self.viewer.current_frame_number
-                location = EarthLocation(
-                    lat=lat * units.deg,
-                    lon=lon * units.deg,
-                    height=alt * units.km
-                )
+                location = EarthLocation(lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km)
                 rows, cols = self.viewer.imagery.sensor.geodetic_to_pixel(frame, location)
                 # Handle both scalar and array returns
                 row = np.atleast_1d(rows)[0]
@@ -201,22 +195,13 @@ class PlacemarkDialog(QDialog):
                         self,
                         "Conversion Error",
                         "Could not convert geodetic coordinates to pixel coordinates.\n"
-                        "The location may be outside the sensor's field of view."
+                        "The location may be outside the sensor's field of view.",
                     )
                     return None
 
-                return {
-                    'name': name,
-                    'row': row,
-                    'col': col,
-                    'lat': lat,
-                    'lon': lon,
-                    'alt': alt
-                }
+                return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
             except Exception as e:
                 QMessageBox.critical(
-                    self,
-                    "Conversion Error",
-                    f"Failed to convert geodetic to pixel coordinates:\n{str(e)}"
+                    self, "Conversion Error", f"Failed to convert geodetic to pixel coordinates:\n{str(e)}"
                 )
                 return None

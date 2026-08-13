@@ -1,10 +1,28 @@
 """Settings dialog for global VISTA application configuration"""
+
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QPushButton, QRadioButton,
-    QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from vista.utils.labeler import LABELER_SETTINGS_KEY, get_system_user
@@ -12,6 +30,7 @@ from vista.wms.wms_client import get_tile_servers, save_tile_servers
 
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -107,8 +126,7 @@ class ImagerySettingsTab(QVBoxLayout):
         self.tooltip_size_spinbox.setRange(6, 72)
         self.tooltip_size_spinbox.setValue(12)
         self.tooltip_size_spinbox.setToolTip(
-            "Font size (in points) for geolocation and pixel value tooltips.\n"
-            "Default: 12"
+            "Font size (in points) for geolocation and pixel value tooltips.\nDefault: 12"
         )
         tooltip_layout.addRow("Font Size:", self.tooltip_size_spinbox)
 
@@ -116,10 +134,7 @@ class ImagerySettingsTab(QVBoxLayout):
         self.tooltip_weight_combo = QComboBox()
         self.tooltip_weight_combo.addItems(["Thin", "Light", "Normal", "DemiBold", "Bold", "Black"])
         self.tooltip_weight_combo.setCurrentText("Normal")
-        self.tooltip_weight_combo.setToolTip(
-            "Font weight for geolocation and pixel value tooltips.\n"
-            "Default: Normal"
-        )
+        self.tooltip_weight_combo.setToolTip("Font weight for geolocation and pixel value tooltips.\nDefault: Normal")
         tooltip_layout.addRow("Font Weight:", self.tooltip_weight_combo)
 
         tooltip_group.setLayout(tooltip_layout)
@@ -145,45 +160,24 @@ class ImagerySettingsTab(QVBoxLayout):
 
     def load_settings(self):
         """Load settings from QSettings"""
-        self.bins_spinbox.setValue(
-            self.settings.value("imagery/histogram_bins", 256, type=int)
-        )
-        self.min_percentile_spinbox.setValue(
-            self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
-        )
-        self.max_percentile_spinbox.setValue(
-            self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
-        )
-        self.max_rowcol_spinbox.setValue(
-            self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
-        )
+        self.bins_spinbox.setValue(self.settings.value("imagery/histogram_bins", 256, type=int))
+        self.min_percentile_spinbox.setValue(self.settings.value("imagery/histogram_min_percentile", 1.0, type=float))
+        self.max_percentile_spinbox.setValue(self.settings.value("imagery/histogram_max_percentile", 99.0, type=float))
+        self.max_rowcol_spinbox.setValue(self.settings.value("imagery/histogram_max_rowcol", 512, type=int))
 
         # Tooltip font settings
         color_name = self.settings.value("imagery/tooltip_font_color", "yellow", type=str)
         self._tooltip_color = QColor(color_name)
         self._update_color_button_style()
-        self.tooltip_size_spinbox.setValue(
-            self.settings.value("imagery/tooltip_font_size", 12, type=int)
-        )
-        self.tooltip_weight_combo.setCurrentText(
-            self.settings.value("imagery/tooltip_font_weight", "Normal", type=str)
-        )
+        self.tooltip_size_spinbox.setValue(self.settings.value("imagery/tooltip_font_size", 12, type=int))
+        self.tooltip_weight_combo.setCurrentText(self.settings.value("imagery/tooltip_font_weight", "Normal", type=str))
 
     def save_settings(self):
         """Save settings to QSettings"""
         self.settings.setValue("imagery/histogram_bins", self.bins_spinbox.value())
-        self.settings.setValue(
-            "imagery/histogram_min_percentile",
-            self.min_percentile_spinbox.value()
-        )
-        self.settings.setValue(
-            "imagery/histogram_max_percentile",
-            self.max_percentile_spinbox.value()
-        )
-        self.settings.setValue(
-            "imagery/histogram_max_rowcol",
-            self.max_rowcol_spinbox.value()
-        )
+        self.settings.setValue("imagery/histogram_min_percentile", self.min_percentile_spinbox.value())
+        self.settings.setValue("imagery/histogram_max_percentile", self.max_percentile_spinbox.value())
+        self.settings.setValue("imagery/histogram_max_rowcol", self.max_rowcol_spinbox.value())
 
         # Tooltip font settings
         self.settings.setValue("imagery/tooltip_font_color", self._tooltip_color.name())
@@ -212,27 +206,15 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
 
         # Line style dropdown
         self.ellipse_style_combo = QComboBox()
-        self.ellipse_style_combo.addItems([
-            'Solid',
-            'Dash',
-            'Dot',
-            'Dash-Dot',
-            'Dash-Dot-Dot'
-        ])
-        self.ellipse_style_combo.setToolTip(
-            "Line style for uncertainty ellipses.\n"
-            "Default: Dash"
-        )
+        self.ellipse_style_combo.addItems(["Solid", "Dash", "Dot", "Dash-Dot", "Dash-Dot-Dot"])
+        self.ellipse_style_combo.setToolTip("Line style for uncertainty ellipses.\nDefault: Dash")
         uncertainty_layout.addRow("Line Style:", self.ellipse_style_combo)
 
         # Line width spinbox
         self.ellipse_width_spinbox = QSpinBox()
         self.ellipse_width_spinbox.setRange(1, 10)
         self.ellipse_width_spinbox.setValue(1)
-        self.ellipse_width_spinbox.setToolTip(
-            "Line width for uncertainty ellipses (pixels).\n"
-            "Default: 1"
-        )
+        self.ellipse_width_spinbox.setToolTip("Line width for uncertainty ellipses (pixels).\nDefault: 1")
         uncertainty_layout.addRow("Line Width:", self.ellipse_width_spinbox)
 
         # Scale factor spinbox
@@ -262,35 +244,31 @@ class TrackVisualizationSettingsTab(QVBoxLayout):
         """Load settings from QSettings"""
         # Map internal style names to display names
         style_map = {
-            'SolidLine': 'Solid',
-            'DashLine': 'Dash',
-            'DotLine': 'Dot',
-            'DashDotLine': 'Dash-Dot',
-            'DashDotDotLine': 'Dash-Dot-Dot'
+            "SolidLine": "Solid",
+            "DashLine": "Dash",
+            "DotLine": "Dot",
+            "DashDotLine": "Dash-Dot",
+            "DashDotDotLine": "Dash-Dot-Dot",
         }
         internal_style = self.settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
-        display_style = style_map.get(internal_style, 'Dash')
+        display_style = style_map.get(internal_style, "Dash")
         self.ellipse_style_combo.setCurrentText(display_style)
 
-        self.ellipse_width_spinbox.setValue(
-            self.settings.value("tracks/uncertainty_line_width", 1, type=int)
-        )
-        self.ellipse_scale_spinbox.setValue(
-            self.settings.value("tracks/uncertainty_scale", 1.0, type=float)
-        )
+        self.ellipse_width_spinbox.setValue(self.settings.value("tracks/uncertainty_line_width", 1, type=int))
+        self.ellipse_scale_spinbox.setValue(self.settings.value("tracks/uncertainty_scale", 1.0, type=float))
 
     def save_settings(self):
         """Save settings to QSettings"""
         # Map display names back to internal style names
         style_map = {
-            'Solid': 'SolidLine',
-            'Dash': 'DashLine',
-            'Dot': 'DotLine',
-            'Dash-Dot': 'DashDotLine',
-            'Dash-Dot-Dot': 'DashDotDotLine'
+            "Solid": "SolidLine",
+            "Dash": "DashLine",
+            "Dot": "DotLine",
+            "Dash-Dot": "DashDotLine",
+            "Dash-Dot-Dot": "DashDotDotLine",
         }
         display_style = self.ellipse_style_combo.currentText()
-        internal_style = style_map.get(display_style, 'DashLine')
+        internal_style = style_map.get(display_style, "DashLine")
         self.settings.setValue("tracks/uncertainty_line_style", internal_style)
 
         self.settings.setValue("tracks/uncertainty_line_width", self.ellipse_width_spinbox.value())
@@ -338,9 +316,7 @@ class DataManagerSettingsTab(QVBoxLayout):
 
     def load_settings(self):
         """Load settings from QSettings"""
-        self.undo_depth_spinbox.setValue(
-            self.settings.value("undo_depth", 10, type=int)
-        )
+        self.undo_depth_spinbox.setValue(self.settings.value("undo_depth", 10, type=int))
 
     def save_settings(self):
         """Save settings to QSettings"""
@@ -476,12 +452,8 @@ class ToolbarSettingsTab(QVBoxLayout):
 
     def load_settings(self):
         """Load settings from QSettings"""
-        self.ewma_decay_spinbox.setValue(
-            self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
-        )
-        self.ewma_frame_offset_spinbox.setValue(
-            self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
-        )
+        self.ewma_decay_spinbox.setValue(self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float))
+        self.ewma_frame_offset_spinbox.setValue(self.settings.value("toolbar/ewma_frame_offset", 1, type=int))
 
     def save_settings(self):
         """Save settings to QSettings"""
@@ -524,9 +496,7 @@ class UserSettingsTab(QVBoxLayout):
 
     def load_settings(self) -> None:
         """Load settings from QSettings."""
-        self.labeler_name_edit.setText(
-            self.settings.value(LABELER_SETTINGS_KEY, "", type=str)
-        )
+        self.labeler_name_edit.setText(self.settings.value(LABELER_SETTINGS_KEY, "", type=str))
 
     def save_settings(self) -> None:
         """Save settings to QSettings."""
@@ -581,9 +551,7 @@ class TileServerEditDialog(QDialog):
         layout.addWidget(epsg_group)
 
         # Buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -706,9 +674,7 @@ class WMSSettingsTab(QVBoxLayout):
         self.coarse_grid_spinbox.setRange(8, 512)
         self.coarse_grid_spinbox.setValue(64)
         self.coarse_grid_spinbox.setToolTip(
-            "Maximum dimension of the coarse sampling grid.\n"
-            "Higher values are more accurate but slower.\n"
-            "Default: 64"
+            "Maximum dimension of the coarse sampling grid.\nHigher values are more accurate but slower.\nDefault: 64"
         )
         proj_layout.addRow("Coarse Grid Size:", self.coarse_grid_spinbox)
 
@@ -796,19 +762,13 @@ class WMSSettingsTab(QVBoxLayout):
         self._populate_table(select_row=idx)
 
         # Cache sizes
-        self.tile_cache_spinbox.setValue(
-            self.settings.value("wms/tile_cache_size", 256, type=int)
-        )
-        self.projection_cache_spinbox.setValue(
-            self.settings.value("wms/projection_cache_size", 16384, type=int)
-        )
+        self.tile_cache_spinbox.setValue(self.settings.value("wms/tile_cache_size", 256, type=int))
+        self.projection_cache_spinbox.setValue(self.settings.value("wms/projection_cache_size", 16384, type=int))
 
         # Projection settings
         coarse_enabled = self.settings.value("wms/coarse_grid_enabled", True, type=bool)
         self.coarse_grid_checkbox.setChecked(coarse_enabled)
-        self.coarse_grid_spinbox.setValue(
-            self.settings.value("wms/coarse_grid_size", 64, type=int)
-        )
+        self.coarse_grid_spinbox.setValue(self.settings.value("wms/coarse_grid_size", 64, type=int))
         self.coarse_grid_spinbox.setEnabled(coarse_enabled)
 
     def save_settings(self) -> None:
@@ -927,10 +887,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.tabs)
 
         # Add standard dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok |
-            QDialogButtonBox.StandardButton.Cancel
-        )
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept_settings)
         button_box.rejected.connect(self.reject)
 

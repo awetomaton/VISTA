@@ -1,4 +1,5 @@
 """Labels fixture loader for VISTA_LABELS environment variable"""
+
 import csv
 import json
 import os
@@ -114,9 +115,7 @@ def _load_from_csv(path: Path) -> list[str]:
 
         # Check if first row looks like a header with 'label' column
         first_row = rows[0]
-        has_label_header = (
-            len(first_row) > 0 and first_row[0].lower().strip() == "label"
-        )
+        has_label_header = len(first_row) > 0 and first_row[0].lower().strip() == "label"
 
         if has_label_header:
             # Skip header row, read remaining rows

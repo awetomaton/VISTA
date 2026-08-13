@@ -12,8 +12,10 @@ Unlike sliding-window approaches, GoDec operates on the entire data matrix
 at once, making it naturally suited for GPU acceleration where large matrix
 multiplications dominate the computation.
 """
+
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -99,8 +101,16 @@ def _hard_threshold(tensor, card):
     return tensor * (tensor.abs() >= threshold)
 
 
-def _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
-                   frame_block_size, block_overlap_frames):
+def _godec_blocked(
+    images,
+    rank,
+    sparsity,
+    max_iter,
+    power_iters,
+    callback,
+    frame_block_size,
+    block_overlap_frames,
+):
     """
     Run GoDec in overlapping frame blocks and combine results.
 
@@ -123,8 +133,7 @@ def _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
 
     if stride <= 0:
         raise ValueError(
-            f"block_overlap_frames ({block_overlap_frames}) must be less than "
-            f"frame_block_size ({frame_block_size})"
+            f"block_overlap_frames ({block_overlap_frames}) must be less than frame_block_size ({frame_block_size})"
         )
 
     # Compute block start indices
@@ -152,8 +161,14 @@ def _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
                 return callback(overall_iter, total_iters)
             return True
 
-        bg, fg = godec(block_images, rank=rank, sparsity=sparsity, max_iter=max_iter,
-                       power_iters=power_iters, callback=block_callback)
+        bg, fg = godec(
+            block_images,
+            rank=rank,
+            sparsity=sparsity,
+            max_iter=max_iter,
+            power_iters=power_iters,
+            callback=block_callback,
+        )
         block_results.append((blk_start, blk_end, bg, fg))
 
     # Combine block results by splitting overlapping regions at their midpoint
@@ -184,8 +199,16 @@ def _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
     return background, foreground
 
 
-def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=None,
-          frame_block_size=None, block_overlap_frames=0):
+def godec(
+    images,
+    rank=5,
+    sparsity=0.01,
+    max_iter=10,
+    power_iters=2,
+    callback=None,
+    frame_block_size=None,
+    block_overlap_frames=0,
+):
     """
     Remove background from imagery using GoDec (Go Decomposition).
 
@@ -247,8 +270,16 @@ def godec(images, rank=5, sparsity=0.01, max_iter=10, power_iters=2, callback=No
 
     # Dispatch to blocked processing if frame_block_size is set
     if frame_block_size is not None:
-        return _godec_blocked(images, rank, sparsity, max_iter, power_iters, callback,
-                              frame_block_size, block_overlap_frames)
+        return _godec_blocked(
+            images,
+            rank,
+            sparsity,
+            max_iter,
+            power_iters,
+            callback,
+            frame_block_size,
+            block_overlap_frames,
+        )
 
     num_frames, height, width = images.shape
     num_pixels = height * width

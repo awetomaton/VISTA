@@ -1,4 +1,5 @@
 """Dialog for configuring and running the Kalman Filter tracker"""
+
 from PyQt6.QtWidgets import QDoubleSpinBox, QSpinBox
 
 from vista.algorithms.trackers import run_kalman_tracker
@@ -28,10 +29,10 @@ class KalmanTrackingDialog(BaseTrackingDialog):
             settings_name="KalmanTracker",
             window_title="Kalman Filter Tracker",
             description=description,
-            default_track_color='g',
-            default_track_marker='o',
+            default_track_color="g",
+            default_track_marker="o",
             default_track_line_width=2,
-            default_track_marker_size=10
+            default_track_marker_size=10,
         )
 
     def add_algorithm_parameters(self, main_layout):
@@ -120,9 +121,9 @@ class KalmanTrackingDialog(BaseTrackingDialog):
     def build_config(self):
         """Build configuration dictionary for Kalman tracker"""
         config = super().build_config()
-        config['process_noise'] = self.process_noise.value()
-        config['measurement_noise'] = self.measurement_noise.value()
-        config['gating_distance'] = self.gating_distance.value()
-        config['min_detections'] = self.min_detections.value()
-        config['delete_threshold'] = self.delete_threshold.value()
+        config["process_noise"] = self.process_noise.value()
+        config["measurement_noise"] = self.measurement_noise.value()
+        config["gating_distance"] = self.gating_distance.value()
+        config["min_detections"] = self.min_detections.value()
+        config["delete_threshold"] = self.delete_threshold.value()
         return config

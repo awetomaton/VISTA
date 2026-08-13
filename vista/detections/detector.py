@@ -1,12 +1,14 @@
-from dataclasses import dataclass, field
 import datetime
-from typing import Optional, Union
 import pathlib
+import uuid
+from dataclasses import dataclass, field
+from typing import Optional, Union
+
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
 import pyqtgraph as pg
-import uuid
+from numpy.typing import NDArray
+
 from vista.sensors.sensor import Sensor
 
 
@@ -71,6 +73,7 @@ class Detector:
     - Labels are per-detection, allowing individual detection categorization
     - Detection coordinates are always in pixel space (row/column)
     """
+
     name: str
     frames: NDArray[np.int_]
     rows: NDArray[np.float64]
@@ -79,14 +82,16 @@ class Detector:
     description: str = ""
 
     # Styling attributes
-    color: str = 'r'  # Red by default
-    marker: str = 'o'  # Circle by default
+    color: str = "r"  # Red by default
+    marker: str = "o"  # Circle by default
     marker_size: int = 10
     line_thickness: int = 2  # Line thickness for marker outline
     visible: bool = True
     complete: bool = False  # Show all detections across all frames (like track.complete)
     labels: list[set[str]] = field(default_factory=list)  # List of label sets, one per detection point
-    label_times: list[Optional[datetime.datetime]] = field(default_factory=list)  # UTC timestamp each detection was last labeled
+    label_times: list[Optional[datetime.datetime]] = field(
+        default_factory=list
+    )  # UTC timestamp each detection was last labeled
     labelers: list[Optional[str]] = field(default_factory=list)  # Username that last labeled each detection
 
     # Performance optimization: cached data structures
@@ -99,7 +104,7 @@ class Detector:
 
     def __post_init__(self):
         self.uuid = uuid.uuid4()
-    
+
     def __eq__(self, other):
         if not isinstance(other, Detector):
             return False
@@ -212,18 +217,42 @@ class Detector:
                 if isinstance(s, slice):
                     detector_slice.labels = detector_slice.labels[s]
                 else:  # numpy array boolean mask or indices
-                    detector_slice.labels = [detector_slice.labels[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labels[i] for i in s]
+                    detector_slice.labels = (
+                        [
+                            detector_slice.labels[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.labels[i] for i in s]
+                    )
             # Subset per-detection label metadata (same indexing rules as labels)
             if len(detector_slice.label_times) > 0:
                 if isinstance(s, slice):
                     detector_slice.label_times = detector_slice.label_times[s]
                 else:
-                    detector_slice.label_times = [detector_slice.label_times[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.label_times[i] for i in s]
+                    detector_slice.label_times = (
+                        [
+                            detector_slice.label_times[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.label_times[i] for i in s]
+                    )
             if len(detector_slice.labelers) > 0:
                 if isinstance(s, slice):
                     detector_slice.labelers = detector_slice.labelers[s]
                 else:
-                    detector_slice.labelers = [detector_slice.labelers[i] for i in np.where(s)[0] if isinstance(s, np.ndarray) and s.dtype == bool] if isinstance(s, np.ndarray) and s.dtype == bool else [detector_slice.labelers[i] for i in s]
+                    detector_slice.labelers = (
+                        [
+                            detector_slice.labelers[i]
+                            for i in np.where(s)[0]
+                            if isinstance(s, np.ndarray) and s.dtype == bool
+                        ]
+                        if isinstance(s, np.ndarray) and s.dtype == bool
+                        else [detector_slice.labelers[i] for i in s]
+                    )
             # Slice cached geodetic coords if present
             if detector_slice._cached_lons is not None:
                 detector_slice._cached_lons = detector_slice._cached_lons[s]
@@ -232,7 +261,7 @@ class Detector:
             return detector_slice
         else:
             raise TypeError("Invalid index or slice type.")
-    
+
     def __len__(self):
         return len(self.frames)
 
@@ -292,7 +321,7 @@ class Detector:
             labels_list = []
             for labels_str in df["Labels"]:
                 if pd.notna(labels_str) and labels_str:
-                    labels_list.append(set(label.strip() for label in labels_str.split(',')))
+                    labels_list.append(set(label.strip() for label in labels_str.split(",")))
                 else:
                     labels_list.append(set())
             kwargs["labels"] = labels_list
@@ -317,12 +346,12 @@ class Detector:
             kwargs["labelers"] = labelers_list
 
         detector = cls(
-            name = name,
-            frames = df["Frames"].to_numpy(),
-            rows = df["Rows"].to_numpy(),
-            columns = df["Columns"].to_numpy(),
-            sensor = sensor,
-            **kwargs
+            name=name,
+            frames=df["Frames"].to_numpy(),
+            rows=df["Rows"].to_numpy(),
+            columns=df["Columns"].to_numpy(),
+            sensor=sensor,
+            **kwargs,
         )
 
         # Pre-populate geodetic cache if coords were available in the dataframe
@@ -342,19 +371,19 @@ class Detector:
             New Detector object with copied arrays and styling attributes
         """
         detector_copy = self.__class__(
-            name = self.name,
-            frames = self.frames.copy(),
-            rows = self.rows.copy(),
-            columns = self.columns.copy(),
-            sensor = self.sensor,
-            color = self.color,
-            marker = self.marker,
-            marker_size = self.marker_size,
-            line_thickness = self.line_thickness,
-            visible = self.visible,
-            labels = [label_set.copy() for label_set in self.labels],
-            label_times = list(self.label_times),
-            labelers = list(self.labelers),
+            name=self.name,
+            frames=self.frames.copy(),
+            rows=self.rows.copy(),
+            columns=self.columns.copy(),
+            sensor=self.sensor,
+            color=self.color,
+            marker=self.marker,
+            marker_size=self.marker_size,
+            line_thickness=self.line_thickness,
+            visible=self.visible,
+            labels=[label_set.copy() for label_set in self.labels],
+            label_times=list(self.label_times),
+            labelers=list(self.labelers),
         )
         # Preserve cached geodetic coords
         if self._cached_lons is not None:
@@ -362,10 +391,10 @@ class Detector:
         if self._cached_lats is not None:
             detector_copy._cached_lats = self._cached_lats.copy()
         return detector_copy
-    
+
     def to_csv(self, file: Union[str, pathlib.Path]):
         self.to_dataframe().to_csv(file, index=None)
-      
+
     def to_dataframe(self) -> pd.DataFrame:
         # Prepare labels column - one entry per detection
         labels_column = []
@@ -373,33 +402,35 @@ class Detector:
         labelers_column = []
         for i in range(len(self.frames)):
             if i < len(self.labels) and self.labels[i]:
-                labels_column.append(', '.join(sorted(self.labels[i])))
+                labels_column.append(", ".join(sorted(self.labels[i])))
             else:
-                labels_column.append('')
+                labels_column.append("")
             if i < len(self.label_times) and self.label_times[i] is not None:
                 label_times_column.append(self.label_times[i].isoformat())
             else:
-                label_times_column.append('')
+                label_times_column.append("")
             if i < len(self.labelers) and self.labelers[i]:
                 labelers_column.append(self.labelers[i])
             else:
-                labelers_column.append('')
+                labelers_column.append("")
 
-        return pd.DataFrame({
-            "Detector": len(self)*[self.name],
-            "Frames": self.frames,
-            "Rows": self.rows,
-            "Columns": self.columns,
-            "Color": self.color,
-            "Marker": self.marker,
-            "Marker Size": self.marker_size,
-            "Line Thickness": self.line_thickness,
-            "Visible": self.visible,
-            "Complete": self.complete,
-            "Labels": labels_column,
-            "Label Time": label_times_column,
-            "Labeler": labelers_column,
-        })
+        return pd.DataFrame(
+            {
+                "Detector": len(self) * [self.name],
+                "Frames": self.frames,
+                "Rows": self.rows,
+                "Columns": self.columns,
+                "Color": self.color,
+                "Marker": self.marker,
+                "Marker Size": self.marker_size,
+                "Line Thickness": self.line_thickness,
+                "Visible": self.visible,
+                "Complete": self.complete,
+                "Labels": labels_column,
+                "Label Time": label_times_column,
+                "Labeler": labelers_column,
+            }
+        )
 
     def get_unique_labels(self) -> set[str]:
         """

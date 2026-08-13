@@ -1,4 +1,5 @@
 """Dialog for configuring and running static (non-sliding) subspace background removal."""
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QCheckBox, QSpinBox
 

@@ -1,4 +1,5 @@
 """Widget for configuring and running the Temporal Median background removal algorithm"""
+
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSpinBox
 
 from vista.algorithms.background_removal.temporal_median import TemporalMedian
@@ -22,7 +23,7 @@ class TemporalMedianWidget(BaseBackgroundRemovalWidget):
             algorithm_class=TemporalMedian,
             settings_name="TemporalMedian",
             window_title="Temporal Median Background Removal",
-            description=description
+            description=description,
         )
 
     def add_algorithm_parameters(self, layout):
@@ -75,10 +76,7 @@ class TemporalMedianWidget(BaseBackgroundRemovalWidget):
 
     def build_algorithm_params(self):
         """Build parameter dictionary for Temporal Median algorithm"""
-        return {
-            'background': self.background_spinbox.value(),
-            'offset': self.offset_spinbox.value()
-        }
+        return {"background": self.background_spinbox.value(), "offset": self.offset_spinbox.value()}
 
     def set_parameters_enabled(self, enabled):
         """Enable or disable parameter widgets"""

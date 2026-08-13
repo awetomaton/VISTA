@@ -1,13 +1,22 @@
 """Imagery panel for data manager"""
-from PyQt6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QMessageBox, QProgressBar, QPushButton,
-    QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
-)
+
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QHeaderView,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from vista.imagery.imagery import HAS_TORCH
 
-_HDF5_EXTENSIONS = ('.h5', '.hdf5')
+_HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 
 class ImageryPanel(QWidget):
@@ -44,9 +53,7 @@ class ImageryPanel(QWidget):
         # Imagery table
         self.imagery_table = QTableWidget()
         self.imagery_table.setColumnCount(4)
-        self.imagery_table.setHorizontalHeaderLabels([
-            "Name", "Frames", "GPU", "Opacity"
-        ])
+        self.imagery_table.setHorizontalHeaderLabels(["Name", "Frames", "GPU", "Opacity"])
 
         # Enable row selection via vertical header (single selection only)
         self.imagery_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -117,9 +124,7 @@ class ImageryPanel(QWidget):
             opacity_spinbox.setSuffix("%")
             opacity_spinbox.setValue(opacity_pct)
             opacity_spinbox.setToolTip("Imagery opacity in map view")
-            opacity_spinbox.valueChanged.connect(
-                lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val)
-            )
+            opacity_spinbox.valueChanged.connect(lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val))
             self.imagery_table.setCellWidget(row, 3, opacity_spinbox)
 
         self.imagery_table.blockSignals(False)
@@ -428,8 +433,7 @@ class ImageryPanel(QWidget):
     def dropEvent(self, event):
         """Handle dropped HDF5 files by emitting the files_dropped signal."""
         file_paths = [
-            url.toLocalFile() for url in event.mimeData().urls()
-            if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS)
+            url.toLocalFile() for url in event.mimeData().urls() if url.toLocalFile().lower().endswith(_HDF5_EXTENSIONS)
         ]
         if file_paths:
             self.files_dropped.emit(file_paths)

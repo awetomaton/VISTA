@@ -4,7 +4,9 @@ Main entry point for VISTA application.
 This module allows the VISTA application to be run as a package:
     python -m vista
 """
+
 import sys
+
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QApplication
 
@@ -16,7 +18,7 @@ def main():
     app = QApplication(sys.argv)
 
     # Set pyqtgraph configuration
-    pg.setConfigOptions(imageAxisOrder='row-major', useNumba=True)
+    pg.setConfigOptions(imageAxisOrder="row-major", useNumba=True)
 
     window = VistaMainWindow()
     window.show()

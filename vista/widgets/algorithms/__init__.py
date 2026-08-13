@@ -1,7 +1,6 @@
 """VISTA Algorithm Widgets Packages"""
-# Detector widgets
-from .detectors import CFARWidget, SimpleThresholdWidget
 
+# Detector widgets
 # Background removal widgets
 from .background_removal import (
     RobustPCADialog,
@@ -9,6 +8,10 @@ from .background_removal import (
     StaticSubspaceBackgroundRemovalDialog,
     TemporalMedianWidget,
 )
+from .detectors import CFARWidget, SimpleThresholdWidget
+
+# Enhancement widgets
+from .enhancement import CoadditionWidget
 
 # Tracker widgets
 from .trackers import (
@@ -18,30 +21,26 @@ from .trackers import (
     TrackletTrackingDialog,
 )
 
-# Enhancement widgets
-from .enhancement import CoadditionWidget
-
-
 __all__ = [
     # Core
-    'VistaMainWindow',
-    'ImageryViewer',
-    'PlaybackControls',
-    'DataManagerPanel',
-    'DataLoaderThread',
+    "VistaMainWindow",
+    "ImageryViewer",
+    "PlaybackControls",
+    "DataManagerPanel",
+    "DataLoaderThread",
     # Detectors
-    'CFARWidget',
-    'SimpleThresholdWidget',
+    "CFARWidget",
+    "SimpleThresholdWidget",
     # Background removal
-    'TemporalMedianWidget',
-    'RobustPCADialog',
-    'StaticMedianBackgroundRemovalDialog',
-    'StaticSubspaceBackgroundRemovalDialog',
+    "TemporalMedianWidget",
+    "RobustPCADialog",
+    "StaticMedianBackgroundRemovalDialog",
+    "StaticSubspaceBackgroundRemovalDialog",
     # Trackers
-    'KalmanTrackingDialog',
-    'NetworkFlowTrackingDialog',
-    'SimpleTrackingDialog',
-    'TrackletTrackingDialog',
+    "KalmanTrackingDialog",
+    "NetworkFlowTrackingDialog",
+    "SimpleTrackingDialog",
+    "TrackletTrackingDialog",
     # Enhancement
-    'CoadditionWidget',
+    "CoadditionWidget",
 ]

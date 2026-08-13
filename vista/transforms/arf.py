@@ -1,4 +1,5 @@
 """Attitude Reference Frame support functions"""
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -8,7 +9,7 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
 
     Note
     ----
-    The purpose of the ARF and it's definition are described and illustrated in detail in 
+    The purpose of the ARF and it's definition are described and illustrated in detail in
     `notebooks/attitude_reference_frame.ipynb`
 
     Parameters
@@ -21,7 +22,7 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
     Returns
     -------
     NDArray
-        A matrix to transform vectors in the global reference frame into the ARF. Use this matrix like 
+        A matrix to transform vectors in the global reference frame into the ARF. Use this matrix like
         `arf_vectors = transformation_matrix @ vectors`.
     """
 
@@ -49,7 +50,7 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
 
     # Cross products can result in a non-normalized vector even with unit vector inputs, so we normalize this vector
     arf_y = arf_y / np.linalg.norm(arf_y)
-    
+
     # Get the transformation matrix to convert from the global reference frame to the ARF reference frame
     global_to_arf_transformation_matrix = np.empty((3, 3))
     global_to_arf_transformation_matrix[0] = arf_x
@@ -57,4 +58,3 @@ def get_arf_transform(sensor_pos: NDArray, sensor_pointing: NDArray):
     global_to_arf_transformation_matrix[2] = arf_z
 
     return global_to_arf_transformation_matrix
-

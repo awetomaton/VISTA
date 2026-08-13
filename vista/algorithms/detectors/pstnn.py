@@ -10,11 +10,13 @@ References
 Guan, X., et al. "Infrared Small Target Detection Based on Partial Sum of the Tensor
 Nuclear Norm." Remote Sensing, 2019.
 """
+
 import numpy as np
 from skimage.measure import label, regionprops
 
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -77,11 +79,20 @@ class PSTNN:
 
     name = "PSTNN"
 
-    def __init__(self, patch_size: int = 40, stride: int = 40,
-                 lambda_param: float = None, convergence_tolerance: float = 1e-7,
-                 max_iterations: int = 50, n_skipped_singular_values: int = 1,
-                 min_area: int = 1, max_area: int = 1000, use_gpu: bool = False,
-                 threshold_multiplier: float = 5.0, detection_mode: str = 'both'):
+    def __init__(
+        self,
+        patch_size: int = 40,
+        stride: int = 40,
+        lambda_param: float = None,
+        convergence_tolerance: float = 1e-7,
+        max_iterations: int = 50,
+        n_skipped_singular_values: int = 1,
+        min_area: int = 1,
+        max_area: int = 1000,
+        use_gpu: bool = False,
+        threshold_multiplier: float = 5.0,
+        detection_mode: str = "both",
+    ):
         self.patch_size = patch_size
         self.stride = stride
         self.lambda_param = lambda_param
@@ -118,7 +129,7 @@ class PSTNN:
         pad_h = (self.stride - (height % self.stride)) % self.stride
         pad_w = (self.stride - (width % self.stride)) % self.stride
         if pad_h > 0 or pad_w > 0:
-            images_padded = np.pad(images, ((0, 0), (0, pad_h), (0, pad_w)), mode='reflect')
+            images_padded = np.pad(images, ((0, 0), (0, pad_h), (0, pad_w)), mode="reflect")
         else:
             images_padded = images
 
@@ -155,14 +166,14 @@ class PSTNN:
             Array of detection centroid column coordinates (float64)
         """
         # Threshold based on detection mode
-        if self.detection_mode == 'bright':
+        if self.detection_mode == "bright":
             # Detect only positive (bright) sparse values
             mean_val = np.mean(target_image)
             std_val = np.std(target_image)
             threshold = mean_val + self.threshold_multiplier * std_val
             binary = target_image > threshold
             intensity_image = np.maximum(target_image, 0)
-        elif self.detection_mode == 'dark':
+        elif self.detection_mode == "dark":
             # Detect only negative (dark) sparse values
             negated = -target_image
             mean_val = np.mean(negated)
@@ -233,13 +244,14 @@ class PSTNN:
         patch_tensor = np.empty((ps * ps, n_patches, num_frames), dtype=np.float32)
         for t in range(num_frames):
             for p_idx, (r, c) in enumerate(patch_positions):
-                patch = images[t, r:r + ps, c:c + ps]
+                patch = images[t, r : r + ps, c : c + ps]
                 patch_tensor[:, p_idx, t] = patch.ravel()
 
         return patch_tensor, patch_positions
 
-    def _reconstruct_from_patches(self, sparse_tensor: np.ndarray, height: int, width: int,
-                                  patch_positions: list, num_frames: int) -> np.ndarray:
+    def _reconstruct_from_patches(
+        self, sparse_tensor: np.ndarray, height: int, width: int, patch_positions: list, num_frames: int
+    ) -> np.ndarray:
         """
         Reconstruct per-frame images from the sparse patch tensor.
 
@@ -267,7 +279,7 @@ class PSTNN:
 
         # Build the count map (same for all frames)
         for p_idx, (r, c) in enumerate(patch_positions):
-            count[r:r + ps, c:c + ps] += 1.0
+            count[r : r + ps, c : c + ps] += 1.0
 
         # Avoid division by zero
         count = np.maximum(count, 1.0)
@@ -276,7 +288,7 @@ class PSTNN:
         for t in range(num_frames):
             for p_idx, (r, c) in enumerate(patch_positions):
                 patch = sparse_tensor[:, p_idx, t].reshape(ps, ps)
-                output[t, r:r + ps, c:c + ps] += patch
+                output[t, r : r + ps, c : c + ps] += patch
 
             output[t] /= count
 
@@ -407,7 +419,7 @@ class PSTNN:
 
         # Move to GPU if requested
         if self.use_gpu and HAS_TORCH:
-            device = torch.device('cuda')
+            device = torch.device("cuda")
             D_tensor = torch.from_numpy(D).float().to(device)
 
             # Initialize variables
@@ -429,9 +441,7 @@ class PSTNN:
                     Z = D_tensor - T + Y_modes[k] / mu
                     Z_unf = torch.reshape(torch.moveaxis(Z, k, 0), (D.shape[k], -1))
                     # Apply partial SVT
-                    Z_svt = self._singular_value_thresholding_partial(
-                        Z_unf, 1.0 / mu, self.n_skipped_singular_values
-                    )
+                    Z_svt = self._singular_value_thresholding_partial(Z_unf, 1.0 / mu, self.n_skipped_singular_values)
                     # Fold back
                     full_shape = [D.shape[k]] + [D.shape[i] for i in range(n_modes) if i != k]
                     B_modes[k] = torch.moveaxis(torch.reshape(Z_svt, full_shape), 0, k)
@@ -484,9 +494,7 @@ class PSTNN:
                 for k in range(n_modes):
                     Z = D - T + Y_modes[k] / mu
                     Z_unf = self._unfold_tensor(Z, k)
-                    Z_svt = self._singular_value_thresholding_partial(
-                        Z_unf, 1.0 / mu, self.n_skipped_singular_values
-                    )
+                    Z_svt = self._singular_value_thresholding_partial(Z_unf, 1.0 / mu, self.n_skipped_singular_values)
                     B_modes[k] = self._fold_tensor(Z_svt, k, D.shape)
 
                 # Average the mode estimates for B

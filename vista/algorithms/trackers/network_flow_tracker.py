@@ -1,4 +1,5 @@
 """Network flow optimization tracker for VISTA"""
+
 from collections import defaultdict
 
 import numpy as np
@@ -43,12 +44,11 @@ def run_network_flow_tracker(detectors, config):
         - 'columns': numpy array of column coordinates
     """
     # Extract configuration with defaults
-    tracker_name = config.get('tracker_name', 'Network Flow Tracker')
-    max_gap = config.get('max_gap', 5)
-    max_distance = config.get('max_distance', 50.0)
-    entrance_cost = config.get('entrance_cost', 50.0)
-    exit_cost = config.get('exit_cost', 50.0)
-    min_track_length = config.get('min_track_length', 3)
+    max_gap = config.get("max_gap", 5)
+    max_distance = config.get("max_distance", 50.0)
+    entrance_cost = config.get("entrance_cost", 50.0)
+    exit_cost = config.get("exit_cost", 50.0)
+    min_track_length = config.get("min_track_length", 3)
 
     # Collect all detections with unique IDs
     all_detections = []
@@ -56,17 +56,19 @@ def run_network_flow_tracker(detectors, config):
 
     for detector in detectors:
         for i, frame in enumerate(detector.frames):
-            all_detections.append({
-                'id': detection_id,
-                'frame': frame,
-                'position': np.array([detector.columns[i], detector.rows[i]]),
-                'row': detector.rows[i],
-                'column': detector.columns[i]
-            })
+            all_detections.append(
+                {
+                    "id": detection_id,
+                    "frame": frame,
+                    "position": np.array([detector.columns[i], detector.rows[i]]),
+                    "row": detector.rows[i],
+                    "column": detector.columns[i],
+                }
+            )
             detection_id += 1
 
     # Sort by frame
-    all_detections.sort(key=lambda x: x['frame'])
+    all_detections.sort(key=lambda x: x["frame"])
 
     if len(all_detections) == 0:
         # No detections, return empty list
@@ -75,9 +77,7 @@ def run_network_flow_tracker(detectors, config):
     # Build detection index by frame for fast lookup
     detections_by_frame = defaultdict(list)
     for det in all_detections:
-        detections_by_frame[det['frame']].append(det)
-
-    frames = sorted(detections_by_frame.keys())
+        detections_by_frame[det["frame"]].append(det)
 
     # Build graph edges with costs
     # Edge types: (1) detection-to-detection, (2) source-to-detection, (3) detection-to-sink
@@ -89,14 +89,14 @@ def run_network_flow_tracker(detectors, config):
             if i >= j:
                 continue
 
-            frame_gap = det_j['frame'] - det_i['frame']
+            frame_gap = det_j["frame"] - det_i["frame"]
 
             # Only consider forward temporal associations within max_gap
             if frame_gap <= 0 or frame_gap > max_gap:
                 continue
 
             # Compute spatial distance
-            distance = np.linalg.norm(det_j['position'] - det_i['position'])
+            distance = np.linalg.norm(det_j["position"] - det_i["position"])
 
             # Skip if too far (likely not same object)
             if distance > max_distance * frame_gap:
@@ -111,25 +111,25 @@ def run_network_flow_tracker(detectors, config):
 
             # Smoothness penalty: penalize velocity changes (encourages straight paths)
             # Compute velocity from det_i to det_j
-            velocity_ij = (det_j['position'] - det_i['position']) / frame_gap
+            velocity_ij = (det_j["position"] - det_i["position"]) / frame_gap
 
             # Look for detections before det_i to check velocity consistency
             min_velocity_change = None
             for k, det_k in enumerate(all_detections):
-                if det_k['frame'] >= det_i['frame']:
+                if det_k["frame"] >= det_i["frame"]:
                     continue  # Only look at earlier frames
 
-                frame_gap_ki = det_i['frame'] - det_k['frame']
+                frame_gap_ki = det_i["frame"] - det_k["frame"]
                 if frame_gap_ki > max_gap or frame_gap_ki == 0:
                     continue
 
                 # Check if det_k could be part of the same track as det_i
-                distance_ki = np.linalg.norm(det_i['position'] - det_k['position'])
+                distance_ki = np.linalg.norm(det_i["position"] - det_k["position"])
                 if distance_ki > max_distance * frame_gap_ki:
                     continue
 
                 # Compute velocity from det_k to det_i
-                velocity_ki = (det_i['position'] - det_k['position']) / frame_gap_ki
+                velocity_ki = (det_i["position"] - det_k["position"]) / frame_gap_ki
 
                 # Compute velocity change (acceleration)
                 velocity_change = np.linalg.norm(velocity_ij - velocity_ki)
@@ -143,33 +143,39 @@ def run_network_flow_tracker(detectors, config):
 
             cost = -link_benefit + distance_penalty + gap_penalty + smoothness_penalty
 
-            edges.append({
-                'from': det_i['id'],
-                'to': det_j['id'],
-                'cost': cost,
-                'type': 'link'
-            })
+            edges.append(
+                {
+                    "from": det_i["id"],
+                    "to": det_j["id"],
+                    "cost": cost,
+                    "type": "link",
+                }
+            )
 
     # 2. Source-to-detection edges (track initiation)
     # Use entrance_cost as-is (positive)
     # The cost should be large enough that linking is preferred over starting new tracks
     for det in all_detections:
-        edges.append({
-            'from': 'source',
-            'to': det['id'],
-            'cost': entrance_cost,
-            'type': 'entrance'
-        })
+        edges.append(
+            {
+                "from": "source",
+                "to": det["id"],
+                "cost": entrance_cost,
+                "type": "entrance",
+            }
+        )
 
     # 3. Detection-to-sink edges (track termination)
     # Use exit_cost as-is (positive)
     for det in all_detections:
-        edges.append({
-            'from': det['id'],
-            'to': 'sink',
-            'cost': exit_cost,
-            'type': 'exit'
-        })
+        edges.append(
+            {
+                "from": det["id"],
+                "to": "sink",
+                "cost": exit_cost,
+                "type": "exit",
+            }
+        )
 
     # Solve minimum-cost flow using successive shortest path
     # Each detection can only be used once (flow capacity = 1)
@@ -182,17 +188,17 @@ def run_network_flow_tracker(detectors, config):
             continue
 
         # Sort by frame
-        track_detections.sort(key=lambda x: x['frame'])
+        track_detections.sort(key=lambda x: x["frame"])
 
         # Extract positions and frames
-        frames_array = np.array([d['frame'] for d in track_detections], dtype=np.int_)
-        rows = np.array([d['row'] for d in track_detections])
-        columns = np.array([d['column'] for d in track_detections])
+        frames_array = np.array([d["frame"] for d in track_detections], dtype=np.int_)
+        rows = np.array([d["row"] for d in track_detections])
+        columns = np.array([d["column"] for d in track_detections])
 
         track_data = {
-            'frames': frames_array,
-            'rows': rows,
-            'columns': columns,
+            "frames": frames_array,
+            "rows": rows,
+            "columns": columns,
         }
         track_data_list.append(track_data)
 
@@ -238,7 +244,7 @@ def solve_min_cost_flow(detections, edges):
             break
 
         # Extract detections from path (exclude source and sink)
-        track_detection_ids = [node for node in path if node not in ['source', 'sink']]
+        track_detection_ids = [node for node in path if node not in ["source", "sink"]]
 
         # Skip empty paths (shouldn't happen but safety check)
         if len(track_detection_ids) == 0:
@@ -248,7 +254,7 @@ def solve_min_cost_flow(detections, edges):
         used_detections.update(track_detection_ids)
 
         # Build track from detection IDs
-        track_detections = [d for d in detections if d['id'] in track_detection_ids]
+        track_detections = [d for d in detections if d["id"] in track_detection_ids]
         if len(track_detections) > 0:
             tracks.append(track_detections)
 
@@ -275,12 +281,12 @@ def find_shortest_path(edges, used_detections):
     """
     # Build edge list excluding used detections
     valid_edges = []
-    nodes = {'source', 'sink'}
+    nodes = {"source", "sink"}
 
     for edge in edges:
-        from_node = edge['from']
-        to_node = edge['to']
-        cost = edge['cost']
+        from_node = edge["from"]
+        to_node = edge["to"]
+        cost = edge["cost"]
 
         # Skip edges involving used detections (but not source/sink)
         if from_node in used_detections or to_node in used_detections:
@@ -294,15 +300,15 @@ def find_shortest_path(edges, used_detections):
         return None
 
     # Bellman-Ford algorithm
-    distances = {node: float('inf') for node in nodes}
-    distances['source'] = 0.0
+    distances = {node: float("inf") for node in nodes}
+    distances["source"] = 0.0
     previous = {}
 
     # Relax edges V-1 times (where V = number of nodes)
     for _ in range(len(nodes) - 1):
         updated = False
         for from_node, to_node, cost in valid_edges:
-            if distances[from_node] != float('inf'):
+            if distances[from_node] != float("inf"):
                 new_dist = distances[from_node] + cost
                 if new_dist < distances[to_node]:
                     distances[to_node] = new_dist
@@ -314,15 +320,15 @@ def find_shortest_path(edges, used_detections):
             break
 
     # Check if sink is reachable
-    if distances['sink'] == float('inf'):
+    if distances["sink"] == float("inf"):
         return None
 
     # Reconstruct path
     path = []
-    node = 'sink'
+    node = "sink"
     while node in previous:
         path.append(node)
         node = previous[node]
-    path.append('source')
+    path.append("source")
     path.reverse()
     return path

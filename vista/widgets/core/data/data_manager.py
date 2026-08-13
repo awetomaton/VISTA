@@ -1,4 +1,5 @@
 """Data manager panel - coordinating panel for managing imagery, tracks, detections, and AOIs"""
+
 from PyQt6.QtCore import QSettings, pyqtSignal
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
