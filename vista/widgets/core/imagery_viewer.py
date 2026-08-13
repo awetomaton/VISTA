@@ -2119,6 +2119,9 @@ class ImageryViewer(QWidget):
             self.known_sources.remove(source)
 
     def _render_known_source(self, source):
+        # TODO: remove this function and associated functions
+        return
+    
         if self.imagery is None:
             return
 
