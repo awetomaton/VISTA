@@ -1514,8 +1514,7 @@ class VistaMainWindow(QMainWindow):
     def on_tracks_loaded(self, tracks):
         """Handle tracks loaded in background thread"""
         # Add tracks to the viewer
-        for track in tracks:
-            self.viewer.add_track(track)
+        self.viewer.add_tracks(tracks)
 
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
