@@ -32,7 +32,7 @@ class Stars(KnownSources):
             Name of the catalog to query
             Value must be one of ["Hipparcos", "Gaia"]
         """
-        super().__init__(name, "stars")
+        super().__init__(name)
         # empty SkyCoord object
         self.stars = SkyCoord(
             ra=[] * u.deg,
@@ -104,6 +104,7 @@ class Stars(KnownSources):
             equinox='J1991.25',
             obstime=Time('1991.25', format='jyear')
         )
+        self.source_types = ["star"] * len(self.stars)
         self.V_magnitudes = stars['Hpmag']
 
     def _download_gaia(self, V_max: int=7, V_min: int=-100):
@@ -165,6 +166,7 @@ class Stars(KnownSources):
             equinox='J2016.0',
             obstime=Time('2016.0', format='jyear')
         )
+        self.source_types = ["star"] * len(self.stars)
         self.V_magnitudes = stars['phot_g_mean_mag']
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:

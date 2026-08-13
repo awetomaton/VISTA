@@ -22,19 +22,24 @@ class KnownSources():
     It is expected that subclasses are implemented which contain *groups* of self-similar
     sources loaded together, i.e. an array of satellites, an array of stars, etc.
 
-    Attributes
+    Parameters
     ----------
     name : str
-        unique name of the source
-        Examples: GAIA stars, APASS stars, LEO satellites
-    source_type : str
-        type of source
-        Example: stars, satellites
+        unique name of the group of sources, stored in KnownSources.name
+        Examples: "GAIA stars", "APASS stars", "LEO satellites"
+
+    Attributes
+    ----------
+    source_types : list[str]
+        list of source types
+        Examples: ["star", "star", "star"], ["satellite", "GEO satellite", "LEO satellite"]
+    source_names : list[str]
+        list of unique names for all the sources
     """
 
-    def __init__(self, name: str, source_type: str):
+    def __init__(self, name: str):
         self.name = name
-        self.source_type = source_type
+        self.source_types = []
         self.source_names = []
         self.uuid = uuid.uuid4()
         self._plot_item = None  # reference to the actual displayed item in the viewer

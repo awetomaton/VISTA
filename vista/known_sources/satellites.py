@@ -34,7 +34,7 @@ class Satellites(KnownSources):
             File path to satellite TLE data
             Data can optionally be loaded later with the load_tle_file function
         """
-        super().__init__(name, "satellites")
+        super().__init__(name)
         self.satellites = SatrecArray([]) # empty satellites array
 
         if file_path is not None:
@@ -49,11 +49,12 @@ class Satellites(KnownSources):
         iterator = iter(lines)
         for line in iterator:
             # Check if line is a TLE header line
+            # If not, line is assumed to be the satellite common name
             if not line.startswith(('1 ', '2 ')):
                 try:
                     line1 = next(iterator)
                     line2 = next(iterator)
-                    name = f"SAT_{line1[2:7]}" # use NORAD ID as name for now
+                    name = f"{line} ({line1[2:7]})" # use common name and include NORAD ID
                     yield name, line1, line2
                 except StopIteration:
                     break  # File ended abruptly
@@ -96,6 +97,7 @@ class Satellites(KnownSources):
 
         self.source_names = list(satellites.keys())
         self.satellites = SatrecArray(list(satellites.values()))
+        self.source_types = ["satellite"] * len(self.satellites)
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
