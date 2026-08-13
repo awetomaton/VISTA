@@ -61,7 +61,14 @@ class Satellites(KnownSources):
                 try:
                     line1 = next(iterator)
                     line2 = next(iterator)
-                    name = f"{line} ({line1[2:7]})" # use common name and include NORAD ID
+                    if line.startswith(('0')):
+                        # if line starts with a 0, everything after should be a common name
+                        # but include NORAD ID as well
+                        name = f"{line[2:]} ({line1[2:7]})" 
+                    else:
+                        # otherwise, line should just be the name itself
+                        # use common name and include NORAD ID
+                        name = f"{line} ({line1[2:7]})" 
                     yield name, line1, line2
                 except StopIteration:
                     break  # File ended abruptly
