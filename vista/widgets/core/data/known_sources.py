@@ -38,7 +38,7 @@ class KnownSourcesPanel(QWidget):
         self.known_sources_table = QTableWidget()
         self.known_sources_table.setColumnCount(2)
         self.known_sources_table.setHorizontalHeaderLabels([
-            "Name", "Type of source"
+            "Name", "Types of source"
         ])
 
         # Enable row selection via vertical header
@@ -78,8 +78,8 @@ class KnownSourcesPanel(QWidget):
             name_item.setData(Qt.ItemDataRole.UserRole, source.uuid)  # Store AOI UUID
             self.known_sources_table.setItem(row, 0, name_item)
 
-            # Source Type (read-only)
-            type_text = source.source_type
+            # Source Types (read-only)
+            type_text = str(list(set(source.source_types))) # string of list of unique source types
             type_item = QTableWidgetItem(type_text)
             type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.known_sources_table.setItem(row, 1, type_item)
