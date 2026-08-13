@@ -17,6 +17,11 @@ from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 class Satellites(KnownSources):
     """
     Class to hold satellite TLE data, converting to positions as necessary
+
+    Attributes
+    ----------
+    satellites : SatrecArray
+        An sgp4 (python package) SatrecArray of satellites
     """
 
     # TODO: Don't restrict myself to TLEs only?

@@ -18,6 +18,16 @@ from typing import Union
 class Stars(KnownSources):
     """
     Class to hold star data, converting to positions as necessary
+
+    Attributes
+    ----------
+    stars : SkyCoord
+        A SkyCoord containing an array of star positions
+    V_magnitudes : NDArray
+        An array containing the magnitudes of the stars
+        These are *not* necessarily in the V band, as every survey is slightly
+        different, but when applicable it contains magnitudes in some ~visual band
+        E.g., Hipparcos Hp, Gaia G
     """
 
     def __init__(self, name: str, catalog: Union[str, None] = None):
