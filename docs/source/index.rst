@@ -70,6 +70,7 @@ Documentation Contents
    user_guide/detections
    user_guide/tracks
    user_guide/interface
+   user_guide/known_sources
 
 .. toctree::
    :maxdepth: 2
@@ -82,6 +83,7 @@ Documentation Contents
    api/transforms
    api/sensors
    api/widgets
+   api/known_sources
 
 .. toctree::
    :maxdepth: 2
