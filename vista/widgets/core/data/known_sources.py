@@ -1,22 +1,21 @@
 """Known Sources panel for data manager"""
 
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QHeaderView, QHBoxLayout, QPushButton, QTableWidget, 
-    QTableWidgetItem, QVBoxLayout, QWidget, QMessageBox
+    QTableWidgetItem, QVBoxLayout, QMessageBox
 )
 
+from vista.widgets.core.data.data_panel import DataPanel
 
-class KnownSourcesPanel(QWidget):
+
+class KnownSourcesPanel(DataPanel):
     """Panel for managing Known Sources"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
-
     def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
-        self.settings = QSettings('VISTA', 'VISTA')
+        super().__init__(viewer)
+        self.settings = QSettings('VISTA', 'DataManager')
         self.init_ui()
 
     def init_ui(self):

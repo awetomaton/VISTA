@@ -144,6 +144,7 @@ class VistaMainWindow(QMainWindow):
             self.data_manager.detections_panel,
             self.data_manager.aois_panel,
             self.data_manager.features_panel,
+            self.data_manager.known_sources_panel,
         ):
             panel.status_message.connect(self.statusBar().showMessage)
 
