@@ -568,7 +568,7 @@ class DataLoaderThread(QThread):
 
         # Name for the satellites object is just the filename
         name = Path(self.file_path).stem
-        satellites = Satellites(name, self.file_path)
+        satellites = Satellites(name, file_path=self.file_path)
 
         # Emit the created satellites
         self.satellites_loaded.emit(satellites)
@@ -584,7 +584,7 @@ class DataLoaderThread(QThread):
         self.stars_loaded.emit(stars)
 
     def _load_solar_system_bodies_astropy(self):
-        """Load stars via astroquery"""
+        """Load solar system bodies via astropy"""
 
         bodies = SolarSystemBodies()
 
