@@ -1,22 +1,20 @@
-"""Base source class for known sources like stars, planets, asteroids, satellites, etc.
+"""Base source class for known sources like stars, planets, asteroids, satellites, etc."""
 
+import uuid
+from typing import Tuple, Union
 
-"""
+import numpy as np
+from astropy import units as u
+from astropy.coordinates import EarthLocation
+from astropy.time import Time
+from numpy.typing import NDArray
 
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 from vista.transforms.earth_intersection import los_to_earth
 
-from astropy.coordinates import EarthLocation
-from astropy.time import Time
-from astropy import units as u
-import numpy as np
-from numpy.typing import NDArray
-from typing import Tuple, Union
-import uuid
 
-
-class KnownSources():
+class KnownSources:
     """
     Base class for known sources like stars, planets, asteroids, satellites, etc.
     It is expected that subclasses are implemented which contain *groups* of self-similar
@@ -44,8 +42,8 @@ class KnownSources():
         self.uuid = uuid.uuid4()
 
         # parameters for Tracks
-        self._color = 'g'
-        self._marker = 'o'
+        self._color = "g"
+        self._marker = "o"
         self._marker_size = 5
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
@@ -57,7 +55,7 @@ class KnownSources():
         ----------
         times : np.datetime64 | NDArray[np.datetime64] | astropy.time.Time
             Time or array of times for which to retrieve positions
-            
+
         Returns
         -------
         EarthLocation
@@ -76,7 +74,7 @@ class KnownSources():
             The imagery we want to project the source onto
         frame : int, NDArray
             The frame number(s) to project onto
-        
+
         Returns
         -------
         rows : NDArray
@@ -84,7 +82,7 @@ class KnownSources():
         cols : NDArray
             Column coordinates of source positions in the frame(s)
         """
-        sensor = imagery.sensor # get the imagery sensor
+        sensor = imagery.sensor  # get the imagery sensor
 
         # get times for the desired frame(s)
         _, times = sensor.get_imagery_frames_and_times()
@@ -151,7 +149,7 @@ class KnownSources():
         ----------
         imagery: Imagery
             The imagery we want to create tracks for
-        
+
         Returns
         -------
         tracks : list[Tracks]
@@ -172,11 +170,19 @@ class KnownSources():
         columns = np.array(columns).T
 
         for source, source_type, row, column in zip(self.source_names, self.source_types, rows, columns):
-            slices = self._get_slices(row) # columns should have the same valid slices
+            slices = self._get_slices(row)  # columns should have the same valid slices
             for slice in slices:
-                track = Track(name=source, frames=imagery.frames[slice], 
-                              rows=row[slice], columns=column[slice], sensor=imagery.sensor,
-                              color=self._color, marker=self._marker, marker_size=self._marker_size,
-                              tracker=self.name, labels={source_type})
+                track = Track(
+                    name=source,
+                    frames=imagery.frames[slice],
+                    rows=row[slice],
+                    columns=column[slice],
+                    sensor=imagery.sensor,
+                    color=self._color,
+                    marker=self._marker,
+                    marker_size=self._marker_size,
+                    tracker=self.name,
+                    labels={source_type},
+                )
                 tracks.append(track)
         return tracks

@@ -12,8 +12,8 @@ from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.known_sources.satellites import Satellites
-from vista.known_sources.stars import Stars
 from vista.known_sources.solar_system_bodies import SolarSystemBodies
+from vista.known_sources.stars import Stars
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
@@ -56,7 +56,7 @@ class DataLoaderThread(QThread):
         data_type : str
             Type of data to load ('imagery', 'detections', 'tracks', 'aois', 'satellites', 'stars', 'solar system bodies')
         file_format : str, optional
-            Format of the file ('hdf5', 'csv', 'tle', or 'txt'), by default 'hdf5'
+            Format of the file ('hdf5', 'csv', or 'tle'), by default 'hdf5'
         sensor : Sensor, optional
             Optional Sensor object for track/detection association and geodetic mapping, by default None
         imagery : Imagery, optional

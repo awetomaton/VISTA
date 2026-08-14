@@ -1,15 +1,15 @@
-"""Class for solar system bodies (planets, moons)
+"""Class for solar system bodies (planets, moons)"""
 
-"""
+from typing import Union
+
+import numpy as np
+from astropy import units as u
+from astropy.coordinates import ITRS, EarthLocation, get_body
+from astropy.time import Time
+from numpy.typing import NDArray
 
 from .known_sources import KnownSources
 
-from astropy.coordinates import EarthLocation, ITRS, get_body
-from astropy.time import Time
-from astropy import units as u
-import numpy as np
-from numpy.typing import NDArray
-from typing import Union
 
 class SolarSystemBodies(KnownSources):
     """
@@ -25,14 +25,11 @@ class SolarSystemBodies(KnownSources):
         """
         super().__init__("Solar system bodies")
 
-        self.source_names = [
-            'Mercury', 'Venus', 'Mars', 'Jupiter', 
-            'Saturn', 'Uranus', 'Neptune'
-        ]
-        self.source_types = ['planet'] * len(self.source_names)
+        self.source_names = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"]
+        self.source_types = ["planet"] * len(self.source_names)
 
-        self._color = 'b'
-        self._marker = 't1'
+        self._color = "b"
+        self._marker = "t1"
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
@@ -42,7 +39,7 @@ class SolarSystemBodies(KnownSources):
         ----------
         times : np.datetime64 | NDArray[np.datetime64] | astropy.time.Time
             Time or array of times for which to retrieve positions
-            
+
         Returns
         -------
         EarthLocation
@@ -58,6 +55,6 @@ class SolarSystemBodies(KnownSources):
         ecef_coords = np.array(source_positions)
         # array of shape (3, num_sources, time)
         ecef_coords = np.moveaxis(ecef_coords, 1, 0)
-        
+
         # unpack into xyz arguments
         return EarthLocation(*ecef_coords * u.km)

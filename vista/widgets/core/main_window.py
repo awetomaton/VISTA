@@ -1882,9 +1882,7 @@ class VistaMainWindow(QMainWindow):
         # Get last used directory from settings
         last_dir = self.settings.value("last_satellites_dir", "")
 
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "Load Satellites", last_dir, "TLE Files (*.tle *.txt)"
-        )
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Satellites", last_dir, "TLE Files (*.tle *.txt)")
 
         if file_paths:
             # Save the directory for next time
@@ -1917,7 +1915,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.satellites_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, 'satellites', 'tle')
+        self.loader_thread = DataLoaderThread(file_path, "satellites", "tle")
         self.loader_thread.satellites_loaded.connect(self.on_satellites_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -1968,7 +1966,7 @@ class VistaMainWindow(QMainWindow):
     # do both? pick one?
     def load_stars_astroquery(self, catalog):
         """Load stars via Astroquery"""
-        
+
         # Ensure any previous loader thread has finished before starting a new one
         if self.loader_thread is not None and self.loader_thread.isRunning():
             self.loader_thread.wait()
@@ -1976,7 +1974,7 @@ class VistaMainWindow(QMainWindow):
         # Create and start loader thread
         # loading via astroquery has no file type
         # but we use the catalog name as the file path
-        self.loader_thread = DataLoaderThread(catalog, 'stars', None)
+        self.loader_thread = DataLoaderThread(catalog, "stars", None)
         self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -2005,7 +2003,7 @@ class VistaMainWindow(QMainWindow):
         self.on_loading_finished()
 
         # Update status with total count
-        self.statusBar().showMessage(f"Loaded Stars via astroquery", 3000)
+        self.statusBar().showMessage("Loaded Stars via astroquery", 3000)
 
     def on_stars_loaded(self, stars):
         """Handle Stars loaded in background thread"""
@@ -2019,14 +2017,14 @@ class VistaMainWindow(QMainWindow):
 
     def load_solar_system_bodies_astropy(self):
         """Load solar system bodies via Astropy"""
-                
+
         # Ensure any previous loader thread has finished before starting a new one
         if self.loader_thread is not None and self.loader_thread.isRunning():
             self.loader_thread.wait()
 
         # Create and start loader thread
         # loading via astropy has no file path or type
-        self.loader_thread = DataLoaderThread(None, 'solar system bodies', None)
+        self.loader_thread = DataLoaderThread(None, "solar system bodies", None)
         self.loader_thread.solar_system_bodies_loaded.connect(self.on_solar_system_bodies_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -2055,7 +2053,7 @@ class VistaMainWindow(QMainWindow):
         self.on_loading_finished()
 
         # Update status with total count
-        self.statusBar().showMessage(f"Loaded Solar System Bodies via astropy", 3000)
+        self.statusBar().showMessage("Loaded Solar System Bodies via astropy", 3000)
 
     def on_solar_system_bodies_loaded(self, bodies):
         """Handle SolarSystemBodies loaded in background thread"""

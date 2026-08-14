@@ -1,17 +1,15 @@
-"""Class for satellites
+"""Class for satellites"""
 
+from typing import Union
 
-"""
+import numpy as np
+from astropy import units as u
+from astropy.coordinates import ITRS, TEME, EarthLocation, SkyCoord
+from astropy.time import Time
+from numpy.typing import NDArray
+from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 from .known_sources import KnownSources
-
-from astropy.coordinates import EarthLocation, ITRS, SkyCoord, TEME
-from astropy.time import Time
-from astropy import units as u
-import numpy as np
-from numpy.typing import NDArray
-from typing import Union
-from sgp4.api import Satrec, SatrecArray, SGP4_ERRORS
 
 
 class Satellites(KnownSources):
@@ -40,35 +38,35 @@ class Satellites(KnownSources):
             Data can optionally be loaded later with the load_tle_file function
         """
         super().__init__(name)
-        self.satellites = SatrecArray([]) # empty satellites array
+        self.satellites = SatrecArray([])  # empty satellites array
 
         if file_path is not None:
             self.load_tle_file(file_path)
 
-        self._marker = 'x'
+        self._marker = "x"
 
     def _parse_tle_blocks(self, lines):
         """Generates (name, line1, line2) tuples from raw TLE lines."""
         # TODO: decide what format to use for names
         # or does it even matter what they are in the dictionary?
         # i.e., actual names or just ID numbers?
-        
+
         iterator = iter(lines)
         for line in iterator:
             # Check if line is a TLE header line
             # If not, line is assumed to contain the satellite common name
-            if not line.startswith(('1 ', '2 ')):
+            if not line.startswith(("1 ", "2 ")):
                 try:
                     line1 = next(iterator)
                     line2 = next(iterator)
-                    if line.startswith(('0')):
+                    if line.startswith(("0 ")):
                         # if line starts with a 0, everything after should be a common name
                         # but include NORAD ID as well
-                        name = f"{line[2:]} ({line1[2:7]})" 
+                        name = f"{line[2:]} ({line1[2:7]})"
                     else:
                         # otherwise, line should just be the name itself
                         # use common name and include NORAD ID
-                        name = f"{line} ({line1[2:7]})" 
+                        name = f"{line} ({line1[2:7]})"
                     yield name, line1, line2
                 except StopIteration:
                     break  # File ended abruptly
@@ -77,7 +75,7 @@ class Satellites(KnownSources):
                 try:
                     line1 = line
                     line2 = next(iterator)
-                    name = f"SAT_{line1[2:7]}" # use NORAD ID as name for now
+                    name = f"SAT_{line1[2:7]}"  # use NORAD ID as name for now
                     yield name, line1, line2
                 except StopIteration:
                     break
@@ -92,20 +90,20 @@ class Satellites(KnownSources):
             File path to satellite TLE data
         """
         satellites = {}
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
+
+        with open(file_path, "r", encoding="utf-8") as f:
             # Strip lines and ignore blanks
             lines = [line.strip() for line in f if line.strip()]
-            
+
         for name, l1, l2 in self._parse_tle_blocks(lines):
             # Ensure TLE lines are actually valid
-            if not (l1.startswith('1 ') and l2.startswith('2 ')):
+            if not (l1.startswith("1 ") and l2.startswith("2 ")):
                 raise ValueError(f"Misaligned TLE block for: {name}")
 
             # Ensure no duplicates in the TLE file
             if name in satellites:
                 raise ValueError(f"Satellite {name} is duplicated in the TLE file")
-            
+
             sat = Satrec.twoline2rv(l1, l2)
             satellites[name] = sat
 
@@ -121,7 +119,7 @@ class Satellites(KnownSources):
         ----------
         times : np.datetime64 | NDArray[np.datetime64] | astropy.time.Time
             Time or array of times for which to retrieve positions
-            
+
         Returns
         -------
         EarthLocation
@@ -140,14 +138,20 @@ class Satellites(KnownSources):
         # or even better, raise a window to the user so they know to load a different file
         # alternatively, just remove those satellites with error codes?
         if np.any(e != 0):
-            raise ValueError(f"Error propogating SGP4 positions")
+            raise ValueError("Error propogating SGP4 positions")
 
         # now remove extra dimensions if time was single value
         r = np.squeeze(r)
 
         # SGP4 provides satellite True Equator Mean Equinox coordinates...
-        teme_coords = SkyCoord(x = r[..., 0] * u.km, y = r[..., 1] * u.km, z = r[..., 2] * u.km, 
-                               obstime = times, frame=TEME, representation_type='cartesian')
+        teme_coords = SkyCoord(
+            x=r[..., 0] * u.km,
+            y=r[..., 1] * u.km,
+            z=r[..., 2] * u.km,
+            obstime=times,
+            frame=TEME,
+            representation_type="cartesian",
+        )
         # ...which we transform to ITRS (ECEF) coordinates
         ecef_coords = teme_coords.transform_to(ITRS(obstime=times))
 

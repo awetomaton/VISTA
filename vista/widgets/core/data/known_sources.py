@@ -1,10 +1,15 @@
 """Known Sources panel for data manager"""
 
-from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QHeaderView, QHBoxLayout, QPushButton, QTableWidget, 
-    QTableWidgetItem, QVBoxLayout, QMessageBox
+    QHBoxLayout,
+    QHeaderView,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
 )
 
 from vista.widgets.core.data.data_panel import DataPanel
@@ -15,7 +20,7 @@ class KnownSourcesPanel(DataPanel):
 
     def __init__(self, viewer):
         super().__init__(viewer)
-        self.settings = QSettings('VISTA', 'DataManager')
+        self.settings = QSettings("VISTA", "DataManager")
         self.init_ui()
 
     def init_ui(self):
@@ -42,9 +47,7 @@ class KnownSourcesPanel(DataPanel):
         # Known Sources table
         self.known_sources_table = QTableWidget()
         self.known_sources_table.setColumnCount(2)
-        self.known_sources_table.setHorizontalHeaderLabels([
-            "Name", "Types of source"
-        ])
+        self.known_sources_table.setHorizontalHeaderLabels(["Name", "Types of source"])
 
         # Enable row selection via vertical header
         self.known_sources_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -84,7 +87,7 @@ class KnownSourcesPanel(DataPanel):
             self.known_sources_table.setItem(row, 0, name_item)
 
             # Source Types (read-only)
-            type_text = str(list(set(source.source_types))) # string of list of unique source types
+            type_text = str(list(set(source.source_types)))  # string of list of unique source types
             type_item = QTableWidgetItem(type_text)
             type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.known_sources_table.setItem(row, 1, type_item)
@@ -114,10 +117,10 @@ class KnownSourcesPanel(DataPanel):
         # early return if no sources selected
         if not selected_rows:
             return
-        
+
         # early return if no imagery selected
         if self.viewer.imagery is None:
-            QMessageBox.warning(self, "No Imagery", f"Please load Imagery before creating Tracks.")
+            QMessageBox.warning(self, "No Imagery", "Please load Imagery before creating Tracks.")
             return
 
         # Collect Known Sources from selected rows
@@ -142,7 +145,7 @@ class KnownSourcesPanel(DataPanel):
         # Get the tracks panel from the parent data manager
         parent_widget = self.parent()
         while parent_widget is not None:
-            if hasattr(parent_widget, 'tracks_panel'):
+            if hasattr(parent_widget, "tracks_panel"):
                 parent_widget.tracks_panel.refresh_tracks_table()
                 break
             parent_widget = parent_widget.parent()
@@ -150,8 +153,7 @@ class KnownSourcesPanel(DataPanel):
         self.data_changed.emit()
 
         QMessageBox.information(
-            self, "Tracks Created",
-            f"Created {total_tracks} Track(s) from {len(known_sources)} Known Source(s)."
+            self, "Tracks Created", f"Created {total_tracks} Track(s) from {len(known_sources)} Known Source(s)."
         )
 
     def delete_selected_known_sources(self):
