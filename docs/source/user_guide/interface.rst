@@ -107,6 +107,14 @@ Work with features and annotations:
 * Add properties and labels
 * Export feature data
 
+Known Sources Panel
+~~~~~~~~~~~~~~~~~~~
+
+Manage known sources:
+
+* Delete loaded sources
+* Create tracks for selected sources in the currently selected imagery
+
 Playback Controls
 -----------------
 
@@ -140,6 +148,7 @@ File Menu
 * **Load AOIs (CSV)**: Load areas of interest from a CSV file
 * **Load Shapefiles**: Load shapefile overlays (``.shp``)
 * **Load Placemarks (CSV)**: Load placemark features from a CSV file
+* **Load Known Sources**: Load known sources
 * **Simulate**: Generate synthetic imagery, detections, and tracks using the built-in simulator
 * **Save Imagery (HDF5)**: Save the selected imagery to an HDF5 file in version 1.7 format
 * **Clear Overlays**: Remove all loaded detections, tracks, AOIs, and features from the viewer
