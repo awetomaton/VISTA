@@ -4,7 +4,6 @@
 """
 
 from vista.imagery.imagery import Imagery
-from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 from vista.transforms.earth_intersection import los_to_earth
 
@@ -51,8 +50,8 @@ class KnownSources():
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
-        Return an EarthLocation containing the position(s) of the source at the provided time(s)
-        Subclasses should implement this function based on the source type
+        Return an EarthLocation containing the positions of the sources at the provided time(s)
+        Subclasses should implement this function based on the source types
 
         Parameters
         ----------
@@ -66,15 +65,13 @@ class KnownSources():
         """
         raise NotImplementedError
 
-    def get_pixels(self, sensor: Sensor, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
+    def get_pixels(self, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
-        Return the pixel positions of the source for the provided sensor, imagery, and frame number(s)
+        Return the pixel positions of the source for the provided imagery and frame number(s)
         Sources which are off-frame or behind the Earth have NaN locations
 
         Parameters
         ----------
-        sensor : Sensor
-            The sensor whose imagery we want to project the source onto
         imagery: Imagery
             The imagery we want to project the source onto
         frame : int, NDArray
@@ -87,6 +84,8 @@ class KnownSources():
         cols : NDArray
             Column coordinates of source positions in the frame(s)
         """
+        sensor = imagery.sensor # get the imagery sensor
+
         # get times for the desired frame(s)
         _, times = sensor.get_imagery_frames_and_times()
         times = times[frame]
@@ -164,7 +163,7 @@ class KnownSources():
         rows = []
         columns = []
         for frame in imagery.frames:
-            r, c = self.get_pixels(imagery.sensor, imagery, frame)
+            r, c = self.get_pixels(imagery, frame)
             rows.append(r)
             columns.append(c)
         # after looping over frames, rows and columns have shape (num_frames, num_sources)
