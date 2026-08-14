@@ -22,9 +22,9 @@ class Stars(KnownSources):
     stars : SkyCoord
         A SkyCoord containing an array of star positions
     V_magnitudes : NDArray
-        An array containing the magnitudes of the stars
+        An array containing the magnitudes of the stars.
         These are *not* necessarily in the V band, as every survey is slightly
-        different, but when applicable it contains magnitudes in some ~visual band
+        different, but when applicable it contains magnitudes in some ~visual band.
         E.g., Hipparcos Hp, Gaia G
     """
 
@@ -37,7 +37,7 @@ class Stars(KnownSources):
         name : str
             Name of the Stars object (e.g. 'Hipparcos stars', 'Gaia stars', etc.)
         catalog : str, None
-            Name of the catalog to query
+            Name of the catalog to query.
             Value must be one of ["Hipparcos", "Gaia"]
         """
         super().__init__(name)
@@ -66,7 +66,7 @@ class Stars(KnownSources):
     def _download_hipparcos(self, V_max: int = 7, V_min: int = -10):
         """
         Queries Hipparcos for all-sky stars brighter than V_max and fainter than V_min
-            (values are magnitudes in the Hipparcos Hp band)
+        (values are magnitudes in the Hipparcos Hp band)
 
         Parameters
         ----------
@@ -123,7 +123,7 @@ class Stars(KnownSources):
     def _download_gaia(self, V_max: int = 7, V_min: int = -10):
         """
         Queries Gaia for all-sky stars brighter than V_max and fainter than V_min
-            (values are magnitudes in the Gaia G band)
+        (values are magnitudes in the Gaia G band)
 
         Parameters
         ----------

@@ -17,19 +17,20 @@ from vista.transforms.earth_intersection import los_to_earth
 class KnownSources:
     """
     Base class for known sources like stars, planets, asteroids, satellites, etc.
+    
     It is expected that subclasses are implemented which contain *groups* of self-similar
     sources loaded together, i.e. an array of satellites, an array of stars, etc.
 
     Parameters
     ----------
     name : str
-        unique name of the group of sources, stored in KnownSources.name
+        unique name of the group of sources, stored in KnownSources.name.
         Examples: "GAIA stars", "APASS stars", "LEO satellites"
 
     Attributes
     ----------
     source_types : list[str]
-        list of source types
+        list of source types.
         Examples: ["star", "star", "star"], ["satellite", "GEO satellite", "LEO satellite"]
     source_names : list[str]
         list of unique names for all the sources
@@ -48,7 +49,7 @@ class KnownSources:
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
-        Return an EarthLocation containing the positions of the sources at the provided time(s)
+        Return an EarthLocation containing the positions of the sources at the provided time(s).
         Subclasses should implement this function based on the source types
 
         Parameters
@@ -65,7 +66,7 @@ class KnownSources:
 
     def get_pixels(self, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
         """
-        Return the pixel positions of the source for the provided imagery and frame number(s)
+        Return the pixel positions of the source for the provided imagery and frame number(s).
         Sources which are off-frame or behind the Earth have NaN locations
 
         Parameters
@@ -123,7 +124,7 @@ class KnownSources:
 
     def _get_slices(self, values):
         """
-        Given a list of values, find the slices that give groupings of non-nan values
+        Given a list of values, find the slices that give groupings of non-nan values.
         e.g.,   given [nan, 2, 3, nan, 5, 6, 7, nan, 9, nan],
                 return [[1:3], [4:7], [8:9]]
         """
@@ -141,8 +142,8 @@ class KnownSources:
 
     def create_tracks(self, imagery: Imagery) -> list[Track]:
         """
-        Create a list of Tracks for the sources for the provided imagery
-        Ignores positions which are off-frame or behind the Earth
+        Create a list of Tracks for the sources for the provided imagery.
+        Ignores positions which are off-frame or behind the Earth.
         Sources which reappear after passing behind the Earth will therefore have multiple tracks
 
         Parameters

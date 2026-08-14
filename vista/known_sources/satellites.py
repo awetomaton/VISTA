@@ -34,7 +34,7 @@ class Satellites(KnownSources):
         name : str
             Name of the Satellites object (e.g. 'LEO satellites', 'GEO satellites', etc.)
         file_path : str, optional
-            File path to satellite TLE data
+            File path to satellite TLE data.
             Data can optionally be loaded later with the load_tle_file function
         """
         super().__init__(name)
