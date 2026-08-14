@@ -92,11 +92,6 @@ class KnownSourcesPanel(QWidget):
 
         self.known_sources_table.blockSignals(False)
 
-        # Select rows for Known Sources that are marked as selected
-        for row, source in enumerate(self.viewer.known_sources):
-            if hasattr(source, '_selected') and source._selected:
-                self.known_sources_table.selectRow(row)
-
     def on_known_sources_cell_changed(self, row, column):
         """Handle Known Source cell changes"""
         if column == 0:  # Name column
