@@ -56,7 +56,7 @@ class Satellites(KnownSources):
         iterator = iter(lines)
         for line in iterator:
             # Check if line is a TLE header line
-            # If not, line is assumed to be the satellite common name
+            # If not, line is assumed to contain the satellite common name
             if not line.startswith(('1 ', '2 ')):
                 try:
                     line1 = next(iterator)

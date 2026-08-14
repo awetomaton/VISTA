@@ -65,16 +65,16 @@ class Stars(KnownSources):
         self._color = 'y'
         self._marker = 'star'
 
-    def _download_hipparcos(self, V_max: int=7, V_min: int=-100):
+    def _download_hipparcos(self, V_max: int=7, V_min: int=-10):
         """
         Queries Hipparcos for all-sky stars brighter than V_max and fainter than V_min
             (values are magnitudes in the Hipparcos Hp band)
 
         Parameters
         ----------
-        V_max : int, default=5
+        V_max : int, default=7
             Faintness limit (more positive = fainter)
-        V_min : int, default=-100
+        V_min : int, default=-10
             Brightness limit (more negative = brighter)
         """
         # We get the Hipparcos ID, RA, RA proper motion, Dec, Dec proper motion,
@@ -120,16 +120,16 @@ class Stars(KnownSources):
         self.source_types = ["star"] * len(self.stars)
         self.V_magnitudes = stars['Hpmag']
 
-    def _download_gaia(self, V_max: int=7, V_min: int=-100):
+    def _download_gaia(self, V_max: int=7, V_min: int=-10):
         """
         Queries Gaia for all-sky stars brighter than V_max and fainter than V_min
             (values are magnitudes in the Gaia G band)
 
         Parameters
         ----------
-        V_max : int, default=5
+        V_max : int, default=7
             Faintness limit (more positive = fainter)
-        V_min : int, default=-100
+        V_min : int, default=-10
             Brightness limit (more negative = brighter)
         """
 
@@ -151,7 +151,7 @@ class Stars(KnownSources):
             
         # Gaia result is already the table we need
         stars = query_results
-        # fill in missing values
+        # fill in missing values where necessary
         stars['pmra'] = stars['pmra'].filled(0.0)
         stars['pmdec'] = stars['pmdec'].filled(0.0)
         stars['parallax'] = stars['parallax'].filled(0.0)
