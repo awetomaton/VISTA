@@ -1962,8 +1962,10 @@ class VistaMainWindow(QMainWindow):
 
         self.statusBar().showMessage(f"Loaded {len(satellites.source_names)} Satellite(s)", 3000)
 
-    # TODO: Handle loading stars via astroquery and/or via file input
-    # do both? pick one?
+    def load_stars_file(self):
+        # TODO: Handle loading stars via file input
+        raise NotImplementedError
+
     def load_stars_astroquery(self, catalog):
         """Load stars via Astroquery"""
 
