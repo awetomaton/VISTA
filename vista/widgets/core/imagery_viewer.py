@@ -694,7 +694,7 @@ class ImageryViewer(QWidget):
         self.update_overlays()
 
     def update_overlays(self):
-        """Update track, detection, and known sources overlays for current frame"""
+        """Update track and detection overlays for current frame"""
         # Get current frame number
         frame_num = self.current_frame_number
 
@@ -2102,7 +2102,7 @@ class ImageryViewer(QWidget):
                     self.plot_item.addItem(scatter_item)
                     feature._plot_items.append(scatter_item)
 
-    def add_known_source(self, source):
+    def add_known_source(self, source: KnownSources):
         if source not in self.known_sources:
             self.known_sources.append(source)
 
