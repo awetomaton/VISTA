@@ -47,9 +47,6 @@ class Satellites(KnownSources):
 
     def _parse_tle_blocks(self, lines):
         """Generates (name, line1, line2) tuples from raw TLE lines."""
-        # TODO: decide what format to use for names
-        # or does it even matter what they are in the dictionary?
-        # i.e., actual names or just ID numbers?
 
         iterator = iter(lines)
         for line in iterator:
@@ -59,26 +56,28 @@ class Satellites(KnownSources):
                 try:
                     line1 = next(iterator)
                     line2 = next(iterator)
-                    if line.startswith(("0 ")):
-                        # if line starts with a 0, everything after should be a common name
-                        # but include NORAD ID as well
-                        name = f"{line[2:]} ({line1[2:7]})"
-                    else:
-                        # otherwise, line should just be the name itself
-                        # use common name and include NORAD ID
-                        name = f"{line} ({line1[2:7]})"
-                    yield name, line1, line2
                 except StopIteration:
                     break  # File ended abruptly
+
+                norad_id = line1[2:7].strip()
+                if line.startswith(("0 ")):
+                    # if line starts with a 0, everything after should be a common name
+                    # but include NORAD ID as well
+                    name = f"{line[2:]} ({norad_id})"
+                else:
+                    # otherwise, line should just be the name itself
+                    # use common name and include NORAD ID
+                    name = f"{line} ({norad_id})"
             else:
                 # File is a 2-line format without names
                 try:
                     line1 = line
                     line2 = next(iterator)
-                    name = f"SAT_{line1[2:7]}"  # use NORAD ID as name for now
-                    yield name, line1, line2
+                    norad_id = line1[2:7].strip()
+                    name = f"SAT {norad_id}"  # use NORAD ID as name for now
                 except StopIteration:
                     break
+            yield name, line1, line2
 
     def load_tle_file(self, file_path: str):
         """
