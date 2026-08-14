@@ -4,7 +4,7 @@ import pathlib
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QEvent, QSettings, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
     QApplication,
@@ -39,6 +39,7 @@ from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
 from vista.widgets.algorithms.tracks.extraction_dialog import TrackExtractionDialog
+from vista.widgets.core.data.data_panel import DataPanel
 from vista.widgets.core.data.delegates import (
     ColorDelegate,
     LabelsDelegate,
@@ -286,15 +287,11 @@ class OrderByDialog(QDialog):
 _CSV_EXTENSIONS = (".csv",)
 
 
-class TracksPanel(QWidget):
+class TracksPanel(DataPanel):
     """Panel for managing tracks"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
-    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
-
     def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
         self.settings = QSettings("VISTA", "DataManager")
 
         # Track plot windows (multiple windows allowed)
@@ -2470,35 +2467,21 @@ class TracksPanel(QWidget):
 
             # Start track editing mode
             self.viewer.start_track_editing(track)
-            # Update main window status
-            if hasattr(self.parent(), "parent"):
-                main_window = self.parent().parent()
-                if hasattr(main_window, "statusBar"):
-                    main_window.statusBar().showMessage(
-                        f"Track editing mode: Click on frames to add/move track points for '{track.name}'. Uncheck 'Edit Track' when finished.",
-                        0,
-                    )
+            self.status_message.emit(
+                f"Track editing mode: Click on frames to add/move track points for '{track.name}'. "
+                "Uncheck 'Edit Track' when finished.",
+                0,
+            )
         else:
             # Finish track editing
             edited_track = self.viewer.finish_track_editing()
             if edited_track:
-                # Refresh the panel (need to access parent's refresh method)
-                parent = self.parent()
-                if parent and hasattr(parent, "refresh"):
-                    parent.refresh()
-                # Update main window status
-                if hasattr(self.parent(), "parent"):
-                    main_window = self.parent().parent()
-                    if hasattr(main_window, "statusBar"):
-                        main_window.statusBar().showMessage(
-                            f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points", 3000
-                        )
+                self.refresh_tracks_table()
+                self.status_message.emit(
+                    f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points", 3000
+                )
             else:
-                # Update main window status
-                if hasattr(self.parent(), "parent"):
-                    main_window = self.parent().parent()
-                    if hasattr(main_window, "statusBar"):
-                        main_window.statusBar().showMessage("Track editing cancelled", 3000)
+                self.status_message.emit("Track editing cancelled", 3000)
 
     def manage_labels(self):
         """Open the labels manager dialog"""
@@ -2617,9 +2600,7 @@ class TracksPanel(QWidget):
             self.on_view_extraction_clicked(True)
 
         # Show status message
-        main_window = self.window()
-        if hasattr(main_window, "statusBar"):
-            main_window.statusBar().showMessage(f"Successfully extracted {len(tracks)} track(s)", 3000)
+        self.status_message.emit(f"Successfully extracted {len(tracks)} track(s)", 3000)
 
     def on_view_extraction_clicked(self, checked):
         """Handle View Extraction button click"""
@@ -2661,20 +2642,15 @@ class TracksPanel(QWidget):
                 self.view_extraction_btn.setChecked(False)
                 return
 
-            # Update main window status
-            if hasattr(main_window, "statusBar"):
-                main_window.statusBar().showMessage(
-                    f"Viewing extraction for '{track.name}'. Signal pixels shown in red. Uncheck 'View Extraction' when finished.",
-                    0,
-                )
+            self.status_message.emit(
+                f"Viewing extraction for '{track.name}'. Signal pixels shown in red. "
+                "Uncheck 'View Extraction' when finished.",
+                0,
+            )
         else:
             # Finish extraction viewing
             self.viewer.finish_extraction_viewing()
-
-            # Update main window status
-            main_window = self.window()
-            if hasattr(main_window, "statusBar"):
-                main_window.statusBar().showMessage("Extraction viewing ended", 3000)
+            self.status_message.emit("Extraction viewing ended", 3000)
 
     def on_edit_extraction_clicked(self, checked):
         """Handle Edit Extraction button click"""
@@ -2733,12 +2709,11 @@ class TracksPanel(QWidget):
                 self.edit_extraction_btn.setChecked(False)
                 return
 
-            # Update main window status
-            if hasattr(main_window, "statusBar"):
-                main_window.statusBar().showMessage(
-                    f"Editing extraction for '{track.name}'. Click to paint/erase signal pixels. Use the editor panel to adjust settings.",
-                    0,
-                )
+            self.status_message.emit(
+                f"Editing extraction for '{track.name}'. Click to paint/erase signal pixels. "
+                "Use the editor panel to adjust settings.",
+                0,
+            )
         else:
             # Finish extraction editing
             self.viewer.finish_extraction_editing()
@@ -2746,11 +2721,7 @@ class TracksPanel(QWidget):
             # Refresh the table to update SNR if changed
             self.refresh_tracks_table()
             self.data_changed.emit()
-
-            # Update main window status
-            main_window = self.window()
-            if hasattr(main_window, "statusBar"):
-                main_window.statusBar().showMessage("Extraction editing ended", 3000)
+            self.status_message.emit("Extraction editing ended", 3000)
 
     def on_extraction_editing_ended(self):
         """Handle extraction editing ended signal from viewer"""

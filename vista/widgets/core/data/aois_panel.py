@@ -3,7 +3,7 @@
 import pathlib
 
 import pandas as pd
-from PyQt6.QtCore import QSettings, Qt, pyqtSignal
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFileDialog,
@@ -15,18 +15,16 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
+from vista.widgets.core.data.data_panel import DataPanel
 
-class AOIsPanel(QWidget):
+
+class AOIsPanel(DataPanel):
     """Panel for managing Areas of Interest (AOIs)"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
-
     def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
         self.settings = QSettings("VISTA", "VISTA")
         self.init_ui()
 

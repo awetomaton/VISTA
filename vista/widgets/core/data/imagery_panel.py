@@ -15,20 +15,18 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.imagery.imagery import HAS_TORCH
+from vista.widgets.core.data.data_panel import DataPanel
 
 _HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 
-class ImageryPanel(QWidget):
+class ImageryPanel(DataPanel):
     """Panel for managing imagery"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
     cancel_loading_requested = pyqtSignal(object)  # Emits imagery UUID to cancel loading
-    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
 
     def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
         self.init_ui()
 
     def init_ui(self):

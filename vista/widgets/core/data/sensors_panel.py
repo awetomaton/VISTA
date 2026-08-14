@@ -9,23 +9,21 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
+
+from vista.widgets.core.data.data_panel import DataPanel
 
 _HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 
-class SensorsPanel(QWidget):
+class SensorsPanel(DataPanel):
     """Panel for managing sensors"""
 
-    data_changed = pyqtSignal()  # Signal when data is modified
     sensor_selected = pyqtSignal(object)  # Signal when sensor selection changes
     cancel_sensor_loading_requested = pyqtSignal(object)  # Emits sensor being deleted (to cancel loading imagery)
-    files_dropped = pyqtSignal(list)  # Emits list of file paths dropped onto the panel
 
     def __init__(self, viewer):
-        super().__init__()
-        self.viewer = viewer
+        super().__init__(viewer)
         self.init_ui()
 
     def init_ui(self):
