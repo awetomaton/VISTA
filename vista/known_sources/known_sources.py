@@ -17,7 +17,7 @@ from vista.transforms.earth_intersection import los_to_earth
 class KnownSources:
     """
     Base class for known sources like stars, planets, asteroids, satellites, etc.
-    
+
     It is expected that subclasses are implemented which contain *groups* of self-similar
     sources loaded together, i.e. an array of satellites, an array of stars, etc.
 

@@ -781,6 +781,52 @@ class WMSSettingsTab(QVBoxLayout):
         self.settings.setValue("wms/coarse_grid_size", self.coarse_grid_spinbox.value())
 
 
+class KnownSourcesTab(QVBoxLayout):
+    """Tab for configuring Known Source settings"""
+
+    def __init__(self, settings: QSettings):
+        """
+        Initialize the Known Sources settings tab.
+
+        Parameters
+        ----------
+        settings : QSettings
+            QSettings object for storing/loading settings.
+        """
+        super().__init__()
+        self.settings = settings
+
+        # Create stars settings group
+        stars_group = QGroupBox("Stars")
+        stars_layout = QFormLayout()
+
+        # Limiting magnitude parameter
+        self.vmag_spinbox = QSpinBox()
+        self.vmag_spinbox.setRange(-10, 20)
+        self.vmag_spinbox.setValue(7)
+        self.vmag_spinbox.setToolTip(
+            "Limiting magnitude to use when loading in a catalog of stars.\n"
+            "More positive = fainter, more negative = brighter.\n"
+            "Default: 7"
+        )
+        stars_layout.addRow("Limiting magnitude:", self.vmag_spinbox)
+
+        stars_group.setLayout(stars_layout)
+        self.addWidget(stars_group)
+
+        self.addStretch()
+
+        self.load_settings()
+
+    def load_settings(self):
+        """Load settings from QSettings"""
+        self.vmag_spinbox.setValue(self.settings.value("limiting_magnitude", 7, type=int))
+
+    def save_settings(self):
+        """Save settings to QSettings"""
+        self.settings.setValue("limiting_magnitude", self.vmag_spinbox.value())
+
+
 class SettingsDialog(QDialog):
     """Main settings dialog for VISTA application"""
 
@@ -884,6 +930,16 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(wms_container, "Map View")
 
+        # Create Known Sources settings tab
+        self.known_sources_tab = KnownSourcesTab(self.settings)
+        known_sources_widget = QVBoxLayout()
+        known_sources_widget.addLayout(self.known_sources_tab)
+
+        known_sources_container = QWidget()
+        known_sources_container.setLayout(known_sources_widget)
+
+        self.tabs.addTab(known_sources_container, "Known Sources")
+
         layout.addWidget(self.tabs)
 
         # Add standard dialog buttons
@@ -904,6 +960,7 @@ class SettingsDialog(QDialog):
         self.gpu_tab.save_settings()
         self.user_tab.save_settings()
         self.wms_tab.save_settings()
+        self.known_sources_tab.save_settings()
 
     def accept_settings(self):
         """Accept and save settings, then close dialog"""

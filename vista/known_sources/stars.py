@@ -28,7 +28,7 @@ class Stars(KnownSources):
         E.g., Hipparcos Hp, Gaia G
     """
 
-    def __init__(self, name: str, catalog: Union[str, None] = None):
+    def __init__(self, name: str, catalog: Union[str, None] = None, V_max: Union[int, None] = None, V_min: int = -10):
         """
         Create a Stars object
 
@@ -39,8 +39,16 @@ class Stars(KnownSources):
         catalog : str, None
             Name of the catalog to query.
             Value must be one of ["Hipparcos", "Gaia"]
+        V_max : int, default=7
+            Faintness limit (more positive = fainter)
+        V_min : int, default=-10
+            Brightness limit (more negative = brighter)
         """
         super().__init__(name)
+        # set to default of 7 if nothing is passed in
+        # only needed to handle QSettings possibly passing in None
+        V_max = 7 if V_max is None else V_max
+
         # empty SkyCoord object
         self.stars = SkyCoord(
             ra=[] * u.deg,
@@ -56,23 +64,23 @@ class Stars(KnownSources):
         self.V_magnitudes = np.array([])
 
         if catalog == "Hipparcos":
-            self._download_hipparcos()
+            self._download_hipparcos(V_max, V_min)
         elif catalog == "Gaia":
-            self._download_gaia()
+            self._download_gaia(V_max, V_min)
 
         self._color = "y"
         self._marker = "star"
 
-    def _download_hipparcos(self, V_max: int = 7, V_min: int = -10):
+    def _download_hipparcos(self, V_max: int, V_min: int):
         """
         Queries Hipparcos for all-sky stars brighter than V_max and fainter than V_min
         (values are magnitudes in the Hipparcos Hp band)
 
         Parameters
         ----------
-        V_max : int, default=7
+        V_max : int
             Faintness limit (more positive = fainter)
-        V_min : int, default=-10
+        V_min : int
             Brightness limit (more negative = brighter)
         """
         # We get the Hipparcos ID, RA, RA proper motion, Dec, Dec proper motion,
@@ -120,16 +128,16 @@ class Stars(KnownSources):
         self.source_types = ["star"] * len(self.stars)
         self.V_magnitudes = stars["Hpmag"]
 
-    def _download_gaia(self, V_max: int = 7, V_min: int = -10):
+    def _download_gaia(self, V_max: int, V_min: int):
         """
         Queries Gaia for all-sky stars brighter than V_max and fainter than V_min
         (values are magnitudes in the Gaia G band)
 
         Parameters
         ----------
-        V_max : int, default=7
+        V_max : int
             Faintness limit (more positive = fainter)
-        V_min : int, default=-10
+        V_min : int
             Brightness limit (more negative = brighter)
         """
 

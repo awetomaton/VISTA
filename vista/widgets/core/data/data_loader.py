@@ -6,7 +6,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
@@ -576,9 +576,13 @@ class DataLoaderThread(QThread):
     def _load_stars_astroquery(self):
         """Load stars via astroquery"""
 
+        # load limiting magnitude setting from QSettings
+        settings = QSettings("Vista", "VistaApp")
+        V_max = settings.value("limiting_magnitude")
+
         # Name for the stars object is astroquery
         # but will update once the actual query goes through
-        stars = Stars("astroquery", catalog=self.file_path)
+        stars = Stars("astroquery", catalog=self.file_path, V_max=V_max)
 
         # Emit the created stars
         self.stars_loaded.emit(stars)
