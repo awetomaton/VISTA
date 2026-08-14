@@ -51,10 +51,10 @@ Version filtering is controlled in `conf.py`:
 
 ```python
 # Only tags matching this pattern are built (e.g., 1.7.0, 1.8.0)
-smv_tag_whitelist = r'^\d+\.\d+\.\d+$'
+smv_tag_whitelist = r"^\d+\.\d+\.\d+$"
 
 # Only these branches are built
-smv_branch_whitelist = r'^(main|develop)$'
+smv_branch_whitelist = r"^(main|develop)$"
 ```
 
 ## Optional: Version Warning Banner
@@ -73,9 +73,9 @@ Or add it programmatically in `conf.py`:
 import os
 
 # Add version warning banner for non-stable versions
-current_branch = os.environ.get('SPHINX_MULTIVERSION_NAME', 'main')
+current_branch = os.environ.get("SPHINX_MULTIVERSION_NAME", "main")
 
-if current_branch == 'develop':
+if current_branch == "develop":
     rst_prolog = """
 .. warning::
    You are viewing the **development version** documentation.
