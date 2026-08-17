@@ -250,6 +250,10 @@ class VistaMainWindow(QMainWindow):
             action.triggered.connect(lambda _, name=catalog: self.load_stars_astroquery(name))
             load_stars_menu.addAction(action)
 
+        load_stars_csv_action = QAction("Load Stars (CSV)", self)
+        load_stars_csv_action.triggered.connect(self.load_stars_file)
+        load_known_sources_menu.addAction(load_stars_csv_action)
+
         load_solar_system_bodies_action = QAction("Load Solar System Bodies (Astropy)", self)
         load_solar_system_bodies_action.triggered.connect(self.load_solar_system_bodies_astropy)
         load_known_sources_menu.addAction(load_solar_system_bodies_action)
@@ -1963,8 +1967,79 @@ class VistaMainWindow(QMainWindow):
         self.statusBar().showMessage(f"Loaded {len(satellites.source_names)} Satellite(s)", 3000)
 
     def load_stars_file(self):
-        # TODO: Handle loading stars via file input
-        raise NotImplementedError
+        """Load Stars from CSV file(s) using background thread"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_stars_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Stars", last_dir, "CSV Files (*.csv)")
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_stars_dir", str(Path(file_paths[0]).parent))
+
+            # Store file paths queue for sequential loading
+            self.stars_file_queue = list(file_paths)
+            self.stars_loaded_count = 0
+            self.stars_total_count = len(file_paths)
+
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading Stars...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
+
+            # Start loading the first file
+            self._load_next_stars_file()
+
+    def _load_next_stars_file(self):
+        """Load the next Stars file from the queue"""
+        if not self.stars_file_queue:
+            # All files loaded
+            return
+
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        file_path = self.stars_file_queue.pop(0)
+
+        # Create and start loader thread
+        self.loader_thread = DataLoaderThread(file_path, "stars", "csv")
+        self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_stars_file_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_stars_file_loaded(self):
+        """Handle completion of a single Stars file load"""
+        self.stars_loaded_count += 1
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # Check if there are more files to load
+        if self.stars_file_queue:
+            # Load next file
+            self._load_next_stars_file()
+        else:
+            # All files loaded, close progress dialog
+            self.on_loading_finished()
+
+            # Update status with total count
+            self.statusBar().showMessage(f"Loaded {self.stars_loaded_count} Stars file(s)", 3000)
 
     def load_stars_astroquery(self, catalog):
         """Load stars via Astroquery"""

@@ -88,7 +88,7 @@ class DataLoaderThread(QThread):
             elif self.data_type == "satellites":
                 self._load_satellites_tle()
             elif self.data_type == "stars":
-                self._load_stars_astroquery()
+                self._load_stars()
             elif self.data_type == "solar system bodies":
                 self._load_solar_system_bodies_astropy()
             else:
@@ -573,16 +573,16 @@ class DataLoaderThread(QThread):
         # Emit the created satellites
         self.satellites_loaded.emit(satellites)
 
-    def _load_stars_astroquery(self):
-        """Load stars via astroquery"""
+    def _load_stars(self):
+        """Load stars"""
 
         # load limiting magnitude setting from QSettings
         settings = QSettings("Vista", "VistaApp")
+        # no default value. if property doesn't exist, V_max is None and Stars will use its internal default
         V_max = settings.value("limiting_magnitude")
 
-        # Name for the stars object is astroquery
-        # but will update once the actual query goes through
-        stars = Stars("astroquery", catalog=self.file_path, V_max=V_max)
+        # Name for the stars object will update once the loading goes through
+        stars = Stars("stars", catalog=self.file_path, V_max=V_max)
 
         # Emit the created stars
         self.stars_loaded.emit(stars)
