@@ -1,5 +1,6 @@
 """Class for stars"""
 
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -245,7 +246,7 @@ class Stars(KnownSources):
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars["parallax"].values * u.mas)
 
-        self.name = file
+        self.name = Path(file).stem
         self.source_names = [f"{id}" for id in stars["ID"]]
         self.stars = SkyCoord(
             ra=stars["RA"].values * u.deg,
