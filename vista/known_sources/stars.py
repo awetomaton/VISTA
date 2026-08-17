@@ -9,6 +9,7 @@ from astropy.time import Time
 from astroquery.gaia import Gaia
 from astroquery.vizier import Vizier
 from numpy.typing import NDArray
+import pandas as pd
 
 from .known_sources import KnownSources
 
@@ -38,7 +39,11 @@ class Stars(KnownSources):
             Name of the Stars object (e.g. 'Hipparcos stars', 'Gaia stars', etc.)
         catalog : str, None
             Name of the catalog to query.
-            Value must be one of ["Hipparcos", "Gaia"]
+            If value is one of ["Hipparcos", "Gaia"], it will query data from online.
+            Otherwise, it is assumed to be the name of a csv file of star data that contains at least
+            the columns ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"].
+            Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and 
+            parallax error must be mas. It is assumed that the csv contains values at the J2000 epoch.
         V_max : int, default=7
             Faintness limit (more positive = fainter)
         V_min : int, default=-10
@@ -63,10 +68,13 @@ class Stars(KnownSources):
         )
         self.V_magnitudes = np.array([])
 
-        if catalog == "Hipparcos":
-            self._download_hipparcos(V_max, V_min)
-        elif catalog == "Gaia":
-            self._download_gaia(V_max, V_min)
+        if catalog is not None:
+            if catalog == "Hipparcos":
+                self._download_hipparcos(V_max, V_min)
+            elif catalog == "Gaia":
+                self._download_gaia(V_max, V_min)
+            else:
+                self._load_csv(catalog, V_max, V_min)
 
         self._color = "y"
         self._marker = "star"
@@ -197,6 +205,61 @@ class Stars(KnownSources):
         )
         self.source_types = ["star"] * len(self.stars)
         self.V_magnitudes = stars["phot_g_mean_mag"]
+
+    def _load_csv(self, file: str, V_max: int, V_min: int):
+        """
+        Load a CSV file of star data.
+
+        Parameters
+        ----------
+        file : str
+            Name of the file to load. Must be a csv file of data that contains at least the
+            columns ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"].
+            Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and 
+            parallax error must be mas. Values are assumed to be at the J2000 epoch.
+            Note: "pmRA" should denote μ_α * cos(δ) (which most modern catalogs already do report).
+        V_max : int
+            Faintness limit (more positive = fainter)
+        V_min : int
+            Brightness limit (more negative = brighter)
+        """
+
+        stars = pd.read_csv(file)
+
+        where = (stars["V_mag"] <= V_max) & (stars["V_mag"] >= V_min)
+        stars = stars[where]
+
+        # fill in specific missing columns with 0
+        stars.fillna({"pmRA": 0, "pmDec": 0, "parallax": 0, "parallax_error": 0}, inplace=True)
+
+        # Stars with relative parallax errors >= 0.2 likely do not give reliable
+        # distances (and are likely far enough away to not matter), so we ignore their parallax
+        # and proper motions
+        # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
+        # since units are already milli-arcsec, we set parallax to a small value of 1 micro-arcsec
+        # to avoid divide by 0 errors. We also zero out proper motion
+        where = stars["parallax_error"] >= 0.2 * stars["parallax"]
+        stars.loc[where, "parallax"] = 10**-3
+        stars.loc[where, "pmRA"] = 0
+        stars.loc[where, "pmDec"] = 0
+        # convert the parallaxes into Astropy Distances
+        star_distances = Distance(parallax=stars["parallax"].values * u.mas)
+
+        self.name = file
+        self.source_names = [f"{id}" for id in stars["ID"]]
+        self.stars = SkyCoord(
+            ra=stars["RA"].values * u.deg,
+            dec=stars["Dec"].values * u.deg,
+            pm_ra_cosdec=stars["pmRA"].values * u.mas / u.yr,
+            pm_dec=stars["pmDec"].values * u.mas / u.yr,
+            distance=star_distances,
+            frame="icrs",
+            # Assume J2000 epoch
+            equinox="J2000.0",
+            obstime=Time("2000.0", format="jyear"),
+        )
+        self.source_types = ["star"] * len(self.stars)
+        self.V_magnitudes = stars["V_mag"].values
 
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
