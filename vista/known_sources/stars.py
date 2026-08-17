@@ -105,10 +105,14 @@ class Stars(KnownSources):
 
         # Stars with relative parallax errors >= 0.2 likely do not give reliable
         # distances (and are likely far enough away to not matter), so we ignore their parallax
+        # and proper motions
         # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
-        # since units are already milli-arcsec, we set to a small value of 1 micro-arcsec
+        # since units are already milli-arcsec, we set parallax to a small value of 1 micro-arcsec
+        # to avoid divide by 0 errors. We also zero out proper motion
         where = stars["e_Plx"] >= 0.2 * stars["Plx"]
         stars["Plx"][where] = 10**-3
+        stars["pmRA"][where] = 0
+        stars["pmDE"][where] = 0
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars["Plx"])
 
@@ -117,9 +121,8 @@ class Stars(KnownSources):
         self.stars = SkyCoord(
             ra=stars["RArad"],
             dec=stars["DErad"],
-            # proper motions need to be in same units
-            pm_ra_cosdec=stars["pmRA"].to(u.mas / u.yr) * np.cos(stars["DErad"]),
-            pm_dec=stars["pmDE"].to(u.mas / u.yr),
+            pm_ra_cosdec=stars["pmRA"],
+            pm_dec=stars["pmDE"],
             distance=star_distances,
             frame="icrs",
             # Hipparcos epoch
@@ -166,12 +169,16 @@ class Stars(KnownSources):
         stars["parallax"] = stars["parallax"].filled(0.0)
         stars["parallax_error"] = stars["parallax_error"].filled(0.0)
 
-        # Stars with relative parallax errors > 0.2 likely do not give reliable
+        # Stars with relative parallax errors >= 0.2 likely do not give reliable
         # distances (and are likely far enough away to not matter), so we ignore their parallax
+        # and proper motions
         # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
-        # since units are already milli-arcsec, we set to a small value of 1 micro-arcsec
+        # since units are already milli-arcsec, we set parallax to a small value of 1 micro-arcsec
+        # to avoid divide by 0 errors. We also zero out proper motion
         where = stars["parallax_error"] >= 0.2 * stars["parallax"]
         stars["parallax"][where] = 10**-3
+        stars["pmra"][where] = 0
+        stars["pmdec"][where] = 0
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars["parallax"])
 
@@ -180,9 +187,8 @@ class Stars(KnownSources):
         self.stars = SkyCoord(
             ra=stars["ra"],
             dec=stars["dec"],
-            # proper motions need to be in same units
-            pm_ra_cosdec=stars["pmra"].to(u.mas / u.yr) * np.cos(stars["dec"]),
-            pm_dec=stars["pmdec"].to(u.mas / u.yr),
+            pm_ra_cosdec=stars["pmra"],
+            pm_dec=stars["pmdec"],
             distance=star_distances,
             frame="icrs",
             # Gaia dr3 epoch
