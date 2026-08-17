@@ -285,7 +285,7 @@ class Stars(KnownSources):
         times = Time(times)
 
         # stars is a (num_stars, 3) array
-        # need to add a time axis to propogate motion to desired times
+        # need to add a time axis to propagate motion to desired times
         ecef_coords = self.stars[:, None].apply_space_motion(times).transform_to(ITRS(obstime=times))
         # but we can squeeze missing axes after
         ecef_coords = ecef_coords.squeeze()

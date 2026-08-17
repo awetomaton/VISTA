@@ -21,7 +21,7 @@ Subclasses
 
 VISTA includes several types of KnownSources:
 
-* **Satellites**: Satellites loaded from TLE files and propogated using the sgp4 python package
+* **Satellites**: Satellites loaded from TLE files and propagated using the sgp4 python package
 * **Stars**: Stars loaded via the astroquery package (currently supported catalogs are Hipparcos and Gaia) or via csv file.
 * **SolarSystemBodies**: Bodies within our solar system loaded via astropy. Currently contains only the major planets.
 These are implemented in the following subclasses:
