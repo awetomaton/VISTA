@@ -103,11 +103,12 @@ class Stars(KnownSources):
         # Extract Astropy Table from the TableList result
         stars = query_results[0]
 
-        # Stars with relative parallax errors > 0.2 likely do not give reliable
+        # Stars with relative parallax errors >= 0.2 likely do not give reliable
         # distances (and are likely far enough away to not matter), so we ignore their parallax
         # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
         # since units are already milli-arcsec, we set to a small value of 1 micro-arcsec
-        stars[stars["e_Plx"] >= 0.2 * stars["Plx"]] = 10**-3
+        where = stars["e_Plx"] >= 0.2 * stars["Plx"]
+        stars["Plx"][where] = 10**-3
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars["Plx"])
 
@@ -145,7 +146,7 @@ class Stars(KnownSources):
         # parallax, parallex error, and G band magnitude
         adql_query = f"""
             SELECT source_id, ra, pmra, dec, pmdec, parallax, parallax_error, phot_g_mean_mag
-            FROM gaiadr3.gaia_source
+            FROM gaiadr3.gaia_source_lite
             WHERE phot_g_mean_mag <= {V_max}
             AND phot_g_mean_mag >= {V_min}
         """
@@ -169,7 +170,8 @@ class Stars(KnownSources):
         # distances (and are likely far enough away to not matter), so we ignore their parallax
         # See https://scixplorer.org/abs/2015PASP..127..994B/abstract for discussion
         # since units are already milli-arcsec, we set to a small value of 1 micro-arcsec
-        stars[stars["parallax_error"] >= 0.2 * stars["parallax"]] = 10**-3
+        where = stars["parallax_error"] >= 0.2 * stars["parallax"]
+        stars["parallax"][where] = 10**-3
         # convert the parallaxes into Astropy Distances
         star_distances = Distance(parallax=stars["parallax"])
 
