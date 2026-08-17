@@ -113,7 +113,7 @@ Known Sources Panel
 Manage known sources:
 
 * Delete loaded sources
-* Create tracks for selected sources in the currently selected imagery
+* Create tracks in the currently selected imagery for selected sources
 
 Playback Controls
 -----------------

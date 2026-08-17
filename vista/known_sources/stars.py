@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
+import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ITRS, Distance, EarthLocation, SkyCoord
 from astropy.time import Time
 from astroquery.gaia import Gaia
 from astroquery.vizier import Vizier
 from numpy.typing import NDArray
-import pandas as pd
 
 from .known_sources import KnownSources
 
@@ -43,7 +43,7 @@ class Stars(KnownSources):
             If value is one of ["Hipparcos", "Gaia"], it will query data from online.
             Otherwise, it is assumed to be the name of a csv file of star data that contains at least
             the columns ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"].
-            Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and 
+            Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and
             parallax error must be mas. It is assumed that the csv contains values at the J2000 epoch.
         V_max : int, default=7
             Faintness limit (more positive = fainter)
@@ -216,7 +216,7 @@ class Stars(KnownSources):
         file : str
             Name of the file to load. Must be a csv file of data that contains at least the
             columns ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"].
-            Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and 
+            Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and
             parallax error must be mas. Values are assumed to be at the J2000 epoch.
             Note: "pmRA" should denote μ_α * cos(δ) (which most modern catalogs already do report).
         V_max : int

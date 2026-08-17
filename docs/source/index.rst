@@ -25,7 +25,7 @@ Key Features
 * **Signal Enhancement**: Decimating or running Coaddition
 * **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
 * **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
-* **Known Sources**: Load known sources such as stars and satellites and create tracks
+* **Known Sources**: Load known sources such as stars and satellites and create tracks for them in the imagery
 * **Sensor calibration**: Bias removal, non-uniformity correction
 * **Geodetic support**: Pixel-to-geodetic coordinate conversion
 * **Manual annotation**: Create/edit/label tracks and detections interactively
