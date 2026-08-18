@@ -141,15 +141,6 @@ class KnownSourcesPanel(DataPanel):
             self.viewer.add_tracks(tracks)
             total_tracks += len(tracks)
 
-        # Explicitly refresh the tracks table to show the new tracks
-        # Get the tracks panel from the parent data manager
-        parent_widget = self.parent()
-        while parent_widget is not None:
-            if hasattr(parent_widget, "tracks_panel"):
-                parent_widget.tracks_panel.refresh_tracks_table()
-                break
-            parent_widget = parent_widget.parent()
-
         self.data_changed.emit()
 
         QMessageBox.information(

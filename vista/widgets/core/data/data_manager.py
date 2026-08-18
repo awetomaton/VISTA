@@ -58,6 +58,9 @@ class DataManagerPanel(QWidget):
         self.features_panel.data_changed.connect(self.data_changed.emit)
         self.known_sources_panel.data_changed.connect(self.data_changed.emit)
 
+        # refresh tracks panel when known_sources add tracks
+        self.known_sources_panel.data_changed.connect(self.tracks_panel.refresh_tracks_table)
+
         # Add panels as tabs
         self.tabs.addTab(self.sensors_panel, "Sensors")
         self.tabs.addTab(self.imagery_panel, "Imagery")
