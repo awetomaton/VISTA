@@ -7,7 +7,7 @@ from astropy import units as u
 from astropy.coordinates import ITRS, TEME, EarthLocation, SkyCoord
 from astropy.time import Time
 from numpy.typing import NDArray
-from sgp4.api import SGP4_ERRORS, Satrec, SatrecArray
+from sgp4.api import Satrec, SatrecArray
 
 from .known_sources import KnownSources
 
@@ -133,14 +133,11 @@ class Satellites(KnownSources):
         # errors, positions, velocities
         e, r, v = self.satellites.sgp4(times.jd1, times.jd2)
 
-        # TODO: raise actual SGP4 error code values for all satellites rather than just first one?
-        # or even better, raise a window to the user so they know to load a different file
-        # alternatively, just remove those satellites with error codes?
+        # if satellite propagation errored, ensure position is set to NaN
+        # TODO: raise actual SGP4 error code values for satellites?
+        # or even better, raise a window to the user so they know to load a different file?
         if np.any(e != 0):
-            where = np.where(e != 0)
-            error = e[where].ravel()[0]  # grab first error message
-            error = SGP4_ERRORS[error]
-            raise ValueError(f"Error propogating SGP4 positions. SGP4 error: {error}")
+            r[e != 0] = np.nan
 
         # now remove extra dimensions if time was single value
         r = np.squeeze(r)
