@@ -43,7 +43,7 @@ class SolarSystemBodies(KnownSources):
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
         time = Time(times)
 
@@ -57,4 +57,4 @@ class SolarSystemBodies(KnownSources):
         ecef_coords = np.moveaxis(ecef_coords, 1, 0)
 
         # unpack into xyz arguments
-        return EarthLocation(*ecef_coords * u.km)
+        return EarthLocation(*ecef_coords, unit=u.km)

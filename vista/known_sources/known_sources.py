@@ -50,7 +50,8 @@ class KnownSources:
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
         Return an EarthLocation containing the positions of the sources at the provided time(s).
-        Subclasses should implement this function based on the source types
+        Subclasses should implement this function based on the source types and be sure to return
+        the resulting EarthLocation in units of km
 
         Parameters
         ----------
@@ -60,7 +61,7 @@ class KnownSources:
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
         raise NotImplementedError
 

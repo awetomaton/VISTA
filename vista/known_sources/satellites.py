@@ -122,7 +122,7 @@ class Satellites(KnownSources):
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
         # TODO: cache results for specific times (frames)?
 
@@ -155,4 +155,4 @@ class Satellites(KnownSources):
         ecef_coords = teme_coords.transform_to(ITRS(obstime=times))
 
         # unpack cartesian xyz coordinates into xyz arguments
-        return EarthLocation(*ecef_coords.cartesian.xyz)
+        return EarthLocation(*ecef_coords.cartesian.xyz, unit=u.km)

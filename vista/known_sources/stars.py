@@ -276,11 +276,11 @@ class Stars(KnownSources):
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
         # quick return if no stars exist
         if len(self.stars) == 0:
-            return EarthLocation([], [], [])
+            return EarthLocation([], [], [], unit=u.km)
 
         # TODO: cache results for specific times (frames)?
 
@@ -293,4 +293,4 @@ class Stars(KnownSources):
         ecef_coords = ecef_coords.squeeze()
 
         # unpack cartesian xyz coordinates into xyz arguments
-        return EarthLocation(*ecef_coords.cartesian.xyz)
+        return EarthLocation(*ecef_coords.cartesian.xyz, unit=u.km)
