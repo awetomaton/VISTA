@@ -1661,15 +1661,6 @@ class DetectionsPanel(DataPanel):
         # Clear selection
         self.clear_detection_selection()
 
-        # Explicitly refresh the tracks table to show the new track
-        # Get the tracks panel from the parent data manager
-        parent_widget = self.parent()
-        while parent_widget is not None:
-            if hasattr(parent_widget, "tracks_panel"):
-                parent_widget.tracks_panel.refresh_tracks_table()
-                break
-            parent_widget = parent_widget.parent()
-
         self.data_changed.emit()
 
         # Exit detection selection mode
