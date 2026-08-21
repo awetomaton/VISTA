@@ -7,7 +7,7 @@ from .aois_panel import AOIsPanel
 from .detections_panel import DetectionsPanel
 from .features_panel import FeaturesPanel
 from .imagery_panel import ImageryPanel
-from .known_sources import KnownSourcesPanel
+from .known_sources_panel import KnownSourcesPanel
 from .sensors_panel import SensorsPanel
 from .tracks_panel import TracksPanel
 
