@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
+    QTableWidgetSelectionRange,
     QVBoxLayout,
     QWidget,
 )
@@ -2381,11 +2382,9 @@ class TracksPanel(DataPanel):
             if track_name_item:
                 track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
                 if track_uuid in track_uuids:
-                    # Manually select all items in the row to ensure multiple rows can be selected
-                    for col in range(self.tracks_table.columnCount()):
-                        item = self.tracks_table.item(row, col)
-                        if item:
-                            item.setSelected(True)
+                    # select all items in the row
+                    row_range = QTableWidgetSelectionRange(row, 0, row, self.tracks_table.columnCount() - 1)
+                    self.tracks_table.setRangeSelected(row_range, True)
 
         self.tracks_table.blockSignals(False)
         self.on_track_selection_changed()  # Trigger selection changed handler
