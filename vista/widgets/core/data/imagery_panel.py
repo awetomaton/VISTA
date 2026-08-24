@@ -50,8 +50,8 @@ class ImageryPanel(DataPanel):
 
         # Imagery table
         self.imagery_table = QTableWidget()
-        self.imagery_table.setColumnCount(4)
-        self.imagery_table.setHorizontalHeaderLabels(["Name", "Frames", "GPU", "Opacity"])
+        self.imagery_table.setColumnCount(5)
+        self.imagery_table.setHorizontalHeaderLabels(["Name", "Frames", "GPU", "Opacity", "File Location"])
 
         # Enable row selection via vertical header (single selection only)
         self.imagery_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -63,9 +63,15 @@ class ImageryPanel(DataPanel):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Opacity
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # File Location
 
         # Opacity column is hidden by default (shown only in map view)
         self.imagery_table.setColumnHidden(3, True)
+
+        # make name column resizeable, after everything is fit to window initially above
+        width = self.imagery_table.columnWidth(0)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self.imagery_table.setColumnWidth(0, width)
 
         self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
         self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
@@ -124,6 +130,10 @@ class ImageryPanel(DataPanel):
             opacity_spinbox.setToolTip("Imagery opacity in map view")
             opacity_spinbox.valueChanged.connect(lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val))
             self.imagery_table.setCellWidget(row, 3, opacity_spinbox)
+
+            imagery_fname_item = QTableWidgetItem(imagery.filename)
+            imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.imagery_table.setItem(row, 4, imagery_fname_item)
 
         self.imagery_table.blockSignals(False)
 

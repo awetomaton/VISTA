@@ -40,9 +40,9 @@ class SensorsPanel(DataPanel):
 
         # Sensors table
         self.sensors_table = QTableWidget()
-        self.sensors_table.setColumnCount(5)
+        self.sensors_table.setColumnCount(6)
         self.sensors_table.setHorizontalHeaderLabels(
-            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask"]
+            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "Imagery File Location(s)"]
         )
 
         # Enable row selection (single selection only)
@@ -56,6 +56,12 @@ class SensorsPanel(DataPanel):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Uniformity Gain
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Imagery File Location(s)
+
+        # make name column resizeable, after everything is fit to window initially above
+        width = self.sensors_table.columnWidth(0)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self.sensors_table.setColumnWidth(0, width)
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
@@ -102,6 +108,16 @@ class SensorsPanel(DataPanel):
             bad_pixel_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             bad_pixel_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.sensors_table.setItem(row, 4, bad_pixel_item)
+
+            # Loaded imagery filename(s) (not editable)
+            loaded_imagery_fnames = []
+            if sensor._added_imagery_uuids:
+                for imagery in self.viewer.imageries:
+                    if imagery.uuid in sensor._added_imagery_uuids:
+                        loaded_imagery_fnames.append(imagery.filename)
+            loaded_imagery_fname_item = QTableWidgetItem(str(loaded_imagery_fnames))
+            loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
 
         self.sensors_table.blockSignals(False)
 
