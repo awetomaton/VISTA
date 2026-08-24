@@ -112,6 +112,7 @@ class SensorsPanel(DataPanel):
                 for imagery in self.viewer.imageries:
                     if imagery.uuid in sensor._added_imagery_uuids:
                         loaded_imagery_fnames.append(imagery.filename)
+            loaded_imagery_fnames = list(set(loaded_imagery_fnames))  # list of unique fnames
             loaded_imagery_fname_item = QTableWidgetItem(str([Path(fname).stem for fname in loaded_imagery_fnames]))
             loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
