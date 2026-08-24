@@ -3121,9 +3121,7 @@ class VistaMainWindow(QMainWindow):
         if tracks is not None:
             # Convert single item to list
             tracks_list = [tracks] if isinstance(tracks, Track) else tracks
-
-            for track in tracks_list:
-                self.viewer.add_track(track)
+            self.viewer.add_tracks(tracks_list)
 
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
