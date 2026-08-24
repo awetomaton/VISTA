@@ -1,5 +1,7 @@
 """Imagery panel for data manager"""
 
+from pathlib import Path
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -68,11 +70,6 @@ class ImageryPanel(DataPanel):
         # Opacity column is hidden by default (shown only in map view)
         self.imagery_table.setColumnHidden(3, True)
 
-        # make name column resizeable, after everything is fit to window initially above
-        width = self.imagery_table.columnWidth(0)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-        self.imagery_table.setColumnWidth(0, width)
-
         self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
         self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
 
@@ -131,9 +128,11 @@ class ImageryPanel(DataPanel):
             opacity_spinbox.valueChanged.connect(lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val))
             self.imagery_table.setCellWidget(row, 3, opacity_spinbox)
 
-            imagery_fname_item = QTableWidgetItem(imagery.filename)
+            fname = imagery.filename
+            imagery_fname_item = QTableWidgetItem(Path(fname).stem)
             imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.imagery_table.setItem(row, 4, imagery_fname_item)
+            imagery_fname_item.setToolTip(fname)
 
         self.imagery_table.blockSignals(False)
 

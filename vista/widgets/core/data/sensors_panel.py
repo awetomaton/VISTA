@@ -1,5 +1,7 @@
 """Sensors panel for data manager"""
 
+from pathlib import Path
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -58,11 +60,6 @@ class SensorsPanel(DataPanel):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Imagery File Location(s)
 
-        # make name column resizeable, after everything is fit to window initially above
-        width = self.sensors_table.columnWidth(0)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-        self.sensors_table.setColumnWidth(0, width)
-
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
         layout.addWidget(self.sensors_table)
@@ -115,9 +112,10 @@ class SensorsPanel(DataPanel):
                 for imagery in self.viewer.imageries:
                     if imagery.uuid in sensor._added_imagery_uuids:
                         loaded_imagery_fnames.append(imagery.filename)
-            loaded_imagery_fname_item = QTableWidgetItem(str(loaded_imagery_fnames))
+            loaded_imagery_fname_item = QTableWidgetItem(str([Path(fname).stem for fname in loaded_imagery_fnames]))
             loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
+            loaded_imagery_fname_item.setToolTip("\n".join(loaded_imagery_fnames))
 
         self.sensors_table.blockSignals(False)
 
