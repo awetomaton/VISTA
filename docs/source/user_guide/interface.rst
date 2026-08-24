@@ -292,6 +292,16 @@ EPSG:4326 Geographic).
 * **Coarse Grid Size** (default: 64): Maximum dimension of the coarse sampling grid. Higher values are more accurate
   but slower. Only available when coarse grid sampling is enabled. Range: 8–512.
 
+Known Sources
+~~~~~~~~~~~~~
+
+Configures options related to loading in known sources.
+
+**Stars**
+
+* Set the limiting magnitude to be used when loading in star catalogs
+
+
 Status Bar
 ----------
 
