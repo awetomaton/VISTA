@@ -140,6 +140,7 @@ class Sensor:
         """
         if (imagery.uuid in self._added_imagery_uuids) or (imagery.times is None):
             return
+        self._added_imagery_uuids.append(imagery.uuid)
         self._imagery_frames_dataframe = pd.concat(
             (self._imagery_frames_dataframe, pd.DataFrame({"frames": imagery.frames, "times": imagery.times}))
         )
