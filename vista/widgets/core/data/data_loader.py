@@ -382,7 +382,7 @@ class DataLoaderThread(QThread):
             column_offset=column_offset,
             times=times,
             description=description,
-            filename=str(self.file_path),
+            filename=self.file_path,
         )
         imagery.loaded_frame_count = 0
 
