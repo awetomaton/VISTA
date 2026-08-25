@@ -83,7 +83,7 @@ class KnownSourcesPanel(DataPanel):
 
             # Name (editable)
             name_item = QTableWidgetItem(source.name)
-            name_item.setData(Qt.ItemDataRole.UserRole, source.uuid)  # Store AOI UUID
+            name_item.setData(Qt.ItemDataRole.UserRole, source.uuid)  # Store KnownSource UUID
             self.known_sources_table.setItem(row, 0, name_item)
 
             # Source Types (read-only)
