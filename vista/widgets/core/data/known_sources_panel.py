@@ -135,16 +135,16 @@ class KnownSourcesPanel(DataPanel):
                         break
 
         # Create the tracks
-        total_tracks = 0
+        all_tracks = []
         for source in known_sources:
             tracks = source.create_tracks(self.viewer.imagery)
-            self.viewer.add_tracks(tracks)
-            total_tracks += len(tracks)
+            all_tracks += tracks
+        self.viewer.add_tracks(all_tracks)
 
         self.data_changed.emit()
 
         QMessageBox.information(
-            self, "Tracks Created", f"Created {total_tracks} Track(s) from {len(known_sources)} Known Source(s)."
+            self, "Tracks Created", f"Created {len(all_tracks)} Track(s) from {len(known_sources)} Known Source(s)."
         )
 
     def delete_selected_known_sources(self):
