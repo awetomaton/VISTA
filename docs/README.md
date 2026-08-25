@@ -284,10 +284,10 @@ The version selector is configured in `conf.py`:
 
 ```python
 # Which tags to include
-smv_tag_whitelist = r'^v\d+\.\d+\.\d+$'
+smv_tag_whitelist = r"^v\d+\.\d+\.\d+$"
 
 # Which branches to include
-smv_branch_whitelist = r'^(main|develop)$'
+smv_branch_whitelist = r"^(main|develop)$"
 ```
 
 ## Troubleshooting

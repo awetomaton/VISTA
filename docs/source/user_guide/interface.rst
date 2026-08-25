@@ -107,6 +107,14 @@ Work with features and annotations:
 * Add properties and labels
 * Export feature data
 
+Known Sources Panel
+~~~~~~~~~~~~~~~~~~~
+
+Manage known sources:
+
+* Delete loaded sources
+* Create tracks in the currently selected imagery for selected sources
+
 Playback Controls
 -----------------
 
@@ -140,6 +148,7 @@ File Menu
 * **Load AOIs (CSV)**: Load areas of interest from a CSV file
 * **Load Shapefiles**: Load shapefile overlays (``.shp``)
 * **Load Placemarks (CSV)**: Load placemark features from a CSV file
+* **Load Known Sources**: Load known sources
 * **Simulate**: Generate synthetic imagery, detections, and tracks using the built-in simulator
 * **Save Imagery (HDF5)**: Save the selected imagery to an HDF5 file in version 1.7 format
 * **Clear Overlays**: Remove all loaded detections, tracks, AOIs, and features from the viewer
@@ -282,6 +291,16 @@ EPSG:4326 Geographic).
   projection.
 * **Coarse Grid Size** (default: 64): Maximum dimension of the coarse sampling grid. Higher values are more accurate
   but slower. Only available when coarse grid sampling is enabled. Range: 8–512.
+
+Known Sources
+~~~~~~~~~~~~~
+
+Configures options related to loading in known sources.
+
+**Stars**
+
+* Set the limiting magnitude to be used when loading in star catalogs
+
 
 Status Bar
 ----------

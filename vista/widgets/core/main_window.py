@@ -144,6 +144,7 @@ class VistaMainWindow(QMainWindow):
             self.data_manager.detections_panel,
             self.data_manager.aois_panel,
             self.data_manager.features_panel,
+            self.data_manager.known_sources_panel,
         ):
             panel.status_message.connect(self.statusBar().showMessage)
 
@@ -233,6 +234,29 @@ class VistaMainWindow(QMainWindow):
         load_placemarks_action = QAction("Load Placemarks (CSV)", self)
         load_placemarks_action.triggered.connect(self.load_placemarks_file)
         file_menu.addAction(load_placemarks_action)
+
+        # Known Sources submenu
+        load_known_sources_menu = file_menu.addMenu("Load Known Sources")
+
+        load_satellites_action = QAction("Load Satellites (TLE)", self)
+        load_satellites_action.triggered.connect(self.load_satellites_file)
+        load_known_sources_menu.addAction(load_satellites_action)
+
+        # various catalogs to add stars via astroquery
+        load_stars_menu = load_known_sources_menu.addMenu("Load Stars (Astroquery)")
+
+        for catalog in ["Hipparcos", "Gaia"]:
+            action = QAction(catalog, self)
+            action.triggered.connect(lambda _, name=catalog: self.load_stars_astroquery(name))
+            load_stars_menu.addAction(action)
+
+        load_stars_csv_action = QAction("Load Stars (CSV)", self)
+        load_stars_csv_action.triggered.connect(self.load_stars_file)
+        load_known_sources_menu.addAction(load_stars_csv_action)
+
+        load_solar_system_bodies_action = QAction("Load Solar System Bodies (Astropy)", self)
+        load_solar_system_bodies_action.triggered.connect(self.load_solar_system_bodies_astropy)
+        load_known_sources_menu.addAction(load_solar_system_bodies_action)
 
         file_menu.addSeparator()
 
@@ -1502,8 +1526,7 @@ class VistaMainWindow(QMainWindow):
     def on_tracks_loaded(self, tracks):
         """Handle tracks loaded in background thread"""
         # Add tracks to the viewer
-        for track in tracks:
-            self.viewer.add_track(track)
+        self.viewer.add_tracks(tracks)
 
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
@@ -1857,6 +1880,268 @@ class VistaMainWindow(QMainWindow):
         if self.loader_thread:
             self.loader_thread.deleteLater()
             self.loader_thread = None
+
+    def load_satellites_file(self):
+        """Load Satellites from TLE file(s) using background thread"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_satellites_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Satellites", last_dir, "TLE Files (*.tle *.txt)")
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_satellites_dir", str(Path(file_paths[0]).parent))
+
+            # Store file paths queue for sequential loading
+            self.satellites_file_queue = list(file_paths)
+            self.satellites_loaded_count = 0
+            self.satellites_total_count = len(file_paths)
+
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading Satellites...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
+
+            # Start loading the first file
+            self._load_next_satellites_file()
+
+    def _load_next_satellites_file(self):
+        """Load the next Satellites file from the queue"""
+        if not self.satellites_file_queue:
+            # All files loaded
+            return
+
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        file_path = self.satellites_file_queue.pop(0)
+
+        # Create and start loader thread
+        self.loader_thread = DataLoaderThread(file_path, "satellites", "tle")
+        self.loader_thread.satellites_loaded.connect(self.on_satellites_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_satellites_file_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_satellites_file_loaded(self):
+        """Handle completion of a single Satellites file load"""
+        self.satellites_loaded_count += 1
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # Check if there are more files to load
+        if self.satellites_file_queue:
+            # Load next file
+            self._load_next_satellites_file()
+        else:
+            # All files loaded, close progress dialog
+            self.on_loading_finished()
+
+            # Update status with total count
+            self.statusBar().showMessage(f"Loaded {self.satellites_loaded_count} Satellites file(s)", 3000)
+
+    def on_satellites_loaded(self, satellites):
+        """Handle Satellites loaded in background thread"""
+        # satellites is a single object
+        self.viewer.add_known_source(satellites)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Loaded {len(satellites.source_names)} Satellite(s)", 3000)
+
+    def load_stars_file(self):
+        """Load Stars from CSV file(s) using background thread"""
+        # Get last used directory from settings
+        last_dir = self.settings.value("last_stars_dir", "")
+
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Stars", last_dir, "CSV Files (*.csv)")
+
+        if file_paths:
+            # Save the directory for next time
+            self.settings.setValue("last_stars_dir", str(Path(file_paths[0]).parent))
+
+            # Store file paths queue for sequential loading
+            self.stars_file_queue = list(file_paths)
+            self.stars_loaded_count = 0
+            self.stars_total_count = len(file_paths)
+
+            # Create progress dialog
+            self.progress_dialog = QProgressDialog("Loading Stars...", "Cancel", 0, 100, self)
+            self.progress_dialog.setWindowTitle("VISTA - Progress Dialog")
+            self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            self.progress_dialog.show()
+
+            # Start loading the first file
+            self._load_next_stars_file()
+
+    def _load_next_stars_file(self):
+        """Load the next Stars file from the queue"""
+        if not self.stars_file_queue:
+            # All files loaded
+            return
+
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        file_path = self.stars_file_queue.pop(0)
+
+        # Create and start loader thread
+        self.loader_thread = DataLoaderThread(file_path, "stars", "csv")
+        self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_stars_file_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_stars_file_loaded(self):
+        """Handle completion of a single Stars file load"""
+        self.stars_loaded_count += 1
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # Check if there are more files to load
+        if self.stars_file_queue:
+            # Load next file
+            self._load_next_stars_file()
+        else:
+            # All files loaded, close progress dialog
+            self.on_loading_finished()
+
+            # Update status with total count
+            self.statusBar().showMessage(f"Loaded {self.stars_loaded_count} Stars file(s)", 3000)
+
+    def load_stars_astroquery(self, catalog):
+        """Load stars via Astroquery"""
+
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        # Create and start loader thread
+        # loading via astroquery has no file type
+        # but we use the catalog name as the file path
+        self.loader_thread = DataLoaderThread(catalog, "stars", None)
+        self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_stars_astroquery_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_stars_astroquery_loaded(self):
+        """Handle completion of a single Stars load"""
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # All files loaded, close progress dialog
+        self.on_loading_finished()
+
+        # Update status with total count
+        self.statusBar().showMessage("Loaded Stars via astroquery", 3000)
+
+    def on_stars_loaded(self, stars):
+        """Handle Stars loaded in background thread"""
+        # stars is a single object
+        self.viewer.add_known_source(stars)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        self.statusBar().showMessage(f"Loaded {len(stars.source_names)} Star(s)", 3000)
+
+    def load_solar_system_bodies_astropy(self):
+        """Load solar system bodies via Astropy"""
+
+        # Ensure any previous loader thread has finished before starting a new one
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.wait()
+
+        # Create and start loader thread
+        # loading via astropy has no file path or type
+        self.loader_thread = DataLoaderThread(None, "solar system bodies", None)
+        self.loader_thread.solar_system_bodies_loaded.connect(self.on_solar_system_bodies_loaded)
+        self.loader_thread.error_occurred.connect(self.on_loading_error)
+        self.loader_thread.warning_occurred.connect(self.on_loading_warning)
+        self.loader_thread.progress_updated.connect(self.on_loading_progress)
+        self.loader_thread.finished.connect(self._on_solar_system_bodies_astropy_loaded)
+
+        # Connect cancel button to thread cancellation
+        if self.progress_dialog:
+            try:
+                self.progress_dialog.canceled.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signal was not connected or already disconnected
+            self.progress_dialog.canceled.connect(self.on_loading_cancelled)
+
+        self.loader_thread.start()
+
+    def _on_solar_system_bodies_astropy_loaded(self):
+        """Handle completion of a single SolarSystemBodies load"""
+
+        # Clean up thread reference
+        if self.loader_thread:
+            self.loader_thread.deleteLater()
+            self.loader_thread = None
+
+        # All files loaded, close progress dialog
+        self.on_loading_finished()
+
+        # Update status with total count
+        self.statusBar().showMessage("Loaded Solar System Bodies via astropy", 3000)
+
+    def on_solar_system_bodies_loaded(self, bodies):
+        """Handle SolarSystemBodies loaded in background thread"""
+        # bodies is a single object
+        self.viewer.add_known_source(bodies)
+
+        # Refresh data manager
+        self.data_manager.refresh()
+
+        # plural message here as I know there are multiple planets included
+        self.statusBar().showMessage(f"Loaded {len(bodies.source_names)} Solar System Bodies", 3000)
 
     def save_imagery_file(self):
         """Open dialog to save imagery data to HDF5 file"""

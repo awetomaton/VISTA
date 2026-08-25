@@ -6,11 +6,14 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 
 from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
+from vista.known_sources.satellites import Satellites
+from vista.known_sources.solar_system_bodies import SolarSystemBodies
+from vista.known_sources.stars import Stars
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
@@ -35,6 +38,9 @@ class DataLoaderThread(QThread):
     detectors_loaded = pyqtSignal(list)  # Emits list of Detector objects
     tracks_loaded = pyqtSignal(list)  # Emits list of Track objects with tracker attribute set
     aois_loaded = pyqtSignal(list)  # Emits list of AOI objects
+    satellites_loaded = pyqtSignal(object)  # Emits Satellites object
+    stars_loaded = pyqtSignal(object)  # Emits Stars object
+    solar_system_bodies_loaded = pyqtSignal(object)  # Emits SolarSystemBodies object
     error_occurred = pyqtSignal(str)  # Emits error message
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
@@ -48,9 +54,9 @@ class DataLoaderThread(QThread):
         file_path : str or Path
             Path to the file to load
         data_type : str
-            Type of data to load ('imagery', 'detections', 'tracks', 'aois')
+            Type of data to load ('imagery', 'detections', 'tracks', 'aois', 'satellites', 'stars', 'solar system bodies')
         file_format : str, optional
-            Format of the file ('hdf5' or 'csv'), by default 'hdf5'
+            Format of the file ('hdf5', 'csv', or 'tle'), by default 'hdf5'
         sensor : Sensor, optional
             Optional Sensor object for track/detection association and geodetic mapping, by default None
         imagery : Imagery, optional
@@ -79,6 +85,12 @@ class DataLoaderThread(QThread):
                 self._load_tracks_csv()
             elif self.data_type == "aois":
                 self._load_aois_csv()
+            elif self.data_type == "satellites":
+                self._load_satellites_tle()
+            elif self.data_type == "stars":
+                self._load_stars()
+            elif self.data_type == "solar system bodies":
+                self._load_solar_system_bodies_astropy()
             else:
                 self.error_occurred.emit(f"Unknown data type: {self.data_type}")
         except Exception as e:
@@ -550,3 +562,35 @@ class DataLoaderThread(QThread):
 
         # Emit the loaded AOIs
         self.aois_loaded.emit(aois)
+
+    def _load_satellites_tle(self):
+        """Load satellites from TLE file"""
+
+        # Name for the satellites object is just the filename
+        name = Path(self.file_path).stem
+        satellites = Satellites(name, file_path=self.file_path)
+
+        # Emit the created satellites
+        self.satellites_loaded.emit(satellites)
+
+    def _load_stars(self):
+        """Load stars"""
+
+        # load limiting magnitude setting from QSettings
+        settings = QSettings("Vista", "VistaApp")
+        # no default value. if property doesn't exist, V_max is None and Stars will use its internal default
+        V_max = settings.value("limiting_magnitude")
+
+        # Name for the stars object will update once the loading goes through
+        stars = Stars("stars", catalog=self.file_path, V_max=V_max)
+
+        # Emit the created stars
+        self.stars_loaded.emit(stars)
+
+    def _load_solar_system_bodies_astropy(self):
+        """Load solar system bodies via astropy"""
+
+        bodies = SolarSystemBodies()
+
+        # Emit the created solar system bodies
+        self.solar_system_bodies_loaded.emit(bodies)

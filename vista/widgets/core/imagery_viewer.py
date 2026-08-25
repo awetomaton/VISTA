@@ -16,6 +16,7 @@ from vista.aoi.aoi import AOI
 from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
+from vista.known_sources.known_sources import KnownSources
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
@@ -95,6 +96,7 @@ class ImageryViewer(QWidget):
         self.tracks = []  # List of Track objects
         self.aois = []  # List of AOI objects
         self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
+        self.known_sources = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
         # Use UUID as key for reliable object identification
@@ -2099,6 +2101,14 @@ class ImageryViewer(QWidget):
                     )
                     self.plot_item.addItem(scatter_item)
                     feature._plot_items.append(scatter_item)
+
+    def add_known_source(self, source: KnownSources):
+        if source not in self.known_sources:
+            self.known_sources.append(source)
+
+    def remove_known_source(self, source: KnownSources):
+        if source in self.known_sources:
+            self.known_sources.remove(source)
 
     def start_track_creation(self):
         """Start track creation mode"""

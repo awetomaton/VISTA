@@ -25,6 +25,7 @@ Key Features
 * **Signal Enhancement**: Decimating or running Coaddition
 * **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
 * **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
+* **Known Sources**: Load known sources such as stars and satellites and create tracks for them in the imagery
 * **Sensor calibration**: Bias removal, non-uniformity correction
 * **Geodetic support**: Pixel-to-geodetic coordinate conversion
 * **Manual annotation**: Create/edit/label tracks and detections interactively
@@ -69,6 +70,7 @@ Documentation Contents
    user_guide/features
    user_guide/detections
    user_guide/tracks
+   user_guide/known_sources
    user_guide/interface
 
 .. toctree::
@@ -78,6 +80,7 @@ Documentation Contents
    api/imagery
    api/detections
    api/tracks
+   api/known_sources
    api/algorithms
    api/transforms
    api/sensors

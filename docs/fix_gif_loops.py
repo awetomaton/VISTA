@@ -5,7 +5,9 @@ Fix GIF loop counts to make them loop infinitely.
 Usage:
     python fix_gif_loops.py
 """
+
 from pathlib import Path
+
 from PIL import Image
 
 
@@ -34,7 +36,7 @@ def fix_gif_loop(gif_path):
         try:
             while True:
                 frames.append(img.copy())
-                durations.append(img.info.get('duration', 100))
+                durations.append(img.info.get("duration", 100))
                 img.seek(img.tell() + 1)
         except EOFError:
             pass  # End of frames
@@ -46,7 +48,7 @@ def fix_gif_loop(gif_path):
             append_images=frames[1:],
             duration=durations,
             loop=0,  # 0 = infinite loop
-            optimize=False
+            optimize=False,
         )
 
         print(f"  ✓ Fixed {gif_path.name}")

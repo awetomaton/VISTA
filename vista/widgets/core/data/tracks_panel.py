@@ -2911,14 +2911,6 @@ class TracksPanel(DataPanel):
             self.viewer.add_detector(detector)
             detectors_created += 1
 
-        # Refresh the detections panel
-        parent_widget = self.parent()
-        while parent_widget is not None:
-            if hasattr(parent_widget, "detections_panel"):
-                parent_widget.detections_panel.refresh_detections_table()
-                break
-            parent_widget = parent_widget.parent()
-
         self.data_changed.emit()
 
         QMessageBox.information(
