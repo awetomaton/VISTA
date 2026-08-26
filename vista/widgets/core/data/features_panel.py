@@ -178,13 +178,18 @@ class FeaturesPanel(DataPanel):
         feature_uuids = {feature.uuid for feature in features}
         self.features_table.blockSignals(True)
         self.features_table.clearSelection()
+        selection_model = self.features_table.selectionModel()
+        model = self.features_table.model()
 
         for row in range(self.features_table.rowCount()):
             name_item = self.features_table.item(row, 1)  # Name column
             if name_item:
                 uuid = name_item.data(Qt.ItemDataRole.UserRole)
                 if uuid in feature_uuids:
-                    self.features_table.selectRow(row)
+                    index = model.index(row, 0)
+                    selection_model.select(
+                        index, selection_model.SelectionFlag.Select | selection_model.SelectionFlag.Rows
+                    )
 
         self.features_table.blockSignals(False)
         self.on_selection_changed()
