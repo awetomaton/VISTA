@@ -4,7 +4,7 @@ import pathlib
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QEvent, QSettings, Qt
+from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
     QApplication,
@@ -30,7 +30,6 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
-    QTableWidgetSelectionRange,
     QVBoxLayout,
     QWidget,
 )
@@ -2376,15 +2375,18 @@ class TracksPanel(DataPanel):
         """
         self.tracks_table.blockSignals(True)
         self.tracks_table.clearSelection()
+        selection_model = self.tracks_table.selectionModel()
+        model = self.tracks_table.model()
 
         for row in range(self.tracks_table.rowCount()):
             track_name_item = self.tracks_table.item(row, 2)  # Track name column
             if track_name_item:
                 track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
                 if track_uuid in track_uuids:
-                    # select all items in the row
-                    row_range = QTableWidgetSelectionRange(row, 0, row, self.tracks_table.columnCount() - 1)
-                    self.tracks_table.setRangeSelected(row_range, True)
+                    index = model.index(row, 0)
+                    selection_model.select(
+                        index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                    )
 
         self.tracks_table.blockSignals(False)
         self.on_track_selection_changed()  # Trigger selection changed handler
