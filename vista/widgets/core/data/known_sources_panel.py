@@ -51,7 +51,7 @@ class KnownSourcesPanel(DataPanel):
         # Known Sources table
         self.known_sources_table = QTableWidget()
         self.known_sources_table.setColumnCount(2)
-        self.known_sources_table.setHorizontalHeaderLabels(["Name", "Types of source"])
+        self.known_sources_table.setHorizontalHeaderLabels(["Name", "Source Types"])
 
         # Enable Delete and Create Tracks buttons when rows are selected
         self.known_sources_table.itemSelectionChanged.connect(self.on_selection_changed)
