@@ -108,6 +108,7 @@ class KnownSourcesPanel(DataPanel):
             self.known_sources_table.setItem(row, 1, type_item)
 
         self.known_sources_table.blockSignals(False)
+        self.on_known_source_selection_changed()
 
     def on_known_sources_cell_changed(self, row, column):
         """Handle Known Source cell changes"""
@@ -190,5 +191,3 @@ class KnownSourcesPanel(DataPanel):
 
         # Refresh table
         self.refresh_known_sources_table()
-        # and check whether buttons should be enabled
-        self.on_known_source_selection_changed()
