@@ -113,10 +113,11 @@ class SensorsPanel(DataPanel):
                     if imagery.uuid in sensor._added_imagery_uuids:
                         loaded_imagery_fnames.append(imagery.filename)
             loaded_imagery_fnames = list(set(loaded_imagery_fnames))  # list of unique fnames
-            loaded_imagery_fname_item = QTableWidgetItem(str([Path(fname).stem for fname in loaded_imagery_fnames]))
+            short_names = [Path(fname).stem for fname in loaded_imagery_fnames]  # just use stem for display
+            loaded_imagery_fname_item = QTableWidgetItem(", ".join(short_names))
             loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
-            loaded_imagery_fname_item.setToolTip("\n".join(loaded_imagery_fnames))
+            loaded_imagery_fname_item.setToolTip("\n".join(loaded_imagery_fnames))  # but full path for tooltip
 
         self.sensors_table.blockSignals(False)
 
