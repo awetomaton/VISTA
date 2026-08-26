@@ -1,5 +1,7 @@
 """Sensors panel for data manager"""
 
+from pathlib import Path
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -40,9 +42,9 @@ class SensorsPanel(DataPanel):
 
         # Sensors table
         self.sensors_table = QTableWidget()
-        self.sensors_table.setColumnCount(5)
+        self.sensors_table.setColumnCount(6)
         self.sensors_table.setHorizontalHeaderLabels(
-            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask"]
+            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "Imagery Files(s)"]
         )
 
         # Enable row selection (single selection only)
@@ -56,6 +58,7 @@ class SensorsPanel(DataPanel):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Uniformity Gain
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Bad Pixel Mask
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Imagery File(s)
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
 
@@ -102,6 +105,19 @@ class SensorsPanel(DataPanel):
             bad_pixel_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             bad_pixel_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.sensors_table.setItem(row, 4, bad_pixel_item)
+
+            # Loaded imagery filename(s) (not editable)
+            loaded_imagery_fnames = []
+            if sensor._added_imagery_uuids:
+                for imagery in self.viewer.imageries:
+                    if imagery.uuid in sensor._added_imagery_uuids:
+                        loaded_imagery_fnames.append(imagery.filename)
+            loaded_imagery_fnames = list(set(loaded_imagery_fnames))  # list of unique fnames
+            short_names = [Path(fname).stem for fname in loaded_imagery_fnames]  # just use stem for display
+            loaded_imagery_fname_item = QTableWidgetItem(", ".join(short_names))
+            loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
+            loaded_imagery_fname_item.setToolTip("\n".join(loaded_imagery_fnames))  # but full path for tooltip
 
         self.sensors_table.blockSignals(False)
 

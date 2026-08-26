@@ -67,6 +67,8 @@ class Imagery:
     -------------------
     description : str, optional
         Long-form description of the imagery (default: "")
+    filename : str, optional
+        Filename the imagery was loaded from
     _histograms : dict, optional
         Cached histograms for performance. Maps frame_index -> (hist_y, hist_x).
         Computed lazily via get_histogram() method.
@@ -132,6 +134,7 @@ class Imagery:
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
     default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
     uuid: str = field(init=None, default=None)
+    filename: str = ""  # filename where this imagery came from
 
     # Incremental loading support: tracks how many frames have valid image data.
     # None = fully loaded (default for programmatically created imagery).

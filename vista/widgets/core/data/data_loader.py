@@ -197,6 +197,7 @@ class DataLoaderThread(QThread):
             row_offset=row_offset,
             column_offset=column_offset,
             times=times,
+            filename=self.file_path,
         )
         imagery.loaded_frame_count = 0
 
@@ -393,12 +394,17 @@ class DataLoaderThread(QThread):
             column_offset=column_offset,
             times=times,
             description=description,
+            filename=self.file_path,
         )
         imagery.loaded_frame_count = 0
 
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if imagery_uuid is not None:
+            # remove auto-generated uuid
+            sensor._added_imagery_uuids.remove(imagery.uuid)
             imagery.uuid = uuid.UUID(imagery_uuid)
+            # and add back in the correct one
+            sensor._added_imagery_uuids.append(imagery.uuid)
 
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset, sensor)
