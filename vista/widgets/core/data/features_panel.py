@@ -54,7 +54,7 @@ class FeaturesPanel(DataPanel):
         self.features_table.setColumnCount(3)
         self.features_table.setHorizontalHeaderLabels(["Visible", "Name", "Type"])
 
-        # Enable Delete and Create Tracks buttons when rows are selected
+        # Enable Delete button when rows are selected
         self.features_table.itemSelectionChanged.connect(self.on_selection_changed)
 
         # Enable row selection via vertical header

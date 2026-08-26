@@ -72,6 +72,8 @@ class AOIsPanel(DataPanel):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Bounds (read-only)
 
         self.aois_table.cellChanged.connect(self.on_aoi_cell_changed)
+        # Enable Delete and Export buttons when rows are selected
+        # Also updates AOI selectability in the viewer
         self.aois_table.itemSelectionChanged.connect(self.on_aoi_selection_changed)
 
         layout.addWidget(self.aois_table)
@@ -113,7 +115,7 @@ class AOIsPanel(DataPanel):
             bounds_item.setFlags(bounds_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.aois_table.setItem(row, 1, bounds_item)
 
-            # Select row if AOIs is marked as selected
+            # Select row if AOI is marked as selected
             if hasattr(aoi, "_selected") and aoi._selected:
                 index = model.index(row, 0)
                 selection_model.select(
