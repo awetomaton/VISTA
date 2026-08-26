@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
  - ✨ Added "Known Sources" to the data panel which may include stars, satellites, and other celestial bodies. These can be used to create tracks corresponding to the currently selected sensor.
+ - 🛠️ Improved consistency of when buttons are enabled / disabled in data panels.
+ - 🔧 Fixed bug with lasso'ing features where only the last lasso'ed feature would get selected.
 
 ## [1.12.4] - 2026-8-13
 

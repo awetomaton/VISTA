@@ -35,15 +35,16 @@ class FeaturesPanel(DataPanel):
         # Button bar for actions
         button_layout = QHBoxLayout()
 
-        # Create Placemark button
-        self.create_placemark_btn = QPushButton("Create Placemark")
-        self.create_placemark_btn.clicked.connect(self.create_placemark)
-        button_layout.addWidget(self.create_placemark_btn)
-
         # Delete button
         self.delete_feature_btn = QPushButton("Delete Selected")
         self.delete_feature_btn.clicked.connect(self.delete_selected_features)
         button_layout.addWidget(self.delete_feature_btn)
+        self.delete_feature_btn.setEnabled(False)
+
+        # Create Placemark button
+        self.create_placemark_btn = QPushButton("Create Placemark")
+        self.create_placemark_btn.clicked.connect(self.create_placemark)
+        button_layout.addWidget(self.create_placemark_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -52,6 +53,9 @@ class FeaturesPanel(DataPanel):
         self.features_table = QTableWidget()
         self.features_table.setColumnCount(3)
         self.features_table.setHorizontalHeaderLabels(["Visible", "Name", "Type"])
+
+        # Enable Delete button when rows are selected
+        self.features_table.itemSelectionChanged.connect(self.on_feature_selection_changed)
 
         # Enable row selection via vertical header
         self.features_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -78,38 +82,44 @@ class FeaturesPanel(DataPanel):
         backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         backspace_shortcut.activated.connect(self.delete_selected_features)
 
+    def on_feature_selection_changed(self):
+        """Enable or disable buttons based on selection"""
+        selected_rows = self.features_table.selectionModel().selectedRows()
+        has_selection = len(selected_rows) > 0
+        self.delete_feature_btn.setEnabled(has_selection)
+
     def refresh_features_table(self):
         """Refresh the features table"""
         self.features_table.blockSignals(True)
         self.features_table.setRowCount(0)
 
-        if hasattr(self.viewer, "features"):
-            for row, feature in enumerate(self.viewer.features):
-                self.features_table.insertRow(row)
+        for row, feature in enumerate(self.viewer.features):
+            self.features_table.insertRow(row)
 
-                # Visible checkbox
-                checkbox = QCheckBox()
-                checkbox.setChecked(feature.visible)
-                checkbox.stateChanged.connect(lambda state, f=feature: self.on_feature_visibility_changed(f, state))
-                # Center the checkbox in the cell
-                checkbox_widget = QWidget()
-                checkbox_layout = QHBoxLayout(checkbox_widget)
-                checkbox_layout.addWidget(checkbox)
-                checkbox_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                checkbox_layout.setContentsMargins(0, 0, 0, 0)
-                self.features_table.setCellWidget(row, 0, checkbox_widget)
+            # Visible checkbox
+            checkbox = QCheckBox()
+            checkbox.setChecked(feature.visible)
+            checkbox.stateChanged.connect(lambda state, f=feature: self.on_feature_visibility_changed(f, state))
+            # Center the checkbox in the cell
+            checkbox_widget = QWidget()
+            checkbox_layout = QHBoxLayout(checkbox_widget)
+            checkbox_layout.addWidget(checkbox)
+            checkbox_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            checkbox_layout.setContentsMargins(0, 0, 0, 0)
+            self.features_table.setCellWidget(row, 0, checkbox_widget)
 
-                # Name (editable)
-                name_item = QTableWidgetItem(feature.name)
-                name_item.setData(Qt.ItemDataRole.UserRole, feature.uuid)  # Store feature UUID
-                self.features_table.setItem(row, 1, name_item)
+            # Name (editable)
+            name_item = QTableWidgetItem(feature.name)
+            name_item.setData(Qt.ItemDataRole.UserRole, feature.uuid)  # Store feature UUID
+            self.features_table.setItem(row, 1, name_item)
 
-                # Type (read-only)
-                type_item = QTableWidgetItem(feature.feature_type)
-                type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.features_table.setItem(row, 2, type_item)
+            # Type (read-only)
+            type_item = QTableWidgetItem(feature.feature_type)
+            type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.features_table.setItem(row, 2, type_item)
 
         self.features_table.blockSignals(False)
+        self.on_feature_selection_changed()
 
     def on_feature_visibility_changed(self, feature, state):
         """Handle feature visibility checkbox changes"""
@@ -168,15 +178,21 @@ class FeaturesPanel(DataPanel):
         feature_uuids = {feature.uuid for feature in features}
         self.features_table.blockSignals(True)
         self.features_table.clearSelection()
+        selection_model = self.features_table.selectionModel()
+        model = self.features_table.model()
 
         for row in range(self.features_table.rowCount()):
             name_item = self.features_table.item(row, 1)  # Name column
             if name_item:
                 uuid = name_item.data(Qt.ItemDataRole.UserRole)
                 if uuid in feature_uuids:
-                    self.features_table.selectRow(row)
+                    index = model.index(row, 0)
+                    selection_model.select(
+                        index, selection_model.SelectionFlag.Select | selection_model.SelectionFlag.Rows
+                    )
 
         self.features_table.blockSignals(False)
+        self.on_feature_selection_changed()
 
     def create_placemark(self):
         """Open dialog to create a new placemark"""

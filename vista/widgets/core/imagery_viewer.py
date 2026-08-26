@@ -1692,7 +1692,6 @@ class ImageryViewer(QWidget):
 
         # Store references
         aoi._roi_item = roi
-        aoi._selected = True  # Mark as selected
         self.aois.append(aoi)
 
         # Add text label
@@ -1770,7 +1769,6 @@ class ImageryViewer(QWidget):
             roi = pg.RectROI(pos, size, pen=pg.mkPen(aoi.color, width=2), snapSize=1.0)
             self.plot_item.addItem(roi)
             aoi._roi_item = roi
-            aoi._selected = False  # Start unselected
 
             # Add text label
             text_item = pg.TextItem(text=aoi.name, color=aoi.color, anchor=(0, 0))
@@ -1792,6 +1790,7 @@ class ImageryViewer(QWidget):
 
     def set_aoi_selectable(self, aoi: AOI, selectable: bool):
         """Set whether an AOI can be moved/resized"""
+        aoi._selected = selectable
         if aoi._roi_item:
             # Enable/disable translation (moving)
             aoi._roi_item.translatable = selectable

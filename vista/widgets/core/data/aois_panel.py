@@ -39,11 +39,13 @@ class AOIsPanel(DataPanel):
         self.delete_aoi_btn = QPushButton("Delete Selected")
         self.delete_aoi_btn.clicked.connect(self.delete_selected_aois)
         button_layout.addWidget(self.delete_aoi_btn)
+        self.delete_aoi_btn.setEnabled(False)
 
         # Export button
         self.export_aoi_btn = QPushButton("Export Selection")
         self.export_aoi_btn.clicked.connect(self.export_aois)
         button_layout.addWidget(self.export_aoi_btn)
+        self.export_aoi_btn.setEnabled(False)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -70,6 +72,8 @@ class AOIsPanel(DataPanel):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # Bounds (read-only)
 
         self.aois_table.cellChanged.connect(self.on_aoi_cell_changed)
+        # Enable Delete and Export buttons when rows are selected
+        # Also updates AOI selectability in the viewer
         self.aois_table.itemSelectionChanged.connect(self.on_aoi_selection_changed)
 
         layout.addWidget(self.aois_table)
@@ -88,11 +92,14 @@ class AOIsPanel(DataPanel):
     def clear_selection(self):
         """Clear all AOI selections in the table, which deselects AOIs in the viewer"""
         self.aois_table.clearSelection()
+        self.on_aoi_selection_changed()
 
     def refresh_aois_table(self):
         """Refresh the AOIs table"""
         self.aois_table.blockSignals(True)
         self.aois_table.setRowCount(0)
+        selection_model = self.aois_table.selectionModel()
+        model = self.aois_table.model()
 
         for row, aoi in enumerate(self.viewer.aois):
             self.aois_table.insertRow(row)
@@ -108,17 +115,22 @@ class AOIsPanel(DataPanel):
             bounds_item.setFlags(bounds_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.aois_table.setItem(row, 1, bounds_item)
 
-        self.aois_table.blockSignals(False)
-
-        # Select rows for AOIs that are marked as selected
-        for row, aoi in enumerate(self.viewer.aois):
+            # Select row if AOI is marked as selected
             if hasattr(aoi, "_selected") and aoi._selected:
-                self.aois_table.selectRow(row)
+                index = model.index(row, 0)
+                selection_model.select(index, selection_model.SelectionFlag.Select | selection_model.SelectionFlag.Rows)
+
+        self.aois_table.blockSignals(False)
+        self.on_aoi_selection_changed()
 
     def on_aoi_selection_changed(self):
         """Handle AOI selection changes from table"""
         # Get selected rows
         selected_rows = set(index.row() for index in self.aois_table.selectedIndexes())
+
+        has_selection = len(selected_rows) > 0
+        self.delete_aoi_btn.setEnabled(has_selection)
+        self.export_aoi_btn.setEnabled(has_selection)
 
         # Update all AOIs selectability based on selection
         for row, aoi in enumerate(self.viewer.aois):
