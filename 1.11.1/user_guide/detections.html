@@ -1,0 +1,1159 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Object Tracking" href="tracks.html"><link rel="prev" title="Features and Annotations" href="features.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>Object Detection - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features and Annotations</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/blob/main/docs/source/user_guide/detections.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/edit/main/docs/source/user_guide/detections.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="object-detection">
+<h1>Object Detection<a class="headerlink" href="#object-detection" title="Link to this heading">¶</a></h1>
+<p>VISTA provides tools for detecting objects and points of interest in multi-frame imagery.
+Detections represent individual observations without temporal association—they are
+“what” and “where” without “when” continuity. To connect detections across time, see <a class="reference internal" href="tracks.html"><span class="doc">Object Tracking</span></a>.</p>
+<section id="overview">
+<span id="detection-overview"></span><h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>Detections in VISTA are:</p>
+<dl class="simple">
+<dt><strong>Frame-Specific</strong></dt><dd><p>Each detection belongs to a specific frame and has pixel coordinates (row, column)</p>
+</dd>
+<dt><strong>Unassociated</strong></dt><dd><p>Unlike tracks, detections are independent observations without temporal relationships</p>
+</dd>
+<dt><strong>Labeled</strong></dt><dd><p>Each detection can have multiple labels for categorization (e.g., “bright”, “moving”)</p>
+</dd>
+<dt><strong>Styled</strong></dt><dd><p>Customize color, marker shape, size, and visibility for visualization</p>
+</dd>
+<dt><strong>Exportable</strong></dt><dd><p>Save detections to CSV or other formats for analysis or sharing</p>
+</dd>
+</dl>
+</section>
+<section id="loading-detections">
+<h2>Loading Detections<a class="headerlink" href="#loading-detections" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Click <strong>File → Load Detections</strong></p></li>
+<li><p>Select an CSV file (<code class="docutils literal notranslate"><span class="pre">.csv</span></code>)</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Alternatively users can drag and drop a detections file onto the <strong>Detectors</strong> panel in the <strong>Data Manager</strong>.</p>
+</div>
+<section id="csv-format">
+<h3>CSV Format<a class="headerlink" href="#csv-format" title="Link to this heading">¶</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Detector,Frame,Row,Column,Labels
+Threshold Detections,0,512.5,1024.3,"bright, moving"
+Threshold Detections,0,450.2,890.7,dim
+Threshold Detections,1,600.0,800.0,bright
+CFAR Detections,2,300.5,500.2,
+</pre></div>
+</div>
+</section>
+<section id="csv-columns">
+<h3>CSV Columns<a class="headerlink" href="#csv-columns" title="Link to this heading">¶</a></h3>
+<dl class="field-list simple">
+<dt class="field-odd">Detector<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of the detector (string)</p>
+</dd>
+<dt class="field-even">Frame<span class="colon">:</span></dt>
+<dd class="field-even"><p>Frame number (integer)</p>
+</dd>
+<dt class="field-odd">Row<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Row pixel coordinate (float)</p>
+</dd>
+<dt class="field-even">Column<span class="colon">:</span></dt>
+<dd class="field-even"><p>Column pixel coordinate (float)</p>
+</dd>
+<dt class="field-odd">Color<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector marker color. PyQtGraph color string (e.g., ‘r’, ‘g’, ‘b’, ‘#FF0000’) (string, optional)</p>
+</dd>
+<dt class="field-even">Marker<span class="colon">:</span></dt>
+<dd class="field-even"><p>Marker style (‘o’, ‘s’, ‘t’, ‘d’, ‘+’, ‘x’, ‘star’) (string, optional)</p>
+</dd>
+<dt class="field-odd">Line Thickness<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector marker line thickness (integer, optional)</p>
+</dd>
+<dt class="field-even">Visible<span class="colon">:</span></dt>
+<dd class="field-even"><p>Determines if detector should be visible by default or not (bool, optional)</p>
+</dd>
+<dt class="field-odd">Complete<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Show detections regardless of current frame (bool, optional)</p>
+</dd>
+<dt class="field-even">Labels<span class="colon">:</span></dt>
+<dd class="field-even"><p>Comma-separated labels (string, optional)</p>
+</dd>
+</dl>
+</section>
+<section id="csv-requirements">
+<h3>CSV Requirements<a class="headerlink" href="#csv-requirements" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Must have columns: Detector (or use name parameter), Frame, Row, Column</p></li>
+<li><p>Labels column is optional</p></li>
+<li><p>Multiple detectors can be in same CSV (grouped by Detector column)</p></li>
+</ul>
+</section>
+</section>
+<section id="manually-create-detections">
+<span id="manual-detection-creation"></span><h2>Manually Create Detections<a class="headerlink" href="#manually-create-detections" title="Link to this heading">¶</a></h2>
+<p>Users can create detections manually using the create detections tool. With this tool selection users can click
+points using one of several methods:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Verbatim: Use the exact location where you click.</p></li>
+<li><p>Peak: Uses the peak pixel within a radius of your clicked location.</p></li>
+<li><p>CFAR: Selects the weighted centroid of the pixel group closest to the clicked location that exceeds the local noise.</p></li>
+</ul>
+</div></blockquote>
+<img alt="Create detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_create.gif" />
+<p>De-select the create detections tool to create a new set of detections (a detector) in the Detections Panel.</p>
+</section>
+<section id="convert-tracks-into-detections">
+<h2>Convert Tracks into Detections<a class="headerlink" href="#convert-tracks-into-detections" title="Link to this heading">¶</a></h2>
+<p>Users can also create detections by converting a track into detections by selecting tracks in the Tracks Panel and
+pressing the Break Into Detections button.</p>
+<img alt="Create detections from tracks" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_from_tracks.gif" />
+</section>
+<section id="detection-algorithms">
+<span id="id1"></span><h2>Detection Algorithms<a class="headerlink" href="#detection-algorithms" title="Link to this heading">¶</a></h2>
+<p>VISTA includes built-in detection algorithms and supports custom detectors. Choose an
+algorithm based on your imagery characteristics and detection requirements.</p>
+<section id="simple-threshold-detector">
+<h3>Simple Threshold Detector<a class="headerlink" href="#simple-threshold-detector" title="Link to this heading">¶</a></h3>
+<p>The Simple Threshold detector identifies pixels above a specified intensity threshold.
+It’s fast and effective for high-contrast objects against low-background imagery.</p>
+<dl class="simple">
+<dt><strong>When to Use:</strong></dt><dd><ul class="simple">
+<li><p>High signal-to-noise ratio imagery</p></li>
+<li><p>Objects significantly brighter than background</p></li>
+<li><p>Quick initial detection pass</p></li>
+<li><p>Testing detection parameters</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Algorithm Parameters:</strong></p>
+<dl class="field-list simple">
+<dt class="field-odd">threshold<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Intensity value above which pixels are detected (float)</p>
+</dd>
+<dt class="field-even">min_area<span class="colon">:</span></dt>
+<dd class="field-even"><p>Minimum connected component size in pixels (int, optional)</p>
+</dd>
+<dt class="field-odd">max_area<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Maximum connected component size in pixels (int, optional)</p>
+</dd>
+</dl>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.detectors.threshold</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleThreshold</span>
+
+<span class="c1"># Create detector</span>
+<span class="n">detector</span> <span class="o">=</span> <span class="n">SimpleThreshold</span><span class="p">(</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>      <span class="c1"># Detect pixels &gt; 50</span>
+    <span class="n">min_area</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>          <span class="c1"># Minimum 5-pixel objects</span>
+    <span class="n">max_area</span><span class="o">=</span><span class="mi">500</span>         <span class="c1"># Maximum 500-pixel objects</span>
+<span class="p">)</span>
+
+<span class="c1"># Run on single frame</span>
+<span class="n">frame_data</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">frame_idx</span><span class="p">]</span>
+<span class="n">rows</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">detector</span><span class="p">(</span><span class="n">frame_data</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="si">}</span><span class="s2"> detections"</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><strong>Advantages:</strong></dt><dd><ul class="simple">
+<li><p>Very fast execution</p></li>
+<li><p>Simple to understand and tune</p></li>
+<li><p>Deterministic results</p></li>
+<li><p>No training required</p></li>
+</ul>
+</dd>
+<dt><strong>Limitations:</strong></dt><dd><ul class="simple">
+<li><p>Sensitive to background variations</p></li>
+<li><p>No spatial context consideration</p></li>
+<li><p>May produce false positives in noisy imagery</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="cfar-detector">
+<h3>CFAR Detector<a class="headerlink" href="#cfar-detector" title="Link to this heading">¶</a></h3>
+<p>The Constant False Alarm Rate (CFAR) detector adapts to local background statistics,
+making it robust to spatially-varying backgrounds and noise levels.</p>
+<dl class="simple">
+<dt><strong>When to Use:</strong></dt><dd><ul class="simple">
+<li><p>Varying background intensity across image</p></li>
+<li><p>Unknown or changing noise levels</p></li>
+<li><p>Need consistent false alarm rate</p></li>
+<li><p>Cluttered imagery with complex backgrounds</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Algorithm Parameters:</strong></p>
+<dl class="field-list simple">
+<dt class="field-odd">name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Detector identifier (string)</p>
+</dd>
+<dt class="field-even">kernel<span class="colon">:</span></dt>
+<dd class="field-even"><p>Detection kernel size determining analysis window (int, odd number)</p>
+</dd>
+<dt class="field-odd">n_pixels<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of standard deviations above mean for detection (float)</p>
+</dd>
+</dl>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.detectors.cfar</span><span class="w"> </span><span class="kn">import</span> <span class="n">CFAR</span>
+
+<span class="c1"># Create CFAR detector</span>
+<span class="n">detector</span> <span class="o">=</span> <span class="n">CFAR</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"CFAR Detector"</span><span class="p">,</span>
+    <span class="n">kernel</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span>          <span class="c1"># 21x21 pixel analysis window</span>
+    <span class="n">n_pixels</span><span class="o">=</span><span class="mf">3.0</span>        <span class="c1"># 3-sigma threshold</span>
+<span class="p">)</span>
+
+<span class="c1"># Process single frame</span>
+<span class="n">frame_data</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">frame_idx</span><span class="p">]</span>
+<span class="n">rows</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">detector</span><span class="p">(</span><span class="n">frame_data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>How It Works:</strong></p>
+<ol class="arabic simple">
+<li><p>For each pixel, compute local statistics in surrounding window</p></li>
+<li><p>Calculate threshold as mean + n_pixels × std_dev</p></li>
+<li><p>Detect pixels exceeding adaptive threshold</p></li>
+<li><p>Return coordinates of detected pixels</p></li>
+</ol>
+<dl class="simple">
+<dt><strong>Advantages:</strong></dt><dd><ul class="simple">
+<li><p>Adapts to local background</p></li>
+<li><p>Robust to illumination changes</p></li>
+<li><p>Maintains consistent false alarm rate</p></li>
+<li><p>Works well in cluttered scenes</p></li>
+</ul>
+</dd>
+<dt><strong>Limitations:</strong></dt><dd><ul class="simple">
+<li><p>Slower than simple threshold</p></li>
+<li><p>Requires tuning kernel size and threshold</p></li>
+<li><p>May miss detections near bright features</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="pstnn-detector">
+<h3>PSTNN Detector<a class="headerlink" href="#pstnn-detector" title="Link to this heading">¶</a></h3>
+<p>The Partial Sum of Tensor Nuclear Norm (PSTNN) detector uses tensor decomposition to separate
+low-rank background from sparse targets across the temporal image sequence. It exploits both
+spatial and temporal structure for robust small target detection in complex scenes.</p>
+<dl class="simple">
+<dt><strong>When to Use:</strong></dt><dd><ul class="simple">
+<li><p>Small targets in complex, slowly-varying backgrounds</p></li>
+<li><p>Multi-frame imagery where temporal correlation can aid detection</p></li>
+<li><p>Scenes where single-frame detectors produce excessive false alarms</p></li>
+<li><p>Infrared or electro-optical imagery with low signal-to-noise ratio</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Algorithm Parameters:</strong></p>
+<dl class="field-list simple">
+<dt class="field-odd">patch_size<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Size of spatial patches for tensor construction (int, default 40)</p>
+</dd>
+<dt class="field-even">stride<span class="colon">:</span></dt>
+<dd class="field-even"><p>Stride between patches; equal to patch_size for non-overlapping (int, default 40)</p>
+</dd>
+<dt class="field-odd">lambda_param<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sparsity weight; None for automatic selection (float or None)</p>
+</dd>
+<dt class="field-even">max_iterations<span class="colon">:</span></dt>
+<dd class="field-even"><p>Maximum ADMM iterations (int, default 50)</p>
+</dd>
+<dt class="field-odd">n_skipped_singular_values<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Top singular values to preserve as background (int, default 1)</p>
+</dd>
+<dt class="field-even">threshold_multiplier<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standard deviations above mean for adaptive thresholding (float, default 5.0)</p>
+</dd>
+<dt class="field-odd">min_area<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Minimum connected component size in pixels (int, default 1)</p>
+</dd>
+<dt class="field-even">max_area<span class="colon">:</span></dt>
+<dd class="field-even"><p>Maximum connected component size in pixels (int, default 1000)</p>
+</dd>
+</dl>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.detectors.pstnn</span><span class="w"> </span><span class="kn">import</span> <span class="n">PSTNN</span>
+
+<span class="c1"># Create PSTNN detector</span>
+<span class="n">detector</span> <span class="o">=</span> <span class="n">PSTNN</span><span class="p">(</span>
+    <span class="n">patch_size</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">stride</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">n_skipped_singular_values</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">threshold_multiplier</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+    <span class="n">min_area</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">max_area</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="c1"># Decompose multi-frame imagery into sparse target component</span>
+<span class="n">sparse_targets</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">)</span>
+
+<span class="c1"># Detect blobs in a single frame's sparse target image</span>
+<span class="n">rows</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">sparse_targets</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><strong>How It Works:</strong></p>
+<ol class="arabic simple">
+<li><p>Construct a 3D patch-tensor from the image sequence</p></li>
+<li><p>Decompose the tensor into low-rank background + sparse targets via ADMM</p></li>
+<li><p>Threshold the sparse component to identify target pixels</p></li>
+<li><p>Group connected pixels into blobs and compute weighted centroids</p></li>
+</ol>
+<dl class="simple">
+<dt><strong>Advantages:</strong></dt><dd><ul class="simple">
+<li><p>Exploits temporal correlation across frames for robust background separation</p></li>
+<li><p>Adapts to complex, non-uniform backgrounds without manual tuning</p></li>
+<li><p>GPU acceleration available for SVD operations via PyTorch</p></li>
+<li><p>Effective for small, dim targets that single-frame detectors may miss</p></li>
+</ul>
+</dd>
+<dt><strong>Limitations:</strong></dt><dd><ul class="simple">
+<li><p>Requires multiple frames (at least 2, more is better)</p></li>
+<li><p>Computationally intensive; GPU recommended for large datasets</p></li>
+<li><p>Patch size must be larger than expected targets</p></li>
+<li><p>Memory usage scales with image size, patch count, and frame count</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="running-detection-algorithms">
+<h3>Running Detection Algorithms<a class="headerlink" href="#running-detection-algorithms" title="Link to this heading">¶</a></h3>
+<p><strong>Via GUI:</strong></p>
+<ol class="arabic simple">
+<li><p>Open <strong>Image Processing → Detectors</strong> menu</p></li>
+<li><p>Select detection algorithm (Simple Threshold, CFAR, or PSTNN)</p></li>
+<li><p>Configure parameters in dialog</p></li>
+<li><p>Click <strong>Run</strong> to execute on current imagery</p></li>
+<li><p>Detections appear in the Detections Panel</p></li>
+</ol>
+<img alt="Shapefiles" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_running.gif" />
+<p><strong>Programmatically:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.detectors.threshold</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleThreshold</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.detections.detector</span><span class="w"> </span><span class="kn">import</span> <span class="n">Detector</span>
+
+<span class="c1"># Create detection algorithm</span>
+<span class="n">detector_algo</span> <span class="o">=</span> <span class="n">SimpleThreshold</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">min_area</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># Run on multiple frames</span>
+<span class="n">all_frames</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">all_rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">all_cols</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">frame_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">imagery</span><span class="p">)):</span>
+    <span class="n">frame_data</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">frame_idx</span><span class="p">]</span>
+    <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">detector_algo</span><span class="p">(</span><span class="n">frame_data</span><span class="p">)</span>
+
+    <span class="c1"># Collect results</span>
+    <span class="n">all_frames</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">frame_idx</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">))</span>
+    <span class="n">all_rows</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+    <span class="n">all_cols</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
+
+<span class="c1"># Create Detector object</span>
+<span class="n">detections</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Threshold Detections"</span><span class="p">,</span>
+    <span class="n">frames</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_frames</span><span class="p">),</span>
+    <span class="n">rows</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_rows</span><span class="p">),</span>
+    <span class="n">columns</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_cols</span><span class="p">),</span>
+    <span class="n">sensor</span><span class="o">=</span><span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">"Simple threshold detector with threshold=50.0"</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="managing-detections">
+<span id="id2"></span><h2>Managing Detections<a class="headerlink" href="#managing-detections" title="Link to this heading">¶</a></h2>
+<p>The <strong>Detections</strong> panel provides tools for viewing, filtering, and managing detection results.</p>
+<section id="detections-panel-overview">
+<h3>Detections Panel Overview<a class="headerlink" href="#detections-panel-overview" title="Link to this heading">¶</a></h3>
+<p>The Detections Panel displays:</p>
+<ul class="simple">
+<li><p><strong>Visible</strong>: Toggle detection display on/off</p></li>
+<li><p><strong>Name</strong>: Name of detector or detections group (resizable)</p></li>
+<li><p><strong>Labels</strong>: Text labels for categorization (resizable)</p></li>
+<li><p><strong>Color</strong>: Track color (click to change)</p></li>
+<li><p><strong>Marker</strong>: Marker style for current position</p></li>
+<li><p><strong>Marker Size</strong>: Size of marker</p></li>
+<li><p><strong>Line Thickness</strong>: Thickness of the marker border</p></li>
+<li><p><strong>Complete</strong>: Show detections regardless of current frame</p></li>
+</ul>
+<img alt="Detector controls" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_controls.gif" />
+<section id="reorder-hide-columns">
+<h4>Reorder / Hide Columns<a class="headerlink" href="#reorder-hide-columns" title="Link to this heading">¶</a></h4>
+<p>Users can reorder columns by clicking and dragging. Users can hide columns by right clicking on the table header and
+navigating to the “Show/Hide Columns” menu.</p>
+<img alt="Reorder detection columns" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detections_reorder_columns.gif" />
+</section>
+<section id="manually-reorder-columns">
+<h4>Manually Reorder Columns<a class="headerlink" href="#manually-reorder-columns" title="Link to this heading">¶</a></h4>
+<p>Users can manually re-order columns by selecting rows in the table content and dragging them. Rows cannot be dragged
+from the row header.</p>
+<img alt="Detector reordering" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detections_reorder.gif" />
+</section>
+<section id="undo">
+<h4>Undo<a class="headerlink" href="#undo" title="Link to this heading">¶</a></h4>
+<p>Users can also undo previous actions in the Detections Panel by pressing the Undo button or pressing <code class="docutils literal notranslate"><span class="pre">ctrl</span></code> + <code class="docutils literal notranslate"><span class="pre">z</span></code>.
+The undo depth is configurable through the global VISTA settings on the Data Manager tab.</p>
+</section>
+</section>
+<section id="export-detections">
+<h3>Export Detections<a class="headerlink" href="#export-detections" title="Link to this heading">¶</a></h3>
+<p>Users can export selected detections by pressing the Export Detections button in the Detections Panel.</p>
+</section>
+<section id="merge-detections">
+<h3>Merge Detections<a class="headerlink" href="#merge-detections" title="Link to this heading">¶</a></h3>
+<p>Users may merge detectors by selecting multiple detector rows and pressing Merge Detections.</p>
+<img alt="Merge detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_merge.gif" />
+</section>
+<section id="copy-detections">
+<h3>Copy Detections<a class="headerlink" href="#copy-detections" title="Link to this heading">¶</a></h3>
+<p>Users may copy detectors between sensors or on the same sensor by selecting detector rows and pressing the Copy to
+Sensor button. Users may copy only detections that are filtered by label by checking the Copy only filtered detections.</p>
+<img alt="Merge detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_copy.gif" />
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For real world applications, copying detections between sensors may require mapping detections in one sensor to
+another through some transform operation. The functionality built into VISTA directly copies the detection frames,
+rows, columns. It is left to users to add any transforms needed for their real-world applications.</p>
+</div>
+</section>
+<section id="detection-selection-actions">
+<h3>Detection Selection Actions<a class="headerlink" href="#detection-selection-actions" title="Link to this heading">¶</a></h3>
+<p>Users can conduct several actions in the Detections Panel once detections are selected. Users can select detections with
+the select detections or lasso tools.</p>
+<section id="create-track">
+<h4>Create Track<a class="headerlink" href="#create-track" title="Link to this heading">¶</a></h4>
+<p>Users can create a track from detections by pressing the Create Track button.</p>
+<img alt="Merge detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_create_track.gif" />
+</section>
+<section id="add-to-track">
+<h4>Add to Track<a class="headerlink" href="#add-to-track" title="Link to this heading">¶</a></h4>
+<p>Users can create a track from detections by pressing the Add to Track button.</p>
+<img alt="Merge detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_add_to_track.gif" />
+</section>
+<section id="edit-detector">
+<h4>Edit Detector<a class="headerlink" href="#edit-detector" title="Link to this heading">¶</a></h4>
+<p>Users can add or remove detections by selecting a single detector row and pressing the Edit Detector button. Users can
+add new detection points using any of the options described in the <a class="reference internal" href="#manual-detection-creation"><span class="std std-ref">Manually Create Detections section</span></a>.
+Users may also remove existing detections by clicking on them.</p>
+<img alt="Edit detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_edit.gif" />
+</section>
+</section>
+<section id="labeling-detections">
+<h3>Labeling Detections<a class="headerlink" href="#labeling-detections" title="Link to this heading">¶</a></h3>
+<p>Users can label detections by pressing the Label Detections button. Users may filter detections for a specific set of
+labels by right clicking on the Labels column in the detections table and setting a filter.</p>
+<img alt="Label detections" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_detectors_label.gif" />
+</section>
+<section id="programmatically-filtering-detections">
+<h3>Programmatically Filtering Detections<a class="headerlink" href="#programmatically-filtering-detections" title="Link to this heading">¶</a></h3>
+<p>Filter detections by various criteria:</p>
+<p><strong>By Frame Range:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get detections in frame range</span>
+<span class="n">frame_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;=</span> <span class="n">start_frame</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">frames</span> <span class="o">&lt;=</span> <span class="n">end_frame</span><span class="p">)</span>
+<span class="n">filtered_detector</span> <span class="o">=</span> <span class="n">detector</span><span class="p">[</span><span class="n">frame_mask</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><strong>By Spatial Region:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get detections in AOI</span>
+<span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">get_bounds</span><span class="p">()</span>
+<span class="n">spatial_mask</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">columns</span> <span class="o">&gt;=</span> <span class="n">x_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">columns</span> <span class="o">&lt;=</span> <span class="n">x_max</span><span class="p">)</span> <span class="o">&amp;</span>
+    <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">rows</span> <span class="o">&gt;=</span> <span class="n">y_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">rows</span> <span class="o">&lt;=</span> <span class="n">y_max</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">filtered_detector</span> <span class="o">=</span> <span class="n">detector</span><span class="p">[</span><span class="n">spatial_mask</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><strong>By Labels:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get detections with specific label</span>
+<span class="n">labeled_mask</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">'bright'</span> <span class="ow">in</span> <span class="n">labels</span>
+    <span class="k">for</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">detector</span><span class="o">.</span><span class="n">labels</span>
+<span class="p">]</span>
+<span class="n">filtered_detector</span> <span class="o">=</span> <span class="n">detector</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">labeled_mask</span><span class="p">)]</span>
+</pre></div>
+</div>
+</section>
+<section id="styling-detections">
+<h3>Styling Detections<a class="headerlink" href="#styling-detections" title="Link to this heading">¶</a></h3>
+<p>Customize detection appearance:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Change color</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="s1">'g'</span>  <span class="c1"># Green</span>
+
+<span class="c1"># Change marker</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">marker</span> <span class="o">=</span> <span class="s1">'s'</span>  <span class="c1"># Square</span>
+<span class="c1"># Available: 'o' (circle), 's' (square), 't' (triangle),</span>
+<span class="c1">#            'd' (diamond), '+' (plus), 'x' (cross), 'star'</span>
+
+<span class="c1"># Change size</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">marker_size</span> <span class="o">=</span> <span class="mi">15</span>
+
+<span class="c1"># Change line thickness</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">line_thickness</span> <span class="o">=</span> <span class="mi">3</span>
+
+<span class="c1"># Toggle visibility</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+<p><strong>In GUI:</strong></p>
+<ol class="arabic simple">
+<li><p>Select detector in Detections Panel</p></li>
+<li><p>Click on color/marker controls</p></li>
+<li><p>Changes apply immediately to viewer</p></li>
+</ol>
+</section>
+<section id="id3">
+<h3>Labeling Detections<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<p>Add categorical labels to detections for classification:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Add labels to specific detections</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'bright'</span><span class="p">,</span> <span class="s1">'moving'</span><span class="p">}</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'dim'</span><span class="p">,</span> <span class="s1">'stationary'</span><span class="p">}</span>
+
+<span class="c1"># Get all unique labels</span>
+<span class="n">all_labels</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">get_unique_labels</span><span class="p">()</span>
+
+<span class="c1"># Filter by label</span>
+<span class="n">bright_detections</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">'bright'</span> <span class="ow">in</span> <span class="n">labels</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>Labels enable:</dt><dd><ul class="simple">
+<li><p>Detection categorization</p></li>
+<li><p>Quality filtering</p></li>
+<li><p>Algorithm comparison</p></li>
+<li><p>Ground truth annotation</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+</section>
+<section id="programmatic-detection-usage">
+<span id="exporting-detections"></span><h2>Programmatic Detection Usage<a class="headerlink" href="#programmatic-detection-usage" title="Link to this heading">¶</a></h2>
+<p>Save detections for analysis, sharing, or archival.</p>
+<section id="programmatically-export-to-csv">
+<h3>Programmatically Export to CSV<a class="headerlink" href="#programmatically-export-to-csv" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Export to CSV</span>
+<span class="n">detector</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'detections.csv'</span><span class="p">)</span>
+
+<span class="c1"># Or use DataFrame for more control</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'detections.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="programmatically-import-from-csv">
+<h3>Programmatically Import from CSV<a class="headerlink" href="#programmatically-import-from-csv" title="Link to this heading">¶</a></h3>
+<p>Load previously exported detections:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.detections.detector</span><span class="w"> </span><span class="kn">import</span> <span class="n">Detector</span>
+
+<span class="c1"># Read CSV</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'detections.csv'</span><span class="p">)</span>
+
+<span class="c1"># Create detector from DataFrame</span>
+<span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span>
+    <span class="n">sensor</span><span class="o">=</span><span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Imported Detections"</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="common-programmatic-workflows">
+<span id="detection-workflows"></span><h3>Common Programmatic Workflows<a class="headerlink" href="#common-programmatic-workflows" title="Link to this heading">¶</a></h3>
+<p>Run multiple algorithms and compare results:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.detectors.threshold</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleThreshold</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.detectors.cfar</span><span class="w"> </span><span class="kn">import</span> <span class="n">CFAR</span>
+
+<span class="c1"># Run threshold detector</span>
+<span class="n">threshold_det</span> <span class="o">=</span> <span class="n">SimpleThreshold</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">50.0</span><span class="p">)</span>
+<span class="n">threshold_rows</span><span class="p">,</span> <span class="n">threshold_cols</span> <span class="o">=</span> <span class="n">threshold_det</span><span class="p">(</span><span class="n">frame_data</span><span class="p">)</span>
+
+<span class="c1"># Run CFAR detector</span>
+<span class="n">cfar_det</span> <span class="o">=</span> <span class="n">CFAR</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span> <span class="n">n_pixels</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+<span class="n">cfar_rows</span><span class="p">,</span> <span class="n">cfar_cols</span> <span class="o">=</span> <span class="n">cfar_det</span><span class="p">(</span><span class="n">frame_data</span><span class="p">)</span>
+
+<span class="c1"># Compare detection counts</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Threshold: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">threshold_rows</span><span class="p">)</span><span class="si">}</span><span class="s2"> detections"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"CFAR: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cfar_rows</span><span class="p">)</span><span class="si">}</span><span class="s2"> detections"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Compare algorithm detections with ground truth:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load ground truth placemarks</span>
+<span class="n">ground_truth_positions</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="n">placemark</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="s1">'row'</span><span class="p">],</span> <span class="n">placemark</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="s1">'col'</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">placemark</span> <span class="ow">in</span> <span class="n">placemarks</span>
+<span class="p">]</span>
+
+<span class="c1"># Find detections near ground truth (within radius)</span>
+<span class="n">radius</span> <span class="o">=</span> <span class="mf">5.0</span>  <span class="c1"># pixels</span>
+<span class="n">true_positives</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="k">for</span> <span class="n">gt_row</span><span class="p">,</span> <span class="n">gt_col</span> <span class="ow">in</span> <span class="n">ground_truth_positions</span><span class="p">:</span>
+    <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">rows</span> <span class="o">-</span> <span class="n">gt_row</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+        <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">columns</span> <span class="o">-</span> <span class="n">gt_col</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">distances</span> <span class="o">&lt;</span> <span class="n">radius</span><span class="p">):</span>
+        <span class="n">true_positives</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="c1"># Calculate detection rate</span>
+<span class="n">detection_rate</span> <span class="o">=</span> <span class="n">true_positives</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">ground_truth_positions</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Detection rate: </span><span class="si">{</span><span class="n">detection_rate</span><span class="si">:</span><span class="s2">.1%</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Focus detections in specific regions using AOIs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.aoi.aoi</span><span class="w"> </span><span class="kn">import</span> <span class="n">AOI</span>
+
+<span class="c1"># Define search zones</span>
+<span class="n">search_zone_1</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Zone 1"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">search_zone_2</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Zone 2"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+
+<span class="c1"># Filter detections by zone</span>
+<span class="k">for</span> <span class="n">aoi</span> <span class="ow">in</span> <span class="p">[</span><span class="n">search_zone_1</span><span class="p">,</span> <span class="n">search_zone_2</span><span class="p">]:</span>
+    <span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">get_bounds</span><span class="p">()</span>
+
+    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">columns</span> <span class="o">&gt;=</span> <span class="n">x_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">columns</span> <span class="o">&lt;=</span> <span class="n">x_max</span><span class="p">)</span> <span class="o">&amp;</span>
+        <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">rows</span> <span class="o">&gt;=</span> <span class="n">y_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">rows</span> <span class="o">&lt;=</span> <span class="n">y_max</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">zone_detections</span> <span class="o">=</span> <span class="n">detector</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">aoi</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">zone_detections</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span><span class="si">}</span><span class="s2"> detections"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Analyze detection patterns over time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Count detections per frame</span>
+<span class="n">unique_frames</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">detector</span><span class="o">.</span><span class="n">frames</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Find frames with most detections</span>
+<span class="n">busy_frames</span> <span class="o">=</span> <span class="n">unique_frames</span><span class="p">[</span><span class="n">counts</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="mi">90</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Busy frames (&gt;90th percentile): </span><span class="si">{</span><span class="n">busy_frames</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># Plot detection rate over time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">unique_frames</span><span class="p">,</span> <span class="n">counts</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Frame Number'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Detection Count'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">'Detections Over Time'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="tips-and-best-practices">
+<span id="detection-tips"></span><h2>Tips and Best Practices<a class="headerlink" href="#tips-and-best-practices" title="Link to this heading">¶</a></h2>
+<p><strong>Algorithm Selection</strong></p>
+<ul class="simple">
+<li><p>Start with Simple Threshold for high-contrast imagery</p></li>
+<li><p>Use CFAR for variable backgrounds or unknown noise levels</p></li>
+<li><p>Use PSTNN for small targets in complex scenes with multi-frame data</p></li>
+<li><p>Run multiple algorithms and compare results</p></li>
+<li><p>Tune parameters on representative sample frames first</p></li>
+</ul>
+<p><strong>Parameter Tuning</strong></p>
+<ul class="simple">
+<li><p><strong>Threshold</strong>: Set to ~3-5× background noise level</p></li>
+<li><p><strong>CFAR kernel</strong>: Should be 2-3× larger than expected object size</p></li>
+<li><p><strong>CFAR n_pixels</strong>: Start with 3.0, increase to reduce false alarms</p></li>
+<li><p><strong>Min area</strong>: Set to smallest object of interest in pixels</p></li>
+<li><p><strong>Max area</strong>: Set to avoid detecting large background features</p></li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul class="simple">
+<li><p>Process subset of frames first to validate parameters</p></li>
+<li><p>Use spatial filtering (AOIs) to focus computation</p></li>
+<li><p>Simple Threshold is faster than CFAR (use for real-time)</p></li>
+<li><p>Cache results rather than re-running detection</p></li>
+</ul>
+<p><strong>Validation</strong></p>
+<ul class="simple">
+<li><p>Always visually inspect detection results</p></li>
+<li><p>Compare with known targets or ground truth</p></li>
+<li><p>Check false positive and false negative rates</p></li>
+<li><p>Validate across different imagery conditions</p></li>
+</ul>
+<p><strong>Organization</strong></p>
+<ul class="simple">
+<li><p>Use descriptive detector names (include algorithm and key parameters)</p></li>
+<li><p>Add descriptions documenting parameter choices</p></li>
+<li><p>Export results to CSV for external analysis</p></li>
+<li><p>Save validated parameters for future use</p></li>
+</ul>
+<p><strong>Common Issues</strong></p>
+<dl class="simple">
+<dt><strong>Too many detections:</strong></dt><dd><ul class="simple">
+<li><p>Increase threshold value</p></li>
+<li><p>Increase CFAR n_pixels parameter</p></li>
+<li><p>Apply spatial filtering with AOIs</p></li>
+<li><p>Increase min_area to filter small noise</p></li>
+</ul>
+</dd>
+<dt><strong>Too few detections:</strong></dt><dd><ul class="simple">
+<li><p>Decrease threshold value</p></li>
+<li><p>Decrease CFAR n_pixels parameter</p></li>
+<li><p>Check that objects are visible in imagery</p></li>
+<li><p>Verify coordinate system is correct</p></li>
+</ul>
+</dd>
+<dt><strong>False positives:</strong></dt><dd><ul class="simple">
+<li><p>Use CFAR instead of threshold for adaptive background</p></li>
+<li><p>Apply size filtering (min_area, max_area)</p></li>
+<li><p>Label and filter detections by confidence</p></li>
+<li><p>Validate against ground truth</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="keyboard-shortcuts">
+<h2>Keyboard Shortcuts<a class="headerlink" href="#keyboard-shortcuts" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Delete</span></code>: Delete selected detector</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h2>
+<p><strong>Related Sections:</strong></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="tracks.html"><span class="doc">Object Tracking</span></a> - Connecting detections into trajectories</p></li>
+<li><p><a class="reference internal" href="features.html"><span class="doc">Features and Annotations</span></a> - AOIs and placemarks for spatial reference</p></li>
+<li><p><a class="reference internal" href="imagery.html"><span class="doc">Working with Imagery</span></a> - Preprocessing imagery before detection</p></li>
+</ul>
+<p><strong>API References:</strong></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector" title="vista.detections.detector.Detector"><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.detections.detector.Detector</span></code></a> - Detection data model</p></li>
+<li><p><a class="reference internal" href="../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html#vista.algorithms.detectors.threshold.SimpleThreshold" title="vista.algorithms.detectors.threshold.SimpleThreshold"><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.algorithms.detectors.threshold.SimpleThreshold</span></code></a> - Threshold detector</p></li>
+<li><p><a class="reference internal" href="../api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR" title="vista.algorithms.detectors.cfar.CFAR"><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.algorithms.detectors.cfar.CFAR</span></code></a> - CFAR detector</p></li>
+<li><p><a class="reference internal" href="../api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#vista.algorithms.detectors.pstnn.PSTNN" title="vista.algorithms.detectors.pstnn.PSTNN"><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.algorithms.detectors.pstnn.PSTNN</span></code></a> - PSTNN tensor decomposition detector</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="tracks.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Object Tracking</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="features.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Features and Annotations</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Object Detection</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#loading-detections">Loading Detections</a><ul>
+<li><a class="reference internal" href="#csv-format">CSV Format</a></li>
+<li><a class="reference internal" href="#csv-columns">CSV Columns</a></li>
+<li><a class="reference internal" href="#csv-requirements">CSV Requirements</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#manually-create-detections">Manually Create Detections</a></li>
+<li><a class="reference internal" href="#convert-tracks-into-detections">Convert Tracks into Detections</a></li>
+<li><a class="reference internal" href="#detection-algorithms">Detection Algorithms</a><ul>
+<li><a class="reference internal" href="#simple-threshold-detector">Simple Threshold Detector</a></li>
+<li><a class="reference internal" href="#cfar-detector">CFAR Detector</a></li>
+<li><a class="reference internal" href="#pstnn-detector">PSTNN Detector</a></li>
+<li><a class="reference internal" href="#running-detection-algorithms">Running Detection Algorithms</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#managing-detections">Managing Detections</a><ul>
+<li><a class="reference internal" href="#detections-panel-overview">Detections Panel Overview</a><ul>
+<li><a class="reference internal" href="#reorder-hide-columns">Reorder / Hide Columns</a></li>
+<li><a class="reference internal" href="#manually-reorder-columns">Manually Reorder Columns</a></li>
+<li><a class="reference internal" href="#undo">Undo</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#export-detections">Export Detections</a></li>
+<li><a class="reference internal" href="#merge-detections">Merge Detections</a></li>
+<li><a class="reference internal" href="#copy-detections">Copy Detections</a></li>
+<li><a class="reference internal" href="#detection-selection-actions">Detection Selection Actions</a><ul>
+<li><a class="reference internal" href="#create-track">Create Track</a></li>
+<li><a class="reference internal" href="#add-to-track">Add to Track</a></li>
+<li><a class="reference internal" href="#edit-detector">Edit Detector</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#labeling-detections">Labeling Detections</a></li>
+<li><a class="reference internal" href="#programmatically-filtering-detections">Programmatically Filtering Detections</a></li>
+<li><a class="reference internal" href="#styling-detections">Styling Detections</a></li>
+<li><a class="reference internal" href="#id3">Labeling Detections</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#programmatic-detection-usage">Programmatic Detection Usage</a><ul>
+<li><a class="reference internal" href="#programmatically-export-to-csv">Programmatically Export to CSV</a></li>
+<li><a class="reference internal" href="#programmatically-import-from-csv">Programmatically Import from CSV</a></li>
+<li><a class="reference internal" href="#common-programmatic-workflows">Common Programmatic Workflows</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tips-and-best-practices">Tips and Best Practices</a></li>
+<li><a class="reference internal" href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

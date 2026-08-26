@@ -1,0 +1,25 @@
+﻿vista.known\_sources.solar\_system\_bodies.SolarSystemBodies
+============================================================
+
+.. currentmodule:: vista.known_sources.solar_system_bodies
+
+.. autoclass:: SolarSystemBodies
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SolarSystemBodies.__init__
+      ~SolarSystemBodies.create_tracks
+      ~SolarSystemBodies.get_geodetics
+      ~SolarSystemBodies.get_pixels
+   
+   
+
+   
+   
+   

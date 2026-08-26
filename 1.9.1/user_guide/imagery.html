@@ -1,0 +1,1277 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Features and Annotations" href="features.html"><link rel="prev" title="Quick Start Guide" href="../getting_started/quickstart.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>Working with Imagery - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/extending.html">Extending VISTA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/blob/main/docs/source/user_guide/imagery.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/edit/main/docs/source/user_guide/imagery.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="working-with-imagery">
+<h1>Working with Imagery<a class="headerlink" href="#working-with-imagery" title="Link to this heading">¶</a></h1>
+<p>This guide covers loading, managing, and processing imagery in VISTA.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While working with imagery is a key VISTA use-case, users should be aware that VISTA can be used to analyze
+detections and tracks.</p>
+</div>
+<section id="loading-imagery">
+<h2>Loading Imagery<a class="headerlink" href="#loading-imagery" title="Link to this heading">¶</a></h2>
+<p>VISTA supports loading imagery from HDF5 files and can work with version 1.5, 1.6, and 1.7 formats.
+See <a class="reference internal" href="../api/imagery.html"><span class="doc">Imagery Module</span></a> for programmatic details.</p>
+<section id="from-the-gui">
+<h3>From the GUI<a class="headerlink" href="#from-the-gui" title="Link to this heading">¶</a></h3>
+<p>To load imagery in the VISTA GUI:</p>
+<ol class="arabic simple">
+<li><p>Click <strong>File → Open</strong></p></li>
+<li><p>Select an HDF5 file (<code class="docutils literal notranslate"><span class="pre">.h5</span></code> or <code class="docutils literal notranslate"><span class="pre">.hdf5</span></code>)</p></li>
+<li><p>VISTA will automatically detect the format and load all sensors and imagery</p></li>
+</ol>
+<img alt="Loading imagery" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_loading.gif" />
+</section>
+<section id="from-python-api">
+<h3>From Python API<a class="headerlink" href="#from-python-api" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.imagery</span><span class="w"> </span><span class="kn">import</span> <span class="n">Imagery</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.sensors</span><span class="w"> </span><span class="kn">import</span> <span class="n">SampledSensor</span>
+
+<span class="c1"># Imagery is typically loaded through the GUI's data loader</span>
+<span class="c1"># For programmatic creation, see the HDF5 Format section below</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="hdf5-file-format">
+<h2>HDF5 File Format<a class="headerlink" href="#hdf5-file-format" title="Link to this heading">¶</a></h2>
+<p>VISTA uses HDF5 as its native format for storing multi-frame imagery along with metadata,
+sensor calibration, and coordinate transformation data.</p>
+<section id="format-overview">
+<span id="imagery-format-overview"></span><h3>Format Overview<a class="headerlink" href="#format-overview" title="Link to this heading">¶</a></h3>
+<p><strong>Current Version:</strong> 1.7 (simplified timestamps with nanosecond precision)</p>
+<p><strong>Legacy Support:</strong> version 1.6 (hierarchical with split timestamps), version 1.5 (flat structure, deprecated)</p>
+<p>The version 1.7 format uses a hierarchical sensor-based structure allowing multiple sensors
+and multiple imagery datasets per sensor in a single file, with simplified timestamp
+storage using a single nanosecond field.</p>
+</section>
+<section id="file-structure-version-1-7">
+<h3>File Structure (version 1.7)<a class="headerlink" href="#file-structure-version-1-7" title="Link to this heading">¶</a></h3>
+<p>The HDF5 file has the following hierarchical structure:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>root/
+├── [attributes]
+│   ├── format_version: "1.7"
+│   └── created: "2024-01-01T12:00:00"
+└── sensors/
+    └── &lt;sensor_uuid&gt;/
+        ├── [attributes]
+        │   ├── name: "Sensor Name"
+        │   ├── uuid: "uuid-string"
+        │   └── sensor_type: "Sensor" or "SampledSensor"
+        ├── position/              (SampledSensor only)
+        │   ├── positions          [3 × N array: x, y, z in ECEF meters]
+        │   └── unix_nanoseconds   [N array: nanoseconds since epoch]
+        ├── geolocation/           (optional, for coordinate transforms)
+        │   ├── frames             [M array: frame numbers for polynomials]
+        │   ├── pointing           [M × 2 array: azimuth, elevation]
+        │   ├── poly_pixel_to_arf_azimuth    [M × P array]
+        │   ├── poly_pixel_to_arf_elevation  [M × Q array]
+        │   ├── poly_arf_to_row    [M × R array]
+        │   └── poly_arf_to_col    [M × S array]
+        ├── radiometric/           (optional, for calibration)
+        │   ├── bias_images                     [K × H × W array]
+        │   ├── bias_image_frames               [K array]
+        │   ├── uniformity_gain_images          [L × H × W array]
+        │   ├── uniformity_gain_image_frames    [L array]
+        │   ├── bad_pixel_masks                 [J × H × W array]
+        │   ├── bad_pixel_mask_frames           [J array]
+        │   ├── radiometric_gain                [M array]
+        │   └── radiometric_gain_frames         [M array]
+        └── imagery/
+            └── &lt;imagery_uuid&gt;/
+                ├── [attributes]
+                │   ├── name: "Imagery Name"
+                │   ├── uuid: "uuid-string"
+                │   ├── description: "Optional description"
+                │   ├── row_offset: 0
+                │   └── column_offset: 0
+                ├── images           [N × H × W array, float32, chunked]
+                ├── frames           [N array: frame numbers]
+                └── unix_nanoseconds [N array: nanoseconds since epoch]
+</pre></div>
+</div>
+</section>
+<section id="detailed-dataset-descriptions">
+<h3>Detailed Dataset Descriptions<a class="headerlink" href="#detailed-dataset-descriptions" title="Link to this heading">¶</a></h3>
+<section id="root-attributes">
+<h4>Root Attributes<a class="headerlink" href="#root-attributes" title="Link to this heading">¶</a></h4>
+<dl class="field-list simple">
+<dt class="field-odd">format_version<span class="colon">:</span></dt>
+<dd class="field-odd"><p>String indicating the format version (e.g., “1.6”)</p>
+</dd>
+<dt class="field-even">created<span class="colon">:</span></dt>
+<dd class="field-even"><p>ISO 8601 timestamp of file creation</p>
+</dd>
+</dl>
+</section>
+<section id="sensor-attributes">
+<h4>Sensor Attributes<a class="headerlink" href="#sensor-attributes" title="Link to this heading">¶</a></h4>
+<dl class="field-list simple">
+<dt class="field-odd">name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Human-readable sensor identifier</p>
+</dd>
+<dt class="field-even">uuid<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unique identifier for this sensor (UUID string)</p>
+</dd>
+<dt class="field-odd">sensor_type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Either <code class="docutils literal notranslate"><span class="pre">&quot;Sensor&quot;</span></code> (base class) or <code class="docutils literal notranslate"><span class="pre">&quot;SampledSensor&quot;</span></code> (with position data)</p>
+</dd>
+</dl>
+</section>
+<section id="sensor-position-data-sampledsensor-only">
+<h4>Sensor Position Data (SampledSensor only)<a class="headerlink" href="#sensor-position-data-sampledsensor-only" title="Link to this heading">¶</a></h4>
+<dl class="field-list simple">
+<dt class="field-odd">positions<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3 × N array of ECEF (Earth-Centered, Earth-Fixed) positions in meters</p>
+<ul class="simple">
+<li><p>Row 0: X coordinate</p></li>
+<li><p>Row 1: Y coordinate</p></li>
+<li><p>Row 2: Z coordinate</p></li>
+</ul>
+</dd>
+<dt class="field-even">unix_nanoseconds<span class="colon">:</span></dt>
+<dd class="field-even"><p>N-element array of nanoseconds since Unix epoch (1970-01-01 00:00:00 UTC).
+int64 datatype provides nanosecond precision with valid range from
+1970-01-01 to 2262-04-11.</p>
+</dd>
+</dl>
+</section>
+<section id="geolocation-data-optional">
+<h4>Geolocation Data (optional)<a class="headerlink" href="#geolocation-data-optional" title="Link to this heading">¶</a></h4>
+<p>Required for pixel-to-geodetic coordinate conversion:</p>
+<dl class="field-list simple">
+<dt class="field-odd">frames<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Frame numbers for which polynomial coefficients apply</p>
+</dd>
+<dt class="field-even">pointing<span class="colon">:</span></dt>
+<dd class="field-even"><p>M × 2 array of sensor pointing [azimuth, elevation] in radians</p>
+</dd>
+<dt class="field-odd">poly_pixel_to_arf_azimuth<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Polynomial coefficients for pixel → ARF azimuth</p>
+</dd>
+<dt class="field-even">poly_pixel_to_arf_elevation<span class="colon">:</span></dt>
+<dd class="field-even"><p>Polynomial coefficients for pixel → ARF elevation</p>
+</dd>
+<dt class="field-odd">poly_arf_to_row<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Polynomial coefficients for ARF → pixel row</p>
+</dd>
+<dt class="field-even">poly_arf_to_col<span class="colon">:</span></dt>
+<dd class="field-even"><p>Polynomial coefficients for ARF → pixel column</p>
+</dd>
+</dl>
+</section>
+<section id="radiometric-calibration-optional">
+<h4>Radiometric Calibration (optional)<a class="headerlink" href="#radiometric-calibration-optional" title="Link to this heading">¶</a></h4>
+<dl class="field-list simple">
+<dt class="field-odd">bias_images<span class="colon">:</span></dt>
+<dd class="field-odd"><p>K × H × W array of bias frames (dark current corrections)</p>
+</dd>
+<dt class="field-even">bias_image_frames<span class="colon">:</span></dt>
+<dd class="field-even"><p>Frame numbers indicating when each bias image applies</p>
+</dd>
+<dt class="field-odd">uniformity_gain_images<span class="colon">:</span></dt>
+<dd class="field-odd"><p>L × H × W array of flat-field correction images</p>
+</dd>
+<dt class="field-even">uniformity_gain_image_frames<span class="colon">:</span></dt>
+<dd class="field-even"><p>Frame numbers for uniformity corrections</p>
+</dd>
+<dt class="field-odd">bad_pixel_masks<span class="colon">:</span></dt>
+<dd class="field-odd"><p>J × H × W boolean array identifying defective pixels</p>
+</dd>
+<dt class="field-even">bad_pixel_mask_frames<span class="colon">:</span></dt>
+<dd class="field-even"><p>Frame numbers for bad pixel masks</p>
+</dd>
+<dt class="field-odd">radiometric_gain<span class="colon">:</span></dt>
+<dd class="field-odd"><p>M-element array of overall gain values per frame</p>
+</dd>
+<dt class="field-even">radiometric_gain_frames<span class="colon">:</span></dt>
+<dd class="field-even"><p>Frame numbers for radiometric gains</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Calibration arrays define frame ranges: calibration at frame N applies
+to all imagery frames until frame N+1 begins.</p>
+</div>
+</section>
+<section id="imagery-attributes">
+<h4>Imagery Attributes<a class="headerlink" href="#imagery-attributes" title="Link to this heading">¶</a></h4>
+<dl class="field-list simple">
+<dt class="field-odd">name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Human-readable imagery identifier</p>
+</dd>
+<dt class="field-even">uuid<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unique identifier for this imagery dataset</p>
+</dd>
+<dt class="field-odd">description<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional long-form description</p>
+</dd>
+<dt class="field-even">row_offset<span class="colon">:</span></dt>
+<dd class="field-even"><p>Vertical offset if imagery is a spatial crop (default: 0)</p>
+</dd>
+<dt class="field-odd">column_offset<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Horizontal offset if imagery is a spatial crop (default: 0)</p>
+</dd>
+</dl>
+</section>
+<section id="imagery-datasets">
+<h4>Imagery Datasets<a class="headerlink" href="#imagery-datasets" title="Link to this heading">¶</a></h4>
+<dl class="field-list">
+<dt class="field-odd">images<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>N × H × W array</strong> of image frames</p>
+<ul class="simple">
+<li><p>Datatype: <code class="docutils literal notranslate"><span class="pre">float32</span></code></p></li>
+<li><p>Chunked: <code class="docutils literal notranslate"><span class="pre">(1,</span> <span class="pre">H,</span> <span class="pre">W)</span></code> for efficient frame-by-frame access</p></li>
+<li><p>N = number of frames</p></li>
+<li><p>H = image height (rows)</p></li>
+<li><p>W = image width (columns)</p></li>
+</ul>
+</dd>
+<dt class="field-even">frames<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>N-element array</strong> of frame numbers (<code class="docutils literal notranslate"><span class="pre">int64</span></code>)</p>
+<p>Frame numbers need not be sequential or start at zero.
+They identify each image within the sensor’s temporal sequence.</p>
+</dd>
+<dt class="field-odd">unix_nanoseconds<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>N-element array</strong> of nanoseconds since Unix epoch (<code class="docutils literal notranslate"><span class="pre">int64</span></code>)</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Times are stored as nanoseconds since Unix epoch (1970-01-01 00:00:00 UTC)
+for nanosecond precision with int64 datatype. Valid range: 1970-01-01 to 2262-04-11.</p>
+<p><code class="docutils literal notranslate"><span class="pre">datetime64[ns]</span> <span class="pre">=</span> <span class="pre">unix_nanoseconds</span></code></p>
+</div>
+</section>
+</section>
+<section id="creating-hdf5-files">
+<h3>Creating HDF5 Files<a class="headerlink" href="#creating-hdf5-files" title="Link to this heading">¶</a></h3>
+<section id="using-the-vista-api">
+<h4>Using the VISTA API<a class="headerlink" href="#using-the-vista-api" title="Link to this heading">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.imagery</span><span class="w"> </span><span class="kn">import</span> <span class="n">Imagery</span><span class="p">,</span> <span class="n">save_imagery_hdf5</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.sensors</span><span class="w"> </span><span class="kn">import</span> <span class="n">SampledSensor</span>
+
+<span class="c1"># Create sensor with position data</span>
+<span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1e6</span><span class="p">],</span> <span class="p">[</span><span class="mf">2e6</span><span class="p">],</span> <span class="p">[</span><span class="mf">3e6</span><span class="p">]])</span>  <span class="c1"># ECEF coordinates</span>
+<span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s1">'2024-01-01T00:00:00'</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'datetime64[ns]'</span><span class="p">)</span>
+<span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">sensor</span> <span class="o">=</span> <span class="n">SampledSensor</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"MySensor"</span><span class="p">,</span>
+    <span class="n">positions</span><span class="o">=</span><span class="n">positions</span><span class="p">,</span>
+    <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">,</span>
+    <span class="n">frames</span><span class="o">=</span><span class="n">frames</span>
+<span class="p">)</span>
+
+<span class="c1"># Create imagery</span>
+<span class="n">images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">img_frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">img_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s1">'2024-01-01T00:00:00'</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="n">i</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="s1">'ms'</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'datetime64[ns]'</span><span class="p">)</span>
+
+<span class="n">imagery</span> <span class="o">=</span> <span class="n">Imagery</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Test Imagery"</span><span class="p">,</span>
+    <span class="n">images</span><span class="o">=</span><span class="n">images</span><span class="p">,</span>
+    <span class="n">frames</span><span class="o">=</span><span class="n">img_frames</span><span class="p">,</span>
+    <span class="n">times</span><span class="o">=</span><span class="n">img_times</span><span class="p">,</span>
+    <span class="n">sensor</span><span class="o">=</span><span class="n">sensor</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">"Example imagery dataset"</span>
+<span class="p">)</span>
+
+<span class="c1"># Save to HDF5</span>
+<span class="n">save_imagery_hdf5</span><span class="p">(</span><span class="s2">"output.h5"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"MySensor"</span><span class="p">:</span> <span class="p">[</span><span class="n">imagery</span><span class="p">]})</span>
+</pre></div>
+</div>
+</section>
+<section id="using-h5py-directly">
+<h4>Using h5py Directly<a class="headerlink" href="#using-h5py-directly" title="Link to this heading">¶</a></h4>
+<p>For advanced users, you can create HDF5 files directly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s1">'custom_imagery.h5'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="c1"># Set root attributes</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'format_version'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'1.6'</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'created'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'2024-01-01T12:00:00'</span>
+
+    <span class="c1"># Create sensor structure</span>
+    <span class="n">sensors_group</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">'sensors'</span><span class="p">)</span>
+    <span class="n">sensor_group</span> <span class="o">=</span> <span class="n">sensors_group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">'sensor-uuid-here'</span><span class="p">)</span>
+    <span class="n">sensor_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'MySensor'</span>
+    <span class="n">sensor_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'uuid'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'sensor-uuid-here'</span>
+    <span class="n">sensor_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'sensor_type'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'Sensor'</span>
+
+    <span class="c1"># Create imagery structure</span>
+    <span class="n">imagery_group</span> <span class="o">=</span> <span class="n">sensor_group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">'imagery'</span><span class="p">)</span>
+    <span class="n">img_group</span> <span class="o">=</span> <span class="n">imagery_group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s1">'imagery-uuid-here'</span><span class="p">)</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'MyImagery'</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'uuid'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'imagery-uuid-here'</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'description'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'Custom imagery'</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'row_offset'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">'column_offset'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Create datasets</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">'images'</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">images</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">))</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">'frames'</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+
+    <span class="c1"># Optional: Add timestamps</span>
+    <span class="n">unix_nanoseconds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100_000_000_000</span>  <span class="c1"># 100 second intervals in nanoseconds</span>
+    <span class="n">img_group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">'unix_nanoseconds'</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">unix_nanoseconds</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="format-versions">
+<h3>Format Versions<a class="headerlink" href="#format-versions" title="Link to this heading">¶</a></h3>
+<section id="version-1-7-current">
+<h4>Version 1.7 (Current)<a class="headerlink" href="#version-1-7-current" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p>Uses single <code class="docutils literal notranslate"><span class="pre">unix_nanoseconds</span></code> field for timestamps (int64)</p></li>
+<li><p>Simplified timestamp storage with nanosecond precision</p></li>
+<li><p>Valid time range: 1970-01-01 to 2262-04-11 (292 years)</p></li>
+<li><p>All other features from version 1.6 retained</p></li>
+</ul>
+</section>
+<section id="version-1-6-legacy-deprecated">
+<h4>Version 1.6 (Legacy, Deprecated)<a class="headerlink" href="#version-1-6-legacy-deprecated" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p>Hierarchical structure with <code class="docutils literal notranslate"><span class="pre">sensors/</span></code> root group</p></li>
+<li><p>Supports multiple sensors per file</p></li>
+<li><p>Supports multiple imagery datasets per sensor</p></li>
+<li><p>Uses split <code class="docutils literal notranslate"><span class="pre">unix_times</span></code> and <code class="docutils literal notranslate"><span class="pre">unix_fine_times</span></code> fields</p></li>
+<li><p>Fully supported for loading (backward compatible)</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When opening version 1.6 files, VISTA displays a deprecation warning.
+Convert legacy files to version 1.7 format by loading and re-saving through
+the GUI: <strong>File → Open</strong> (load version 1.5) then <strong>File → Save</strong> (saves as version 1.7).</p>
+</div>
+</section>
+<section id="version-1-5-legacy-deprecated">
+<h4>Version 1.5 (Legacy, Deprecated)<a class="headerlink" href="#version-1-5-legacy-deprecated" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p>Flat structure with datasets at root level</p></li>
+<li><p>Single sensor, single imagery per file</p></li>
+<li><p>Still supported for loading but not recommended for new files</p></li>
+<li><p>Will be removed in a future VISTA version</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When opening version 1.5 files, VISTA displays a deprecation warning.
+Convert legacy files to version 1.7 format by loading and re-saving through
+the GUI: <strong>File → Open</strong> (load version 1.5) then <strong>File → Save</strong> (saves as version 1.7).</p>
+</div>
+</section>
+</section>
+</section>
+<section id="attitude-reference-frame-arf">
+<span id="arf-coordinate-system"></span><h2>Attitude Reference Frame (ARF)<a class="headerlink" href="#attitude-reference-frame-arf" title="Link to this heading">¶</a></h2>
+<p>The Attitude Reference Frame (ARF) is a local sensor-centric coordinate system used in VISTA
+for efficient pixel-to-geodetic coordinate transformations and geolocation calculations.</p>
+<section id="purpose">
+<h3>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">¶</a></h3>
+<p>The ARF serves as an intermediate coordinate system in the transformation chain between
+image pixel coordinates and Earth-centered, Earth-fixed (ECEF) geodetic coordinates:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Pixel (row, col) → ARF (azimuth, elevation) → ECEF (lat, lon, alt)
+                 ↑                          ↑
+          Polynomial transforms      Earth intersection
+</pre></div>
+</div>
+<p>Using ARF as an intermediate step provides several benefits:</p>
+<ul class="simple">
+<li><p><strong>Compact polynomial representation</strong>: ARF angles change smoothly across the image,
+allowing accurate polynomial approximations with low-order terms</p></li>
+<li><p><strong>Sensor independence</strong>: ARF is defined relative to sensor pointing, not absolute coordinates</p></li>
+<li><p><strong>Numerical stability</strong>: Local coordinates avoid precision issues with large ECEF values</p></li>
+<li><p><strong>Physical intuition</strong>: Azimuth/elevation angles are easier to interpret than ECEF vectors</p></li>
+</ul>
+</section>
+<section id="arf-definition">
+<h3>ARF Definition<a class="headerlink" href="#arf-definition" title="Link to this heading">¶</a></h3>
+<p>The ARF is a right-handed Cartesian coordinate system defined by three orthonormal axes
+relative to the sensor’s position and pointing direction:</p>
+<dl class="simple">
+<dt><strong>X-axis (Boresight)</strong></dt><dd><p>Points along the sensor’s boresight (pointing direction). This is the primary viewing
+direction of the sensor.</p>
+</dd>
+<dt><strong>Z-axis (North-aligned)</strong></dt><dd><p>Points as close to North as possible while remaining orthogonal to the X-axis.
+Specifically, it’s the component of the “toward North pole” vector that is perpendicular
+to the boresight.</p>
+</dd>
+<dt><strong>Y-axis (Completes right-hand system)</strong></dt><dd><p>Computed as the cross product of X and Z axes: <strong>Y = X × Z</strong>. This creates a
+right-handed coordinate system.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The ARF rotates with the sensor. As the sensor moves and its pointing changes,
+the ARF axes change accordingly. This makes ARF a <em>dynamic</em> coordinate system
+that must be recomputed for each sensor position and pointing angle.</p>
+</div>
+</section>
+<section id="mathematical-construction">
+<h3>Mathematical Construction<a class="headerlink" href="#mathematical-construction" title="Link to this heading">¶</a></h3>
+<p>Given sensor position <strong>P</strong> (in ECEF coordinates, km) and sensor pointing unit vector <strong>D</strong>
+(in ECEF), the ARF transformation matrix is constructed as follows:</p>
+<ol class="arabic">
+<li><p><strong>X-axis</strong>: ARF X-axis = sensor pointing direction</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{\hat{x}}_{ARF} = \mathbf{D}\]</div>
+</div>
+</li>
+<li><p><strong>Northish vector</strong>: Vector from sensor toward North pole</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{N}_{pole} = [0, 0, 6356.752314245]^T \text{ km (Earth polar radius)}\]</div>
+</div>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{\hat{N}} = \frac{\mathbf{N}_{pole} - \mathbf{P}}{|\mathbf{N}_{pole} - \mathbf{P}|}\]</div>
+</div>
+</li>
+<li><p><strong>Z-axis</strong>: Orthogonal component of northish vector</p>
+<p>Remove the projection of ARF X-axis onto the northish vector:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{z}_{ARF} = \mathbf{\hat{N}} - (\mathbf{\hat{x}}_{ARF} \cdot \mathbf{\hat{N}}) \mathbf{\hat{x}}_{ARF}\]</div>
+</div>
+<p>Normalize to unit vector:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{\hat{z}}_{ARF} = \frac{\mathbf{z}_{ARF}}{|\mathbf{z}_{ARF}|}\]</div>
+</div>
+</li>
+<li><p><strong>Y-axis</strong>: Cross product of X and Z</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{y}_{ARF} = \mathbf{\hat{x}}_{ARF} \times \mathbf{\hat{z}}_{ARF}\]</div>
+</div>
+<p>Normalize to ensure unit length:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{\hat{y}}_{ARF} = \frac{\mathbf{y}_{ARF}}{|\mathbf{y}_{ARF}|}\]</div>
+</div>
+</li>
+<li><p><strong>Transformation matrix</strong>: Converts global vectors to ARF</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\mathbf{M}_{global \rightarrow ARF} = \begin{bmatrix}
+   \mathbf{\hat{x}}_{ARF}^T \\
+   \mathbf{\hat{y}}_{ARF}^T \\
+   \mathbf{\hat{z}}_{ARF}^T
+\end{bmatrix}\end{split}\]</div>
+</div>
+</li>
+</ol>
+</section>
+<section id="arf-angles">
+<h3>ARF Angles<a class="headerlink" href="#arf-angles" title="Link to this heading">¶</a></h3>
+<p>Directions in ARF are commonly expressed as spherical coordinates (azimuth, elevation):</p>
+<dl class="simple">
+<dt><strong>Azimuth</strong></dt><dd><p>Angle in radians measured counter-clockwise from the ARF Y-axis in the Y-Z plane.
+Range: [-π, π] radians (-180° to 180°)</p>
+</dd>
+<dt><strong>Elevation</strong></dt><dd><p>Angle in radians measured from the Y-Z plane toward the ARF X-axis.
+Range: [-π/2, π/2] radians (-90° to 90°)</p>
+</dd>
+</dl>
+<p>Conversion between ARF Cartesian and spherical coordinates:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Cartesian (x, y, z) to spherical (azimuth, elevation)</span>
+<span class="n">azimuth</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+<span class="n">elevation</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+
+<span class="c1"># Spherical to Cartesian</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">elevation</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">azimuth</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">elevation</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">azimuth</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">elevation</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="usage-in-geolocation">
+<h3>Usage in Geolocation<a class="headerlink" href="#usage-in-geolocation" title="Link to this heading">¶</a></h3>
+<p>VISTA uses ARF in the pixel-to-geodetic transformation pipeline stored in the HDF5
+geolocation data:</p>
+<dl>
+<dt><strong>Step 1: Pixel → ARF angles</strong></dt><dd><p>2D polynomials map pixel coordinates to ARF azimuth and elevation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">azimuth</span> <span class="o">=</span> <span class="n">evaluate_2d_polynomial</span><span class="p">(</span><span class="n">poly_pixel_to_arf_azimuth</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+<span class="n">elevation</span> <span class="o">=</span> <span class="n">evaluate_2d_polynomial</span><span class="p">(</span><span class="n">poly_pixel_to_arf_elevation</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt><strong>Step 2: ARF angles → ECEF direction</strong></dt><dd><p>Convert ARF angles to Cartesian unit vector, then transform to ECEF:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">arf_vector</span> <span class="o">=</span> <span class="n">spherical_to_cartesian</span><span class="p">(</span><span class="n">azimuth</span><span class="p">,</span> <span class="n">elevation</span><span class="p">)</span>
+<span class="n">ecef_direction</span> <span class="o">=</span> <span class="n">arf_to_global_matrix</span> <span class="o">@</span> <span class="n">arf_vector</span>
+</pre></div>
+</div>
+</dd>
+<dt><strong>Step 3: ECEF direction → Ground intersection</strong></dt><dd><p>Ray-trace from sensor position along ECEF direction to intersect Earth ellipsoid:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span> <span class="o">=</span> <span class="n">earth_intersection</span><span class="p">(</span><span class="n">sensor_pos</span><span class="p">,</span> <span class="n">ecef_direction</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt><strong>Inverse: ECEF → ARF angles → Pixel</strong></dt><dd><p>The reverse transformation uses different polynomial coefficients:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># ECEF direction → ARF angles</span>
+<span class="n">arf_vector</span> <span class="o">=</span> <span class="n">global_to_arf_matrix</span> <span class="o">@</span> <span class="n">ecef_direction</span>
+<span class="n">azimuth</span><span class="p">,</span> <span class="n">elevation</span> <span class="o">=</span> <span class="n">cartesian_to_spherical</span><span class="p">(</span><span class="n">arf_vector</span><span class="p">)</span>
+
+<span class="c1"># ARF angles → Pixel coordinates</span>
+<span class="n">row</span> <span class="o">=</span> <span class="n">evaluate_2d_polynomial</span><span class="p">(</span><span class="n">poly_arf_to_row</span><span class="p">,</span> <span class="n">azimuth</span><span class="p">,</span> <span class="n">elevation</span><span class="p">)</span>
+<span class="n">col</span> <span class="o">=</span> <span class="n">evaluate_2d_polynomial</span><span class="p">(</span><span class="n">poly_arf_to_col</span><span class="p">,</span> <span class="n">azimuth</span><span class="p">,</span> <span class="n">elevation</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</section>
+<section id="polynomial-coefficients">
+<h3>Polynomial Coefficients<a class="headerlink" href="#polynomial-coefficients" title="Link to this heading">¶</a></h3>
+<p>The geolocation data in HDF5 files stores polynomial coefficients for these transformations:</p>
+<dl class="field-list simple">
+<dt class="field-odd">poly_pixel_to_arf_azimuth<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Maps (row, col) → ARF azimuth</p>
+</dd>
+<dt class="field-even">poly_pixel_to_arf_elevation<span class="colon">:</span></dt>
+<dd class="field-even"><p>Maps (row, col) → ARF elevation</p>
+</dd>
+<dt class="field-odd">poly_arf_to_row<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Maps (ARF azimuth, ARF elevation) → pixel row</p>
+</dd>
+<dt class="field-even">poly_arf_to_col<span class="colon">:</span></dt>
+<dd class="field-even"><p>Maps (ARF azimuth, ARF elevation) → pixel column</p>
+</dd>
+</dl>
+<p>Each polynomial coefficient array has shape <code class="docutils literal notranslate"><span class="pre">(num_frames,</span> <span class="pre">num_coefficients)</span></code>, where:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">num_frames</span></code>: Number of frames with polynomial data</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_coefficients</span></code>: <code class="docutils literal notranslate"><span class="pre">(order</span> <span class="pre">+</span> <span class="pre">1)</span> <span class="pre">*</span> <span class="pre">(order</span> <span class="pre">+</span> <span class="pre">2)</span> <span class="pre">/</span> <span class="pre">2</span></code> for polynomial of given order</p></li>
+</ul>
+<p>Polynomial terms are ordered by total degree, then by decreasing powers of the first variable:</p>
+<ul class="simple">
+<li><p>Order 0: <code class="docutils literal notranslate"><span class="pre">c₀</span></code> (1 coefficient)</p></li>
+<li><p>Order 1: <code class="docutils literal notranslate"><span class="pre">c₁·x</span> <span class="pre">+</span> <span class="pre">c₂·y</span></code> (3 coefficients total)</p></li>
+<li><p>Order 2: <code class="docutils literal notranslate"><span class="pre">c₃·x²</span> <span class="pre">+</span> <span class="pre">c₄·x·y</span> <span class="pre">+</span> <span class="pre">c₅·y²</span></code> (6 coefficients total)</p></li>
+<li><p>Order 3: <code class="docutils literal notranslate"><span class="pre">c₆·x³</span> <span class="pre">+</span> <span class="pre">c₇·x²·y</span> <span class="pre">+</span> <span class="pre">c₈·x·y²</span> <span class="pre">+</span> <span class="pre">c₉·y³</span></code> (10 coefficients total)</p></li>
+</ul>
+</section>
+<section id="example-arf-transform">
+<h3>Example: ARF Transform<a class="headerlink" href="#example-arf-transform" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.transforms.arf</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_arf_transform</span>
+
+<span class="c1"># Sensor position in ECEF (km)</span>
+<span class="n">sensor_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">5000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">3000</span><span class="p">])</span>
+
+<span class="c1"># Sensor pointing direction (unit vector in ECEF)</span>
+<span class="n">sensor_pointing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>  <span class="c1"># Pointing down (nadir)</span>
+
+<span class="c1"># Get transformation matrix: global → ARF</span>
+<span class="n">global_to_arf</span> <span class="o">=</span> <span class="n">get_arf_transform</span><span class="p">(</span><span class="n">sensor_pos</span><span class="p">,</span> <span class="n">sensor_pointing</span><span class="p">)</span>
+
+<span class="c1"># Transform a vector from global ECEF to ARF</span>
+<span class="n">global_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>  <span class="c1"># East direction</span>
+<span class="n">arf_vector</span> <span class="o">=</span> <span class="n">global_to_arf</span> <span class="o">@</span> <span class="n">global_vector</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Global vector: </span><span class="si">{</span><span class="n">global_vector</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ARF vector: </span><span class="si">{</span><span class="n">arf_vector</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># Get inverse transform: ARF → global</span>
+<span class="n">arf_to_global</span> <span class="o">=</span> <span class="n">global_to_arf</span><span class="o">.</span><span class="n">T</span>  <span class="c1"># Orthonormal matrix: inverse = transpose</span>
+<span class="n">global_vector_reconstructed</span> <span class="o">=</span> <span class="n">arf_to_global</span> <span class="o">@</span> <span class="n">arf_vector</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reconstructed: </span><span class="si">{</span><span class="n">global_vector_reconstructed</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="see-also">
+<h3>See Also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h3>
+<p>For a detailed illustrated explanation of the ARF coordinate system with visualizations
+and examples, see the Jupyter notebook:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">notebooks/attitude_reference_frame.ipynb</span></code></p>
+</div></blockquote>
+<p>API references:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../api/transforms.html#vista.transforms.arf.get_arf_transform" title="vista.transforms.arf.get_arf_transform"><code class="xref py py-func docutils literal notranslate"><span class="pre">vista.transforms.arf.get_arf_transform()</span></code></a> - Compute ARF transformation matrix</p></li>
+<li><p><a class="reference internal" href="../api/transforms.html#vista.transforms.transforms.spherical_to_cartesian" title="vista.transforms.transforms.spherical_to_cartesian"><code class="xref py py-func docutils literal notranslate"><span class="pre">vista.transforms.transforms.spherical_to_cartesian()</span></code></a> - Convert angles to vectors</p></li>
+<li><p><a class="reference internal" href="../api/transforms.html#vista.transforms.transforms.cartesian_to_spherical" title="vista.transforms.transforms.cartesian_to_spherical"><code class="xref py py-func docutils literal notranslate"><span class="pre">vista.transforms.transforms.cartesian_to_spherical()</span></code></a> - Convert vectors to angles</p></li>
+<li><p><a class="reference internal" href="../api/transforms.html#vista.transforms.polynomials.evaluate_2d_polynomial" title="vista.transforms.polynomials.evaluate_2d_polynomial"><code class="xref py py-func docutils literal notranslate"><span class="pre">vista.transforms.polynomials.evaluate_2d_polynomial()</span></code></a> - Evaluate 2D polynomials</p></li>
+</ul>
+</section>
+</section>
+<section id="imagery-properties">
+<h2>Imagery Properties<a class="headerlink" href="#imagery-properties" title="Link to this heading">¶</a></h2>
+<p>Each imagery dataset has the following properties accessible in Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Array properties</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">images</span>        <span class="c1"># 3D array: (frames, height, width)</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">frames</span>        <span class="c1"># 1D array: frame numbers</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">times</span>         <span class="c1"># 1D array: datetime64[ns] timestamps</span>
+
+<span class="c1"># Dimensions</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">imagery</span><span class="p">)</span>          <span class="c1"># Number of frames</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">shape</span>         <span class="c1"># Tuple: (num_frames, height, width)</span>
+
+<span class="c1"># Metadata</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">name</span>          <span class="c1"># String identifier</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">description</span>   <span class="c1"># Long-form description</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">uuid</span>          <span class="c1"># Unique identifier</span>
+
+<span class="c1"># Offsets (for cropped imagery)</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">row_offset</span>    <span class="c1"># Vertical offset in pixels</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">column_offset</span> <span class="c1"># Horizontal offset in pixels</span>
+
+<span class="c1"># Associated sensor</span>
+<span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span>        <span class="c1"># Sensor object with calibration data</span>
+</pre></div>
+</div>
+<section id="slicing-and-subsetting">
+<h3>Slicing and Subsetting<a class="headerlink" href="#slicing-and-subsetting" title="Link to this heading">¶</a></h3>
+<p>VISTA supports efficient imagery slicing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Temporal slicing (by frame index, not frame number)</span>
+<span class="n">subset</span> <span class="o">=</span> <span class="n">imagery</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">50</span><span class="p">]</span>  <span class="c1"># Frames at indices 10-49</span>
+
+<span class="c1"># Spatial cropping via AOI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.aoi</span><span class="w"> </span><span class="kn">import</span> <span class="n">AOI</span>
+<span class="n">aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Region"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">cropped</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">get_aoi</span><span class="p">(</span><span class="n">aoi</span><span class="p">)</span>
+
+<span class="c1"># Accessing individual frames</span>
+<span class="n">frame_0</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># First frame as 2D array</span>
+
+<span class="c1"># Frame number lookup</span>
+<span class="n">frame_idx</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">get_frame_index</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>  <span class="c1"># Index of frame number 42</span>
+<span class="k">if</span> <span class="n">frame_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">frame_data</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">frame_idx</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="imagery-controls">
+<h2>Imagery Controls<a class="headerlink" href="#imagery-controls" title="Link to this heading">¶</a></h2>
+<section id="pan-and-zoom">
+<h3>Pan and Zoom<a class="headerlink" href="#pan-and-zoom" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Left-click and drag on the imagery viewer to pan.</p></li>
+<li><p>Use scroll-wheel to zoom. Reset view using the context menu (right-click) and press “View All” or click the “A” in the lower-left of the imagery viewer.</p></li>
+</ul>
+<img alt="imagery zoom / pan" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_zoom_pan.gif" />
+</section>
+<section id="histogram">
+<h3>Histogram<a class="headerlink" href="#histogram" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Left-click and drag the histogram boundary box to shift the histogram range displayed in the viewer.</p></li>
+<li><p>Left-click and drag the bounds of the histogram to adjust its size.</p></li>
+<li><p>Right-click on the gradient bar to adust the gradient color.</p></li>
+<li><p>Left-click on the gradient bar to add ticks</p></li>
+<li><p>Left-click and drag on gradient bar ticks to adjust</p></li>
+<li><p>Use scrollwheel to zoom in and out on the histogram</p></li>
+<li><p>Right click on the histogram and press “View All” to reset histogram view</p></li>
+<li><p>Click and drag empty area of histogram to pan left and right</p></li>
+</ul>
+<img alt="Imagery histogram" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_histogram.gif" />
+</section>
+<section id="playback">
+<h3>Playback<a class="headerlink" href="#playback" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Drag the slider to slide through frames.</p></li>
+<li><p>Click the play/pause button (or press spacebar) to play or pause imagery animation.</p></li>
+<li><p>Click the reverse button to reverse playback direction.</p></li>
+<li><p>Click the Prevous Frame or Next Frame buttons or use (left arrow/right arrow or A/D) to step forward or backward by one frame.</p></li>
+<li><p>Check the “Bounce” checkbox to enable setting frames to bounce between.</p></li>
+<li><p>Adjust the player’s objective Frames-Per-Second (FPS) using the FPS input or dial.</p></li>
+</ul>
+<img alt="Imagery playback" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_playback.gif" />
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The FPS defines the _objective_ FPS which may be unachievable on data and systems. In these cases, the playback is as
+quick as possible.</p>
+</div>
+</section>
+<section id="tooltips">
+<h3>Tooltips<a class="headerlink" href="#tooltips" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Select the geospatial tooltip to view the latitude / longitude corresponding to the hovered location in the imagery</p></li>
+<li><p>Select the pixel details tooltip to view the row, column, counts for the hovered location in the imagery. The tooltip
+gives counts for the nearest hovered pixel.</p></li>
+</ul>
+<img alt="Imagery tooltips" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_tooltips.gif" />
+</section>
+</section>
+<section id="treatments-and-processing">
+<h2>Treatments and Processing<a class="headerlink" href="#treatments-and-processing" title="Link to this heading">¶</a></h2>
+<p>VISTA provides several image treatment operations accessible through the GUI:</p>
+<section id="subset-frames">
+<h3>Subset Frames<a class="headerlink" href="#subset-frames" title="Link to this heading">¶</a></h3>
+<p>This tool crops the imagery to a subset of the input frames.</p>
+</section>
+<section id="radiometric-corrections">
+<h3>Radiometric Corrections<a class="headerlink" href="#radiometric-corrections" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Bias Removal</strong></dt><dd><p>Subtracts dark current using bias frames from sensor calibration data.
+Access via <strong>Algorithms → Treatments → Bias Removal</strong></p>
+</dd>
+<dt><strong>Non-Uniformity Correction (NUC)</strong></dt><dd><p>Applies flat-field correction using uniformity gain images.
+Access via <strong>Algorithms → Treatments → Non-Uniformity Correction</strong></p>
+</dd>
+<dt><strong>Bad Pixel Replacement</strong></dt><dd><p>Interpolates over defective pixels identified in bad pixel masks.
+Automatically applied when sensor has bad pixel mask data.</p>
+</dd>
+</dl>
+</section>
+<section id="background-removal">
+<h3>Background Removal<a class="headerlink" href="#background-removal" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Temporal Median</strong></dt><dd><p>Removes static background by subtracting temporal median of surrounding frames.
+Access via <strong>Algorithms → Background Removal → Temporal Median</strong></p>
+</dd>
+<dt><strong>Robust PCA</strong></dt><dd><p>Separates low-rank background from sparse foreground using robust PCA.
+Access via <strong>Algorithms → Background Removal → Robust PCA</strong></p>
+</dd>
+</dl>
+<img alt="Background removal" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_background_removal.gif" />
+</section>
+<section id="enhancement">
+<h3>Enhancement<a class="headerlink" href="#enhancement" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Frame Coaddition</strong></dt><dd><p>Improves SNR by averaging multiple frames.
+Access via <strong>Algorithms → Enhancement → Coadd Frames</strong></p>
+</dd>
+</dl>
+<img alt="Enhancement" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_enhancement.gif" />
+</section>
+</section>
+<section id="saving-and-exporting">
+<h2>Saving and Exporting<a class="headerlink" href="#saving-and-exporting" title="Link to this heading">¶</a></h2>
+<section id="save-entire-dataset">
+<h3>Save Entire Dataset<a class="headerlink" href="#save-entire-dataset" title="Link to this heading">¶</a></h3>
+<p>To save imagery with all metadata and calibration:</p>
+<ol class="arabic simple">
+<li><p>Select imagery in the <strong>Imagery Panel</strong></p></li>
+<li><p>Click <strong>File → Save</strong></p></li>
+<li><p>Choose output filename</p></li>
+<li><p>File is saved in 1.7 HDF5 format with all associated data</p></li>
+</ol>
+<img alt="Imagery export" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_export.gif" />
+</section>
+<section id="export-specific-frames">
+<h3>Export Specific Frames<a class="headerlink" href="#export-specific-frames" title="Link to this heading">¶</a></h3>
+<p>To export a subset of frames or processed imagery:</p>
+<ol class="arabic simple">
+<li><p>Select imagery in the <strong>Imagery Panel</strong></p></li>
+<li><p>Click <strong>Export</strong> button in the panel</p></li>
+<li><p>Configure export options:</p>
+<ul class="simple">
+<li><p>Frame range</p></li>
+<li><p>Output format (HDF5, TIFF sequence, etc.)</p></li>
+<li><p>Bit depth and scaling</p></li>
+</ul>
+</li>
+<li><p>Click <strong>Save</strong></p></li>
+</ol>
+</section>
+<section id="programmatic-export">
+<h3>Programmatic Export<a class="headerlink" href="#programmatic-export" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save to HDF5</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.imagery</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_imagery_hdf5</span>
+<span class="n">save_imagery_hdf5</span><span class="p">(</span><span class="s2">"output.h5"</span><span class="p">,</span> <span class="p">{</span><span class="n">sensor</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="p">[</span><span class="n">imagery</span><span class="p">]})</span>
+
+<span class="c1"># Export frames as numpy array</span>
+<span class="n">frames_subset</span> <span class="o">=</span> <span class="n">imagery</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">50</span><span class="p">]</span><span class="o">.</span><span class="n">images</span>  <span class="c1"># Get frames 10-49</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"frames.npy"</span><span class="p">,</span> <span class="n">frames_subset</span><span class="p">)</span>
+
+<span class="c1"># Export single frame as image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="n">frame</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="c1"># Scale to 0-255 for 8-bit export</span>
+<span class="n">scaled</span> <span class="o">=</span> <span class="p">((</span><span class="n">frame</span> <span class="o">-</span> <span class="n">frame</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">frame</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+<span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">scaled</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"frame_0.png"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading">¶</a></h2>
+<section id="storage-and-performance">
+<h3>Storage and Performance<a class="headerlink" href="#storage-and-performance" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Use chunking</strong>: HDF5 files created by VISTA use (1, H, W) chunking for efficient frame access</p></li>
+<li><p><strong>Compression</strong>: Consider enabling gzip compression for archival (slower but smaller)</p></li>
+<li><p><strong>Frame ordering</strong>: Keep frames sorted by frame number for faster lookups</p></li>
+<li><p><strong>Reasonable sizes</strong>: Very large datasets (&gt;10,000 frames) may benefit from splitting</p></li>
+</ul>
+</section>
+<section id="metadata-management">
+<h3>Metadata Management<a class="headerlink" href="#metadata-management" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Descriptive names</strong>: Use clear, descriptive names for imagery datasets</p></li>
+<li><p><strong>Add descriptions</strong>: Use the description field to document processing history</p></li>
+<li><p><strong>Preserve calibration</strong>: Always include sensor calibration data when available</p></li>
+<li><p><strong>UUID tracking</strong>: UUIDs help track imagery across processing workflows</p></li>
+</ul>
+</section>
+<section id="coordinate-systems">
+<h3>Coordinate Systems<a class="headerlink" href="#coordinate-systems" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Check sensor</strong>: Verify sensor has geolocation polynomials before using coordinate conversion</p></li>
+<li><p><strong>Frame alignment</strong>: Ensure polynomial frame numbers align with imagery frame numbers</p></li>
+<li><p><strong>Time synchronization</strong>: For multi-sensor data, verify time alignment across sensors</p></li>
+</ul>
+</section>
+</section>
+<section id="id1">
+<h2>See Also<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../api/imagery.html"><span class="doc">Imagery Module</span></a> - Imagery API reference</p></li>
+<li><p><a class="reference internal" href="detections.html"><span class="doc">Object Detection</span></a> - Working with detections</p></li>
+<li><p><a class="reference internal" href="tracks.html"><span class="doc">Object Tracking</span></a> - Object tracking workflows</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="features.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Features and Annotations</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../getting_started/quickstart.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Quick Start Guide</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Working with Imagery</a><ul>
+<li><a class="reference internal" href="#loading-imagery">Loading Imagery</a><ul>
+<li><a class="reference internal" href="#from-the-gui">From the GUI</a></li>
+<li><a class="reference internal" href="#from-python-api">From Python API</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#hdf5-file-format">HDF5 File Format</a><ul>
+<li><a class="reference internal" href="#format-overview">Format Overview</a></li>
+<li><a class="reference internal" href="#file-structure-version-1-7">File Structure (version 1.7)</a></li>
+<li><a class="reference internal" href="#detailed-dataset-descriptions">Detailed Dataset Descriptions</a><ul>
+<li><a class="reference internal" href="#root-attributes">Root Attributes</a></li>
+<li><a class="reference internal" href="#sensor-attributes">Sensor Attributes</a></li>
+<li><a class="reference internal" href="#sensor-position-data-sampledsensor-only">Sensor Position Data (SampledSensor only)</a></li>
+<li><a class="reference internal" href="#geolocation-data-optional">Geolocation Data (optional)</a></li>
+<li><a class="reference internal" href="#radiometric-calibration-optional">Radiometric Calibration (optional)</a></li>
+<li><a class="reference internal" href="#imagery-attributes">Imagery Attributes</a></li>
+<li><a class="reference internal" href="#imagery-datasets">Imagery Datasets</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#creating-hdf5-files">Creating HDF5 Files</a><ul>
+<li><a class="reference internal" href="#using-the-vista-api">Using the VISTA API</a></li>
+<li><a class="reference internal" href="#using-h5py-directly">Using h5py Directly</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#format-versions">Format Versions</a><ul>
+<li><a class="reference internal" href="#version-1-7-current">Version 1.7 (Current)</a></li>
+<li><a class="reference internal" href="#version-1-6-legacy-deprecated">Version 1.6 (Legacy, Deprecated)</a></li>
+<li><a class="reference internal" href="#version-1-5-legacy-deprecated">Version 1.5 (Legacy, Deprecated)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#attitude-reference-frame-arf">Attitude Reference Frame (ARF)</a><ul>
+<li><a class="reference internal" href="#purpose">Purpose</a></li>
+<li><a class="reference internal" href="#arf-definition">ARF Definition</a></li>
+<li><a class="reference internal" href="#mathematical-construction">Mathematical Construction</a></li>
+<li><a class="reference internal" href="#arf-angles">ARF Angles</a></li>
+<li><a class="reference internal" href="#usage-in-geolocation">Usage in Geolocation</a></li>
+<li><a class="reference internal" href="#polynomial-coefficients">Polynomial Coefficients</a></li>
+<li><a class="reference internal" href="#example-arf-transform">Example: ARF Transform</a></li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#imagery-properties">Imagery Properties</a><ul>
+<li><a class="reference internal" href="#slicing-and-subsetting">Slicing and Subsetting</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#imagery-controls">Imagery Controls</a><ul>
+<li><a class="reference internal" href="#pan-and-zoom">Pan and Zoom</a></li>
+<li><a class="reference internal" href="#histogram">Histogram</a></li>
+<li><a class="reference internal" href="#playback">Playback</a></li>
+<li><a class="reference internal" href="#tooltips">Tooltips</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#treatments-and-processing">Treatments and Processing</a><ul>
+<li><a class="reference internal" href="#subset-frames">Subset Frames</a></li>
+<li><a class="reference internal" href="#radiometric-corrections">Radiometric Corrections</a></li>
+<li><a class="reference internal" href="#background-removal">Background Removal</a></li>
+<li><a class="reference internal" href="#enhancement">Enhancement</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#saving-and-exporting">Saving and Exporting</a><ul>
+<li><a class="reference internal" href="#save-entire-dataset">Save Entire Dataset</a></li>
+<li><a class="reference internal" href="#export-specific-frames">Export Specific Frames</a></li>
+<li><a class="reference internal" href="#programmatic-export">Programmatic Export</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#best-practices">Best Practices</a><ul>
+<li><a class="reference internal" href="#storage-and-performance">Storage and Performance</a></li>
+<li><a class="reference internal" href="#metadata-management">Metadata Management</a></li>
+<li><a class="reference internal" href="#coordinate-systems">Coordinate Systems</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id1">See Also</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

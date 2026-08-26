@@ -1,0 +1,28 @@
+﻿vista.algorithms.tracks.extraction.TrackExtraction
+==================================================
+
+.. currentmodule:: vista.algorithms.tracks.extraction
+
+.. autoclass:: TrackExtraction
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrackExtraction.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TrackExtraction.name
+   
+   

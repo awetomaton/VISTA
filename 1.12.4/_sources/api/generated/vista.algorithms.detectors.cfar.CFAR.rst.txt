@@ -1,0 +1,29 @@
+﻿vista.algorithms.detectors.cfar.CFAR
+====================================
+
+.. currentmodule:: vista.algorithms.detectors.cfar
+
+.. autoclass:: CFAR
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CFAR.__init__
+      ~CFAR.process_chip
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CFAR.name
+   
+   

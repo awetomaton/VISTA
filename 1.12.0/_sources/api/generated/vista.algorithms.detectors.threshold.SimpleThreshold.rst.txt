@@ -1,0 +1,28 @@
+﻿vista.algorithms.detectors.threshold.SimpleThreshold
+====================================================
+
+.. currentmodule:: vista.algorithms.detectors.threshold
+
+.. autoclass:: SimpleThreshold
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SimpleThreshold.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SimpleThreshold.name
+   
+   

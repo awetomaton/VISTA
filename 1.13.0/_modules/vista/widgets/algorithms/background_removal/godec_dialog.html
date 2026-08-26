@@ -1,0 +1,1127 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../../../genindex.html"><link rel="search" title="Search" href="../../../../../search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>vista.widgets.algorithms.background_removal.godec_dialog - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../../../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../user_guide/imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../user_guide/features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../user_guide/detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../user_guide/tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../user_guide/known_sources.html">Known Sources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../user_guide/interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../api/known_sources.html">Known Sources Module</a><input aria-label="Toggle navigation of Known Sources Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.known_sources.known_sources.KnownSources.html">vista.known_sources.known_sources.KnownSources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.known_sources.satellites.Satellites.html">vista.known_sources.satellites.Satellites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.known_sources.solar_system_bodies.SolarSystemBodies.html">vista.known_sources.solar_system_bodies.SolarSystemBodies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.known_sources.stars.Stars.html">vista.known_sources.stars.Stars</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal.html">vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal.html">vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for vista.widgets.algorithms.background_removal.godec_dialog</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Dialog for configuring and running GoDec background removal"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt6.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">QSettings</span><span class="p">,</span> <span class="n">Qt</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">pyqtSignal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyQt6.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">QCheckBox</span><span class="p">,</span>
+    <span class="n">QComboBox</span><span class="p">,</span>
+    <span class="n">QDialog</span><span class="p">,</span>
+    <span class="n">QDoubleSpinBox</span><span class="p">,</span>
+    <span class="n">QFormLayout</span><span class="p">,</span>
+    <span class="n">QGroupBox</span><span class="p">,</span>
+    <span class="n">QHBoxLayout</span><span class="p">,</span>
+    <span class="n">QLabel</span><span class="p">,</span>
+    <span class="n">QMessageBox</span><span class="p">,</span>
+    <span class="n">QProgressBar</span><span class="p">,</span>
+    <span class="n">QPushButton</span><span class="p">,</span>
+    <span class="n">QSpinBox</span><span class="p">,</span>
+    <span class="n">QVBoxLayout</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.background_removal.godec</span><span class="w"> </span><span class="kn">import</span> <span class="n">godec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.imagery.imagery</span><span class="w"> </span><span class="kn">import</span> <span class="n">HAS_TORCH</span>
+
+<span class="k">if</span> <span class="n">HAS_TORCH</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+
+<div class="viewcode-block" id="GoDecThread">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GoDecThread</span><span class="p">(</span><span class="n">QThread</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Worker thread for running GoDec background removal"""</span>
+
+    <span class="n">progress_updated</span> <span class="o">=</span> <span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>  <span class="c1"># (current, total)</span>
+    <span class="n">status_updated</span> <span class="o">=</span> <span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">processing_complete</span> <span class="o">=</span> <span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="nb">object</span><span class="p">)</span>  <span class="c1"># (background_imagery, foreground_imagery)</span>
+    <span class="n">error_occurred</span> <span class="o">=</span> <span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GoDecThread.__init__">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">imagery</span><span class="p">,</span>
+        <span class="n">rank</span><span class="p">,</span>
+        <span class="n">sparsity</span><span class="p">,</span>
+        <span class="n">max_iter</span><span class="p">,</span>
+        <span class="n">power_iters</span><span class="p">,</span>
+        <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">aoi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">start_frame</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">end_frame</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">frame_block_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">block_overlap_frames</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Initialize the processing thread.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        imagery : Imagery</span>
+<span class="sd">            Imagery object to process</span>
+<span class="sd">        rank : int or None</span>
+<span class="sd">            Rank of the low-rank background, or None for automatic selection</span>
+<span class="sd">        sparsity : float</span>
+<span class="sd">            Fraction of entries in the sparse foreground (0.0 to 1.0)</span>
+<span class="sd">        max_iter : int</span>
+<span class="sd">            Maximum number of GoDec iterations</span>
+<span class="sd">        power_iters : int</span>
+<span class="sd">            Number of power iterations for randomized SVD</span>
+<span class="sd">        use_gpu : bool, optional</span>
+<span class="sd">            Whether to process on GPU (True) or CPU (False), by default True</span>
+<span class="sd">        aoi : AOI, optional</span>
+<span class="sd">            AOI to process a subset of the imagery</span>
+<span class="sd">        start_frame : int, optional</span>
+<span class="sd">            Starting frame index, by default 0</span>
+<span class="sd">        end_frame : int, optional</span>
+<span class="sd">            Ending frame index (exclusive), by default None for all frames</span>
+<span class="sd">        frame_block_size : int or None, optional</span>
+<span class="sd">            Number of frames per block, or None to process all at once</span>
+<span class="sd">        block_overlap_frames : int, optional</span>
+<span class="sd">            Number of overlapping frames between consecutive blocks</span>
+<span class="sd">        """</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">imagery</span> <span class="o">=</span> <span class="n">imagery</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="n">rank</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity</span> <span class="o">=</span> <span class="n">sparsity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters</span> <span class="o">=</span> <span class="n">power_iters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu</span> <span class="o">=</span> <span class="n">use_gpu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aoi</span> <span class="o">=</span> <span class="n">aoi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span> <span class="o">=</span> <span class="n">start_frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span> <span class="o">=</span> <span class="n">end_frame</span> <span class="k">if</span> <span class="n">end_frame</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">imagery</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame_block_size</span> <span class="o">=</span> <span class="n">frame_block_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_frames</span> <span class="o">=</span> <span class="n">block_overlap_frames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="GoDecThread.cancel">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.cancel">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cancel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Request cancellation."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_iteration_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iteration</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Callback invoked after each GoDec iteration.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        iteration : int</span>
+<span class="sd">            Current iteration number (1-indexed)</span>
+<span class="sd">        max_iter : int</span>
+<span class="sd">            Total number of iterations</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True to continue, False to cancel</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">iteration</span><span class="p">,</span> <span class="n">max_iter</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Iteration </span><span class="si">{</span><span class="n">iteration</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">max_iter</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span>
+
+<div class="viewcode-block" id="GoDecThread.run">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Execute GoDec background removal."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="c1"># Subset imagery by frame range</span>
+            <span class="n">imagery_subset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">imagery</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="p">]</span>
+
+            <span class="c1"># Apply AOI if selected</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">aoi</span><span class="p">:</span>
+                <span class="n">imagery_to_process</span> <span class="o">=</span> <span class="n">imagery_subset</span><span class="o">.</span><span class="n">get_aoi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aoi</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">imagery_to_process</span> <span class="o">=</span> <span class="n">imagery_subset</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="c1"># Create torch tensor on the appropriate device</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s2">"Uploading imagery to GPU..."</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">input_tensor</span> <span class="o">=</span> <span class="n">imagery_to_process</span><span class="o">.</span><span class="n">gpu_images</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s2">"Preparing imagery tensor..."</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">input_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">imagery_to_process</span><span class="o">.</span><span class="n">images</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="n">device_label</span> <span class="o">=</span> <span class="s2">"GPU"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu</span> <span class="k">else</span> <span class="s2">"CPU"</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Running GoDec on </span><span class="si">{</span><span class="n">device_label</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">)</span>
+
+            <span class="c1"># Run the algorithm</span>
+            <span class="n">background_tensor</span><span class="p">,</span> <span class="n">foreground_tensor</span> <span class="o">=</span> <span class="n">godec</span><span class="p">(</span>
+                <span class="n">input_tensor</span><span class="p">,</span>
+                <span class="n">rank</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span>
+                <span class="n">sparsity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sparsity</span><span class="p">,</span>
+                <span class="n">max_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">,</span>
+                <span class="n">power_iters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">power_iters</span><span class="p">,</span>
+                <span class="n">callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_iteration_callback</span><span class="p">,</span>
+                <span class="n">frame_block_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame_block_size</span><span class="p">,</span>
+                <span class="n">block_overlap_frames</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_frames</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s2">"Transferring results..."</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># Transfer results to CPU numpy for Imagery objects</span>
+            <span class="n">background_images</span> <span class="o">=</span> <span class="n">background_tensor</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+            <span class="n">foreground_images</span> <span class="o">=</span> <span class="n">foreground_tensor</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s2">"Creating imagery objects..."</span><span class="p">)</span>
+
+            <span class="c1"># Build result Imagery objects</span>
+            <span class="n">aoi_suffix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" (AOI: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">aoi</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">aoi</span> <span class="k">else</span> <span class="s2">""</span>
+            <span class="n">rank_str</span> <span class="o">=</span> <span class="s2">"auto"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+
+            <span class="n">background_imagery</span> <span class="o">=</span> <span class="n">imagery_to_process</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">background_imagery</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">imagery</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> - Background (GoDec)</span><span class="si">{</span><span class="n">aoi_suffix</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">background_imagery</span><span class="o">.</span><span class="n">images</span> <span class="o">=</span> <span class="n">background_images</span>
+            <span class="n">background_imagery</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Low-rank background from GoDec "</span>
+                <span class="sa">f</span><span class="s2">"(rank=</span><span class="si">{</span><span class="n">rank_str</span><span class="si">}</span><span class="s2">, sparsity=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sparsity</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, iter=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"frames </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">device_label</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+
+            <span class="n">foreground_imagery</span> <span class="o">=</span> <span class="n">imagery_to_process</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">foreground_imagery</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">imagery</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> - Foreground (GoDec)</span><span class="si">{</span><span class="n">aoi_suffix</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">foreground_imagery</span><span class="o">.</span><span class="n">images</span> <span class="o">=</span> <span class="n">foreground_images</span>
+            <span class="n">foreground_imagery</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Sparse foreground from GoDec "</span>
+                <span class="sa">f</span><span class="s2">"(rank=</span><span class="si">{</span><span class="n">rank_str</span><span class="si">}</span><span class="s2">, sparsity=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sparsity</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, iter=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"frames </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">device_label</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Keep result imagery on GPU if processed on GPU</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu</span><span class="p">:</span>
+                <span class="n">device_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">background_tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">background_imagery</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="n">background_tensor</span>
+                <span class="n">background_imagery</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="n">device_str</span>
+                <span class="n">foreground_imagery</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="n">foreground_tensor</span>
+                <span class="n">foreground_imagery</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="n">device_str</span>
+
+            <span class="c1"># Pre-compute histograms</span>
+            <span class="n">total_histograms</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">background_imagery</span><span class="o">.</span><span class="n">images</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">foreground_imagery</span><span class="o">.</span><span class="n">images</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s2">"Computing histograms..."</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">total_histograms</span><span class="p">)</span>
+
+            <span class="n">histogram_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">background_imagery</span><span class="o">.</span><span class="n">images</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                    <span class="k">return</span>
+                <span class="n">background_imagery</span><span class="o">.</span><span class="n">get_histogram</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">histogram_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">histogram_count</span><span class="p">,</span> <span class="n">total_histograms</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">foreground_imagery</span><span class="o">.</span><span class="n">images</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                    <span class="k">return</span>
+                <span class="n">foreground_imagery</span><span class="o">.</span><span class="n">get_histogram</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">histogram_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">histogram_count</span><span class="p">,</span> <span class="n">total_histograms</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cancelled</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s2">"Complete"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">processing_complete</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">background_imagery</span><span class="p">,</span> <span class="n">foreground_imagery</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">InterruptedError</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">tb_str</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Error running GoDec background removal: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">Traceback:</span><span class="se">\n</span><span class="si">{</span><span class="n">tb_str</span><span class="si">}</span><span class="s2">"</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">error_occurred</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GoDecDialog">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GoDecDialog</span><span class="p">(</span><span class="n">QDialog</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Dialog for configuring GoDec background removal parameters"""</span>
+
+    <span class="n">imagery_processed</span> <span class="o">=</span> <span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GoDecDialog.__init__">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">imagery</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aois</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Initialize the GoDec background removal dialog.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        parent : QWidget, optional</span>
+<span class="sd">            Parent widget</span>
+<span class="sd">        imagery : Imagery, optional</span>
+<span class="sd">            Imagery object to process</span>
+<span class="sd">        aois : list of AOI, optional</span>
+<span class="sd">            List of available AOIs</span>
+<span class="sd">        """</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">imagery</span> <span class="o">=</span> <span class="n">imagery</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aois</span> <span class="o">=</span> <span class="n">aois</span> <span class="k">if</span> <span class="n">aois</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">QSettings</span><span class="p">(</span><span class="s2">"VISTA"</span><span class="p">,</span> <span class="s2">"GoDec"</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s2">"GoDec Background Removal"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setModal</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setMinimumWidth</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setup_ui</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_settings</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.setup_ui">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.setup_ui">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup_ui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Setup the dialog UI."""</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
+
+        <span class="c1"># Description</span>
+        <span class="n">desc_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span>
+            <span class="s2">"&lt;b&gt;GoDec (Go Decomposition) Background Removal&lt;/b&gt;&lt;br&gt;&lt;br&gt;"</span>
+            <span class="s2">"Decomposes imagery into low-rank background + sparse foreground + noise "</span>
+            <span class="s2">"using PyTorch, with optional GPU acceleration.&lt;br&gt;&lt;br&gt;"</span>
+            <span class="s2">"&lt;b&gt;How it works:&lt;/b&gt; GoDec alternates between computing a low-rank approximation "</span>
+            <span class="s2">"of the data (via randomized SVD) and extracting sparse foreground content (via hard "</span>
+            <span class="s2">"thresholding). The low-rank component captures the slowly varying background, while "</span>
+            <span class="s2">"the sparse component isolates targets and transient features.&lt;br&gt;&lt;br&gt;"</span>
+            <span class="s2">"&lt;b&gt;Best for:&lt;/b&gt; Imagery with sparse point targets or transient features against a "</span>
+            <span class="s2">"low-rank background. Unlike sliding-window methods, GoDec processes all frames "</span>
+            <span class="s2">"simultaneously.&lt;br&gt;&lt;br&gt;"</span>
+            <span class="s2">"&lt;b&gt;Advantages:&lt;/b&gt; All computation is dominated by large matrix multiplications, "</span>
+            <span class="s2">"making this algorithm highly efficient on GPU. Typically 5-10x faster on GPU than CPU.&lt;br&gt;"</span>
+            <span class="s2">"&lt;b&gt;Requirements:&lt;/b&gt; PyTorch must be installed. GPU acceleration requires a CUDA-capable GPU."</span>
+        <span class="p">)</span>
+        <span class="n">desc_label</span><span class="o">.</span><span class="n">setWordWrap</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">desc_label</span><span class="p">)</span>
+
+        <span class="c1"># AOI selection</span>
+        <span class="n">aoi_layout</span> <span class="o">=</span> <span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="n">aoi_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="s2">"Process Region:"</span><span class="p">)</span>
+        <span class="n">aoi_label</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Select an Area of Interest (AOI) to process only a subset of the imagery.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"The resulting imagery will have offsets to position it correctly."</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span> <span class="o">=</span> <span class="n">QComboBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="s2">"Full Image"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">aoi</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">aois</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="o">.</span><span class="n">addItem</span><span class="p">(</span><span class="n">aoi</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">aoi</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">aoi_label</span><span class="o">.</span><span class="n">toolTip</span><span class="p">())</span>
+        <span class="n">aoi_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">aoi_label</span><span class="p">)</span>
+        <span class="n">aoi_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="p">)</span>
+        <span class="n">aoi_layout</span><span class="o">.</span><span class="n">addStretch</span><span class="p">()</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">aoi_layout</span><span class="p">)</span>
+
+        <span class="c1"># Parameters</span>
+        <span class="n">params_group</span> <span class="o">=</span> <span class="n">QGroupBox</span><span class="p">(</span><span class="s2">"Algorithm Parameters"</span><span class="p">)</span>
+        <span class="n">params_layout</span> <span class="o">=</span> <span class="n">QFormLayout</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span> <span class="o">=</span> <span class="n">QCheckBox</span><span class="p">(</span><span class="s2">"Automatic (knee in singular values)"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Automatically select rank by finding the knee (elbow)</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"in the singular value curve of the data matrix.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"This identifies the transition from dominant background</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"components to noise/signal."</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">stateChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_auto_rank_changed</span><span class="p">)</span>
+        <span class="n">params_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Rank:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Rank of the low-rank background component.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Higher values capture more complex backgrounds but may</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"include target signal in the background estimate.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Recommended: 3-15"</span>
+        <span class="p">)</span>
+        <span class="n">params_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"  Manual Rank:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span> <span class="o">=</span> <span class="n">QDoubleSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setSingleStep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setDecimals</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setSuffix</span><span class="p">(</span><span class="s2">"%"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Percentage of entries in the sparse foreground component.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Higher values allow more foreground content to be extracted.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Lower values produce sparser (cleaner) foreground.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Recommended: 0.5</span><span class="si">% - 5%</span><span class="s2">"</span>
+        <span class="p">)</span>
+        <span class="n">params_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Sparsity:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Maximum number of GoDec iterations.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Convergence is typically reached within 5-10 iterations.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Recommended: 5-20"</span>
+        <span class="p">)</span>
+        <span class="n">params_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Max Iterations:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Number of power iterations in the randomized SVD.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"More iterations improve numerical accuracy at moderate cost.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Recommended: 1-3"</span>
+        <span class="p">)</span>
+        <span class="n">params_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Power Iterations:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span> <span class="o">=</span> <span class="n">QCheckBox</span><span class="p">(</span><span class="s2">"Use GPU for processing"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="n">HAS_TORCH</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">HAS_TORCH</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"When checked, processing runs on the GPU for faster computation.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"When unchecked, processing runs on the CPU via PyTorch.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Disabled if no CUDA-capable GPU is available."</span>
+        <span class="p">)</span>
+        <span class="n">params_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="p">)</span>
+
+        <span class="n">params_group</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">params_layout</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">params_group</span><span class="p">)</span>
+
+        <span class="c1"># Frame range selection</span>
+        <span class="n">frame_group</span> <span class="o">=</span> <span class="n">QGroupBox</span><span class="p">(</span><span class="s2">"Frame Range"</span><span class="p">)</span>
+        <span class="n">frame_layout</span> <span class="o">=</span> <span class="n">QFormLayout</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999999</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">"First frame to process (0-indexed)"</span><span class="p">)</span>
+        <span class="n">frame_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Start Frame:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999999</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">999999</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setSpecialValueText</span><span class="p">(</span><span class="s2">"End"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">"Last frame to process (exclusive). Set to max for all frames."</span><span class="p">)</span>
+        <span class="n">frame_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"End Frame:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="p">)</span>
+
+        <span class="n">frame_group</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">frame_layout</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">frame_group</span><span class="p">)</span>
+
+        <span class="c1"># Block processing</span>
+        <span class="n">block_group</span> <span class="o">=</span> <span class="n">QGroupBox</span><span class="p">(</span><span class="s2">"Block Processing"</span><span class="p">)</span>
+        <span class="n">block_layout</span> <span class="o">=</span> <span class="n">QFormLayout</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span> <span class="o">=</span> <span class="n">QCheckBox</span><span class="p">(</span><span class="s2">"Process in frame blocks"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"When enabled, the imagery is split into overlapping blocks of frames.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"GoDec runs independently on each block and the results are combined.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"This can reduce memory usage and may improve results for very long sequences</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"where the background changes significantly over time."</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">stateChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_use_blocks_changed</span><span class="p">)</span>
+        <span class="n">block_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">999999</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Number of frames in each processing block.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Smaller blocks use less memory but may miss longer-term background patterns.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Recommended: 50-500"</span>
+        <span class="p">)</span>
+        <span class="n">block_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Frame Block Size:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span> <span class="o">=</span> <span class="n">QSpinBox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999999</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span>
+            <span class="s2">"Number of overlapping frames between consecutive blocks.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Overlap helps avoid discontinuities at block boundaries.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"The overlapping region is split at its midpoint between adjacent blocks.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Must be less than the frame block size.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="s2">"Recommended: 10-50"</span>
+        <span class="p">)</span>
+        <span class="n">block_layout</span><span class="o">.</span><span class="n">addRow</span><span class="p">(</span><span class="s2">"Block Overlap Frames:"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="p">)</span>
+
+        <span class="n">block_group</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">block_layout</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">block_group</span><span class="p">)</span>
+
+        <span class="c1"># Output options</span>
+        <span class="n">output_group</span> <span class="o">=</span> <span class="n">QGroupBox</span><span class="p">(</span><span class="s2">"Output Options"</span><span class="p">)</span>
+        <span class="n">output_layout</span> <span class="o">=</span> <span class="n">QVBoxLayout</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span> <span class="o">=</span> <span class="n">QCheckBox</span><span class="p">(</span><span class="s2">"Add background imagery to viewer"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">output_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span> <span class="o">=</span> <span class="n">QCheckBox</span><span class="p">(</span><span class="s2">"Add foreground imagery to viewer"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">output_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="p">)</span>
+
+        <span class="n">output_group</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">output_layout</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">output_group</span><span class="p">)</span>
+
+        <span class="c1"># Status label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span> <span class="o">=</span> <span class="n">QLabel</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="p">)</span>
+
+        <span class="c1"># Progress bar</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span> <span class="o">=</span> <span class="n">QProgressBar</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="p">)</span>
+
+        <span class="c1"># Buttons</span>
+        <span class="n">button_layout</span> <span class="o">=</span> <span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="n">button_layout</span><span class="o">.</span><span class="n">addStretch</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_button</span> <span class="o">=</span> <span class="n">QPushButton</span><span class="p">(</span><span class="s2">"Run"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_button</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_processing</span><span class="p">)</span>
+        <span class="n">button_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_button</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span> <span class="o">=</span> <span class="n">QPushButton</span><span class="p">(</span><span class="s2">"Cancel"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cancel_processing</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">button_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_button</span> <span class="o">=</span> <span class="n">QPushButton</span><span class="p">(</span><span class="s2">"Close"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_button</span><span class="o">.</span><span class="n">clicked</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">)</span>
+        <span class="n">button_layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close_button</span><span class="p">)</span>
+
+        <span class="n">layout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">button_layout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_auto_rank_changed">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_auto_rank_changed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_auto_rank_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle auto rank checkbox change."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="n">Qt</span><span class="o">.</span><span class="n">CheckState</span><span class="o">.</span><span class="n">Checked</span><span class="o">.</span><span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_use_blocks_changed">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_use_blocks_changed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_use_blocks_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle block processing checkbox change."""</span>
+        <span class="n">enabled</span> <span class="o">=</span> <span class="n">state</span> <span class="o">==</span> <span class="n">Qt</span><span class="o">.</span><span class="n">CheckState</span><span class="o">.</span><span class="n">Checked</span><span class="o">.</span><span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">enabled</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">enabled</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.load_settings">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.load_settings">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Load previously saved settings."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"auto_rank"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"rank"</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"sparsity"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"max_iter"</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"power_iters"</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">HAS_TORCH</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"use_gpu"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"start_frame"</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"end_frame"</span><span class="p">,</span> <span class="mi">999999</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"add_background"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"add_foreground"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">setChecked</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"use_blocks"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"block_size"</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"block_overlap"</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.save_settings">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.save_settings">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Save current settings for next time."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"auto_rank"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">isChecked</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"rank"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"sparsity"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"max_iter"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"power_iters"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"use_gpu"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"start_frame"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"end_frame"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"add_background"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="o">.</span><span class="n">isChecked</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"add_foreground"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="o">.</span><span class="n">isChecked</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"use_blocks"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"block_size"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s2">"block_overlap"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.run_processing">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.run_processing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_processing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Start GoDec background removal."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">imagery</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"No Imagery"</span><span class="p">,</span> <span class="s2">"No imagery is currently loaded."</span><span class="p">,</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_TORCH</span><span class="p">:</span>
+            <span class="n">QMessageBox</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span>
+                <span class="s2">"PyTorch Not Available"</span><span class="p">,</span>
+                <span class="s2">"PyTorch is not installed. Install with: pip install vista-imagery[gpu]"</span><span class="p">,</span>
+                <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">Ok</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Get parameters</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">isChecked</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">sparsity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="o">/</span> <span class="mf">100.0</span>  <span class="c1"># Convert percentage to fraction</span>
+        <span class="n">max_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">power_iters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">use_gpu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">()</span>
+        <span class="n">selected_aoi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="o">.</span><span class="n">currentData</span><span class="p">()</span>
+        <span class="n">start_frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+        <span class="n">end_frame</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">value</span><span class="p">(),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">imagery</span><span class="o">.</span><span class="n">frames</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_settings</span><span class="p">()</span>
+
+        <span class="c1"># Update UI for processing state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">"Initializing..."</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Get blocking parameters</span>
+        <span class="n">frame_block_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">block_overlap_frames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_overlap_spinbox</span><span class="o">.</span><span class="n">value</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">isChecked</span><span class="p">()</span> <span class="k">else</span> <span class="mi">0</span>
+
+        <span class="c1"># Create and start worker thread</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="o">=</span> <span class="n">GoDecThread</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">imagery</span><span class="p">,</span>
+            <span class="n">rank</span><span class="p">,</span>
+            <span class="n">sparsity</span><span class="p">,</span>
+            <span class="n">max_iter</span><span class="p">,</span>
+            <span class="n">power_iters</span><span class="p">,</span>
+            <span class="n">use_gpu</span><span class="p">,</span>
+            <span class="n">selected_aoi</span><span class="p">,</span>
+            <span class="n">start_frame</span><span class="p">,</span>
+            <span class="n">end_frame</span><span class="p">,</span>
+            <span class="n">frame_block_size</span><span class="p">,</span>
+            <span class="n">block_overlap_frames</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">progress_updated</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_progress_updated</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">status_updated</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_status_updated</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">processing_complete</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_processing_complete</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">error_occurred</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_error_occurred</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">finished</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_thread_finished</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.cancel_processing">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.cancel_processing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cancel_processing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Cancel the ongoing processing."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">"Cancelling..."</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_progress_updated">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_progress_updated">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_progress_updated</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="n">total</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle progress updates from the processing thread."""</span>
+        <span class="k">if</span> <span class="n">total</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">current</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_status_updated">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_status_updated">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_status_updated</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status_message</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle status updates from the processing thread."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">status_message</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_processing_complete">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_processing_complete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_processing_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">background_imagery</span><span class="p">,</span> <span class="n">foreground_imagery</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle successful completion of processing."""</span>
+        <span class="n">created_imagery</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">added_items</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+            <span class="n">created_imagery</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">background_imagery</span><span class="p">)</span>
+            <span class="n">added_items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"background"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="o">.</span><span class="n">isChecked</span><span class="p">():</span>
+            <span class="n">created_imagery</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">foreground_imagery</span><span class="p">)</span>
+            <span class="n">added_items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"foreground"</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">imagery_processed</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">created_imagery</span><span class="p">)</span>
+
+        <span class="n">QMessageBox</span><span class="o">.</span><span class="n">information</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="s2">"Processing Complete"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"GoDec background removal complete.</span><span class="se">\n</span><span class="s2">Added: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">added_items</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">Ok</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_error_occurred">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_error_occurred">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_error_occurred</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_message</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle errors from the processing thread."""</span>
+        <span class="n">msg_box</span> <span class="o">=</span> <span class="n">QMessageBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">msg_box</span><span class="o">.</span><span class="n">setIcon</span><span class="p">(</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Icon</span><span class="o">.</span><span class="n">Critical</span><span class="p">)</span>
+        <span class="n">msg_box</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s2">"Processing Error"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">"</span><span class="se">\n\n</span><span class="s2">Traceback:</span><span class="se">\n</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">error_message</span><span class="p">:</span>
+            <span class="n">summary</span><span class="p">,</span> <span class="n">full_traceback</span> <span class="o">=</span> <span class="n">error_message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Traceback:</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">msg_box</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+            <span class="n">msg_box</span><span class="o">.</span><span class="n">setDetailedText</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Traceback:</span><span class="se">\n</span><span class="si">{</span><span class="n">full_traceback</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg_box</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">error_message</span><span class="p">)</span>
+
+        <span class="n">msg_box</span><span class="o">.</span><span class="n">setStandardButtons</span><span class="p">(</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">Ok</span><span class="p">)</span>
+        <span class="n">msg_box</span><span class="o">.</span><span class="n">exec</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_ui</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.on_thread_finished">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_thread_finished">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_thread_finished</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle thread completion (cleanup)."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">deleteLater</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isVisible</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset_ui</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.reset_ui">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.reset_ui">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset_ui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Reset UI to initial state."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_auto_rank_changed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">auto_rank</span><span class="o">.</span><span class="n">checkState</span><span class="p">())</span>  <span class="c1"># Re-enable rank spinbox if needed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sparsity_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">power_iters_spinbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_gpu_checkbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="n">HAS_TORCH</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aoi_combo</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_frame</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_frame</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_background</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_foreground</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_use_blocks_changed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">use_blocks_checkbox</span><span class="o">.</span><span class="n">checkState</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cancel_button</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s2">"Cancel"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_label</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">setVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GoDecDialog.closeEvent">
+<a class="viewcode-back" href="../../../../../api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.closeEvent">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Handle dialog close event."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">isRunning</span><span class="p">():</span>
+            <span class="n">reply</span> <span class="o">=</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">question</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span>
+                <span class="s2">"Processing in Progress"</span><span class="p">,</span>
+                <span class="s2">"Processing is still in progress. Are you sure you want to cancel and close?"</span><span class="p">,</span>
+                <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">Yes</span> <span class="o">|</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">No</span><span class="p">,</span>
+                <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">No</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">QMessageBox</span><span class="o">.</span><span class="n">StandardButton</span><span class="o">.</span><span class="n">Yes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cancel_processing</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../../../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../../../../../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

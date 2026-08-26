@@ -1,0 +1,739 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Imagery Module" href="../api/imagery.html"><link rel="prev" title="Object Tracking" href="tracks.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>User Interface - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Object Tracking</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/blob/main/docs/source/user_guide/interface.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/edit/main/docs/source/user_guide/interface.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="user-interface">
+<h1>User Interface<a class="headerlink" href="#user-interface" title="Link to this heading">¶</a></h1>
+<p>The VISTA user interface is designed for efficient navigation and analysis of multi-frame imagery datasets.</p>
+<section id="main-window-layout">
+<h2>Main Window Layout<a class="headerlink" href="#main-window-layout" title="Link to this heading">¶</a></h2>
+<p>The VISTA main window consists of several key areas:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A screenshot of the VISTA Main Window will be added here in a future update.</p>
+</div>
+<section id="components">
+<h3>Components<a class="headerlink" href="#components" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Menu Bar</strong>: Access to file operations, algorithms, tools, and settings</p></li>
+<li><p><strong>Toolbar</strong>: Quick access to common operations</p></li>
+<li><p><strong>Imagery Viewer</strong>: Central display area for viewing imagery</p></li>
+<li><p><strong>Data Panels</strong>: Tabbed panels for managing data (Imagery, Detections, Tracks, etc.)</p></li>
+<li><p><strong>Playback Controls</strong>: Frame navigation and playback controls</p></li>
+<li><p><strong>Status Bar</strong>: Current frame, mouse coordinates, and pixel values</p></li>
+</ol>
+</section>
+</section>
+<section id="imagery-viewer">
+<h2>Imagery Viewer<a class="headerlink" href="#imagery-viewer" title="Link to this heading">¶</a></h2>
+<p>The central imagery viewer displays the current frame with overlays for detections, tracks, and other annotations.</p>
+<section id="navigation">
+<h3>Navigation<a class="headerlink" href="#navigation" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Pan</strong>: Click and drag with left mouse button</p></li>
+<li><p><strong>Zoom</strong>: Mouse wheel or zoom controls</p></li>
+<li><p><strong>Reset View</strong>: Right-click the viewer and select <code class="docutils literal notranslate"><span class="pre">View</span> <span class="pre">All</span></code></p></li>
+</ul>
+</section>
+<section id="display-controls">
+<h3>Display Controls<a class="headerlink" href="#display-controls" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Contrast/Brightness</strong>: Adjust using the histogram widget</p></li>
+<li><p><strong>Color Maps</strong>: Apply different color maps for visualization</p></li>
+<li><p><strong>Overlays</strong>: Toggle detection and track overlays</p></li>
+<li><p><strong>Annotations</strong>: Add markers, lines, and regions</p></li>
+</ul>
+</section>
+</section>
+<section id="data-panels">
+<h2>Data Panels<a class="headerlink" href="#data-panels" title="Link to this heading">¶</a></h2>
+<section id="imagery-panel">
+<h3>Imagery Panel<a class="headerlink" href="#imagery-panel" title="Link to this heading">¶</a></h3>
+<p>Manage loaded imagery datasets:</p>
+<ul class="simple">
+<li><p>Load new imagery files</p></li>
+<li><p>View imagery metadata</p></li>
+<li><p>Select active imagery</p></li>
+<li><p>Apply treatments (bias, NUC, etc.)</p></li>
+<li><p>Save processed imagery</p></li>
+</ul>
+</section>
+<section id="detections-panel">
+<h3>Detections Panel<a class="headerlink" href="#detections-panel" title="Link to this heading">¶</a></h3>
+<p>View and manage detections:</p>
+<ul class="simple">
+<li><p>Run detection algorithms</p></li>
+<li><p>View detection parameters</p></li>
+<li><p>Filter detections by properties</p></li>
+<li><p>Export detection data</p></li>
+<li><p>Visualize detection statistics</p></li>
+</ul>
+</section>
+<section id="tracks-panel">
+<h3>Tracks Panel<a class="headerlink" href="#tracks-panel" title="Link to this heading">¶</a></h3>
+<p>Work with object tracks:</p>
+<ul class="simple">
+<li><p>Run tracking algorithms</p></li>
+<li><p>View track properties</p></li>
+<li><p>Edit tracks manually</p></li>
+<li><p>Interpolate missing detections</p></li>
+<li><p>Export track data</p></li>
+</ul>
+</section>
+<section id="aois-panel">
+<h3>AOIs Panel<a class="headerlink" href="#aois-panel" title="Link to this heading">¶</a></h3>
+<p>Define and manage Areas of Interest:</p>
+<ul class="simple">
+<li><p>Create rectangular or polygon AOIs</p></li>
+<li><p>Associate AOIs with frames</p></li>
+<li><p>Extract sub-imagery from AOIs</p></li>
+<li><p>Save and load AOI definitions</p></li>
+</ul>
+</section>
+<section id="sensors-panel">
+<h3>Sensors Panel<a class="headerlink" href="#sensors-panel" title="Link to this heading">¶</a></h3>
+<p>Manage sensor calibration data:</p>
+<ul class="simple">
+<li><p>Load sensor metadata</p></li>
+<li><p>View sensor parameters</p></li>
+<li><p>Associate sensors with imagery</p></li>
+<li><p>Configure coordinate transformations</p></li>
+</ul>
+</section>
+<section id="features-panel">
+<h3>Features Panel<a class="headerlink" href="#features-panel" title="Link to this heading">¶</a></h3>
+<p>Work with features and annotations:</p>
+<ul class="simple">
+<li><p>Create point, line, and polygon features</p></li>
+<li><p>Associate features with frames</p></li>
+<li><p>Add properties and labels</p></li>
+<li><p>Export feature data</p></li>
+</ul>
+</section>
+</section>
+<section id="playback-controls">
+<h2>Playback Controls<a class="headerlink" href="#playback-controls" title="Link to this heading">¶</a></h2>
+<p>The playback controls allow navigation through multi-frame imagery:</p>
+<section id="controls">
+<h3>Controls<a class="headerlink" href="#controls" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Play/Pause</strong>: Start/stop playback</p></li>
+<li><p><strong>Step Forward/Backward</strong>: Move one frame</p></li>
+<li><p><strong>Frame Slider</strong>: Scrub through frames</p></li>
+<li><p><strong>Frame Rate Control</strong>: Adjust playback speed</p></li>
+<li><p><strong>Loop Toggle</strong>: Enable/disable loop playback</p></li>
+</ul>
+</section>
+<section id="keyboard-shortcuts">
+<h3>Keyboard Shortcuts<a class="headerlink" href="#keyboard-shortcuts" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Space</span></code>: Play/Pause</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Left/Right</span> <span class="pre">Arrow</span></code>: Previous/Next frame</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Page</span> <span class="pre">Up/Down</span></code>: Skip forward/backward by 10 frames</p></li>
+</ul>
+</section>
+</section>
+<section id="menus">
+<h2>Menus<a class="headerlink" href="#menus" title="Link to this heading">¶</a></h2>
+<section id="file-menu">
+<h3>File Menu<a class="headerlink" href="#file-menu" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Load Imagery (HDF5)</strong>: Load imagery from an HDF5 file (<code class="docutils literal notranslate"><span class="pre">.h5</span></code> or <code class="docutils literal notranslate"><span class="pre">.hdf5</span></code>)</p></li>
+<li><p><strong>Load Detections (CSV)</strong>: Load detections from a CSV file</p></li>
+<li><p><strong>Load Tracks (CSV)</strong>: Load tracks from a CSV file</p></li>
+<li><p><strong>Load AOIs (CSV)</strong>: Load areas of interest from a CSV file</p></li>
+<li><p><strong>Load Shapefiles</strong>: Load shapefile overlays (<code class="docutils literal notranslate"><span class="pre">.shp</span></code>)</p></li>
+<li><p><strong>Load Placemarks (CSV)</strong>: Load placemark features from a CSV file</p></li>
+<li><p><strong>Simulate</strong>: Generate synthetic imagery, detections, and tracks using the built-in simulator</p></li>
+<li><p><strong>Save Imagery (HDF5)</strong>: Save the selected imagery to an HDF5 file in version 1.7 format</p></li>
+<li><p><strong>Clear Overlays</strong>: Remove all loaded detections, tracks, AOIs, and features from the viewer</p></li>
+<li><p><strong>Settings</strong>: Open the application settings dialog</p></li>
+<li><p><strong>Exit</strong>: Close the application</p></li>
+</ul>
+</section>
+<section id="view-menu">
+<h3>View Menu<a class="headerlink" href="#view-menu" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Data Manager</strong>: Toggle visibility of the Data Manager dock panel</p></li>
+<li><p><strong>Point Selection Mode</strong>: Toggle point selection mode for picking pixel coordinates</p></li>
+<li><p><strong>Histogram</strong>: Toggle the histogram widget in the imagery viewer</p></li>
+<li><p><strong>Map View</strong>: Toggle the WMS map view background (requires a sensor with geolocation data)</p></li>
+<li><p><strong>Labels</strong>: Open the label manager to create and manage labels for tracks and detections</p></li>
+</ul>
+</section>
+<section id="image-processing-menu">
+<h3>Image Processing Menu<a class="headerlink" href="#image-processing-menu" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Subset Frames</strong>: Crop imagery to a subset of frames</p></li>
+<li><p><strong>Background Removal</strong></p>
+<ul>
+<li><p><strong>Temporal Median</strong>: Subtract temporal median of surrounding frames</p></li>
+<li><p><strong>Robust PCA</strong>: Separate low-rank background from sparse foreground</p></li>
+<li><p><strong>Sliding Subspace</strong>: Sliding-window low-rank SVD background estimation</p></li>
+<li><p><strong>GoDec</strong>: Go Decomposition via randomized SVD (requires PyTorch)</p></li>
+</ul>
+</li>
+<li><p><strong>Enhancement</strong></p>
+<ul>
+<li><p><strong>Coaddition</strong>: Improve SNR by averaging multiple frames</p></li>
+</ul>
+</li>
+<li><p><strong>Detectors</strong></p>
+<ul>
+<li><p><strong>Simple Threshold</strong>: Detect pixels above a fixed threshold</p></li>
+<li><p><strong>CFAR</strong>: Constant False Alarm Rate detector</p></li>
+<li><p><strong>PSTNN</strong>: Partial Sum of Tensor Nuclear Norm detector</p></li>
+</ul>
+</li>
+<li><p><strong>Tracking</strong></p>
+<ul>
+<li><p><strong>Simple Tracker</strong>: Nearest-neighbor frame-to-frame association</p></li>
+<li><p><strong>Kalman Filter Tracker</strong>: Kalman filter-based multi-object tracker</p></li>
+<li><p><strong>Network Flow Tracker</strong>: Min-cost network flow tracking</p></li>
+<li><p><strong>Tracklet Tracker</strong>: Tracklet-based association tracker</p></li>
+</ul>
+</li>
+<li><p><strong>Treatment</strong></p>
+<ul>
+<li><p><strong>Bias Removal</strong>: Subtract dark current using sensor bias frames</p></li>
+<li><p><strong>Non-Uniformity Correction</strong>: Apply flat-field correction using sensor gain images</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="filters-menu">
+<h3>Filters Menu<a class="headerlink" href="#filters-menu" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Track Filters</strong></p>
+<ul>
+<li><p><strong>Track Interpolator</strong>: Interpolate missing frames within tracks</p></li>
+<li><p><strong>Savitzky-Golay Filter</strong>: Smooth track positions using Savitzky-Golay filtering</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="settings">
+<h2>Settings<a class="headerlink" href="#settings" title="Link to this heading">¶</a></h2>
+<p>The Settings dialog is accessible via <strong>File → Settings</strong> and is organized into five tabs.</p>
+<section id="imagery">
+<h3>Imagery<a class="headerlink" href="#imagery" title="Link to this heading">¶</a></h3>
+<p><strong>Histogram Computation</strong></p>
+<p>Controls how the histogram widget computes its display range.</p>
+<ul class="simple">
+<li><p><strong>Bins</strong> (default: 256): Number of bins used when computing histograms. More bins give finer detail but are slower
+to compute. Range: 8–2048.</p></li>
+<li><p><strong>Min Percentile</strong> (default: 1.0): Lower percentile bound for the histogram range. Lower values include more dark
+pixels. Range: 0.0–50.0.</p></li>
+<li><p><strong>Max Percentile</strong> (default: 99.0): Upper percentile bound for the histogram range. Higher values include more
+bright pixels. Range: 50.0–100.0.</p></li>
+<li><p><strong>Max Row/Col</strong> (default: 512): Maximum number of rows or columns sampled for histogram computation. Images larger
+than this are downsampled for performance. Range: 64–4096.</p></li>
+</ul>
+<p><strong>Hover Tooltips</strong></p>
+<p>Controls the appearance of the geolocation and pixel value tooltips that appear when hovering over the imagery viewer.</p>
+<ul class="simple">
+<li><p><strong>Font Color</strong> (default: yellow): Color of the tooltip text. Click the color swatch to open a color picker.</p></li>
+<li><p><strong>Font Size</strong> (default: 12): Font size in points. Range: 6–72.</p></li>
+<li><p><strong>Font Weight</strong> (default: Normal): Font weight. Options: Thin, Light, Normal, DemiBold, Bold, Black.</p></li>
+</ul>
+</section>
+<section id="track-visualization">
+<h3>Track Visualization<a class="headerlink" href="#track-visualization" title="Link to this heading">¶</a></h3>
+<p><strong>Uncertainty Ellipse</strong></p>
+<p>Controls how track uncertainty ellipses are rendered in the viewer.</p>
+<ul class="simple">
+<li><p><strong>Line Style</strong> (default: Dash): Line style for uncertainty ellipses. Options: Solid, Dash, Dot, Dash-Dot,
+Dash-Dot-Dot.</p></li>
+<li><p><strong>Line Width</strong> (default: 1): Line width in pixels. Range: 1–10.</p></li>
+<li><p><strong>Scale Factor</strong> (default: 1.0): Multiplier applied to the uncertainty ellipse radii. 1.0 corresponds to 1-sigma
+(~68% confidence), 2.0 to 2-sigma (~95%), and 3.0 to 3-sigma (~99.7%). Range: 0.1–10.0.</p></li>
+</ul>
+</section>
+<section id="data-manager">
+<h3>Data Manager<a class="headerlink" href="#data-manager" title="Link to this heading">¶</a></h3>
+<p><strong>Undo Settings</strong></p>
+<ul class="simple">
+<li><p><strong>Undo Depth</strong> (default: 10): Maximum number of undo operations kept in history. Higher values use more memory.
+Changes take effect immediately. Range: 1–100.</p></li>
+</ul>
+</section>
+<section id="gpu">
+<h3>GPU<a class="headerlink" href="#gpu" title="Link to this heading">¶</a></h3>
+<p>Configures the GPU device used by PyTorch-accelerated algorithms (e.g., GoDec).</p>
+<ul class="simple">
+<li><p><strong>Device</strong>: Select which CUDA GPU to use when multiple devices are available.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This tab requires PyTorch to be installed (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">vista-imagery[gpu]</span></code>) and a CUDA-capable GPU to be
+detected. If either requirement is not met, the tab displays an informational message.</p>
+</div>
+</section>
+<section id="map-view">
+<h3>Map View<a class="headerlink" href="#map-view" title="Link to this heading">¶</a></h3>
+<p><strong>Tile Servers</strong></p>
+<p>Manages the list of tile servers used for the WMS map view background. Click a row to select the active server.
+Servers can be added, edited, or removed using the buttons below the table. Each server entry specifies a name,
+a URL template with <code class="docutils literal notranslate"><span class="pre">{z}</span></code>, <code class="docutils literal notranslate"><span class="pre">{x}</span></code>, <code class="docutils literal notranslate"><span class="pre">{y}</span></code> placeholders, and a coordinate system (EPSG:3857 Web Mercator or
+EPSG:4326 Geographic).</p>
+<p><strong>Cache</strong></p>
+<ul class="simple">
+<li><p><strong>Tile Cache Size</strong> (default: 256): Maximum number of map tiles kept in memory. Higher values reduce network
+requests but use more memory. Range: 16–2048.</p></li>
+<li><p><strong>Projection Cache Size</strong> (default: 64): Maximum number of projected imagery frames cached. Higher values reduce
+recomputation but use more memory. Range: 8–262144.</p></li>
+</ul>
+<p><strong>Projection</strong></p>
+<ul class="simple">
+<li><p><strong>Use coarse grid sampling</strong> (default: enabled): When enabled, the coordinate mapping is computed on a small grid
+and interpolated to full resolution. This is much faster but slightly approximate. Disable for exact per-pixel
+projection.</p></li>
+<li><p><strong>Coarse Grid Size</strong> (default: 64): Maximum dimension of the coarse sampling grid. Higher values are more accurate
+but slower. Only available when coarse grid sampling is enabled. Range: 8–512.</p></li>
+</ul>
+</section>
+</section>
+<section id="status-bar">
+<h2>Status Bar<a class="headerlink" href="#status-bar" title="Link to this heading">¶</a></h2>
+<p>The status bar displays contextual information:</p>
+<ul class="simple">
+<li><p><strong>Current Frame</strong>: Frame number and timestamp</p></li>
+<li><p><strong>Mouse Position</strong>: Pixel coordinates under cursor</p></li>
+<li><p><strong>Pixel Value</strong>: Intensity value at cursor position</p></li>
+<li><p><strong>Selection Info</strong>: Information about selected objects</p></li>
+<li><p><strong>Progress</strong>: Algorithm execution progress</p></li>
+</ul>
+</section>
+<section id="customization">
+<h2>Customization<a class="headerlink" href="#customization" title="Link to this heading">¶</a></h2>
+<p>The VISTA interface can be customized to suit your workflow:</p>
+<ul class="simple">
+<li><p><strong>Panel Layout</strong>: The <strong>Data Manager</strong> can be docked in different locations</p></li>
+<li><p><strong>Themes</strong>: Icons adjust to your systems light (purple) / dark (yellow) theme.</p></li>
+</ul>
+</section>
+<section id="tips-and-tricks">
+<h2>Tips and Tricks<a class="headerlink" href="#tips-and-tricks" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Data Selection</strong>: All data is selected by selecting table rows in the <strong>Data Manager</strong>.</p></li>
+<li><p><strong>Multi-Select</strong>: Hold Ctrl/Cmd while clicking to select multiple items</p></li>
+<li><p><strong>Context Menus</strong>: Right-click on items for context-specific options</p></li>
+<li><p><strong>Drag and Drop</strong>: Drag files from file explorer to load them in their respective panels in the <strong>Data Manager</strong></p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../api/imagery.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Imagery Module</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="tracks.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Object Tracking</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">User Interface</a><ul>
+<li><a class="reference internal" href="#main-window-layout">Main Window Layout</a><ul>
+<li><a class="reference internal" href="#components">Components</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#imagery-viewer">Imagery Viewer</a><ul>
+<li><a class="reference internal" href="#navigation">Navigation</a></li>
+<li><a class="reference internal" href="#display-controls">Display Controls</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#data-panels">Data Panels</a><ul>
+<li><a class="reference internal" href="#imagery-panel">Imagery Panel</a></li>
+<li><a class="reference internal" href="#detections-panel">Detections Panel</a></li>
+<li><a class="reference internal" href="#tracks-panel">Tracks Panel</a></li>
+<li><a class="reference internal" href="#aois-panel">AOIs Panel</a></li>
+<li><a class="reference internal" href="#sensors-panel">Sensors Panel</a></li>
+<li><a class="reference internal" href="#features-panel">Features Panel</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#playback-controls">Playback Controls</a><ul>
+<li><a class="reference internal" href="#controls">Controls</a></li>
+<li><a class="reference internal" href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#menus">Menus</a><ul>
+<li><a class="reference internal" href="#file-menu">File Menu</a></li>
+<li><a class="reference internal" href="#view-menu">View Menu</a></li>
+<li><a class="reference internal" href="#image-processing-menu">Image Processing Menu</a></li>
+<li><a class="reference internal" href="#filters-menu">Filters Menu</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#settings">Settings</a><ul>
+<li><a class="reference internal" href="#imagery">Imagery</a></li>
+<li><a class="reference internal" href="#track-visualization">Track Visualization</a></li>
+<li><a class="reference internal" href="#data-manager">Data Manager</a></li>
+<li><a class="reference internal" href="#gpu">GPU</a></li>
+<li><a class="reference internal" href="#map-view">Map View</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#status-bar">Status Bar</a></li>
+<li><a class="reference internal" href="#customization">Customization</a></li>
+<li><a class="reference internal" href="#tips-and-tricks">Tips and Tricks</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

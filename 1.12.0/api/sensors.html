@@ -1,0 +1,1321 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="vista.sensors.sensor.Sensor" href="generated/vista.sensors.sensor.Sensor.html"><link rel="prev" title="Transforms Module" href="transforms.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>Sensors Module - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_guide/interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal.html">vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal.html">vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/blob/main/docs/source/api/sensors.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/edit/main/docs/source/api/sensors.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="sensors-module">
+<h1>Sensors Module<a class="headerlink" href="#sensors-module" title="Link to this heading">¶</a></h1>
+<p>The sensors module provides classes for representing sensor metadata and calibration data.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>Sensor information is crucial for:</p>
+<ul class="simple">
+<li><p>Coordinate transformations</p></li>
+<li><p>Radiometric calibration</p></li>
+<li><p>Geometric corrections</p></li>
+<li><p>Geolocation accuracy</p></li>
+</ul>
+<p>VISTA supports both continuous sensor models and sampled sensor data.</p>
+</section>
+<section id="core-classes">
+<h2>Core Classes<a class="headerlink" href="#core-classes" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#vista.sensors.sensor.Sensor" title="vista.sensors.sensor.Sensor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sensor.Sensor</span></code></a></p></td>
+<td><p>Base class for sensor position, line-of-sight, geodetic conversion, and radiometric modeling</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor" title="vista.sensors.sampled_sensor.SampledSensor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampled_sensor.SampledSensor</span></code></a></p></td>
+<td><p>Sensor implementation using sampled position data with interpolation/extrapolation.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-reference">
+<h2>Module Reference<a class="headerlink" href="#module-reference" title="Link to this heading">¶</a></h2>
+<section id="module-vista.sensors.sensor">
+<span id="sensor"></span><h3>Sensor<a class="headerlink" href="#module-vista.sensors.sensor" title="Link to this heading">¶</a></h3>
+<p>Base sensor class for position, line-of-sight, geodetic conversion, and radiometric modeling.</p>
+<p>This module defines the Sensor base class which provides a framework for representing
+sensor platforms and their characteristics. Sensors support position queries, geodetic
+coordinate conversion, radiometric calibration data (bias, gain, bad pixels), and
+optional point spread function modeling.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">vista.sensors.sensor.</span></span><span class="sig-name descname"><span class="pre">Sensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_mask_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_instance_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Base class for sensor position, line-of-sight, geodetic conversion, and radiometric modeling</p>
+<p>The Sensor class provides a framework for representing sensor platforms and their
+associated characteristics including projection polynomials and radiometric calibration data.</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.name" title="Link to this definition">¶</a></dt>
+<dd><p>Unique name for this sensor. Used as the primary identifier.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.bias_images">
+<span class="sig-name descname"><span class="pre">bias_images</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.bias_images" title="Link to this definition">¶</a></dt>
+<dd><p>3D array of bias/dark frames with shape (num_bias_images, height, width).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.bias_image_frames">
+<span class="sig-name descname"><span class="pre">bias_image_frames</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.bias_image_frames" title="Link to this definition">¶</a></dt>
+<dd><p>1D array specifying frame ranges for each bias image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.uniformity_gain_images">
+<span class="sig-name descname"><span class="pre">uniformity_gain_images</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.uniformity_gain_images" title="Link to this definition">¶</a></dt>
+<dd><p>3D array of flat-field/gain correction images.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.uniformity_gain_image_frames">
+<span class="sig-name descname"><span class="pre">uniformity_gain_image_frames</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.uniformity_gain_image_frames" title="Link to this definition">¶</a></dt>
+<dd><p>1D array specifying frame ranges for each uniformity gain image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.bad_pixel_masks">
+<span class="sig-name descname"><span class="pre">bad_pixel_masks</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.bad_pixel_masks" title="Link to this definition">¶</a></dt>
+<dd><p>3D array of bad pixel masks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.bad_pixel_mask_frames">
+<span class="sig-name descname"><span class="pre">bad_pixel_mask_frames</span></span><a class="headerlink" href="#vista.sensors.sensor.Sensor.bad_pixel_mask_frames" title="Link to this definition">¶</a></dt>
+<dd><p>1D array specifying frame ranges for each bad pixel mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><p>All positions are in Earth-Centered Earth-Fixed (ECEF) Cartesian coordinates</p></li>
+<li><p>Position units are kilometers</p></li>
+<li><p>Positions are represented as (3, N) arrays with x, y, z in each column</p></li>
+<li><p>PSF modeling is optional and can be used for fitting signal blobs to estimate irradiance</p></li>
+<li><p>Sensor names must be unique within a VISTA session</p></li>
+<li><p>Class variable _instance_count tracks the total number of Sensor instances created</p></li>
+</ul>
+</div>
+<div class="admonition-examples admonition">
+<p class="admonition-title">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Subclass can implement get_positions</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">MySensor</span><span class="p">(</span><span class="n">Sensor</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="c1"># Return sensor positions for given times</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">],</span> <span class="p">[</span><span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">],</span> <span class="p">[</span><span class="n">z1</span><span class="p">,</span> <span class="n">z2</span><span class="p">]])</span>
+</pre></div>
+</div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#id0" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id1">
+<span class="sig-name descname"><span class="pre">bias_images</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id1" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">bias_image_frames</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id2" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id3">
+<span class="sig-name descname"><span class="pre">uniformity_gain_images</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id3" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id4">
+<span class="sig-name descname"><span class="pre">uniformity_gain_image_frames</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id4" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id5">
+<span class="sig-name descname"><span class="pre">bad_pixel_masks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id5" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id6">
+<span class="sig-name descname"><span class="pre">bad_pixel_mask_frames</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id6" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.uuid">
+<span class="sig-name descname"><span class="pre">uuid</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#vista.sensors.sensor.Sensor.uuid" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.__post_init__">
+<span class="sig-name descname"><span class="pre">__post_init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.__post_init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.__post_init__" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize sensor instance and increment global counter.</p>
+<p>Generates a unique UUID for this sensor instance and initializes internal
+data structures for tracking associated imagery.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.__eq__">
+<span class="sig-name descname"><span class="pre">__eq__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.__eq__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.__eq__" title="Link to this definition">¶</a></dt>
+<dd><p>Compare Sensors based on UUID</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.get_imagery_frames_and_times">
+<span class="sig-name descname"><span class="pre">get_imagery_frames_and_times</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.get_imagery_frames_and_times"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.get_imagery_frames_and_times" title="Link to this definition">¶</a></dt>
+<dd><p>Get all unique imagery frames and corresponding times in increasing order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>frames</strong> (<em>NDArray[np.int_]</em>) – Sorted array of unique frame numbers</p></li>
+<li><p><strong>times</strong> (<em>NDArray[np.datetime64]</em>) – Sorted array of corresponding timestamps</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><em>Tuple</em></a>[NDArray, NDArray]</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>This method aggregates frames and times from all imagery objects that have
+been registered with this sensor via add_imagery().</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.add_imagery">
+<span class="sig-name descname"><span class="pre">add_imagery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">imagery</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.add_imagery"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.add_imagery" title="Link to this definition">¶</a></dt>
+<dd><p>Register imagery with this sensor and update frame/time tracking.</p>
+<p>Adds the imagery’s frames and times to the sensor’s internal registry
+for coordinate conversion and time-to-frame mapping. Duplicate imagery
+(by UUID) or imagery without times is ignored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>imagery</strong> (<a class="reference internal" href="imagery.html#vista.imagery.imagery.Imagery" title="vista.imagery.imagery.Imagery"><em>Imagery</em></a>) – Imagery object to register with this sensor</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><p>Only imagery with non-None times are tracked</p></li>
+<li><p>Duplicate frame/time pairs are automatically removed</p></li>
+<li><p>This method is typically called automatically when Imagery is created</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.get_positions">
+<span class="sig-name descname"><span class="pre">get_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">times</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.get_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.get_positions" title="Link to this definition">¶</a></dt>
+<dd><p>Return sensor positions in Cartesian ECEF coordinates for given times.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>times</strong> (<em>NDArray</em><em>[</em><em>np.datetime64</em><em>]</em>) – Array of times for which to retrieve sensor positions</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sensor positions as (3, N) array where N is the number of times.
+Each column contains [x, y, z] coordinates in ECEF frame (km).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64]</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>The default implementation returns None. Subclasses should override this method</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.model_psf">
+<span class="sig-name descname"><span class="pre">model_psf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.model_psf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.model_psf" title="Link to this definition">¶</a></dt>
+<dd><p>Model the sensor’s point spread function (PSF).</p>
+<p>This is an optional method that can be overridden by subclasses to provide
+PSF modeling capability. The PSF can be used to fit signal pixel blobs in
+imagery to estimate irradiance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Standard deviation parameter for PSF modeling (e.g., Gaussian width)</p></li>
+<li><p><strong>size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – Size of the PSF kernel to generate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2D array representing the point spread function, or None if not implemented</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64] or None</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>The default implementation returns None. Subclasses should override this
+method to provide specific PSF models (e.g., Gaussian, Airy disk, etc.).</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.can_geolocate">
+<span class="sig-name descname"><span class="pre">can_geolocate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.can_geolocate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.can_geolocate" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sensor can convert pixels to geodetic coordinates and vice versa.</p>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>The default implementation returns False. Subclasses can override this method.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if sensor has both forward and reverse geolocation polynomials.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.can_correct_bad_pixel">
+<span class="sig-name descname"><span class="pre">can_correct_bad_pixel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.can_correct_bad_pixel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.can_correct_bad_pixel" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sensor has radiometric bad pixel masks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if sensor has radiometric bad pixel masks.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.can_correct_bias">
+<span class="sig-name descname"><span class="pre">can_correct_bias</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.can_correct_bias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.can_correct_bias" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sensor has bias images</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if sensor has bias images.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.can_correct_non_uniformity">
+<span class="sig-name descname"><span class="pre">can_correct_non_uniformity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.can_correct_non_uniformity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.can_correct_non_uniformity" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sensor has uniformity gain images</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if sensor has uniformity gain images.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.geodetic_to_pixel">
+<span class="sig-name descname"><span class="pre">geodetic_to_pixel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.geodetic_to_pixel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.geodetic_to_pixel" title="Link to this definition">¶</a></dt>
+<dd><p>Convert geodetic coordinates to pixel coordinates using polynomial coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frame</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>np.ndarray</em>) – Frame number(s) for which to perform the conversion. If an array,
+must have the same length as loc and each element specifies the frame
+for the corresponding location.</p></li>
+<li><p><strong>loc</strong> (<em>EarthLocation</em>) – Astropy EarthLocation object(s) containing geodetic coordinates</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>rows</strong> (<em>np.ndarray</em>) – Array of row pixel coordinates (NaN for base implementation)</p></li>
+<li><p><strong>columns</strong> (<em>np.ndarray</em>) – Array of column pixel coordinates (NaN for base implementation)</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><em>Tuple</em></a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>]</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>The default implementation returns NaN arrays. Subclasses should override
+this method to provide geodetic-to-pixel conversion using their specific
+projection model (e.g., polynomial coefficients).</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.pixel_to_geodetic">
+<span class="sig-name descname"><span class="pre">pixel_to_geodetic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.pixel_to_geodetic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.pixel_to_geodetic" title="Link to this definition">¶</a></dt>
+<dd><p>Convert pixel coordinates to geodetic coordinates using polynomial coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frame</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>np.ndarray</em>) – Frame number(s) for which to perform the conversion. If an array,
+must have the same length as rows/columns and each element specifies
+the frame for the corresponding pixel coordinate.</p></li>
+<li><p><strong>rows</strong> (<em>np.ndarray</em>) – Array of row pixel coordinates</p></li>
+<li><p><strong>columns</strong> (<em>np.ndarray</em>) – Array of column pixel coordinates</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Astropy EarthLocation object(s) with geodetic coordinates
+(zeros for base implementation)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>EarthLocation</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>The default implementation returns EarthLocation with zero coordinates.
+Subclasses should override this method to provide pixel-to-geodetic
+conversion using their specific projection model.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.to_hdf5">
+<span class="sig-name descname"><span class="pre">to_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sensor.html#Sensor.to_hdf5"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sensor.Sensor.to_hdf5" title="Link to this definition">¶</a></dt>
+<dd><p>Save sensor radiometric calibration data to an HDF5 group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>group</strong> (<em>h5py.Group</em>) – HDF5 group to write sensor data to (typically sensors/&lt;sensor_uuid&gt;/)</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>This method writes radiometric calibration data to the HDF5 group:
+- bias_images and bias_image_frames
+- uniformity_gain_images and uniformity_gain_image_frames
+- bad_pixel_masks and bad_pixel_mask_frames</p>
+<p>Subclasses should call super().to_hdf5(group) and then add their own data.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sensor.Sensor.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_mask_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_instance_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vista.sensors.sensor.Sensor.__init__" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-vista.sensors.sampled_sensor">
+<span id="sampled-sensor"></span><h3>Sampled Sensor<a class="headerlink" href="#module-vista.sensors.sampled_sensor" title="Link to this heading">¶</a></h3>
+<p>Sampled sensor with interpolated position and geodetic conversion capabilities.</p>
+<p>This module defines the SampledSensor class, which extends the base Sensor class to provide
+position retrieval via interpolation/extrapolation from discrete position samples. It also
+supports geodetic coordinate conversion using ARF (Attitude Reference Frame) polynomials and
+radiometric gain calibration.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">vista.sensors.sampled_sensor.</span></span><span class="sig-name descname"><span class="pre">SampledSensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_mask_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_instance_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radiometric_gain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pointing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_pixel_to_arf_azimuth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_pixel_to_arf_elevation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_arf_to_row</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_arf_to_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#vista.sensors.sensor.Sensor" title="vista.sensors.sensor.Sensor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sensor</span></code></a></p>
+<p>Sensor implementation using sampled position data with interpolation/extrapolation.</p>
+<p>SampledSensor stores discrete position samples at known times and provides
+position estimates at arbitrary times through interpolation (within the time range)
+or extrapolation (outside the time range). For single-position sensors, the same
+position is returned for all query times.</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.positions">
+<span class="sig-name descname"><span class="pre">positions</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.positions" title="Link to this definition">¶</a></dt>
+<dd><p>Sensor positions as (3, N) array where N is the number of samples.
+Each column contains [x, y, z] ECEF coordinates in kilometers.
+Required - will raise ValueError in __post_init__ if not provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.times">
+<span class="sig-name descname"><span class="pre">times</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.times" title="Link to this definition">¶</a></dt>
+<dd><p>Times corresponding to each position sample. Must have length N.
+Required - will raise ValueError in __post_init__ if not provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.datetime64]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.frames">
+<span class="sig-name descname"><span class="pre">frames</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.frames" title="Link to this definition">¶</a></dt>
+<dd><p>Sensor frames numbers corresponding to each time sample. Must have length N.
+Required - will raise ValueError in __post_init__ if not provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.int64]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.radiometric_gain">
+<span class="sig-name descname"><span class="pre">radiometric_gain</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.radiometric_gain" title="Link to this definition">¶</a></dt>
+<dd><p>1D array of multiplicative factors for each frame to convert from counts to
+irradiance in units of kW/km²/sr.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.pointing">
+<span class="sig-name descname"><span class="pre">pointing</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.pointing" title="Link to this definition">¶</a></dt>
+<dd><p>Sensor pointing unit vectors in ECEF coordinates. Shape: (3, num_frames).
+Each column is the direction the sensor is pointing for that frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64], optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_azimuth">
+<span class="sig-name descname"><span class="pre">poly_pixel_to_arf_azimuth</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_azimuth" title="Link to this definition">¶</a></dt>
+<dd><p>Polynomial coefficients for converting (column, row) to ARF azimuth (radians).
+Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64], optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_elevation">
+<span class="sig-name descname"><span class="pre">poly_pixel_to_arf_elevation</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_elevation" title="Link to this definition">¶</a></dt>
+<dd><p>Polynomial coefficients for converting (column, row) to ARF elevation (radians).
+Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64], optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_row">
+<span class="sig-name descname"><span class="pre">poly_arf_to_row</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_row" title="Link to this definition">¶</a></dt>
+<dd><p>Polynomial coefficients for converting (azimuth, elevation) to row.
+Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64], optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_col">
+<span class="sig-name descname"><span class="pre">poly_arf_to_col</span></span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_col" title="Link to this definition">¶</a></dt>
+<dd><p>Polynomial coefficients for converting (azimuth, elevation) to column.
+Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64], optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.get_positions">
+<span class="sig-name descname"><span class="pre">get_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">times</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.get_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.get_positions" title="Link to this definition">¶</a></dt>
+<dd><p>Return interpolated/extrapolated sensor positions for given times</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><p>Duplicate times in the input are automatically removed during initialization</p></li>
+<li><p>For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside</p></li>
+<li><p>For 1 sample: returns the same position for all query times (stationary sensor)</p></li>
+<li><p>Positions must be (3, N) arrays with x, y, z in each column</p></li>
+<li><p>All coordinates are in ECEF Cartesian frame with units of kilometers</p></li>
+<li><p>ARF (Attitude Reference Frame) is a local coordinate system where the X-axis
+points along the sensor pointing direction</p></li>
+</ul>
+</div>
+<div class="admonition-examples admonition">
+<p class="admonition-title">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create sensor with multiple position samples</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1100</span><span class="p">,</span> <span class="mi">1200</span><span class="p">],</span>
+<span class="gp">... </span>                      <span class="p">[</span><span class="mi">2000</span><span class="p">,</span> <span class="mi">2100</span><span class="p">,</span> <span class="mi">2200</span><span class="p">],</span>
+<span class="gp">... </span>                      <span class="p">[</span><span class="mi">3000</span><span class="p">,</span> <span class="mi">3100</span><span class="p">,</span> <span class="mi">3200</span><span class="p">]])</span>  <span class="c1"># (3, 3) array</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">'2024-01-01T00:00:00'</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="s1">'2024-01-01T00:01:00'</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="s1">'2024-01-01T00:02:00'</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'datetime64'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sensor</span> <span class="o">=</span> <span class="n">SampledSensor</span><span class="p">(</span><span class="n">positions</span><span class="o">=</span><span class="n">positions</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get interpolated position</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">'2024-01-01T00:00:30'</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'datetime64'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">sensor</span><span class="o">.</span><span class="n">get_positions</span><span class="p">(</span><span class="n">query_times</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(3, 1)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create stationary sensor with single position</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">positions_static</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1000</span><span class="p">],</span> <span class="p">[</span><span class="mi">2000</span><span class="p">],</span> <span class="p">[</span><span class="mi">3000</span><span class="p">]])</span>  <span class="c1"># (3, 1) array</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">times_static</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">'2024-01-01T00:00:00'</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">'datetime64'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sensor_static</span> <span class="o">=</span> <span class="n">SampledSensor</span><span class="p">(</span><span class="n">positions</span><span class="o">=</span><span class="n">positions_static</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="n">times_static</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Returns same position for any query time</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pos</span> <span class="o">=</span> <span class="n">sensor_static</span><span class="o">.</span><span class="n">get_positions</span><span class="p">(</span><span class="n">query_times</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id7">
+<span class="sig-name descname"><span class="pre">positions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id7" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id8">
+<span class="sig-name descname"><span class="pre">times</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.datetime64" title="(in NumPy v2.5)"><span class="pre">datetime64</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id8" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id9">
+<span class="sig-name descname"><span class="pre">frames</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">int64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id9" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id10">
+<span class="sig-name descname"><span class="pre">radiometric_gain</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id10" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id11">
+<span class="sig-name descname"><span class="pre">pointing</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id11" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id12">
+<span class="sig-name descname"><span class="pre">poly_pixel_to_arf_azimuth</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id12" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id13">
+<span class="sig-name descname"><span class="pre">poly_pixel_to_arf_elevation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id13" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id14">
+<span class="sig-name descname"><span class="pre">poly_arf_to_row</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id14" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id15">
+<span class="sig-name descname"><span class="pre">poly_arf_to_col</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float64</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#id15" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.__post_init__">
+<span class="sig-name descname"><span class="pre">__post_init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.__post_init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.__post_init__" title="Link to this definition">¶</a></dt>
+<dd><p>Validate inputs and remove duplicate times.</p>
+<p>Ensures positions and times have compatible shapes and removes any
+duplicate time entries along with their corresponding positions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If positions or times are not provided, or if they have incompatible shapes.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.can_geolocate">
+<span class="sig-name descname"><span class="pre">can_geolocate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.can_geolocate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.can_geolocate" title="Link to this definition">¶</a></dt>
+<dd><p>Check if sensor can convert pixels to geodetic coordinates and vice versa.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if sensor has all required ARF geolocation data: pointing vectors
+and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id16">
+<span class="sig-name descname"><span class="pre">get_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">times</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.get_positions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id16" title="Link to this definition">¶</a></dt>
+<dd><p>Return sensor positions for given times via interpolation/extrapolation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>times</strong> (<em>NDArray</em><em>[</em><em>np.datetime64</em><em>]</em>) – Array of times for which to retrieve sensor positions</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sensor positions as (3, N) array where N is the number of query times.
+Each column contains [x, y, z] coordinates in ECEF frame (km).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NDArray[np.float64]</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><p>For sensors with 1 sample: returns the single position for all times</p></li>
+<li><p>For sensors with 2+ samples: uses linear interpolation within the time
+range and linear extrapolation outside the range</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.pixel_to_geodetic">
+<span class="sig-name descname"><span class="pre">pixel_to_geodetic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.pixel_to_geodetic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.pixel_to_geodetic" title="Link to this definition">¶</a></dt>
+<dd><p>Convert pixel coordinates to geodetic coordinates using ARF polynomials.</p>
+<p>Uses ARF (Attitude Reference Frame) polynomials to map (row, column) pixel
+coordinates to geodetic coordinates by ray-casting to the Earth’s surface.
+Pixels that do not intersect Earth will have NaN coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frame</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>np.ndarray</em>) – Frame number(s) for which to perform the conversion. If an array,
+must have the same length as rows/columns and each element specifies
+the frame for the corresponding pixel coordinate.</p></li>
+<li><p><strong>rows</strong> (<em>np.ndarray</em>) – Array of row pixel coordinates</p></li>
+<li><p><strong>columns</strong> (<em>np.ndarray</em>) – Array of column pixel coordinates</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Astropy EarthLocation object(s) with geodetic coordinates.
+Returns NaN coordinates for pixels that do not intersect Earth.
+Returns zero coordinates if polynomials are not available or frame not found.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>EarthLocation</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><p>Requires ARF polynomials and pointing vectors to be defined</p></li>
+<li><p>Frame must exist in self.frames array</p></li>
+<li><p>Off-Earth pixels will have NaN lat/lon/height values</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.geodetic_to_pixel">
+<span class="sig-name descname"><span class="pre">geodetic_to_pixel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.geodetic_to_pixel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.geodetic_to_pixel" title="Link to this definition">¶</a></dt>
+<dd><p>Convert geodetic coordinates to pixel coordinates using ARF polynomials.</p>
+<p>Uses ARF (Attitude Reference Frame) polynomials to map geodetic coordinates
+(latitude, longitude, altitude) to (row, column) pixel coordinates. This
+method properly handles targets at any altitude, not just ground level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frame</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> or </em><em>np.ndarray</em>) – Frame number(s) for which to perform the conversion. If an array,
+must have the same length as loc and each element specifies the frame
+for the corresponding location.</p></li>
+<li><p><strong>loc</strong> (<em>EarthLocation</em>) – Astropy EarthLocation object(s) containing geodetic coordinates</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>rows</strong> (<em>np.ndarray</em>) – Array of row pixel coordinates (zeros if polynomials unavailable)</p></li>
+<li><p><strong>columns</strong> (<em>np.ndarray</em>) – Array of column pixel coordinates (zeros if polynomials unavailable)</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><em>Tuple</em></a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><em>ndarray</em></a>]</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<ul class="simple">
+<li><p>Requires ARF polynomials and pointing vectors to be defined</p></li>
+<li><p>Frame must exist in self.frames array</p></li>
+<li><p>Returns zero coordinates if polynomials are not available or frame not found</p></li>
+<li><p>Properly handles targets at any altitude (not limited to ground level)</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.to_hdf5">
+<span class="sig-name descname"><span class="pre">to_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/vista/sensors/sampled_sensor.html#SampledSensor.to_hdf5"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.to_hdf5" title="Link to this definition">¶</a></dt>
+<dd><p>Save sampled sensor data to an HDF5 group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>group</strong> (<em>h5py.Group</em>) – HDF5 group to write sensor data to (typically sensors/&lt;sensor_name&gt;/)</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>This method extends the base Sensor.to_hdf5() by adding:
+- Position data (positions, times) in position/ subgroup
+- Geolocation polynomials in geolocation/ subgroup
+- Radiometric gain values in radiometric/ subgroup</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniformity_gain_image_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bad_pixel_mask_frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_instance_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radiometric_gain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pointing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_pixel_to_arf_azimuth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_pixel_to_arf_elevation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_arf_to_row</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poly_arf_to_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.__init__" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="vista.sensors.sampled_sensor.SampledSensor.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#vista.sensors.sampled_sensor.SampledSensor.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+<section id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
+<section id="creating-a-sensor">
+<h3>Creating a Sensor<a class="headerlink" href="#creating-a-sensor" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.sensors.sensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sensor</span>
+
+<span class="c1"># Create a basic sensor (no calibration data)</span>
+<span class="n">sensor</span> <span class="o">=</span> <span class="n">Sensor</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"My Sensor"</span><span class="p">)</span>
+
+<span class="c1"># Create a sensor with radiometric calibration data</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="n">sensor</span> <span class="o">=</span> <span class="n">Sensor</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Calibrated Sensor"</span><span class="p">,</span>
+    <span class="n">bias_images</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+    <span class="n">bias_image_frames</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
+    <span class="n">uniformity_gain_images</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+    <span class="n">uniformity_gain_image_frames</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="using-sensor-capabilities">
+<h3>Using Sensor Capabilities<a class="headerlink" href="#using-sensor-capabilities" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check what calibration data is available</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Can correct bias: </span><span class="si">{</span><span class="n">sensor</span><span class="o">.</span><span class="n">can_correct_bias</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Can correct non-uniformity: </span><span class="si">{</span><span class="n">sensor</span><span class="o">.</span><span class="n">can_correct_non_uniformity</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Can geolocate: </span><span class="si">{</span><span class="n">sensor</span><span class="o">.</span><span class="n">can_geolocate</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># Geolocation (requires a SampledSensor or custom subclass with polynomial data)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.sensors.sampled_sensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">SampledSensor</span>
+<span class="c1"># See the Custom Sensors developer guide for implementing geolocation</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="generated/vista.sensors.sensor.Sensor.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">vista.sensors.sensor.Sensor</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="transforms.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Transforms Module</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Sensors Module</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#core-classes">Core Classes</a></li>
+<li><a class="reference internal" href="#module-reference">Module Reference</a><ul>
+<li><a class="reference internal" href="#module-vista.sensors.sensor">Sensor</a><ul>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor"><code class="docutils literal notranslate"><span class="pre">Sensor</span></code></a><ul>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.name"><code class="docutils literal notranslate"><span class="pre">Sensor.name</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.bias_images"><code class="docutils literal notranslate"><span class="pre">Sensor.bias_images</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.bias_image_frames"><code class="docutils literal notranslate"><span class="pre">Sensor.bias_image_frames</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.uniformity_gain_images"><code class="docutils literal notranslate"><span class="pre">Sensor.uniformity_gain_images</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.uniformity_gain_image_frames"><code class="docutils literal notranslate"><span class="pre">Sensor.uniformity_gain_image_frames</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.bad_pixel_masks"><code class="docutils literal notranslate"><span class="pre">Sensor.bad_pixel_masks</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.bad_pixel_mask_frames"><code class="docutils literal notranslate"><span class="pre">Sensor.bad_pixel_mask_frames</span></code></a></li>
+<li><a class="reference internal" href="#id0"><code class="docutils literal notranslate"><span class="pre">Sensor.name</span></code></a></li>
+<li><a class="reference internal" href="#id1"><code class="docutils literal notranslate"><span class="pre">Sensor.bias_images</span></code></a></li>
+<li><a class="reference internal" href="#id2"><code class="docutils literal notranslate"><span class="pre">Sensor.bias_image_frames</span></code></a></li>
+<li><a class="reference internal" href="#id3"><code class="docutils literal notranslate"><span class="pre">Sensor.uniformity_gain_images</span></code></a></li>
+<li><a class="reference internal" href="#id4"><code class="docutils literal notranslate"><span class="pre">Sensor.uniformity_gain_image_frames</span></code></a></li>
+<li><a class="reference internal" href="#id5"><code class="docutils literal notranslate"><span class="pre">Sensor.bad_pixel_masks</span></code></a></li>
+<li><a class="reference internal" href="#id6"><code class="docutils literal notranslate"><span class="pre">Sensor.bad_pixel_mask_frames</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.uuid"><code class="docutils literal notranslate"><span class="pre">Sensor.uuid</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.__post_init__"><code class="docutils literal notranslate"><span class="pre">Sensor.__post_init__()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.__eq__"><code class="docutils literal notranslate"><span class="pre">Sensor.__eq__()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.get_imagery_frames_and_times"><code class="docutils literal notranslate"><span class="pre">Sensor.get_imagery_frames_and_times()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.add_imagery"><code class="docutils literal notranslate"><span class="pre">Sensor.add_imagery()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.get_positions"><code class="docutils literal notranslate"><span class="pre">Sensor.get_positions()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.model_psf"><code class="docutils literal notranslate"><span class="pre">Sensor.model_psf()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.can_geolocate"><code class="docutils literal notranslate"><span class="pre">Sensor.can_geolocate()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.can_correct_bad_pixel"><code class="docutils literal notranslate"><span class="pre">Sensor.can_correct_bad_pixel()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.can_correct_bias"><code class="docutils literal notranslate"><span class="pre">Sensor.can_correct_bias()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.can_correct_non_uniformity"><code class="docutils literal notranslate"><span class="pre">Sensor.can_correct_non_uniformity()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.geodetic_to_pixel"><code class="docutils literal notranslate"><span class="pre">Sensor.geodetic_to_pixel()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.pixel_to_geodetic"><code class="docutils literal notranslate"><span class="pre">Sensor.pixel_to_geodetic()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.to_hdf5"><code class="docutils literal notranslate"><span class="pre">Sensor.to_hdf5()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sensor.Sensor.__init__"><code class="docutils literal notranslate"><span class="pre">Sensor.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-vista.sensors.sampled_sensor">Sampled Sensor</a><ul>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor"><code class="docutils literal notranslate"><span class="pre">SampledSensor</span></code></a><ul>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.positions"><code class="docutils literal notranslate"><span class="pre">SampledSensor.positions</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.times"><code class="docutils literal notranslate"><span class="pre">SampledSensor.times</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.frames"><code class="docutils literal notranslate"><span class="pre">SampledSensor.frames</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.radiometric_gain"><code class="docutils literal notranslate"><span class="pre">SampledSensor.radiometric_gain</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.pointing"><code class="docutils literal notranslate"><span class="pre">SampledSensor.pointing</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_azimuth"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_pixel_to_arf_azimuth</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_elevation"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_pixel_to_arf_elevation</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_row"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_arf_to_row</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_col"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_arf_to_col</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.get_positions"><code class="docutils literal notranslate"><span class="pre">SampledSensor.get_positions()</span></code></a></li>
+<li><a class="reference internal" href="#id7"><code class="docutils literal notranslate"><span class="pre">SampledSensor.positions</span></code></a></li>
+<li><a class="reference internal" href="#id8"><code class="docutils literal notranslate"><span class="pre">SampledSensor.times</span></code></a></li>
+<li><a class="reference internal" href="#id9"><code class="docutils literal notranslate"><span class="pre">SampledSensor.frames</span></code></a></li>
+<li><a class="reference internal" href="#id10"><code class="docutils literal notranslate"><span class="pre">SampledSensor.radiometric_gain</span></code></a></li>
+<li><a class="reference internal" href="#id11"><code class="docutils literal notranslate"><span class="pre">SampledSensor.pointing</span></code></a></li>
+<li><a class="reference internal" href="#id12"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_pixel_to_arf_azimuth</span></code></a></li>
+<li><a class="reference internal" href="#id13"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_pixel_to_arf_elevation</span></code></a></li>
+<li><a class="reference internal" href="#id14"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_arf_to_row</span></code></a></li>
+<li><a class="reference internal" href="#id15"><code class="docutils literal notranslate"><span class="pre">SampledSensor.poly_arf_to_col</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.__post_init__"><code class="docutils literal notranslate"><span class="pre">SampledSensor.__post_init__()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.can_geolocate"><code class="docutils literal notranslate"><span class="pre">SampledSensor.can_geolocate()</span></code></a></li>
+<li><a class="reference internal" href="#id16"><code class="docutils literal notranslate"><span class="pre">SampledSensor.get_positions()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.pixel_to_geodetic"><code class="docutils literal notranslate"><span class="pre">SampledSensor.pixel_to_geodetic()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.geodetic_to_pixel"><code class="docutils literal notranslate"><span class="pre">SampledSensor.geodetic_to_pixel()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.to_hdf5"><code class="docutils literal notranslate"><span class="pre">SampledSensor.to_hdf5()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.__init__"><code class="docutils literal notranslate"><span class="pre">SampledSensor.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#vista.sensors.sampled_sensor.SampledSensor.name"><code class="docutils literal notranslate"><span class="pre">SampledSensor.name</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#basic-usage">Basic Usage</a><ul>
+<li><a class="reference internal" href="#creating-a-sensor">Creating a Sensor</a></li>
+<li><a class="reference internal" href="#using-sensor-capabilities">Using Sensor Capabilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

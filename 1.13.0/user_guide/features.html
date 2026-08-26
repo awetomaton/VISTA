@@ -1,0 +1,1269 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Object Detection" href="detections.html"><link rel="prev" title="Working with Imagery" href="imagery.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>Features and Annotations - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="known_sources.html">Known Sources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/known_sources.html">Known Sources Module</a><input aria-label="Toggle navigation of Known Sources Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.known_sources.known_sources.KnownSources.html">vista.known_sources.known_sources.KnownSources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.known_sources.satellites.Satellites.html">vista.known_sources.satellites.Satellites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.known_sources.solar_system_bodies.SolarSystemBodies.html">vista.known_sources.solar_system_bodies.SolarSystemBodies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.known_sources.stars.Stars.html">vista.known_sources.stars.Stars</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal.html">vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal.html">vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/blob/main/docs/source/user_guide/features.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/edit/main/docs/source/user_guide/features.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="features-and-annotations">
+<h1>Features and Annotations<a class="headerlink" href="#features-and-annotations" title="Link to this heading">¶</a></h1>
+<p>VISTA provides several types of features and annotations for marking regions of interest,
+importing geospatial data, and creating persistent overlays on imagery. These tools enable
+spatial analysis, data organization, and collaborative workflows.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>VISTA supports three main types of features:</p>
+<dl class="simple">
+<dt><strong>Areas of Interest (AOIs)</strong></dt><dd><p>Rectangular regions for extracting sub-imagery, defining analysis zones, or organizing
+spatial data. AOIs are frame-independent and persist across the entire imagery sequence.</p>
+</dd>
+<dt><strong>Placemarks</strong></dt><dd><p>Point features marking specific locations with pixel coordinates and optional geodetic
+coordinates (latitude, longitude, altitude). Useful for marking landmarks, targets,
+or points of interest.</p>
+</dd>
+<dt><strong>Shapefiles</strong></dt><dd><p>Vector geospatial data imported from standard shapefile formats (.shp). Supports points,
+lines, and polygons with associated attribute data.</p>
+</dd>
+</dl>
+</section>
+<section id="areas-of-interest-aois">
+<span id="aois-areas-of-interest"></span><h2>Areas of Interest (AOIs)<a class="headerlink" href="#areas-of-interest-aois" title="Link to this heading">¶</a></h2>
+<p>AOIs define rectangular regions on imagery for analysis, extraction, or organization. They
+are frame-independent, meaning the same AOI applies to all frames in the imagery sequence.</p>
+<section id="creating-aois">
+<h3>Creating AOIs<a class="headerlink" href="#creating-aois" title="Link to this heading">¶</a></h3>
+<img alt="Create AOI" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_create_aoi.gif" />
+<p><strong>Interactive Creation:</strong></p>
+<ol class="arabic simple">
+<li><p>Open the <strong>AOIs</strong> Panel from the Data Panels</p></li>
+<li><p>Click <strong>Add AOI</strong> button</p></li>
+<li><p>Draw a rectangle on the imagery viewer by clicking and dragging</p></li>
+<li><p>Adjust size and position by dragging the corner handles</p></li>
+<li><p>Double-click the AOI to rename it</p></li>
+</ol>
+<p><strong>Programmatic Creation:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.aoi.aoi</span><span class="w"> </span><span class="kn">import</span> <span class="n">AOI</span>
+
+<span class="c1"># Create an AOI at (row=100, col=200) with width=150, height=100</span>
+<span class="n">aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Target Region"</span><span class="p">,</span>
+    <span class="n">x</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>          <span class="c1"># Column (x-coordinate)</span>
+    <span class="n">y</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>          <span class="c1"># Row (y-coordinate)</span>
+    <span class="n">width</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span>      <span class="c1"># Width in pixels</span>
+    <span class="n">height</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>     <span class="c1"># Height in pixels</span>
+    <span class="n">color</span><span class="o">=</span><span class="s1">'r'</span><span class="p">,</span>      <span class="c1"># Red color</span>
+    <span class="n">visible</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="c1"># Check if a point is inside the AOI</span>
+<span class="n">is_inside</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">contains_point</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">250</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>  <span class="c1"># True</span>
+
+<span class="c1"># Get bounding box</span>
+<span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">get_bounds</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="aoi-controls">
+<h3>AOI Controls<a class="headerlink" href="#aoi-controls" title="Link to this heading">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p>Rename AOI by double-clicking on the Name column</p></li>
+<li><p>Users can drag any selected AOIs. AOIs are selected by default. De-select AOIs by holding ctrl/cmd and clicking on
+their row in the AOIs table.</p></li>
+<li><p>Change AOI size by clicking and dragging on the lower-right corner</p></li>
+</ul>
+</div></blockquote>
+<img alt="Control AOI" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_control_aoi.gif" />
+</section>
+<section id="aoi-properties">
+<h3>AOI Properties<a class="headerlink" href="#aoi-properties" title="Link to this heading">¶</a></h3>
+<p>Each AOI has the following properties:</p>
+<dl class="field-list simple">
+<dt class="field-odd">name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unique identifier for the AOI (string)</p>
+</dd>
+<dt class="field-even">x<span class="colon">:</span></dt>
+<dd class="field-even"><p>Left edge column coordinate (pixels)</p>
+</dd>
+<dt class="field-odd">y<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Top edge row coordinate (pixels)</p>
+</dd>
+<dt class="field-even">width<span class="colon">:</span></dt>
+<dd class="field-even"><p>Width of rectangle (pixels)</p>
+</dd>
+<dt class="field-odd">height<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Height of rectangle (pixels)</p>
+</dd>
+<dt class="field-even">color<span class="colon">:</span></dt>
+<dd class="field-even"><p>Display color (‘r’, ‘g’, ‘b’, ‘y’, ‘c’, ‘m’, etc.)</p>
+</dd>
+<dt class="field-odd">visible<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the AOI is displayed (boolean)</p>
+</dd>
+</dl>
+</section>
+<section id="aoi-operations">
+<h3>AOI Operations<a class="headerlink" href="#aoi-operations" title="Link to this heading">¶</a></h3>
+<p><strong>Extracting Sub-Imagery</strong></p>
+<p>Extract imagery data within an AOI:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get imagery data within AOI bounds</span>
+<span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">get_bounds</span><span class="p">()</span>
+
+<span class="c1"># Extract from single frame</span>
+<span class="n">sub_image</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">frame_idx</span><span class="p">,</span>
+                            <span class="nb">int</span><span class="p">(</span><span class="n">y_min</span><span class="p">):</span><span class="nb">int</span><span class="p">(</span><span class="n">y_max</span><span class="p">),</span>
+                            <span class="nb">int</span><span class="p">(</span><span class="n">x_min</span><span class="p">):</span><span class="nb">int</span><span class="p">(</span><span class="n">x_max</span><span class="p">)]</span>
+
+<span class="c1"># Or use imagery slicing with AOI</span>
+<span class="n">aoi_imagery</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">get_aoi</span><span class="p">(</span><span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="saving-and-loading-aois-from-csv">
+<h3>Saving and Loading AOIs from CSV<a class="headerlink" href="#saving-and-loading-aois-from-csv" title="Link to this heading">¶</a></h3>
+<p>AOIs can be saved to and loaded from CSV (Comma-Separated Values) files for sharing,
+backup, or batch processing. This allows you to define AOIs in a spreadsheet or text
+editor and import them into VISTA.</p>
+<p><strong>CSV Format Requirements</strong></p>
+<p>The CSV file must contain the following columns (case-sensitive):</p>
+<dl class="field-list simple">
+<dt class="field-odd">Name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unique identifier for the AOI (string, required)</p>
+</dd>
+<dt class="field-even">X<span class="colon">:</span></dt>
+<dd class="field-even"><p>Left edge column coordinate in pixels (float, required)</p>
+</dd>
+<dt class="field-odd">Y<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Top edge row coordinate in pixels (float, required)</p>
+</dd>
+<dt class="field-even">Width<span class="colon">:</span></dt>
+<dd class="field-even"><p>Width of rectangle in pixels (float, required)</p>
+</dd>
+<dt class="field-odd">Height<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Height of rectangle in pixels (float, required)</p>
+</dd>
+<dt class="field-even">Color<span class="colon">:</span></dt>
+<dd class="field-even"><p>Display color code (string, optional, default: ‘y’)</p>
+</dd>
+<dt class="field-odd">Visible<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Visibility flag (boolean, optional, default: True)</p>
+</dd>
+</dl>
+<p><strong>Example CSV File</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Name,X,Y,Width,Height,Color,Visible
+Search Zone,100.0,200.0,500.0,300.0,r,True
+Analysis Area,600.0,150.0,400.0,450.0,g,True
+Background Region,50.0,50.0,200.0,200.0,b,False
+Target Zone,800.0,600.0,150.0,100.0,y,True
+</pre></div>
+</div>
+<p><strong>Loading AOIs via GUI:</strong></p>
+<ol class="arabic simple">
+<li><p>Open the <strong>AOIs</strong> panel from the Data Panels</p></li>
+<li><p>Click <strong>File → Import → AOIs from CSV</strong></p></li>
+<li><p>Select your CSV file</p></li>
+<li><p>AOIs are automatically created and displayed on the imagery</p></li>
+</ol>
+<p><strong>Loading AOIs Programmatically:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.aoi.aoi</span><span class="w"> </span><span class="kn">import</span> <span class="n">AOI</span>
+
+<span class="c1"># Read CSV file</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'aois.csv'</span><span class="p">)</span>
+
+<span class="c1"># Create AOIs from DataFrame</span>
+<span class="n">aois</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)):</span>
+    <span class="c1"># Get single row as DataFrame</span>
+    <span class="n">row_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">idx</span><span class="p">:</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">row_df</span><span class="p">)</span>
+    <span class="n">aois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aoi</span><span class="p">)</span>
+
+<span class="c1"># Or process row by row</span>
+<span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">'Name'</span><span class="p">],</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">'X'</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">'Y'</span><span class="p">],</span>
+        <span class="n">width</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">'Width'</span><span class="p">],</span>
+        <span class="n">height</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">'Height'</span><span class="p">],</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Color'</span><span class="p">,</span> <span class="s1">'y'</span><span class="p">),</span>
+        <span class="n">visible</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Visible'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">aois</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aoi</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Exporting AOIs to CSV:</strong></p>
+<p>Save your AOIs for sharing or documentation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.aoi.aoi</span><span class="w"> </span><span class="kn">import</span> <span class="n">AOI</span>
+
+<span class="c1"># Export single AOI</span>
+<span class="n">aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"My Region"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'single_aoi.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># Export multiple AOIs</span>
+<span class="n">aoi_dataframes</span> <span class="o">=</span> <span class="p">[</span><span class="n">aoi</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span> <span class="k">for</span> <span class="n">aoi</span> <span class="ow">in</span> <span class="n">aois_list</span><span class="p">]</span>
+<span class="n">combined_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">aoi_dataframes</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">combined_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'all_aois.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>CSV Format Notes:</strong></p>
+<ul class="simple">
+<li><p><strong>Required columns</strong>: Name, X, Y, Width, Height must be present</p></li>
+<li><p><strong>Coordinate system</strong>: X and Y are pixel coordinates (column, row)</p></li>
+<li><p><strong>Dimensions</strong>: Width and Height are in pixels</p></li>
+<li><p><strong>Color codes</strong>: Use single character codes (‘r’, ‘g’, ‘b’, ‘y’, ‘c’, ‘m’, ‘k’, ‘w’)</p></li>
+<li><p><strong>Boolean values</strong>: Use True/False (case-sensitive) for Visible column</p></li>
+<li><p><strong>Decimal precision</strong>: Use floating-point values for sub-pixel positioning (e.g., 100.5)</p></li>
+<li><p><strong>Header row</strong>: First row must contain column names exactly as shown above</p></li>
+<li><p><strong>Encoding</strong>: Use UTF-8 encoding for compatibility</p></li>
+</ul>
+<p><strong>Common CSV Workflows:</strong></p>
+<dl class="simple">
+<dt><strong>Batch Create Analysis Regions:</strong></dt><dd><p>Define multiple AOIs in a spreadsheet and import them all at once.</p>
+</dd>
+<dt><strong>Template-Based AOIs:</strong></dt><dd><p>Create a template CSV with standard AOI layouts for consistent analysis across datasets.</p>
+</dd>
+<dt><strong>Automated AOI Generation:</strong></dt><dd><p>Use Python scripts to generate AOI CSV files based on detection results or grid patterns.</p>
+</dd>
+<dt><strong>Collaborative Workflows:</strong></dt><dd><p>Share AOI definitions between team members or projects via CSV files.</p>
+</dd>
+<dt><strong>Validation and Documentation:</strong></dt><dd><p>Export AOIs to CSV to document analysis regions for reports or publications.</p>
+</dd>
+</dl>
+<p><strong>Dictionary-Based Saving and Loading</strong></p>
+<p>AOIs can also be saved as dictionaries for programmatic workflows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save AOI to dictionary</span>
+<span class="n">aoi_dict</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+<span class="c1"># Create AOI from dictionary</span>
+<span class="n">restored_aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">aoi_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Managing Multiple AOIs</strong></p>
+<p>The AOIs Panel provides tools for:</p>
+<ul class="simple">
+<li><p><strong>Show/Hide</strong>: Toggle visibility of individual AOIs</p></li>
+<li><p><strong>Delete</strong>: Remove AOIs from the project</p></li>
+<li><p><strong>Rename</strong>: Change AOI names</p></li>
+<li><p><strong>Color</strong>: Modify display colors</p></li>
+<li><p><strong>Export</strong>: Save AOI definitions to file</p></li>
+<li><p><strong>Import</strong>: Load AOI definitions from file</p></li>
+</ul>
+</section>
+<section id="use-cases">
+<h3>Use Cases<a class="headerlink" href="#use-cases" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Spatial Analysis Zones</strong></dt><dd><p>Define regions for statistical analysis (mean, std, max, etc.)</p>
+</dd>
+<dt><strong>Chip Extraction</strong></dt><dd><p>Extract image chips around detections or targets</p>
+</dd>
+<dt><strong>Masking</strong></dt><dd><p>Define regions to include or exclude from processing</p>
+</dd>
+<dt><strong>Collaborative Workflows</strong></dt><dd><p>Share AOI definitions between team members</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="placemarks">
+<span id="id1"></span><h2>Placemarks<a class="headerlink" href="#placemarks" title="Link to this heading">¶</a></h2>
+<p>Placemarks are point features that mark specific locations on imagery with both pixel
+and optional geodetic coordinates.</p>
+<img alt="Shapefiles" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_placemarks.gif" />
+<section id="creating-placemarks">
+<h3>Creating Placemarks<a class="headerlink" href="#creating-placemarks" title="Link to this heading">¶</a></h3>
+<p><strong>Interactive Creation:</strong></p>
+<ol class="arabic simple">
+<li><p>Open the <strong>Features</strong> tab from the Data Panels</p></li>
+<li><p>Click <strong>Add Placemark</strong> button</p></li>
+<li><p>Click on the imagery to place the placemark</p></li>
+<li><p>Enter a name and optional description</p></li>
+</ol>
+<p><strong>Programmatic Creation:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.features.feature</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlacemarkFeature</span>
+
+<span class="c1"># Create placemark with pixel coordinates</span>
+<span class="n">placemark</span> <span class="o">=</span> <span class="n">PlacemarkFeature</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Launch Site"</span><span class="p">,</span>
+    <span class="n">geometry</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">'row'</span><span class="p">:</span> <span class="mf">512.5</span><span class="p">,</span>
+        <span class="s1">'col'</span><span class="p">:</span> <span class="mf">1024.3</span><span class="p">,</span>
+        <span class="s1">'lat'</span><span class="p">:</span> <span class="mf">28.5721</span><span class="p">,</span>     <span class="c1"># Optional: latitude in degrees</span>
+        <span class="s1">'lon'</span><span class="p">:</span> <span class="o">-</span><span class="mf">80.6480</span><span class="p">,</span>    <span class="c1"># Optional: longitude in degrees</span>
+        <span class="s1">'alt'</span><span class="p">:</span> <span class="mf">0.0</span>          <span class="c1"># Optional: altitude in km</span>
+    <span class="p">},</span>
+    <span class="n">color</span><span class="o">=</span><span class="s1">'r'</span><span class="p">,</span>
+    <span class="n">visible</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="loading-placemarks-from-csv">
+<h3>Loading Placemarks from CSV<a class="headerlink" href="#loading-placemarks-from-csv" title="Link to this heading">¶</a></h3>
+<p>Placemarks can be imported in bulk from CSV (Comma-Separated Values) files. This is useful
+for loading predefined reference points, ground truth data, or coordinate lists.</p>
+<p><strong>CSV Format Requirements</strong></p>
+<p>The CSV file must contain the following columns (case-sensitive):</p>
+<dl class="field-list simple">
+<dt class="field-odd">Name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Descriptive name for the placemark (string, required)</p>
+</dd>
+<dt class="field-even">Row<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pixel row coordinate (float, required)</p>
+</dd>
+<dt class="field-odd">Col<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pixel column coordinate (float, required)</p>
+</dd>
+<dt class="field-even">Lat<span class="colon">:</span></dt>
+<dd class="field-even"><p>Latitude in decimal degrees (float, optional)</p>
+</dd>
+<dt class="field-odd">Lon<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Longitude in decimal degrees (float, optional)</p>
+</dd>
+<dt class="field-even">Alt<span class="colon">:</span></dt>
+<dd class="field-even"><p>Altitude in kilometers (float, optional)</p>
+</dd>
+<dt class="field-odd">Color<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Display color code (string, optional, default: ‘y’)</p>
+</dd>
+<dt class="field-even">Visible<span class="colon">:</span></dt>
+<dd class="field-even"><p>Visibility flag (boolean, optional, default: True)</p>
+</dd>
+</dl>
+<p><strong>Example CSV File</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Name,Row,Col,Lat,Lon,Alt,Color,Visible
+Launch Pad,512.5,1024.3,28.5721,-80.6480,0.0,r,True
+Airport,450.2,890.7,28.4294,-81.3089,0.029,b,True
+Target Site,600.0,800.0,28.3922,-80.6077,0.0,g,True
+Waypoint 1,300.5,500.2,,,,,False
+</pre></div>
+</div>
+<p><strong>Loading via GUI:</strong></p>
+<ol class="arabic simple">
+<li><p>Open the <strong>Features</strong> tab from the Data Panels</p></li>
+<li><p>Click <strong>File → Import → Placemarks from CSV</strong></p></li>
+<li><p>Select your CSV file</p></li>
+<li><p>Placemarks are automatically created and displayed</p></li>
+</ol>
+<p><strong>Loading Programmatically:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.features.feature</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlacemarkFeature</span>
+
+<span class="c1"># Read CSV file</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'placemarks.csv'</span><span class="p">)</span>
+
+<span class="c1"># Create placemarks from DataFrame</span>
+<span class="n">placemarks</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">placemark</span> <span class="o">=</span> <span class="n">PlacemarkFeature</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">'Name'</span><span class="p">],</span>
+        <span class="n">geometry</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">'row'</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">'Row'</span><span class="p">],</span>
+            <span class="s1">'col'</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">'Col'</span><span class="p">],</span>
+            <span class="s1">'lat'</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Lat'</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s1">'lon'</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Lon'</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s1">'alt'</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Alt'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">},</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Color'</span><span class="p">,</span> <span class="s1">'y'</span><span class="p">),</span>
+        <span class="n">visible</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Visible'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">placemarks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">placemark</span><span class="p">)</span>
+
+<span class="c1"># Add to viewer</span>
+<span class="k">for</span> <span class="n">placemark</span> <span class="ow">in</span> <span class="n">placemarks</span><span class="p">:</span>
+    <span class="n">viewer</span><span class="o">.</span><span class="n">add_feature</span><span class="p">(</span><span class="n">placemark</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>CSV Format Notes:</strong></p>
+<ul class="simple">
+<li><p><strong>Required columns</strong>: Name, Row, Col must be present</p></li>
+<li><p><strong>Optional coordinates</strong>: Lat, Lon, Alt can be empty or omitted</p></li>
+<li><p><strong>Color codes</strong>: Use single character codes (‘r’, ‘g’, ‘b’, ‘y’, ‘c’, ‘m’, ‘k’, ‘w’)</p></li>
+<li><p><strong>Coordinate precision</strong>: Use sufficient decimal places for pixel coordinates (e.g., 512.5, not 512)</p></li>
+<li><p><strong>Missing values</strong>: Leave cells empty for optional fields (do not use “NaN” or “null”)</p></li>
+<li><p><strong>Header row</strong>: First row must contain column names exactly as shown above</p></li>
+<li><p><strong>Encoding</strong>: Use UTF-8 encoding to support special characters in names</p></li>
+</ul>
+<p><strong>Exporting Placemarks to CSV:</strong></p>
+<p>Save your placemarks for sharing or backup:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># Collect placemark data</span>
+<span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">viewer</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">feature</span><span class="o">.</span><span class="n">feature_type</span> <span class="o">==</span> <span class="s1">'placemark'</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s1">'Name'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s1">'Row'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="s1">'row'</span><span class="p">],</span>
+            <span class="s1">'Col'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="s1">'col'</span><span class="p">],</span>
+            <span class="s1">'Lat'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'lat'</span><span class="p">,</span> <span class="s1">''</span><span class="p">),</span>
+            <span class="s1">'Lon'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'lon'</span><span class="p">,</span> <span class="s1">''</span><span class="p">),</span>
+            <span class="s1">'Alt'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'alt'</span><span class="p">,</span> <span class="s1">''</span><span class="p">),</span>
+            <span class="s1">'Color'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">color</span><span class="p">,</span>
+            <span class="s1">'Visible'</span><span class="p">:</span> <span class="n">feature</span><span class="o">.</span><span class="n">visible</span>
+        <span class="p">})</span>
+
+<span class="c1"># Create DataFrame and save</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'exported_placemarks.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Common CSV Workflows:</strong></p>
+<dl class="simple">
+<dt><strong>Load GPS Waypoints:</strong></dt><dd><p>If you have a GPS waypoint list, create a CSV with Lat/Lon coordinates.
+VISTA will convert to pixel coordinates if imagery has geolocation data.</p>
+</dd>
+<dt><strong>Batch Import Reference Points:</strong></dt><dd><p>Create a CSV with known landmark locations for validation or calibration.</p>
+</dd>
+<dt><strong>Ground Truth Data:</strong></dt><dd><p>Import target positions from external sources for algorithm validation.</p>
+</dd>
+<dt><strong>Coordinate Conversion:</strong></dt><dd><p>Load placemarks with pixel OR geodetic coordinates. VISTA can convert between
+coordinate systems when sensor data is available.</p>
+</dd>
+</dl>
+</section>
+<section id="placemark-properties">
+<h3>Placemark Properties<a class="headerlink" href="#placemark-properties" title="Link to this heading">¶</a></h3>
+<dl class="field-list simple">
+<dt class="field-odd">name<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Descriptive name for the placemark</p>
+</dd>
+<dt class="field-even">geometry<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary containing:
+- <code class="docutils literal notranslate"><span class="pre">row</span></code>: Pixel row coordinate (float)
+- <code class="docutils literal notranslate"><span class="pre">col</span></code>: Pixel column coordinate (float)
+- <code class="docutils literal notranslate"><span class="pre">lat</span></code>: Latitude in degrees (float or None)
+- <code class="docutils literal notranslate"><span class="pre">lon</span></code>: Longitude in degrees (float or None)
+- <code class="docutils literal notranslate"><span class="pre">alt</span></code>: Altitude in kilometers (float or None)</p>
+</dd>
+<dt class="field-odd">color<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Display color</p>
+</dd>
+<dt class="field-even">visible<span class="colon">:</span></dt>
+<dd class="field-even"><p>Whether the placemark is displayed</p>
+</dd>
+<dt class="field-odd">uuid<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unique identifier (automatically generated)</p>
+</dd>
+</dl>
+</section>
+<section id="coordinate-conversion">
+<h3>Coordinate Conversion<a class="headerlink" href="#coordinate-conversion" title="Link to this heading">¶</a></h3>
+<p>When imagery has a sensor with geolocation data, you can convert between
+pixel and geodetic coordinates using the sensor’s methods directly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">astropy.coordinates</span><span class="w"> </span><span class="kn">import</span> <span class="n">EarthLocation</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">astropy.units</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">u</span>
+
+<span class="n">sensor</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span>
+
+<span class="c1"># Convert pixel coordinates to geodetic (if sensor data available)</span>
+<span class="k">if</span> <span class="n">sensor</span><span class="o">.</span><span class="n">can_geolocate</span><span class="p">():</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">sensor</span><span class="o">.</span><span class="n">pixel_to_geodetic</span><span class="p">(</span>
+        <span class="n">frame</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">rows</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">512.5</span><span class="p">]),</span>
+        <span class="n">columns</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1024.3</span><span class="p">]),</span>
+    <span class="p">)</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">lat</span><span class="o">.</span><span class="n">deg</span>   <span class="c1"># Latitude in degrees</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">lon</span><span class="o">.</span><span class="n">deg</span>   <span class="c1"># Longitude in degrees</span>
+    <span class="n">alt</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">height</span>    <span class="c1"># Altitude</span>
+
+    <span class="c1"># Convert geodetic coordinates to pixel</span>
+    <span class="n">loc</span> <span class="o">=</span> <span class="n">EarthLocation</span><span class="p">(</span>
+        <span class="n">lat</span><span class="o">=</span><span class="mf">28.5721</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+        <span class="n">lon</span><span class="o">=-</span><span class="mf">80.6480</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mf">0.0</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">m</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">sensor</span><span class="o">.</span><span class="n">geodetic_to_pixel</span><span class="p">(</span><span class="n">frame</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="n">loc</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Use Cases<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Landmark Identification</strong></dt><dd><p>Mark known geographic features or locations</p>
+</dd>
+<dt><strong>Target Designation</strong></dt><dd><p>Flag objects or areas of interest</p>
+</dd>
+<dt><strong>Ground Truth Data</strong></dt><dd><p>Store reference points for validation</p>
+</dd>
+<dt><strong>Navigation Waypoints</strong></dt><dd><p>Define locations for flight planning or navigation</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="shapefiles">
+<span id="id3"></span><h2>Shapefiles<a class="headerlink" href="#shapefiles" title="Link to this heading">¶</a></h2>
+<p>VISTA can import and visualize vector geospatial data from standard ESRI shapefile format.
+Shapefiles provide a way to overlay geospatial features (roads, boundaries, facilities, etc.)
+on imagery.</p>
+<img alt="Shapefiles" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_features_shapefiles.gif" />
+<section id="create-test-shapefile-py">
+<h3>create_test_shapefile.py<a class="headerlink" href="#create-test-shapefile-py" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">scripts/</span></code> directory includes a script to generate example shapefiles.</p>
+<p>Creates example shapefiles (polygons, polylines, points, and multipoints) for testing VISTA’s shapefile overlay
+feature. Accepts an optional bounding box to control the geographic extent of the generated shapes.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>scripts/create_test_shapefile.py
+python<span class="w"> </span>scripts/create_test_shapefile.py<span class="w"> </span>--lon-min<span class="w"> </span>-105.3<span class="w"> </span>--lat-min<span class="w"> </span><span class="m">39</span>.95<span class="w"> </span>--lon-max<span class="w"> </span>-105.2<span class="w"> </span>--lat-max<span class="w"> </span><span class="m">40</span>.05
+</pre></div>
+</div>
+<p>Output is saved to <code class="docutils literal notranslate"><span class="pre">data/shapefiles/</span></code> by default, or to a custom directory via <code class="docutils literal notranslate"><span class="pre">--output-dir</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This script requires the <code class="docutils literal notranslate"><span class="pre">pyshp</span></code> package (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pyshp</span></code>).</p>
+</div>
+</section>
+<section id="importing-shapefiles">
+<h3>Importing Shapefiles<a class="headerlink" href="#importing-shapefiles" title="Link to this heading">¶</a></h3>
+<p><strong>Via GUI:</strong></p>
+<ol class="arabic simple">
+<li><p>Open the <strong>Features</strong> tab</p></li>
+<li><p>Click <strong>Import Shapefile</strong> button</p></li>
+<li><p>Select a <cite>.shp</cite> file</p></li>
+<li><p>The shapefile is automatically converted to pixel coordinates if imagery has geolocation</p></li>
+</ol>
+<p><strong>Programmatic Import:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">shapefile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.features.feature</span><span class="w"> </span><span class="kn">import</span> <span class="n">ShapefileFeature</span>
+
+<span class="c1"># Read shapefile</span>
+<span class="n">sf</span> <span class="o">=</span> <span class="n">shapefile</span><span class="o">.</span><span class="n">Reader</span><span class="p">(</span><span class="s2">"data/boundaries.shp"</span><span class="p">)</span>
+
+<span class="c1"># Create feature</span>
+<span class="n">shapefile_feature</span> <span class="o">=</span> <span class="n">ShapefileFeature</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"Region Boundaries"</span><span class="p">,</span>
+    <span class="n">geometry</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">'shapes'</span><span class="p">:</span> <span class="n">sf</span><span class="o">.</span><span class="n">shapes</span><span class="p">(),</span>
+        <span class="s1">'records'</span><span class="p">:</span> <span class="n">sf</span><span class="o">.</span><span class="n">records</span><span class="p">(),</span>
+        <span class="s1">'fields'</span><span class="p">:</span> <span class="n">sf</span><span class="o">.</span><span class="n">fields</span>
+    <span class="p">},</span>
+    <span class="n">color</span><span class="o">=</span><span class="s1">'g'</span><span class="p">,</span>
+    <span class="n">visible</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="shapefile-geometry-types">
+<h3>Shapefile Geometry Types<a class="headerlink" href="#shapefile-geometry-types" title="Link to this heading">¶</a></h3>
+<p>VISTA supports the following shapefile geometry types:</p>
+<dl class="simple">
+<dt><strong>Point (Type 1)</strong></dt><dd><p>Individual point locations (e.g., cities, facilities)</p>
+</dd>
+<dt><strong>PolyLine (Type 3)</strong></dt><dd><p>Connected line segments (e.g., roads, rivers, flight paths)</p>
+</dd>
+<dt><strong>Polygon (Type 5)</strong></dt><dd><p>Closed regions with boundaries (e.g., countries, lakes, restricted areas)</p>
+</dd>
+<dt><strong>MultiPoint (Type 8)</strong></dt><dd><p>Collection of points (e.g., sensor network locations)</p>
+</dd>
+</dl>
+</section>
+<section id="coordinate-transformation">
+<h3>Coordinate Transformation<a class="headerlink" href="#coordinate-transformation" title="Link to this heading">¶</a></h3>
+<p>Shapefiles typically use geodetic coordinates (latitude/longitude). VISTA automatically
+transforms these to pixel coordinates using the imagery’s geolocation data:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">astropy.coordinates</span><span class="w"> </span><span class="kn">import</span> <span class="n">EarthLocation</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">astropy.units</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">u</span>
+
+<span class="c1"># Shapefile coordinates are in (lon, lat) format</span>
+<span class="n">shapefile_lon</span> <span class="o">=</span> <span class="o">-</span><span class="mf">80.6480</span>
+<span class="n">shapefile_lat</span> <span class="o">=</span> <span class="mf">28.5721</span>
+
+<span class="c1"># Transform to pixel coordinates using the sensor's geolocation model</span>
+<span class="k">if</span> <span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span><span class="o">.</span><span class="n">can_geolocate</span><span class="p">():</span>
+    <span class="n">loc</span> <span class="o">=</span> <span class="n">EarthLocation</span><span class="p">(</span>
+        <span class="n">lat</span><span class="o">=</span><span class="n">shapefile_lat</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+        <span class="n">lon</span><span class="o">=</span><span class="n">shapefile_lon</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mf">0.0</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">m</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">sensor</span><span class="o">.</span><span class="n">geodetic_to_pixel</span><span class="p">(</span><span class="n">frame</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="n">loc</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="shapefile-attributes">
+<h3>Shapefile Attributes<a class="headerlink" href="#shapefile-attributes" title="Link to this heading">¶</a></h3>
+<p>Shapefiles often contain attribute data (properties) associated with each feature:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Access shapefile records (attributes)</span>
+<span class="k">for</span> <span class="n">record</span><span class="p">,</span> <span class="n">shape</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sf</span><span class="o">.</span><span class="n">records</span><span class="p">(),</span> <span class="n">sf</span><span class="o">.</span><span class="n">shapes</span><span class="p">()):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">'NAME'</span><span class="p">]</span>        <span class="c1"># Attribute field</span>
+    <span class="n">population</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s1">'POP'</span><span class="p">]</span>   <span class="c1"># Another attribute</span>
+    <span class="c1"># Process shape and attributes...</span>
+</pre></div>
+</div>
+</section>
+<section id="styling-shapefiles">
+<h3>Styling Shapefiles<a class="headerlink" href="#styling-shapefiles" title="Link to this heading">¶</a></h3>
+<p>Customize the appearance of imported shapefiles:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">shapefile_feature</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="s1">'b'</span>    <span class="c1"># Blue</span>
+<span class="n">shapefile_feature</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># In the Features Panel:</span>
+<span class="c1"># - Change color using the color picker</span>
+<span class="c1"># - Toggle visibility with checkbox</span>
+<span class="c1"># - Adjust line width or fill opacity</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3>Use Cases<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Geographic Context</strong></dt><dd><p>Overlay political boundaries, coastlines, or terrain features</p>
+</dd>
+<dt><strong>Infrastructure Mapping</strong></dt><dd><p>Display roads, airports, facilities, or utilities</p>
+</dd>
+<dt><strong>Restricted Areas</strong></dt><dd><p>Show no-fly zones, exclusion zones, or protected areas</p>
+</dd>
+<dt><strong>Mission Planning</strong></dt><dd><p>Import flight paths, survey regions, or search areas</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="feature-management">
+<span id="id5"></span><h2>Feature Management<a class="headerlink" href="#feature-management" title="Link to this heading">¶</a></h2>
+<section id="managing-features-in-the-gui">
+<h3>Managing Features in the GUI<a class="headerlink" href="#managing-features-in-the-gui" title="Link to this heading">¶</a></h3>
+<p>The <strong>Features</strong> tab provides centralized management of all features:</p>
+<dl class="simple">
+<dt><strong>Feature List</strong></dt><dd><ul class="simple">
+<li><p>Displays all placemarks, shapefiles, and custom features</p></li>
+<li><p>Shows visibility status, color, and type</p></li>
+<li><p>Allows selection of multiple features</p></li>
+</ul>
+</dd>
+<dt><strong>Actions</strong></dt><dd><ul class="simple">
+<li><p><strong>Show/Hide</strong>: Toggle individual feature visibility</p></li>
+<li><p><strong>Delete</strong>: Remove features from the project</p></li>
+<li><p><strong>Rename</strong>: Change feature names</p></li>
+<li><p><strong>Edit Properties</strong>: Modify colors, styles, and attributes</p></li>
+<li><p><strong>Export</strong>: Save features to file</p></li>
+<li><p><strong>Import</strong>: Load features from file</p></li>
+</ul>
+</dd>
+<dt><strong>Filtering</strong></dt><dd><ul class="simple">
+<li><p>Filter by feature type (placemark, shapefile, polygon, etc.)</p></li>
+<li><p>Search by name</p></li>
+<li><p>Show only visible or hidden features</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="saving-and-loading-features">
+<h3>Saving and Loading Features<a class="headerlink" href="#saving-and-loading-features" title="Link to this heading">¶</a></h3>
+<p>Features are automatically saved with VISTA project files (.h5):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save project with features</span>
+<span class="c1"># File → Save Project (includes all features)</span>
+
+<span class="c1"># Load project</span>
+<span class="c1"># File → Open Project (restores all features)</span>
+</pre></div>
+</div>
+</section>
+<section id="export-and-import">
+<h3>Export and Import<a class="headerlink" href="#export-and-import" title="Link to this heading">¶</a></h3>
+<p>Features can be exported independently for sharing or backup:</p>
+<p><strong>Export Features:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="c1"># Export all features to JSON</span>
+<span class="n">features_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">feature</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">features_list</span><span class="p">]</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'features.json'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">features_data</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Import Features:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.features.feature</span><span class="w"> </span><span class="kn">import</span> <span class="n">Feature</span><span class="p">,</span> <span class="n">PlacemarkFeature</span><span class="p">,</span> <span class="n">ShapefileFeature</span>
+
+<span class="c1"># Import features from JSON</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">'features.json'</span><span class="p">,</span> <span class="s1">'r'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">features_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">features_data</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s1">'feature_type'</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'placemark'</span><span class="p">:</span>
+        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PlacemarkFeature</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">'feature_type'</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'shapefile'</span><span class="p">:</span>
+        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ShapefileFeature</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Feature</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="performance-considerations">
+<h3>Performance Considerations<a class="headerlink" href="#performance-considerations" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><strong>Large Shapefiles</strong></dt><dd><ul class="simple">
+<li><p>Shapefiles with thousands of polygons may slow rendering</p></li>
+<li><p>Consider simplifying geometry or using level-of-detail techniques</p></li>
+<li><p>Toggle visibility of unused layers</p></li>
+</ul>
+</dd>
+<dt><strong>Many Features</strong></dt><dd><ul class="simple">
+<li><p>Limit the number of visible features to improve performance</p></li>
+<li><p>Use filtering to show only relevant features</p></li>
+<li><p>Group related features into layers</p></li>
+</ul>
+</dd>
+<dt><strong>Coordinate Transformations</strong></dt><dd><ul class="simple">
+<li><p>Transformations are cached to improve performance</p></li>
+<li><p>Re-transformation occurs when sensor data changes</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+</section>
+<section id="common-workflows">
+<span id="feature-workflows"></span><h2>Common Workflows<a class="headerlink" href="#common-workflows" title="Link to this heading">¶</a></h2>
+<section id="workflow-1-extract-detections-in-aoi">
+<h3>Workflow 1: Extract Detections in AOI<a class="headerlink" href="#workflow-1-extract-detections-in-aoi" title="Link to this heading">¶</a></h3>
+<p>Extract and analyze only detections within a specific region:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define AOI</span>
+<span class="n">aoi</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"Search Zone"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+
+<span class="c1"># Filter detections within AOI</span>
+<span class="n">filtered_detections</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">detection</span> <span class="ow">in</span> <span class="n">detections</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">aoi</span><span class="o">.</span><span class="n">contains_point</span><span class="p">(</span><span class="n">detection</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">detection</span><span class="o">.</span><span class="n">row</span><span class="p">):</span>
+        <span class="n">filtered_detections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">detection</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">filtered_detections</span><span class="p">)</span><span class="si">}</span><span class="s2"> detections in AOI"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="workflow-2-overlay-reference-data">
+<h3>Workflow 2: Overlay Reference Data<a class="headerlink" href="#workflow-2-overlay-reference-data" title="Link to this heading">¶</a></h3>
+<p>Import shapefile with known features and compare with detections:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import shapefile with known facility locations</span>
+<span class="n">facilities_shapefile</span> <span class="o">=</span> <span class="n">import_shapefile</span><span class="p">(</span><span class="s2">"facilities.shp"</span><span class="p">)</span>
+
+<span class="c1"># Convert shapefile points to pixel coordinates</span>
+<span class="c1"># Compare with detected objects</span>
+<span class="c1"># Flag detections near known facilities</span>
+</pre></div>
+</div>
+</section>
+<section id="workflow-3-multi-region-analysis">
+<h3>Workflow 3: Multi-Region Analysis<a class="headerlink" href="#workflow-3-multi-region-analysis" title="Link to this heading">¶</a></h3>
+<p>Define multiple AOIs for comparative analysis:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create multiple AOIs</span>
+<span class="n">aoi_north</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"North Sector"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">384</span><span class="p">)</span>
+<span class="n">aoi_south</span> <span class="o">=</span> <span class="n">AOI</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"South Sector"</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">384</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">384</span><span class="p">)</span>
+
+<span class="c1"># Extract statistics for each region</span>
+<span class="k">for</span> <span class="n">aoi</span> <span class="ow">in</span> <span class="p">[</span><span class="n">aoi_north</span><span class="p">,</span> <span class="n">aoi_south</span><span class="p">]:</span>
+    <span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">get_bounds</span><span class="p">()</span>
+    <span class="n">sub_image</span> <span class="o">=</span> <span class="n">imagery</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">y_min</span><span class="p">):</span><span class="nb">int</span><span class="p">(</span><span class="n">y_max</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">x_min</span><span class="p">):</span><span class="nb">int</span><span class="p">(</span><span class="n">x_max</span><span class="p">)]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">aoi</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: mean=</span><span class="si">{</span><span class="n">sub_image</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, std=</span><span class="si">{</span><span class="n">sub_image</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="workflow-4-geodetic-reference-points">
+<h3>Workflow 4: Geodetic Reference Points<a class="headerlink" href="#workflow-4-geodetic-reference-points" title="Link to this heading">¶</a></h3>
+<p>Create placemarks with known geodetic coordinates for validation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create ground truth placemarks</span>
+<span class="n">ground_truth</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">PlacemarkFeature</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">"Airport"</span><span class="p">,</span>
+        <span class="n">geometry</span><span class="o">=</span><span class="p">{</span><span class="s1">'row'</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="s1">'col'</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+                 <span class="s1">'lat'</span><span class="p">:</span> <span class="mf">28.4294</span><span class="p">,</span> <span class="s1">'lon'</span><span class="p">:</span> <span class="o">-</span><span class="mf">81.3089</span><span class="p">,</span> <span class="s1">'alt'</span><span class="p">:</span> <span class="mf">0.029</span><span class="p">}</span>
+    <span class="p">),</span>
+    <span class="n">PlacemarkFeature</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">"Launch Pad"</span><span class="p">,</span>
+        <span class="n">geometry</span><span class="o">=</span><span class="p">{</span><span class="s1">'row'</span><span class="p">:</span> <span class="mi">600</span><span class="p">,</span> <span class="s1">'col'</span><span class="p">:</span> <span class="mi">800</span><span class="p">,</span>
+                 <span class="s1">'lat'</span><span class="p">:</span> <span class="mf">28.5721</span><span class="p">,</span> <span class="s1">'lon'</span><span class="p">:</span> <span class="o">-</span><span class="mf">80.6480</span><span class="p">,</span> <span class="s1">'alt'</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
+    <span class="p">)</span>
+<span class="p">]</span>
+
+<span class="c1"># Compare detected positions with ground truth</span>
+<span class="c1"># Calculate position errors</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="keyboard-shortcuts">
+<h2>Keyboard Shortcuts<a class="headerlink" href="#keyboard-shortcuts" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Delete</span></code>: Delete selected features</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="tips-and-best-practices">
+<h2>Tips and Best Practices<a class="headerlink" href="#tips-and-best-practices" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt><strong>Organization</strong></dt><dd><ul class="simple">
+<li><p>Use descriptive names for AOIs and features</p></li>
+<li><p>Color-code features by type or purpose</p></li>
+<li><p>Group related features using naming conventions (e.g., “Target_1”, “Target_2”)</p></li>
+</ul>
+</dd>
+<dt><strong>Performance</strong></dt><dd><ul class="simple">
+<li><p>Hide unused features to improve rendering speed</p></li>
+<li><p>Simplify complex shapefiles before importing</p></li>
+<li><p>Limit the number of visible AOIs to 10-20 for best performance</p></li>
+</ul>
+</dd>
+<dt><strong>Coordinate Systems</strong></dt><dd><ul class="simple">
+<li><p>Always verify coordinate system of imported shapefiles</p></li>
+<li><p>Check that geodetic coordinates match your imagery’s projection</p></li>
+<li><p>Use sensor calibration data for accurate transformations</p></li>
+</ul>
+</dd>
+<dt><strong>Collaboration</strong></dt><dd><ul class="simple">
+<li><p>Export features as JSON for sharing with team members</p></li>
+<li><p>Document AOI purposes in the name or description</p></li>
+<li><p>Use consistent naming conventions across projects</p></li>
+</ul>
+</dd>
+<dt><strong>Validation</strong></dt><dd><ul class="simple">
+<li><p>Cross-check placemark coordinates with known landmarks</p></li>
+<li><p>Verify AOI boundaries match intended regions</p></li>
+<li><p>Test shapefile imports on small datasets first</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h2>
+<p><strong>API References:</strong></p>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.aoi.aoi.AOI</span></code> - AOI data model</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.features.feature.Feature</span></code> - Generic feature class</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.features.feature.PlacemarkFeature</span></code> - Placemark feature class</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">vista.features.feature.ShapefileFeature</span></code> - Shapefile feature class</p></li>
+</ul>
+<p><strong>Related Sections:</strong></p>
+<ul class="simple">
+<li><p><a class="reference internal" href="imagery.html"><span class="doc">Working with Imagery</span></a> - Working with imagery data</p></li>
+<li><p><a class="reference internal" href="detections.html"><span class="doc">Object Detection</span></a> - Detection and tracking</p></li>
+<li><p><a class="reference internal" href="interface.html"><span class="doc">User Interface</span></a> - User interface overview</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="detections.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Object Detection</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="imagery.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Working with Imagery</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Features and Annotations</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#areas-of-interest-aois">Areas of Interest (AOIs)</a><ul>
+<li><a class="reference internal" href="#creating-aois">Creating AOIs</a></li>
+<li><a class="reference internal" href="#aoi-controls">AOI Controls</a></li>
+<li><a class="reference internal" href="#aoi-properties">AOI Properties</a></li>
+<li><a class="reference internal" href="#aoi-operations">AOI Operations</a></li>
+<li><a class="reference internal" href="#saving-and-loading-aois-from-csv">Saving and Loading AOIs from CSV</a></li>
+<li><a class="reference internal" href="#use-cases">Use Cases</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#placemarks">Placemarks</a><ul>
+<li><a class="reference internal" href="#creating-placemarks">Creating Placemarks</a></li>
+<li><a class="reference internal" href="#loading-placemarks-from-csv">Loading Placemarks from CSV</a></li>
+<li><a class="reference internal" href="#placemark-properties">Placemark Properties</a></li>
+<li><a class="reference internal" href="#coordinate-conversion">Coordinate Conversion</a></li>
+<li><a class="reference internal" href="#id2">Use Cases</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#shapefiles">Shapefiles</a><ul>
+<li><a class="reference internal" href="#create-test-shapefile-py">create_test_shapefile.py</a></li>
+<li><a class="reference internal" href="#importing-shapefiles">Importing Shapefiles</a></li>
+<li><a class="reference internal" href="#shapefile-geometry-types">Shapefile Geometry Types</a></li>
+<li><a class="reference internal" href="#coordinate-transformation">Coordinate Transformation</a></li>
+<li><a class="reference internal" href="#shapefile-attributes">Shapefile Attributes</a></li>
+<li><a class="reference internal" href="#styling-shapefiles">Styling Shapefiles</a></li>
+<li><a class="reference internal" href="#id4">Use Cases</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#feature-management">Feature Management</a><ul>
+<li><a class="reference internal" href="#managing-features-in-the-gui">Managing Features in the GUI</a></li>
+<li><a class="reference internal" href="#saving-and-loading-features">Saving and Loading Features</a></li>
+<li><a class="reference internal" href="#export-and-import">Export and Import</a></li>
+<li><a class="reference internal" href="#performance-considerations">Performance Considerations</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#common-workflows">Common Workflows</a><ul>
+<li><a class="reference internal" href="#workflow-1-extract-detections-in-aoi">Workflow 1: Extract Detections in AOI</a></li>
+<li><a class="reference internal" href="#workflow-2-overlay-reference-data">Workflow 2: Overlay Reference Data</a></li>
+<li><a class="reference internal" href="#workflow-3-multi-region-analysis">Workflow 3: Multi-Region Analysis</a></li>
+<li><a class="reference internal" href="#workflow-4-geodetic-reference-points">Workflow 4: Geodetic Reference Points</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+<li><a class="reference internal" href="#tips-and-best-practices">Tips and Best Practices</a></li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

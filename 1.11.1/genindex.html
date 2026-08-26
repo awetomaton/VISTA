@@ -1,0 +1,1775 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#"><link rel="search" title="Search" href="search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 --><title>Index - VISTA 1.13.0</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide/interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#_"><strong>_</strong></a> | <a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#H"><strong>H</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#K"><strong>K</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#Q"><strong>Q</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a></div>
+</section>
+<section id="_" class="genindex-section">
+  <h2>_</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.__call__">__call__() (vista.algorithms.background_removal.temporal_median.TemporalMedian method)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.__call__">[1]</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#id2">(vista.algorithms.detectors.cfar.CFAR method)</a>, <a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR.__call__">[1]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#id2">[2]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR.__call__">[3]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.detectors.threshold.SimpleThreshold.__call__">(vista.algorithms.detectors.threshold.SimpleThreshold method)</a>, <a href="api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html#vista.algorithms.detectors.threshold.SimpleThreshold.__call__">[1]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.Coaddition.__call__">(vista.algorithms.enhancement.coadd.Coaddition method)</a>, <a href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html#vista.algorithms.enhancement.coadd.Coaddition.__call__">[1]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.DecimatingCoaddition.__call__">(vista.algorithms.enhancement.coadd.DecimatingCoaddition method)</a>
+</li>
+          <li><a href="api/algorithms.html#id12">(vista.algorithms.tracks.extraction.TrackExtraction method)</a>, <a href="api/algorithms.html#vista.algorithms.tracks.extraction.TrackExtraction.__call__">[1]</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#id2">[2]</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#vista.algorithms.tracks.extraction.TrackExtraction.__call__">[3]</a>
+</li>
+          <li><a href="api/algorithms.html#id9">(vista.algorithms.tracks.interpolation.TrackInterpolation method)</a>, <a href="api/algorithms.html#vista.algorithms.tracks.interpolation.TrackInterpolation.__call__">[1]</a>, <a href="api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html#id1">[2]</a>, <a href="api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html#vista.algorithms.tracks.interpolation.TrackInterpolation.__call__">[3]</a>
+</li>
+          <li><a href="api/algorithms.html#id10">(vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter method)</a>, <a href="api/algorithms.html#vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.__call__">[1]</a>, <a href="api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html#id1">[2]</a>, <a href="api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html#vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.__call__">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.__eq__">__eq__() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.__eq__">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.__getitem__">__getitem__() (vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.__getitem__">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.__getitem__">(vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#id0">[1]</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.__getitem__">[2]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.__getitem__">(vista.tracks.track.Track method)</a>, <a href="api/tracks.html#id11">[1]</a>, <a href="api/tracks.html#vista.tracks.track.Track.__getitem__">[2]</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.__init__">__init__() (vista.algorithms.background_removal.temporal_median.TemporalMedian method)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#id0">[1]</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.__init__">[2]</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR.__init__">(vista.algorithms.detectors.cfar.CFAR method)</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#id1">[1]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR.__init__">[2]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.detectors.pstnn.PSTNN.__init__">(vista.algorithms.detectors.pstnn.PSTNN method)</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#id1">[1]</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#vista.algorithms.detectors.pstnn.PSTNN.__init__">[2]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.detectors.threshold.SimpleThreshold.__init__">(vista.algorithms.detectors.threshold.SimpleThreshold method)</a>, <a href="api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html#id0">[1]</a>, <a href="api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html#vista.algorithms.detectors.threshold.SimpleThreshold.__init__">[2]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.Coaddition.__init__">(vista.algorithms.enhancement.coadd.Coaddition method)</a>, <a href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html#id0">[1]</a>, <a href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html#vista.algorithms.enhancement.coadd.Coaddition.__init__">[2]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.DecimatingCoaddition.__init__">(vista.algorithms.enhancement.coadd.DecimatingCoaddition method)</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack.__init__">(vista.algorithms.trackers.kalman_tracker.KalmanTrack method)</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.__init__">(vista.algorithms.trackers.simple_tracker.SimpleTrack method)</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.__init__">(vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.tracks.extraction.TrackExtraction.__init__">(vista.algorithms.tracks.extraction.TrackExtraction method)</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#id1">[1]</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#vista.algorithms.tracks.extraction.TrackExtraction.__init__">[2]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.tracks.interpolation.TrackInterpolation.__init__">(vista.algorithms.tracks.interpolation.TrackInterpolation method)</a>, <a href="api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html#id0">[1]</a>, <a href="api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html#vista.algorithms.tracks.interpolation.TrackInterpolation.__init__">[2]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.__init__">(vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter method)</a>, <a href="api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html#id0">[1]</a>, <a href="api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html#vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.__init__">[2]</a>
+</li>
+          <li><a href="api/detections.html#vista.detections.detector.Detector.__init__">(vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#id11">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.__init__">[2]</a>
+</li>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#id4">(vista.imagery.imagery.Imagery method)</a>, <a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.__init__">[1]</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.__init__">[2]</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id10">(vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.__init__">[1]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.__init__">[2]</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id7">(vista.sensors.sensor.Sensor method)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.__init__">[1]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.__init__">[2]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id16">(vista.tracks.track.Track method)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.__init__">[1]</a>, <a href="api/tracks.html#vista.tracks.track.Track.__init__">[2]</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.__init__">(vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.__init__">(vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.__init__">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.__init__">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread.__init__">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.__init__">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.__init__">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker.__init__">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.__init__">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.__init__">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.__init__">(vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.__init__">(vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.__init__">(vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.Coaddition.__len__">__len__() (vista.algorithms.enhancement.coadd.Coaddition method)</a>, <a href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html#vista.algorithms.enhancement.coadd.Coaddition.__len__">[1]</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.DecimatingCoaddition.__len__">(vista.algorithms.enhancement.coadd.DecimatingCoaddition method)</a>
+</li>
+          <li><a href="api/tracks.html#vista.tracks.track.Track.__len__">(vista.tracks.track.Track method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.__post_init__">__post_init__() (vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.__post_init__">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.__post_init__">(vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.__post_init__">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian._current_frame">_current_frame (vista.algorithms.background_removal.temporal_median.TemporalMedian attribute)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian._current_frame">[1]</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.add_algorithm_parameters">add_algorithm_parameters() (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.add_algorithm_parameters">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.add_detection">add_detection() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.add_imagery">add_imagery() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.add_imagery">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.add_treatment_ui">add_treatment_ui() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.advance_frame">advance_frame() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.age">age (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.background">background (vista.algorithms.background_removal.temporal_median.TemporalMedian attribute)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.background">[1]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id6">bad_pixel_mask_frames (vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.bad_pixel_mask_frames">[1]</a>, <a href="api/sensors.html#id6">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.bad_pixel_mask_frames">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id5">bad_pixel_masks (vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.bad_pixel_masks">[1]</a>, <a href="api/sensors.html#id5">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.bad_pixel_masks">[3]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread">BaseDetectorProcessingThread (class in vista.widgets.algorithms.detectors.base_detector_widget)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget">BaseDetectorWidget (class in vista.widgets.algorithms.detectors.base_detector_widget)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog">BaseTrackingDialog (class in vista.widgets.algorithms.trackers.base_tracker_dialog)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker">BaseTrackingWorker (class in vista.widgets.algorithms.trackers.base_tracker_dialog)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread">BaseTreatmentThread (class in vista.widgets.algorithms.treatments.base_treatment_widget)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget">BaseTreatmentWidget (class in vista.widgets.algorithms.treatments.base_treatment_widget)</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id2">bias_image_frames (vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.bias_image_frames">[1]</a>, <a href="api/sensors.html#id2">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.bias_image_frames">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id1">bias_images (vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.bias_images">[1]</a>, <a href="api/sensors.html#id1">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.bias_images">[3]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.build_algorithm_params">build_algorithm_params() (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.build_config">build_config() (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.can_correct_bad_pixel">can_correct_bad_pixel() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.can_correct_bad_pixel">[1]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.can_correct_bias">can_correct_bias() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.can_correct_bias">[1]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.can_correct_non_uniformity">can_correct_non_uniformity() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.can_correct_non_uniformity">[1]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.can_geolocate">can_geolocate() (vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.can_geolocate">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.can_geolocate">(vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.can_geolocate">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.cancel">cancel() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.cancel">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread.cancel">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker.cancel">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.cancel">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.cancel_loading_requested">cancel_loading_requested (vista.widgets.core.data.imagery_panel.ImageryPanel attribute)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.cancel_processing">cancel_processing() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.cancel_processing">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.cancel_processing">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.cancel_processing">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.cancel_tracking">cancel_tracking() (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        <li><a href="api/transforms.html#vista.transforms.transforms.cartesian_to_spherical">cartesian_to_spherical() (in module vista.transforms.transforms)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR">CFAR (class in vista.algorithms.detectors.cfar)</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.check_velocity_consistency">check_velocity_consistency() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.tracks.extraction.TrackExtraction.chip_diameter">chip_diameter (vista.algorithms.tracks.extraction.TrackExtraction attribute)</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#vista.algorithms.tracks.extraction.TrackExtraction.chip_diameter">[1]</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.clear_aoi_selection">clear_aoi_selection() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.closeEvent">closeEvent() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.closeEvent">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.closeEvent">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.closeEvent">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.Coaddition">Coaddition (class in vista.algorithms.enhancement.coadd)</a>, <a href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html#vista.algorithms.enhancement.coadd.Coaddition">[1]</a>
+</li>
+        <li><a href="api/detections.html#id0">color (vista.detections.detector.Detector attribute)</a>, <a href="api/detections.html#vista.detections.detector.Detector.color">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id0">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.color">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id0">(vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.color">[1]</a>, <a href="api/tracks.html#id0">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.color">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.column_offset">column_offset (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.column_offset">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.columns">columns (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.columns">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.columns">(vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.columns">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.complete">complete (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.complete">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id6">(vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.complete">[1]</a>, <a href="api/tracks.html#id6">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.complete">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#id7">copy() (vista.detections.detector.Detector method)</a>, <a href="api/detections.html#vista.detections.detector.Detector.copy">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id7">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.copy">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#id0">(vista.imagery.imagery.Imagery method)</a>, <a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.copy">[1]</a>, <a href="api/imagery.html#id1">[2]</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.copy">[3]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id14">(vista.tracks.track.Track method)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.copy">[1]</a>, <a href="api/tracks.html#id15">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.copy">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.covariance_00">covariance_00 (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.covariance_00">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.covariance_01">covariance_01 (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.covariance_01">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.covariance_11">covariance_11 (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.covariance_11">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.create_processing_thread">create_processing_thread() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel">DataManagerPanel (class in vista.widgets.core.data.data_manager)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.DecimatingCoaddition">DecimatingCoaddition (class in vista.algorithms.enhancement.coadd)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.pstnn.PSTNN.decompose">decompose() (vista.algorithms.detectors.pstnn.PSTNN method)</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#vista.algorithms.detectors.pstnn.PSTNN.decompose">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.default_histogram_bounds">default_histogram_bounds (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.default_histogram_bounds">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.delete_selected_imagery">delete_selected_imagery() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.description">description (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.description">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.description">(vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.description">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.pstnn.PSTNN.detect">detect() (vista.algorithms.detectors.pstnn.PSTNN method)</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#vista.algorithms.detectors.pstnn.PSTNN.detect">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.detection_rate">detection_rate() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector">Detector (class in vista.detections.detector)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.detector_processed">detector_processed (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget attribute)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.distance_to">distance_to() (vista.algorithms.trackers.simple_tracker.SimpleTrack method)</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.distance_to">(vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.dragEnterEvent">dragEnterEvent() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.dropEvent">dropEvent() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.error_occurred">error_occurred (vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread attribute)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.error_occurred">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread.error_occurred">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker.error_occurred">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.error_occurred">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/transforms.html#vista.transforms.polynomials.evaluate_2d_polynomial">evaluate_2d_polynomial() (in module vista.transforms.polynomials)</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id10">extraction_metadata (vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.extraction_metadata">[1]</a>, <a href="api/tracks.html#id10">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.extraction_metadata">[3]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.extrapolate_backward">extrapolate_backward() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.extrapolate_forward">extrapolate_forward() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.filename">filename (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.filename">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.subspace_background_removal.find_knee">find_knee() (in module vista.algorithms.background_removal.subspace_background_removal)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.network_flow_tracker.find_shortest_path">find_shortest_path() (in module vista.algorithms.trackers.network_flow_tracker)</a>
+</li>
+        <li><a href="api/transforms.html#vista.transforms.polynomials.fit_2d_polynomial">fit_2d_polynomial() (in module vista.transforms.polynomials)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.frame_changed">frame_changed() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.frames">frames (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+
+        <ul>
+          <li><a href="api/detections.html#vista.detections.detector.Detector.frames">(vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.frames">[1]</a>
+</li>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.frames">(vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.frames">[1]</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id2">(vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.frames">[1]</a>, <a href="api/sensors.html#id9">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.frames">[3]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.frames">(vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.frames">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/detections.html#id6">from_dataframe() (vista.detections.detector.Detector class method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#id6">[1]</a>
+
+        <ul>
+          <li><a href="api/detections.html#vista.detections.detector.Detector.from_dataframe">(vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.from_dataframe">[1]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id12">(vista.tracks.track.Track class method)</a>, <a href="api/tracks.html#id13">[1]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.from_dataframe">(vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.from_dataframe">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.geodetic_to_pixel">geodetic_to_pixel() (vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.geodetic_to_pixel">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.geodetic_to_pixel">(vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.geodetic_to_pixel">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#id2">get_aoi() (vista.imagery.imagery.Imagery method)</a>, <a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.get_aoi">[1]</a>, <a href="api/imagery.html#id3">[2]</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.get_aoi">[3]</a>
+</li>
+        <li><a href="api/transforms.html#vista.transforms.arf.get_arf_transform">get_arf_transform() (in module vista.transforms.arf)</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_brush">get_brush() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_brush">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.get_detections_at_frame">get_detections_at_frame() (vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.get_detections_at_frame">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.get_end_velocity">get_end_velocity() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.get_frame_index">get_frame_index() (vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.get_frame_index">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.get_geodetic_coords">get_geodetic_coords() (vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.get_geodetic_coords">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_geodetic_coords">(vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_geodetic_coords">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#id1">get_histogram() (vista.imagery.imagery.Imagery method)</a>, <a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.get_histogram">[1]</a>, <a href="api/imagery.html#id2">[2]</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.get_histogram">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.get_imagery_frames_and_times">get_imagery_frames_and_times() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.get_imagery_frames_and_times">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.DecimatingCoaddition.get_output_frame_indices">get_output_frame_indices() (vista.algorithms.enhancement.coadd.DecimatingCoaddition method)</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.get_pen">get_pen() (vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.get_pen">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_pen">(vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_pen">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id9">get_positions() (vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.get_positions">[1]</a>, <a href="api/sensors.html#id16">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.get_positions">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.get_positions">(vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.get_positions">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack.get_predicted_position">get_predicted_position() (vista.algorithms.trackers.kalman_tracker.KalmanTrack method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.get_processed_name_suffix">get_processed_name_suffix() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.get_start_velocity">get_start_velocity() (vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id11">get_times() (vista.tracks.track.Track method)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_times">[1]</a>, <a href="api/tracks.html#id12">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_times">[3]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_track_data_at_frame">get_track_data_at_frame() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_track_data_at_frame">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_uncertainty_ellipse_parameters">get_uncertainty_ellipse_parameters() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_uncertainty_ellipse_parameters">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_uncertainty_radius">get_uncertainty_radius() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_uncertainty_radius">[1]</a>
+</li>
+        <li><a href="api/detections.html#id10">get_unique_labels() (vista.detections.detector.Detector method)</a>, <a href="api/detections.html#vista.detections.detector.Detector.get_unique_labels">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id10">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.get_unique_labels">[3]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.get_visible_indices">get_visible_indices() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.get_visible_indices">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.godec.godec">godec() (in module vista.algorithms.background_removal.godec)</a>, <a href="api/generated/vista.algorithms.background_removal.godec.godec.html#vista.algorithms.background_removal.godec.godec">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog">GoDecDialog (class in vista.widgets.algorithms.background_removal.godec_dialog)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread">GoDecThread (class in vista.widgets.algorithms.background_removal.godec_dialog)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.gpu_device">gpu_device (vista.imagery.imagery.Imagery property)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.gpu_device">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.gpu_device_name">gpu_device_name (vista.imagery.imagery.Imagery property)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.gpu_device_name">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.gpu_images">gpu_images (vista.imagery.imagery.Imagery property)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.gpu_images">[1]</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="H" class="genindex-section">
+  <h2>H</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.has_cached_histograms">has_cached_histograms() (vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.has_cached_histograms">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.has_gpu_images">has_gpu_images (vista.imagery.imagery.Imagery property)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.has_gpu_images">[1]</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.has_uncertainty">has_uncertainty() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.has_uncertainty">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.hits">hits (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.id">id (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery">Imagery (class in vista.imagery.imagery)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.imagery">imagery (vista.algorithms.background_removal.temporal_median.TemporalMedian attribute)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.imagery">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.imagery_processed">imagery_processed (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog attribute)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.imagery_processed">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.imagery_processed">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel">ImageryPanel (class in vista.widgets.core.data.imagery_panel)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.images">images (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.images">[1]</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.init_ui">init_ui() (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.init_ui">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.init_ui">(vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.init_ui">(vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.init_ui">(vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.invalidate_caches">invalidate_caches() (vista.detections.detector.Detector method)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.invalidate_caches">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.invalidate_caches">(vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.invalidate_caches">[1]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.invalidate_caches">(vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.invalidate_caches">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.is_fully_loaded">is_fully_loaded (vista.imagery.imagery.Imagery property)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.is_fully_loaded">[1]</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="K" class="genindex-section">
+  <h2>K</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack">KalmanTrack (class in vista.algorithms.trackers.kalman_tracker)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR.kernel">kernel (vista.algorithms.detectors.cfar.CFAR attribute)</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR.kernel">[1]</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.label_time">label_time (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.label_time">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.label_times">label_times (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.label_times">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.labeler">labeler (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.labeler">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.labelers">labelers (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.labelers">[1]</a>
+</li>
+        <li><a href="api/detections.html#id5">labels (vista.detections.detector.Detector attribute)</a>, <a href="api/detections.html#vista.detections.detector.Detector.labels">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id5">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.labels">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id9">(vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.labels">[1]</a>, <a href="api/tracks.html#id9">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.labels">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id13">length (vista.tracks.track.Track property)</a>, <a href="api/tracks.html#id14">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.length">length() (vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.length">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id8">line_style (vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.line_style">[1]</a>, <a href="api/tracks.html#id8">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.line_style">[3]</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/detections.html#id3">line_thickness (vista.detections.detector.Detector attribute)</a>, <a href="api/detections.html#vista.detections.detector.Detector.line_thickness">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id3">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.line_thickness">[3]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id2">line_width (vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.line_width">[1]</a>, <a href="api/tracks.html#id2">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.line_width">[3]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.load_settings">load_settings() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.load_settings">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.load_settings">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.load_settings">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.loaded_frame_count">loaded_frame_count (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.loaded_frame_count">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.loaded_frames">loaded_frames (vista.imagery.imagery.Imagery property)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.loaded_frames">[1]</a>
+</li>
+        <li><a href="api/transforms.html#vista.transforms.earth_intersection.los_to_earth">los_to_earth() (in module vista.transforms.earth_intersection)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack.mahalanobis_distance">mahalanobis_distance() (vista.algorithms.trackers.kalman_tracker.KalmanTrack method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack.mark_missed">mark_missed() (vista.algorithms.trackers.kalman_tracker.KalmanTrack method)</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.mark_missed">(vista.algorithms.trackers.simple_tracker.SimpleTrack method)</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.mark_missed">(vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#id1">marker (vista.detections.detector.Detector attribute)</a>, <a href="api/detections.html#vista.detections.detector.Detector.marker">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id1">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.marker">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id1">(vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.marker">[1]</a>, <a href="api/tracks.html#id1">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.marker">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#id2">marker_size (vista.detections.detector.Detector attribute)</a>, <a href="api/detections.html#vista.detections.detector.Detector.marker_size">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id2">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.marker_size">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id3">(vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.marker_size">[1]</a>, <a href="api/tracks.html#id3">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.marker_size">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.max_search_radius">max_search_radius (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.misses">misses (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.model_psf">model_psf() (vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.model_psf">[1]</a>
+</li>
+        <li>
+    module
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.godec">vista.algorithms.background_removal.godec</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.robust_pca">vista.algorithms.background_removal.robust_pca</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.subspace_background_removal">vista.algorithms.background_removal.subspace_background_removal</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.temporal_median">vista.algorithms.background_removal.temporal_median</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.detectors.cfar">vista.algorithms.detectors.cfar</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.detectors.pstnn">vista.algorithms.detectors.pstnn</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.detectors.threshold">vista.algorithms.detectors.threshold</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.enhancement.coadd">vista.algorithms.enhancement.coadd</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.kalman_tracker">vista.algorithms.trackers.kalman_tracker</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.network_flow_tracker">vista.algorithms.trackers.network_flow_tracker</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.simple_tracker">vista.algorithms.trackers.simple_tracker</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.tracklet_tracker">vista.algorithms.trackers.tracklet_tracker</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.tracks.extraction">vista.algorithms.tracks.extraction</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.tracks.interpolation">vista.algorithms.tracks.interpolation</a>
+</li>
+          <li><a href="api/algorithms.html#module-vista.algorithms.tracks.savitzky_golay">vista.algorithms.tracks.savitzky_golay</a>
+</li>
+          <li><a href="api/detections.html#module-vista.detections.detector">vista.detections.detector</a>
+</li>
+          <li><a href="api/imagery.html#module-vista.imagery.imagery">vista.imagery.imagery</a>
+</li>
+          <li><a href="api/sensors.html#module-vista.sensors.sampled_sensor">vista.sensors.sampled_sensor</a>
+</li>
+          <li><a href="api/sensors.html#module-vista.sensors.sensor">vista.sensors.sensor</a>
+</li>
+          <li><a href="api/tracks.html#module-vista.tracks.track">vista.tracks.track</a>
+</li>
+          <li><a href="api/transforms.html#module-vista.transforms.arf">vista.transforms.arf</a>
+</li>
+          <li><a href="api/transforms.html#module-vista.transforms.earth_intersection">vista.transforms.earth_intersection</a>
+</li>
+          <li><a href="api/transforms.html#module-vista.transforms.polynomials">vista.transforms.polynomials</a>
+</li>
+          <li><a href="api/transforms.html#module-vista.transforms.transforms">vista.transforms.transforms</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.background_removal.godec_dialog">vista.widgets.algorithms.background_removal.godec_dialog</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.background_removal.subspace_background_removal_dialog">vista.widgets.algorithms.background_removal.subspace_background_removal_dialog</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.detectors.base_detector_widget">vista.widgets.algorithms.detectors.base_detector_widget</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.trackers.base_tracker_dialog">vista.widgets.algorithms.trackers.base_tracker_dialog</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.treatments.base_treatment_widget">vista.widgets.algorithms.treatments.base_treatment_widget</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.core.data.data_manager">vista.widgets.core.data.data_manager</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.core.data.imagery_panel">vista.widgets.core.data.imagery_panel</a>
+</li>
+          <li><a href="api/widgets.html#module-vista.widgets.core.playback_controls">vista.widgets.core.playback_controls</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR.n_pixels">n_pixels (vista.algorithms.detectors.cfar.CFAR attribute)</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR.n_pixels">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.name">name (vista.algorithms.background_removal.temporal_median.TemporalMedian attribute)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.name">[1]</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#id0">(vista.algorithms.detectors.cfar.CFAR attribute)</a>, <a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR.name">[1]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#id0">[2]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR.name">[3]</a>
+</li>
+          <li><a href="api/algorithms.html#id4">(vista.algorithms.detectors.pstnn.PSTNN attribute)</a>, <a href="api/algorithms.html#vista.algorithms.detectors.pstnn.PSTNN.name">[1]</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#id0">[2]</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#vista.algorithms.detectors.pstnn.PSTNN.name">[3]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.detectors.threshold.SimpleThreshold.name">(vista.algorithms.detectors.threshold.SimpleThreshold attribute)</a>, <a href="api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html#vista.algorithms.detectors.threshold.SimpleThreshold.name">[1]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.Coaddition.name">(vista.algorithms.enhancement.coadd.Coaddition attribute)</a>, <a href="api/generated/vista.algorithms.enhancement.coadd.Coaddition.html#vista.algorithms.enhancement.coadd.Coaddition.name">[1]</a>
+</li>
+          <li><a href="api/algorithms.html#vista.algorithms.enhancement.coadd.DecimatingCoaddition.name">(vista.algorithms.enhancement.coadd.DecimatingCoaddition attribute)</a>
+</li>
+          <li><a href="api/algorithms.html#id11">(vista.algorithms.tracks.extraction.TrackExtraction attribute)</a>, <a href="api/algorithms.html#vista.algorithms.tracks.extraction.TrackExtraction.name">[1]</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#id0">[2]</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#vista.algorithms.tracks.extraction.TrackExtraction.name">[3]</a>
+</li>
+          <li><a href="api/detections.html#vista.detections.detector.Detector.name">(vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.name">[1]</a>
+</li>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.name">(vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.name">[1]</a>
+</li>
+          <li><a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.name">(vista.sensors.sampled_sensor.SampledSensor attribute)</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id0">(vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.name">[1]</a>, <a href="api/sensors.html#id0">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.name">[3]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.name">(vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.name">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.next_frame">next_frame() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.offset">offset (vista.algorithms.background_removal.temporal_median.TemporalMedian attribute)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian.offset">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_auto_rank_changed">on_auto_rank_changed() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.on_auto_rank_changed">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.on_bounce_range_changed">on_bounce_range_changed() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.on_bounce_toggled">on_bounce_toggled() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.on_complete">on_complete() (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.on_detections_selected_in_viewer">on_detections_selected_in_viewer() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.on_error">on_error() (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_error_occurred">on_error_occurred() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.on_error_occurred">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.on_error_occurred">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.on_error_occurred">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.on_fps_dial_changed">on_fps_dial_changed() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.on_fps_spinbox_changed">on_fps_spinbox_changed() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.on_imagery_cell_changed">on_imagery_cell_changed() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.on_imagery_selection_changed">on_imagery_selection_changed() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.on_loading_complete">on_loading_complete() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_processing_complete">on_processing_complete() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.on_processing_complete">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.on_processing_complete">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.on_processing_complete">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.on_progress">on_progress() (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_progress_updated">on_progress_updated() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.on_progress_updated">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.on_progress_updated">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.on_progress_updated">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.on_sensor_data_changed">on_sensor_data_changed() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.on_sensor_selected">on_sensor_selected() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.on_slider_changed">on_slider_changed() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_status_updated">on_status_updated() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.on_status_updated">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_thread_finished">on_thread_finished() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.on_thread_finished">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.on_thread_finished">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.on_thread_finished">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.on_timer_tick">on_timer_tick() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.on_track_selected_in_viewer">on_track_selected_in_viewer() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.on_use_blocks_changed">on_use_blocks_changed() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.pause">pause() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.pixel_to_geodetic">pixel_to_geodetic() (vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.pixel_to_geodetic">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.pixel_to_geodetic">(vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.pixel_to_geodetic">[1]</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.pixel_to_geodetic">(vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.pixel_to_geodetic">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.play">play() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls">PlaybackControls (class in vista.widgets.core.playback_controls)</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id4">pointing (vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.pointing">[1]</a>, <a href="api/sensors.html#id11">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.pointing">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id8">poly_arf_to_col (vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_col">[1]</a>, <a href="api/sensors.html#id15">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_col">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id7">poly_arf_to_row (vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_row">[1]</a>, <a href="api/sensors.html#id14">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.poly_arf_to_row">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id5">poly_pixel_to_arf_azimuth (vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_azimuth">[1]</a>, <a href="api/sensors.html#id12">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_azimuth">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id6">poly_pixel_to_arf_elevation (vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_elevation">[1]</a>, <a href="api/sensors.html#id13">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.poly_pixel_to_arf_elevation">[3]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.positions">positions (vista.algorithms.trackers.simple_tracker.SimpleTrack attribute)</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id0">(vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.positions">[1]</a>, <a href="api/sensors.html#id7">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.positions">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack.predict">predict() (vista.algorithms.trackers.kalman_tracker.KalmanTrack method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.predict_position">predict_position() (vista.algorithms.trackers.simple_tracker.SimpleTrack method)</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet.predict_position">(vista.algorithms.trackers.tracklet_tracker.Tracklet method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.prev_frame">prev_frame() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.prev_frame_reverse">prev_frame_reverse() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/algorithms.html#id3">process_chip() (vista.algorithms.detectors.cfar.CFAR method)</a>, <a href="api/algorithms.html#vista.algorithms.detectors.cfar.CFAR.process_chip">[1]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#id3">[2]</a>, <a href="api/generated/vista.algorithms.detectors.cfar.CFAR.html#vista.algorithms.detectors.cfar.CFAR.process_chip">[3]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.process_frame">process_frame() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.processing_complete">processing_complete (vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread attribute)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.processing_complete">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread.processing_complete">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.processing_complete">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.progress_updated">progress_updated (vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread attribute)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.progress_updated">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread.progress_updated">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker.progress_updated">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker attribute)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.progress_updated">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.pstnn.PSTNN">PSTNN (class in vista.algorithms.detectors.pstnn)</a>, <a href="api/generated/vista.algorithms.detectors.pstnn.PSTNN.html#vista.algorithms.detectors.pstnn.PSTNN">[1]</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="Q" class="genindex-section">
+  <h2>Q</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.quality_score">quality_score() (vista.algorithms.trackers.simple_tracker.SimpleTrack method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="R" class="genindex-section">
+  <h2>R</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id3">radiometric_gain (vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.radiometric_gain">[1]</a>, <a href="api/sensors.html#id10">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.radiometric_gain">[3]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.refresh">refresh() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.data_manager.DataManagerPanel.refresh_aois_table">refresh_aois_table() (vista.widgets.core.data.data_manager.DataManagerPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.refresh_imagery_table">refresh_imagery_table() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.release_gpu">release_gpu() (vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.release_gpu">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.reset_ui">reset_ui() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.reset_ui">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.reset_ui">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.reset_ui">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.robust_pca.robust_pca_inexact_alm">robust_pca_inexact_alm() (in module vista.algorithms.background_removal.robust_pca)</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.row_offset">row_offset (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.row_offset">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.rows">rows (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.rows">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.rows">(vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.rows">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.run">run() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.run">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread.run">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorProcessingThread method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker.run">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread.run">(vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentThread method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.run_algorithm">run_algorithm() (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.run_kalman_tracker">run_kalman_tracker() (in module vista.algorithms.trackers.kalman_tracker)</a>, <a href="api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html#vista.algorithms.trackers.kalman_tracker.run_kalman_tracker">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker">run_network_flow_tracker() (in module vista.algorithms.trackers.network_flow_tracker)</a>, <a href="api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html#vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.run_processing">run_processing() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.run_processing">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.robust_pca.run_robust_pca">run_robust_pca() (in module vista.algorithms.background_removal.robust_pca)</a>, <a href="api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html#vista.algorithms.background_removal.robust_pca.run_robust_pca">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.run_simple_tracker">run_simple_tracker() (in module vista.algorithms.trackers.simple_tracker)</a>, <a href="api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html#vista.algorithms.trackers.simple_tracker.run_simple_tracker">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.run_tracker">run_tracker() (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker">run_tracklet_tracker() (in module vista.algorithms.trackers.tracklet_tracker)</a>, <a href="api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html#vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.run_treatment">run_treatment() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor">SampledSensor (class in vista.sensors.sampled_sensor)</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor">[1]</a>
+</li>
+        <li><a href="api/imagery.html#vista.imagery.imagery.save_imagery_hdf5">save_imagery_hdf5() (in module vista.imagery.imagery)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.save_settings">save_settings() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.save_settings">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.save_settings">(vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.save_settings">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter">SavitzkyGolayFilter (class in vista.algorithms.tracks.savitzky_golay)</a>, <a href="api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html#vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter">[1]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor">Sensor (class in vista.sensors.sensor)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor">[1]</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.sensor">sensor (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.sensor">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.sensor">(vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.sensor">[1]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.sensor">(vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.sensor">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.set_frame">set_frame() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.set_frame_range">set_frame_range() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.set_opacity_column_visible">set_opacity_column_visible() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.set_parameters_enabled">set_parameters_enabled() (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.set_treatment_ui_enabled">set_treatment_ui_enabled() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog.setup_ui">setup_ui() (vista.widgets.algorithms.background_removal.godec_dialog.GoDecDialog method)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog.setup_ui">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog method)</a>
+</li>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog.setup_ui">(vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingDialog method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id7">show_line (vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.show_line">[1]</a>, <a href="api/tracks.html#id7">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.show_line">[3]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.show_uncertainty">show_uncertainty (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.show_uncertainty">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.robust_pca.shrinkage_operator">shrinkage_operator() (in module vista.algorithms.background_removal.robust_pca)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.detectors.threshold.SimpleThreshold">SimpleThreshold (class in vista.algorithms.detectors.threshold)</a>, <a href="api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html#vista.algorithms.detectors.threshold.SimpleThreshold">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack">SimpleTrack (class in vista.algorithms.trackers.simple_tracker)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.robust_pca.singular_value_threshold">singular_value_threshold() (in module vista.algorithms.background_removal.robust_pca)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.network_flow_tracker.solve_min_cost_flow">solve_min_cost_flow() (in module vista.algorithms.trackers.network_flow_tracker)</a>
+</li>
+        <li><a href="api/transforms.html#vista.transforms.transforms.spherical_to_cartesian">spherical_to_cartesian() (in module vista.transforms.transforms)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread.status_updated">status_updated (vista.widgets.algorithms.background_removal.godec_dialog.GoDecThread attribute)</a>
+
+        <ul>
+          <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread.status_updated">(vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal">subspace_background_removal() (in module vista.algorithms.background_removal.subspace_background_removal)</a>, <a href="api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html#vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalDialog">SubspaceBackgroundRemovalDialog (class in vista.widgets.algorithms.background_removal.subspace_background_removal_dialog)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.background_removal.subspace_background_removal_dialog.SubspaceBackgroundRemovalThread">SubspaceBackgroundRemovalThread (class in vista.widgets.algorithms.background_removal.subspace_background_removal_dialog)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.tracks.track.Track.html#id5">tail_length (vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.tail_length">[1]</a>, <a href="api/tracks.html#id5">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.tail_length">[3]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.background_removal.temporal_median.TemporalMedian">TemporalMedian (class in vista.algorithms.background_removal.temporal_median)</a>, <a href="api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html#vista.algorithms.background_removal.temporal_median.TemporalMedian">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.times">times (vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.times">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#id1">(vista.sensors.sampled_sensor.SampledSensor attribute)</a>, <a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.times">[1]</a>, <a href="api/sensors.html#id8">[2]</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.times">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#id8">to_csv() (vista.detections.detector.Detector method)</a>, <a href="api/detections.html#vista.detections.detector.Detector.to_csv">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id8">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.to_csv">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.to_csv">(vista.tracks.track.Track method)</a>, <a href="api/tracks.html#vista.tracks.track.Track.to_csv">[1]</a>
+</li>
+        </ul></li>
+        <li><a href="api/detections.html#id9">to_dataframe() (vista.detections.detector.Detector method)</a>, <a href="api/detections.html#vista.detections.detector.Detector.to_dataframe">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id9">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.to_dataframe">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id15">(vista.tracks.track.Track method)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.to_dataframe">[1]</a>, <a href="api/tracks.html#id16">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.to_dataframe">[3]</a>
+</li>
+        </ul></li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.to_gpu">to_gpu() (vista.imagery.imagery.Imagery method)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.to_gpu">[1]</a>
+</li>
+        <li><a href="api/generated/vista.imagery.imagery.Imagery.html#id3">to_hdf5() (vista.imagery.imagery.Imagery method)</a>, <a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.to_hdf5">[1]</a>, <a href="api/imagery.html#id4">[2]</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.to_hdf5">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.sensors.sampled_sensor.SampledSensor.html#vista.sensors.sampled_sensor.SampledSensor.to_hdf5">(vista.sensors.sampled_sensor.SampledSensor method)</a>, <a href="api/sensors.html#vista.sensors.sampled_sensor.SampledSensor.to_hdf5">[1]</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.to_hdf5">(vista.sensors.sensor.Sensor method)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.to_hdf5">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.toggle_play">toggle_play() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.toggle_reverse">toggle_reverse() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track">Track (class in vista.tracks.track)</a>, <a href="api/tracks.html#vista.tracks.track.Track">[1]</a>
+</li>
+        <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.tracker">tracker (vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.tracker">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.tracks.extraction.TrackExtraction">TrackExtraction (class in vista.algorithms.tracks.extraction)</a>, <a href="api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html#vista.algorithms.tracks.extraction.TrackExtraction">[1]</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker.tracking_complete">tracking_complete (vista.widgets.algorithms.trackers.base_tracker_dialog.BaseTrackingWorker attribute)</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.tracks.interpolation.TrackInterpolation">TrackInterpolation (class in vista.algorithms.tracks.interpolation)</a>, <a href="api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html#vista.algorithms.tracks.interpolation.TrackInterpolation">[1]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.tracklet_tracker.Tracklet">Tracklet (class in vista.algorithms.trackers.tracklet_tracker)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id4">uniformity_gain_image_frames (vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.uniformity_gain_image_frames">[1]</a>, <a href="api/sensors.html#id4">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.uniformity_gain_image_frames">[3]</a>
+</li>
+        <li><a href="api/generated/vista.sensors.sensor.Sensor.html#id3">uniformity_gain_images (vista.sensors.sensor.Sensor attribute)</a>, <a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.uniformity_gain_images">[1]</a>, <a href="api/sensors.html#id3">[2]</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.uniformity_gain_images">[3]</a>
+</li>
+        <li><a href="api/algorithms.html#vista.algorithms.trackers.kalman_tracker.KalmanTrack.update">update() (vista.algorithms.trackers.kalman_tracker.KalmanTrack method)</a>
+
+        <ul>
+          <li><a href="api/algorithms.html#vista.algorithms.trackers.simple_tracker.SimpleTrack.update">(vista.algorithms.trackers.simple_tracker.SimpleTrack method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.update_actual_fps">update_actual_fps() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.core.playback_controls.PlaybackControls.update_label">update_label() (vista.widgets.core.playback_controls.PlaybackControls method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.core.data.imagery_panel.ImageryPanel.update_loading_progress">update_loading_progress() (vista.widgets.core.data.imagery_panel.ImageryPanel method)</a>
+</li>
+        <li><a href="api/detections.html#vista.detections.detector.Detector.uuid">uuid (vista.detections.detector.Detector attribute)</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.uuid">[1]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.imagery.imagery.Imagery.html#vista.imagery.imagery.Imagery.uuid">(vista.imagery.imagery.Imagery attribute)</a>, <a href="api/imagery.html#vista.imagery.imagery.Imagery.uuid">[1]</a>
+</li>
+          <li><a href="api/generated/vista.sensors.sensor.Sensor.html#vista.sensors.sensor.Sensor.uuid">(vista.sensors.sensor.Sensor attribute)</a>, <a href="api/sensors.html#vista.sensors.sensor.Sensor.uuid">[1]</a>
+</li>
+          <li><a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.uuid">(vista.tracks.track.Track attribute)</a>, <a href="api/tracks.html#vista.tracks.track.Track.uuid">[1]</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="V" class="genindex-section">
+  <h2>V</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget.validate_parameters">validate_parameters() (vista.widgets.algorithms.detectors.base_detector_widget.BaseDetectorWidget method)</a>
+</li>
+        <li><a href="api/widgets.html#vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget.validate_sensor_requirements">validate_sensor_requirements() (vista.widgets.algorithms.treatments.base_treatment_widget.BaseTreatmentWidget method)</a>
+</li>
+        <li><a href="api/detections.html#id4">visible (vista.detections.detector.Detector attribute)</a>, <a href="api/detections.html#vista.detections.detector.Detector.visible">[1]</a>, <a href="api/generated/vista.detections.detector.Detector.html#id4">[2]</a>, <a href="api/generated/vista.detections.detector.Detector.html#vista.detections.detector.Detector.visible">[3]</a>
+
+        <ul>
+          <li><a href="api/generated/vista.tracks.track.Track.html#id4">(vista.tracks.track.Track attribute)</a>, <a href="api/generated/vista.tracks.track.Track.html#vista.tracks.track.Track.visible">[1]</a>, <a href="api/tracks.html#id4">[2]</a>, <a href="api/tracks.html#vista.tracks.track.Track.visible">[3]</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.background_removal.godec
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.godec">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.background_removal.robust_pca
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.robust_pca">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.background_removal.subspace_background_removal
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.subspace_background_removal">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.background_removal.temporal_median
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.background_removal.temporal_median">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.detectors.cfar
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.detectors.cfar">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.detectors.pstnn
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.detectors.pstnn">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.detectors.threshold
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.detectors.threshold">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.enhancement.coadd
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.enhancement.coadd">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.trackers.kalman_tracker
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.kalman_tracker">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.trackers.network_flow_tracker
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.network_flow_tracker">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.trackers.simple_tracker
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.simple_tracker">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.trackers.tracklet_tracker
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.trackers.tracklet_tracker">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.tracks.extraction
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.tracks.extraction">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.tracks.interpolation
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.tracks.interpolation">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.algorithms.tracks.savitzky_golay
+
+        <ul>
+          <li><a href="api/algorithms.html#module-vista.algorithms.tracks.savitzky_golay">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    vista.detections.detector
+
+        <ul>
+          <li><a href="api/detections.html#module-vista.detections.detector">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.imagery.imagery
+
+        <ul>
+          <li><a href="api/imagery.html#module-vista.imagery.imagery">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.sensors.sampled_sensor
+
+        <ul>
+          <li><a href="api/sensors.html#module-vista.sensors.sampled_sensor">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.sensors.sensor
+
+        <ul>
+          <li><a href="api/sensors.html#module-vista.sensors.sensor">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.tracks.track
+
+        <ul>
+          <li><a href="api/tracks.html#module-vista.tracks.track">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.transforms.arf
+
+        <ul>
+          <li><a href="api/transforms.html#module-vista.transforms.arf">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.transforms.earth_intersection
+
+        <ul>
+          <li><a href="api/transforms.html#module-vista.transforms.earth_intersection">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.transforms.polynomials
+
+        <ul>
+          <li><a href="api/transforms.html#module-vista.transforms.polynomials">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.transforms.transforms
+
+        <ul>
+          <li><a href="api/transforms.html#module-vista.transforms.transforms">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.algorithms.background_removal.godec_dialog
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.background_removal.godec_dialog">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.algorithms.background_removal.subspace_background_removal_dialog
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.background_removal.subspace_background_removal_dialog">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.algorithms.detectors.base_detector_widget
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.detectors.base_detector_widget">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.algorithms.trackers.base_tracker_dialog
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.trackers.base_tracker_dialog">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.algorithms.treatments.base_treatment_widget
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.algorithms.treatments.base_treatment_widget">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.core.data.data_manager
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.core.data.data_manager">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.core.data.imagery_panel
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.core.data.imagery_panel">module</a>
+</li>
+        </ul></li>
+        <li>
+    vista.widgets.core.playback_controls
+
+        <ul>
+          <li><a href="api/widgets.html#module-vista.widgets.core.playback_controls">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

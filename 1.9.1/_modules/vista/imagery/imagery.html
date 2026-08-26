@@ -1,0 +1,972 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>vista.imagery.imagery - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/detections.html">Object Detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/tracks.html">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../user_guide/interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer_guide/extending.html">Extending VISTA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for vista.imagery.imagery</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Module that contains the default imagery object</span>
+
+<span class="sd">The Imagery object in this class can be subclassed by third-party objects to implement their own logic including</span>
+<span class="sd">file readers and pixel-to-geodetic conversions</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pathlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.aoi</span><span class="w"> </span><span class="kn">import</span> <span class="n">AOI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.sensors.sensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sensor</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+    <span class="n">HAS_TORCH</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">HAS_TORCH</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="Imagery">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Imagery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Container for multi-frame imagery datasets with metadata and coordinate conversion capabilities.</span>
+
+<span class="sd">    VISTA's Imagery class represents a temporal sequence of image frames with associated metadata</span>
+<span class="sd">    including timestamps, geodetic coordinate conversion polynomials, and sensor calibration data.</span>
+<span class="sd">    This class serves as the foundation for all image-based analysis in VISTA.</span>
+
+<span class="sd">    Core Attributes</span>
+<span class="sd">    ---------------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Human-readable identifier for this imagery dataset</span>
+<span class="sd">    images : NDArray[np.float32]</span>
+<span class="sd">        3D array of image data with shape (num_frames, height, width).</span>
+<span class="sd">        Pixel values are stored as 32-bit floats to support processing operations.</span>
+<span class="sd">    frames : NDArray[np.int_]</span>
+<span class="sd">        1D array of frame numbers corresponding to each image.</span>
+<span class="sd">        Frame numbers need not be sequential or start at zero.</span>
+<span class="sd">    row_offset : int, optional</span>
+<span class="sd">        Row offset for imagery positioning (default: 0).</span>
+<span class="sd">        Used when imagery represents a subset/crop of a larger scene.</span>
+<span class="sd">    column_offset : int, optional</span>
+<span class="sd">        Column offset for imagery positioning (default: 0).</span>
+<span class="sd">        Used when imagery represents a subset/crop of a larger scene.</span>
+
+<span class="sd">    Temporal Metadata</span>
+<span class="sd">    -----------------</span>
+<span class="sd">    times : NDArray[np.datetime64], optional</span>
+<span class="sd">        Timestamp for each frame with microsecond precision.</span>
+<span class="sd">        Enables time-based analysis and temporal coordinate conversion.</span>
+
+<span class="sd">    Sensor Information</span>
+<span class="sd">    ------------------</span>
+<span class="sd">    sensor : Sensor</span>
+<span class="sd">        Sensor object containing projection polynomials and radiometric calibration data.</span>
+<span class="sd">        The Sensor provides geodetic coordinate conversion capabilities, sensor positions,</span>
+<span class="sd">        and optional point spread function modeling for irradiance estimation.</span>
+
+<span class="sd">    Internal Attributes</span>
+<span class="sd">    -------------------</span>
+<span class="sd">    description : str, optional</span>
+<span class="sd">        Long-form description of the imagery (default: "")</span>
+<span class="sd">    filename : str, optional</span>
+<span class="sd">        Filename the imagery was loaded from</span>
+<span class="sd">    _histograms : dict, optional</span>
+<span class="sd">        Cached histograms for performance. Maps frame_index -&gt; (hist_y, hist_x).</span>
+<span class="sd">        Computed lazily via get_histogram() method.</span>
+<span class="sd">    uuid : str</span>
+<span class="sd">        Unique identifier automatically generated for each Imagery instance</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    __getitem__(slice)</span>
+<span class="sd">        Slice imagery by frame range, preserving metadata</span>
+<span class="sd">    get_aoi(aoi)</span>
+<span class="sd">        Extract spatial subset defined by Area of Interest</span>
+<span class="sd">    pixel_to_geodetic(frame, rows, columns)</span>
+<span class="sd">        Convert pixel coordinates to geodetic (lat/lon/alt)</span>
+<span class="sd">    (frame, location)</span>
+<span class="sd">        Convert geodetic coordinates to pixel (row/column)</span>
+<span class="sd">    get_histogram(frame_index)</span>
+<span class="sd">        Compute or retrieve cached histogram for a frame</span>
+<span class="sd">    to_hdf5(file)</span>
+<span class="sd">        Save imagery and all metadata to HDF5 file</span>
+<span class="sd">    copy()</span>
+<span class="sd">        Create a shallow copy of the imagery object</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; # Create basic imagery</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; images = np.random.randn(100, 256, 256).astype(np.float32)</span>
+<span class="sd">    &gt;&gt;&gt; frames = np.arange(100)</span>
+<span class="sd">    &gt;&gt;&gt; imagery = Imagery(name="Test", images=images, frames=frames)</span>
+
+<span class="sd">    &gt;&gt;&gt; # Create imagery with timestamps</span>
+<span class="sd">    &gt;&gt;&gt; times = np.array([np.datetime64('2024-01-01T00:00:00') +</span>
+<span class="sd">    ...                   np.timedelta64(i*100, 'ms') for i in range(100)])</span>
+<span class="sd">    &gt;&gt;&gt; imagery = Imagery(name="Test", images=images, frames=frames, times=times)</span>
+
+<span class="sd">    &gt;&gt;&gt; # Slice imagery by frame range</span>
+<span class="sd">    &gt;&gt;&gt; subset = imagery[10:50]  # Frames 10-49</span>
+
+<span class="sd">    &gt;&gt;&gt; # Extract spatial subset via AOI</span>
+<span class="sd">    &gt;&gt;&gt; from vista.aoi import AOI</span>
+<span class="sd">    &gt;&gt;&gt; aoi = AOI(name="Region1", x=50, y=50, width=100, height=100)</span>
+<span class="sd">    &gt;&gt;&gt; cropped = imagery.get_aoi(aoi)</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Frame numbers in the `frames` array need not be contiguous or zero-indexed</span>
+<span class="sd">    - All optional metadata (times, polynomials, calibration data) is preserved during</span>
+<span class="sd">      slicing operations</span>
+<span class="sd">    - Geodetic conversion requires valid polynomial coefficients for the frame of interest</span>
+<span class="sd">    - Calibration frame arrays define ranges: frame N applies until frame N+1 starts</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">images</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]</span>
+    <span class="n">frames</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int_</span><span class="p">]</span>
+    <span class="n">sensor</span><span class="p">:</span> <span class="n">Sensor</span>
+    <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">column_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">times</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="c1"># Cached histograms for performance (computed lazily)</span>
+    <span class="n">_histograms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Maps frame_index -&gt; (hist_y, hist_x)</span>
+    <span class="n">default_histogram_bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Maps frame_index -&gt; (min, max)</span>
+    <span class="n">uuid</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>  <span class="c1"># filename where this imagery came from</span>
+
+    <span class="c1"># Incremental loading support: tracks how many frames have valid image data.</span>
+    <span class="c1"># None = fully loaded (default for programmatically created imagery).</span>
+    <span class="c1"># Integer = only images[0:loaded_frame_count] contain valid data.</span>
+    <span class="n">loaded_frame_count</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># GPU tensor support: lazily created PyTorch tensor copy of images for GPU-accelerated algorithms.</span>
+    <span class="c1"># None = no GPU copy exists. Created on first access via gpu_images property.</span>
+    <span class="n">_gpu_images</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">_gpu_device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Performance optimization: cached data structures</span>
+    <span class="n">_frame_index</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Frame number -&gt; index</span>
+    <span class="n">_frames_sorted</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Whether frames are sorted</span>
+    <span class="n">_histogram_bins</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Pre-computed histogram bin edges</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uuid</span> <span class="o">=</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sensor</span><span class="o">.</span><span class="n">add_imagery</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Imagery.__getitem__">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.__getitem__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">slice</span><span class="p">)):</span>
+            <span class="c1"># Handle slice objects</span>
+            <span class="n">imagery_slice</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">imagery_slice</span><span class="o">.</span><span class="n">images</span> <span class="o">=</span> <span class="n">imagery_slice</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+            <span class="n">imagery_slice</span><span class="o">.</span><span class="n">frames</span> <span class="o">=</span> <span class="n">imagery_slice</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+            <span class="n">imagery_slice</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">imagery_slice</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">if</span> <span class="n">imagery_slice</span><span class="o">.</span><span class="n">times</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="c1"># Invalidate GPU tensor since the numpy data is now a different subset</span>
+            <span class="n">imagery_slice</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">imagery_slice</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="n">imagery_slice</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Invalid index or slice type. Use slice, list, or numpy array."</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="s2">"uuid"</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uuid</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">uuid</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">)"</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_fully_loaded</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return True if all frames have been loaded (or if imagery was created programmatically)."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaded_frame_count</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaded_frame_count</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">loaded_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return the subset of frame numbers that have been loaded so far."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaded_frame_count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[:</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaded_frame_count</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_gpu_images</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return True if a GPU tensor copy of the images exists."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gpu_device</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return the GPU device string (e.g. 'cuda:0') if a GPU copy exists, or None."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gpu_device_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return the human-readable GPU device name (e.g. 'NVIDIA RTX 4090') if a GPU copy exists, or None."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_gpu_images</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">HAS_TORCH</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"cuda"</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">get_device_name</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gpu_images</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return the GPU tensor copy of images, creating it lazily if needed.</span>
+
+<span class="sd">        Uses the GPU device configured in application settings, or 'cuda:0' as default.</span>
+<span class="sd">        Requires imagery to be fully loaded.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            GPU tensor with shape (num_frames, height, width) and dtype float32</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuntimeError</span>
+<span class="sd">            If PyTorch is not installed, no CUDA device is available, or imagery is not fully loaded</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_TORCH</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"PyTorch is not installed. Install with: pip install vista-imagery[gpu]"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"No CUDA-capable GPU device is available"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_fully_loaded</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Cannot create GPU copy of imagery that is still loading"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_gpu_device_from_settings</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span>
+
+<div class="viewcode-block" id="Imagery.to_gpu">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.to_gpu">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Explicitly upload images to a specific GPU device.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        device : str, optional</span>
+<span class="sd">            PyTorch device string (e.g. 'cuda:0', 'cuda:1'). If None, uses the device</span>
+<span class="sd">            configured in application settings, or 'cuda:0' as default.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            GPU tensor with shape (num_frames, height, width) and dtype float32</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuntimeError</span>
+<span class="sd">            If PyTorch is not installed, no CUDA device is available, or imagery is not fully loaded</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAS_TORCH</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"PyTorch is not installed. Install with: pip install vista-imagery[gpu]"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"No CUDA-capable GPU device is available"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_fully_loaded</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Cannot create GPU copy of imagery that is still loading"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_gpu_device_from_settings</span><span class="p">()</span>
+
+        <span class="c1"># If already on the requested device, return existing tensor</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span>
+
+        <span class="c1"># Release existing GPU memory if switching devices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release_gpu</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span></div>
+
+
+<div class="viewcode-block" id="Imagery.release_gpu">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.release_gpu">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Release the GPU tensor copy to free VRAM."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_gpu_device_from_settings</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">"""Read the configured GPU device from application settings.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            PyTorch device string (e.g. 'cuda:0')</span>
+<span class="sd">        """</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="s2">"cuda:0"</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">PyQt6.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">QSettings</span>
+
+            <span class="n">settings</span> <span class="o">=</span> <span class="n">QSettings</span><span class="p">(</span><span class="s2">"Vista"</span><span class="p">,</span> <span class="s2">"VistaApp"</span><span class="p">)</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"gpu/device"</span><span class="p">,</span> <span class="s2">"cuda:0"</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">device</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_frames_sorted</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Check if frames array is sorted for binary search optimization."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frames_sorted</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_frames_sorted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frames_sorted</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_frame_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Build index mapping frame numbers to indices for O(1) lookup."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frame_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_frame_index</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_frame_index</span><span class="p">[</span><span class="n">frame</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+
+<div class="viewcode-block" id="Imagery.get_frame_index">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.get_frame_index">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_frame_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame_num</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get array index for a specific frame number using efficient lookup.</span>
+
+<span class="sd">        Uses binary search if frames are sorted (O(log n)), otherwise uses</span>
+<span class="sd">        cached dictionary lookup (O(1)).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        frame_num : int</span>
+<span class="sd">            Frame number to find</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int or None</span>
+<span class="sd">            Array index for the frame, or None if frame not found</span>
+<span class="sd">        """</span>
+        <span class="c1"># If frames are sorted, use binary search</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_frames_sorted</span><span class="p">():</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">,</span> <span class="n">frame_num</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="n">frame_num</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">idx</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Use dictionary lookup for unsorted frames</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_build_frame_index</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_frame_index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">frame_num</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Imagery.invalidate_caches">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.invalidate_caches">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">invalidate_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Invalidate cached data structures when imagery data changes."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_frame_index</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_frames_sorted</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_histogram_bins</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_histogram_bounds</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release_gpu</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Imagery.copy">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.copy">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Create a (soft) copy of this imagery.</span>
+
+<span class="sd">        The numpy images array and GPU tensor (if present) are shared by reference, not copied.</span>
+<span class="sd">        """</span>
+        <span class="n">imagery_copy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">" (copy)"</span><span class="p">,</span>
+            <span class="n">images</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">,</span>
+            <span class="n">frames</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">,</span>
+            <span class="n">sensor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sensor</span><span class="p">,</span>
+            <span class="n">row_offset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span><span class="p">,</span>
+            <span class="n">column_offset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span><span class="p">,</span>
+            <span class="n">times</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">imagery_copy</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_images</span>
+        <span class="n">imagery_copy</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gpu_device</span>
+        <span class="k">return</span> <span class="n">imagery_copy</span></div>
+
+
+<div class="viewcode-block" id="Imagery.get_histogram">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.get_histogram">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_histogram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame_index</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">max_rowcol</span><span class="o">=</span><span class="mi">512</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get histogram for a specific frame using consistent bin edges.</span>
+
+<span class="sd">        Computes histogram if not cached, using pre-computed global bin edges</span>
+<span class="sd">        for consistency across frames.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        frame_index : int</span>
+<span class="sd">            Index of frame to get histogram for</span>
+<span class="sd">        bins : int</span>
+<span class="sd">            Number of histogram bins (default: 256)</span>
+<span class="sd">        max_rowcol : int</span>
+<span class="sd">            Maximum number of rows or columns to search over. Downsamples imagery larger than this for the purpose of</span>
+<span class="sd">            computing the histogram.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            (hist_y, bin_centers) - histogram counts and bin center values</span>
+<span class="sd">        """</span>
+
+        <span class="c1"># Try to load histogram settings from QSettings (if PyQt6 is available)</span>
+        <span class="c1"># Fall back to defaults if not in a PyQt context</span>
+        <span class="n">min_percentile</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">max_percentile</span> <span class="o">=</span> <span class="mf">99.0</span>
+        <span class="n">settings_bins</span> <span class="o">=</span> <span class="mi">256</span>
+        <span class="n">settings_max_rowcol</span> <span class="o">=</span> <span class="mi">512</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">PyQt6.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">QSettings</span>
+
+            <span class="n">settings</span> <span class="o">=</span> <span class="n">QSettings</span><span class="p">(</span><span class="s2">"Vista"</span><span class="p">,</span> <span class="s2">"VistaApp"</span><span class="p">)</span>
+            <span class="n">min_percentile</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"imagery/histogram_min_percentile"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">max_percentile</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"imagery/histogram_max_percentile"</span><span class="p">,</span> <span class="mf">99.0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">settings_bins</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"imagery/histogram_bins"</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">settings_max_rowcol</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">"imagery/histogram_max_rowcol"</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
+            <span class="c1"># PyQt6 not available or no QApplication - use defaults</span>
+            <span class="k">pass</span>
+
+        <span class="c1"># Use settings values if not explicitly specified</span>
+        <span class="n">bins_to_use</span> <span class="o">=</span> <span class="n">bins</span> <span class="k">if</span> <span class="n">bins</span> <span class="o">!=</span> <span class="mi">256</span> <span class="k">else</span> <span class="n">settings_bins</span>
+        <span class="n">max_rowcol_to_use</span> <span class="o">=</span> <span class="n">max_rowcol</span> <span class="k">if</span> <span class="n">max_rowcol</span> <span class="o">!=</span> <span class="mi">512</span> <span class="k">else</span> <span class="n">settings_max_rowcol</span>
+
+        <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">row_downsample</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">rows</span> <span class="o">//</span> <span class="n">max_rowcol_to_use</span><span class="p">)</span>
+        <span class="n">col_downsample</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cols</span> <span class="o">//</span> <span class="n">max_rowcol_to_use</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_histogram_bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">default_histogram_bounds</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">frame_index</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="n">frame_index</span><span class="p">,</span> <span class="p">::</span><span class="n">row_downsample</span><span class="p">,</span> <span class="p">::</span><span class="n">col_downsample</span><span class="p">]</span>
+
+            <span class="c1"># Remove zero values since there are often many of these values</span>
+            <span class="n">nonzero_image</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="n">image</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Compute data range</span>
+            <span class="k">if</span> <span class="n">nonzero_image</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">hist_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">nonzero_image</span><span class="p">,</span> <span class="n">min_percentile</span><span class="p">)</span>
+                <span class="n">hist_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">nonzero_image</span><span class="p">,</span> <span class="n">max_percentile</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">hist_min</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+                <span class="n">hist_max</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">default_histogram_bounds</span><span class="p">[</span><span class="n">frame_index</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">hist_min</span><span class="p">,</span> <span class="n">hist_max</span><span class="p">)</span>
+
+            <span class="n">hist_y</span><span class="p">,</span> <span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins_to_use</span><span class="p">)</span>
+            <span class="n">bin_centers</span> <span class="o">=</span> <span class="p">(</span><span class="n">bin_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">bin_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">nonzero_hist</span> <span class="o">=</span> <span class="n">hist_y</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span><span class="p">[</span><span class="n">frame_index</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">hist_y</span><span class="p">[</span><span class="n">nonzero_hist</span><span class="p">],</span> <span class="n">bin_centers</span><span class="p">[</span><span class="n">nonzero_hist</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span><span class="p">[</span><span class="n">frame_index</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Imagery.has_cached_histograms">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.has_cached_histograms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_cached_histograms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Check if histograms have been pre-computed for all loaded frames"""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaded_frame_count</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaded_frame_count</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_histograms</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">target</span></div>
+
+
+<div class="viewcode-block" id="Imagery.get_aoi">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.get_aoi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_aoi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">aoi</span><span class="p">:</span> <span class="n">AOI</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Imagery"</span><span class="p">:</span>
+        <span class="c1"># Extract AOI bounds</span>
+        <span class="n">row_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">aoi</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span>
+        <span class="n">row_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">aoi</span><span class="o">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">aoi</span><span class="o">.</span><span class="n">height</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span>
+        <span class="n">col_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">aoi</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span>
+        <span class="n">col_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">aoi</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">aoi</span><span class="o">.</span><span class="n">width</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span>
+
+        <span class="c1"># Crop imagery to AOI</span>
+        <span class="n">cropped_images</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">[:,</span> <span class="n">row_start</span><span class="p">:</span><span class="n">row_end</span><span class="p">,</span> <span class="n">col_start</span><span class="p">:</span><span class="n">col_end</span><span class="p">]</span>
+
+        <span class="c1"># Create imagery AOI from a copy of this imagery</span>
+        <span class="n">imagery_aoi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">imagery_aoi</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">" (AOI: </span><span class="si">{</span><span class="n">aoi</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="n">imagery_aoi</span><span class="o">.</span><span class="n">images</span> <span class="o">=</span> <span class="n">cropped_images</span>
+        <span class="n">imagery_aoi</span><span class="o">.</span><span class="n">row_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span> <span class="o">+</span> <span class="n">row_start</span>
+        <span class="n">imagery_aoi</span><span class="o">.</span><span class="n">column_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span> <span class="o">+</span> <span class="n">col_start</span>
+        <span class="c1"># Invalidate GPU tensor since the numpy data is now a different spatial subset</span>
+        <span class="n">imagery_aoi</span><span class="o">.</span><span class="n">_gpu_images</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">imagery_aoi</span><span class="o">.</span><span class="n">_gpu_device</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">imagery_aoi</span></div>
+
+
+<div class="viewcode-block" id="Imagery.to_hdf5">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.Imagery.to_hdf5">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_hdf5</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Save imagery data to an HDF5 group.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        group : h5py.Group</span>
+<span class="sd">            HDF5 group to write imagery data to (typically sensors/&lt;sensor_uuid&gt;/imagery/&lt;imagery_uuid&gt;/)</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This method writes only imagery-specific data:</span>
+<span class="sd">        - Image arrays (chunked for efficient loading)</span>
+<span class="sd">        - Frame numbers</span>
+<span class="sd">        - Times (as unix_nanoseconds)</span>
+<span class="sd">        - Row/column offsets</span>
+<span class="sd">        - Metadata attributes (name, description, uuid)</span>
+
+<span class="sd">        Sensor data should be written separately using sensor.to_hdf5()</span>
+<span class="sd">        """</span>
+        <span class="c1"># Set imagery attributes</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"description"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"uuid"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uuid</span><span class="p">)</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"row_offset"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_offset</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"column_offset"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_offset</span>
+
+        <span class="c1"># Save image data with chunking</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s2">"images"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+        <span class="c1"># Save frames</span>
+        <span class="n">group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s2">"frames"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
+
+        <span class="c1"># Save times if present</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Convert datetime64 to unix nanoseconds</span>
+            <span class="n">unix_nanoseconds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"datetime64[ns]"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+            <span class="n">group</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s2">"unix_nanoseconds"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">unix_nanoseconds</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="save_imagery_hdf5">
+<a class="viewcode-back" href="../../../api/imagery.html#vista.imagery.imagery.save_imagery_hdf5">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_imagery_hdf5</span><span class="p">(</span>
+    <span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">],</span>
+    <span class="n">sensor_imagery_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Imagery</span><span class="p">]],</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Save imagery data to HDF5 file with hierarchical sensor/imagery structure.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_path : Union[str, pathlib.Path]</span>
+<span class="sd">        Path to the HDF5 file to create</span>
+<span class="sd">    sensor_imagery_map : dict[str, list[Imagery]]</span>
+<span class="sd">        Dictionary mapping Sensor object names to lists of Imagery objects from that sensor</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The HDF5 file structure created is:</span>
+<span class="sd">    ```</span>
+<span class="sd">    root/</span>
+<span class="sd">    ├── [attrs] format_version, created</span>
+<span class="sd">    └── sensors/</span>
+<span class="sd">        ├── &lt;sensor_uuid&gt;/</span>
+<span class="sd">        │   ├── [attrs] name, uuid, sensor_type</span>
+<span class="sd">        │   ├── position/ (SampledSensor only)</span>
+<span class="sd">        │   ├── geolocation/ (if can_geolocate)</span>
+<span class="sd">        │   ├── radiometric/ (if calibration data exists)</span>
+<span class="sd">        │   └── imagery/</span>
+<span class="sd">        │       ├── &lt;imagery_uuid_1&gt;/</span>
+<span class="sd">        │       │   ├── [attrs] name, uuid, description, ...</span>
+<span class="sd">        │       └── &lt;imagery_uuid_2&gt;/</span>
+<span class="sd">        └── &lt;sensor_uuid_2&gt;/</span>
+<span class="sd">            └── ...</span>
+<span class="sd">    ```</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; sensor = SampledSensor(name="MySensor", ...)</span>
+<span class="sd">    &gt;&gt;&gt; imagery1 = Imagery(name="img1", sensor=sensor, ...)</span>
+<span class="sd">    &gt;&gt;&gt; imagery2 = Imagery(name="img2", sensor=sensor, ...)</span>
+<span class="sd">    &gt;&gt;&gt; save_imagery_hdf5("data.h5", {"MySensor": [imagery1, imagery2]})</span>
+<span class="sd">    """</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="c1"># Set root attributes</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"format_version"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1.7"</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"created"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">"now"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
+
+        <span class="c1"># Create sensors group</span>
+        <span class="n">sensors_group</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">"sensors"</span><span class="p">)</span>
+
+        <span class="c1"># Iterate through sensor names and their imagery</span>
+        <span class="k">for</span> <span class="n">sensor_name</span><span class="p">,</span> <span class="n">imagery_list</span> <span class="ow">in</span> <span class="n">sensor_imagery_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">imagery_list</span><span class="p">:</span>
+                <span class="k">continue</span>  <span class="c1"># Skip if no imagery for this sensor</span>
+
+            <span class="c1"># Get sensor from first imagery (all imagery in list should have same sensor)</span>
+            <span class="n">sensor</span> <span class="o">=</span> <span class="n">imagery_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sensor</span>
+
+            <span class="c1"># Create sensor group using UUID (guaranteed unique, no sanitization needed)</span>
+            <span class="n">sensor_group</span> <span class="o">=</span> <span class="n">sensors_group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sensor</span><span class="o">.</span><span class="n">uuid</span><span class="p">))</span>
+
+            <span class="c1"># Save sensor data</span>
+            <span class="n">sensor</span><span class="o">.</span><span class="n">to_hdf5</span><span class="p">(</span><span class="n">sensor_group</span><span class="p">)</span>
+
+            <span class="c1"># Create imagery subgroup</span>
+            <span class="n">imagery_group</span> <span class="o">=</span> <span class="n">sensor_group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">"imagery"</span><span class="p">)</span>
+
+            <span class="c1"># Save each imagery dataset</span>
+            <span class="k">for</span> <span class="n">imagery</span> <span class="ow">in</span> <span class="n">imagery_list</span><span class="p">:</span>
+                <span class="c1"># Create imagery group using UUID (guaranteed unique, no sanitization needed)</span>
+                <span class="n">img_group</span> <span class="o">=</span> <span class="n">imagery_group</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">imagery</span><span class="o">.</span><span class="n">uuid</span><span class="p">))</span>
+
+                <span class="c1"># Save imagery data</span>
+                <span class="n">imagery</span><span class="o">.</span><span class="n">to_hdf5</span><span class="p">(</span><span class="n">img_group</span><span class="p">)</span></div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../../../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

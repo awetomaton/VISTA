@@ -1,0 +1,1515 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="User Interface" href="interface.html"><link rel="prev" title="Object Detection" href="detections.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>Object Tracking - VISTA 1.13.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=06097209" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  --color-brand-primary: #2b5b84;
+  --color-brand-content: #2b5b84;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #5b9bd5;
+  --color-brand-content: #5b9bd5;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">VISTA 1.13.0</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">VISTA 1.13.0</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/quickstart.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imagery.html">Working with Imagery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features and Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="detections.html">Object Detection</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Object Tracking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interface.html">User Interface</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/imagery.html">Imagery Module</a><input aria-label="Toggle navigation of Imagery Module" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.imagery.imagery.Imagery.html">vista.imagery.imagery.Imagery</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/detections.html">Detections Module</a><input aria-label="Toggle navigation of Detections Module" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.detections.detector.Detector.html">vista.detections.detector.Detector</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/tracks.html">Tracks Module</a><input aria-label="Toggle navigation of Tracks Module" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.tracks.track.Track.html">vista.tracks.track.Track</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/algorithms.html">Algorithms Module</a><input aria-label="Toggle navigation of Algorithms Module" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.threshold.SimpleThreshold.html">vista.algorithms.detectors.threshold.SimpleThreshold</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.cfar.CFAR.html">vista.algorithms.detectors.cfar.CFAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.detectors.pstnn.PSTNN.html">vista.algorithms.detectors.pstnn.PSTNN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.simple_tracker.run_simple_tracker.html">vista.algorithms.trackers.simple_tracker.run_simple_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.kalman_tracker.run_kalman_tracker.html">vista.algorithms.trackers.kalman_tracker.run_kalman_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker.html">vista.algorithms.trackers.network_flow_tracker.run_network_flow_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker.html">vista.algorithms.trackers.tracklet_tracker.run_tracklet_tracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.temporal_median.TemporalMedian.html">vista.algorithms.background_removal.temporal_median.TemporalMedian</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.robust_pca.run_robust_pca.html">vista.algorithms.background_removal.robust_pca.run_robust_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal.html">vista.algorithms.background_removal.subspace_background_removal.subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal.html">vista.algorithms.background_removal.static_subspace_background_removal.static_subspace_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal.html">vista.algorithms.background_removal.static_median_background_removal.static_median_background_removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.background_removal.godec.godec.html">vista.algorithms.background_removal.godec.godec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.enhancement.coadd.Coaddition.html">vista.algorithms.enhancement.coadd.Coaddition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.interpolation.TrackInterpolation.html">vista.algorithms.tracks.interpolation.TrackInterpolation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter.html">vista.algorithms.tracks.savitzky_golay.SavitzkyGolayFilter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.algorithms.tracks.extraction.TrackExtraction.html">vista.algorithms.tracks.extraction.TrackExtraction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/transforms.html">Transforms Module</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/sensors.html">Sensors Module</a><input aria-label="Toggle navigation of Sensors Module" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sensor.Sensor.html">vista.sensors.sensor.Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/generated/vista.sensors.sampled_sensor.SampledSensor.html">vista.sensors.sampled_sensor.SampledSensor</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/widgets.html">Widgets Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/contributing.html">Contributing to VISTA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/architecture.html">Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_sensors.html">Custom Sensors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/custom_loaders.html">Custom Imagery Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Resources</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA">GitHub Repository</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/awetomaton/VISTA/issues">Issue Tracker</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/blob/main/docs/source/user_guide/tracks.rst?plain=true" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/awetomaton/VISTA/edit/main/docs/source/user_guide/tracks.rst" rel="edit" title="Edit this page">
+    <svg><use href="#svg-pencil"></use></svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="object-tracking">
+<h1>Object Tracking<a class="headerlink" href="#object-tracking" title="Link to this heading">¶</a></h1>
+<p>This guide covers creating, managing, and analyzing object tracks in VISTA. Tracks represent object trajectories across
+multiple frames, linking detections or manual observations to form continuous motion paths.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<section id="what-are-tracks">
+<h3>What are Tracks?<a class="headerlink" href="#what-are-tracks" title="Link to this heading">¶</a></h3>
+<p>A <strong>Track</strong> represents a single object’s trajectory across multiple frames. While detections identify objects at
+specific points in time, tracks link these observations to form continuous motion paths. Each track contains:</p>
+<ul class="simple">
+<li><p><strong>Temporal coordinates</strong>: Frame numbers or timestamps</p></li>
+<li><p><strong>Spatial coordinates</strong>: Pixel positions (row/column) or geodetic coordinates (lat/lon/alt)</p></li>
+<li><p><strong>Visualization properties</strong>: Color, marker style, line width, tail length</p></li>
+<li><p><strong>Motion metadata</strong>: Velocity estimates, quality metrics, length</p></li>
+<li><p><strong>Analysis data</strong>: Optional extraction metadata (image chips, signal masks)</p></li>
+</ul>
+<p>Tracks differ from detections in that they:</p>
+<ul class="simple">
+<li><p>Represent motion over time rather than static observations</p></li>
+<li><p>Support gap interpolation and smoothing operations</p></li>
+<li><p>Track single objects rather than multiple independent observations</p></li>
+<li><p>Enable trajectory analysis and prediction</p></li>
+</ul>
+</section>
+<section id="tracks-in-vista">
+<h3>Tracks in VISTA<a class="headerlink" href="#tracks-in-vista" title="Link to this heading">¶</a></h3>
+<p>VISTA provides two ways to create tracks:</p>
+<ol class="arabic simple">
+<li><p><strong>Manual track creation</strong>: Click points across frames to manually define trajectories</p></li>
+<li><p><strong>Automated tracking</strong>: Use tracking algorithms to link detections into tracks</p></li>
+</ol>
+<p>The application stores tracks in a hierarchical structure where each Sensor can have multiple Trackers, and each Tracker contains multiple Tracks. This organization allows you to:</p>
+<ul class="simple">
+<li><p>Compare results from different tracking algorithms</p></li>
+<li><p>Maintain tracks from different sensors separately</p></li>
+<li><p>Export and import tracks in CSV or HDF5 format</p></li>
+<li><p>Apply visualization and analysis operations to entire trackers</p></li>
+</ul>
+</section>
+</section>
+<section id="manual-track-creation">
+<span id="id1"></span><h2>Manual Track Creation<a class="headerlink" href="#manual-track-creation" title="Link to this heading">¶</a></h2>
+<section id="creating-tracks-manually">
+<h3>Creating Tracks Manually<a class="headerlink" href="#creating-tracks-manually" title="Link to this heading">¶</a></h3>
+<p>To create a track manually by clicking points across frames:</p>
+<ol class="arabic simple">
+<li><p>Open the <strong>Data Manager</strong> panel (Ctrl+D or View menu)</p></li>
+<li><p>Select the <strong>Tracks</strong> tab</p></li>
+<li><p>Select a Sensor from the dropdown</p></li>
+<li><p>Click <strong>Manual Track</strong> button</p></li>
+<li><p>Navigate through frames and click to add track points:
+- Left-click to add a point at the clicked location
+- Re-click a point to remove it</p></li>
+<li><p>Uncheck the <strong>Manual Track</strong> tool to complete the track.</p></li>
+</ol>
+<img alt="Create track" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_create.gif" />
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use keyboard shortcuts for efficient manual tracking:</p>
+<ul class="simple">
+<li><p>Use left/right or A/D keys to navigate frames</p></li>
+<li><p>Click near expected object locations</p></li>
+<li><p>Use the zoom tool (mouse wheel) for precise placement</p></li>
+<li><p>Click on a point again to delete it</p></li>
+</ul>
+</div>
+</section>
+<section id="loading-tracks-from-csv">
+<h3>Loading Tracks from CSV<a class="headerlink" href="#loading-tracks-from-csv" title="Link to this heading">¶</a></h3>
+<p>To load tracks from a CSV file:</p>
+<ol class="arabic simple">
+<li><p>In the Tracks panel, select a Sensor</p></li>
+<li><p>Click <strong>Load Tracks</strong> button</p></li>
+<li><p>Browse to your CSV file</p></li>
+<li><p>Tracks are loaded and added to the selected Sensor</p></li>
+</ol>
+<p>See <a class="reference internal" href="#tracks-csv-format"><span class="std std-ref">CSV Format</span></a> for CSV format details.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Alternatively users can drag and drop a detections file onto the <strong>Tracks</strong> panel in the <strong>Data Manager</strong>.</p>
+</div>
+</section>
+</section>
+<section id="tracking-algorithms">
+<span id="id2"></span><h2>Tracking Algorithms<a class="headerlink" href="#tracking-algorithms" title="Link to this heading">¶</a></h2>
+<p>VISTA provides four tracking algorithms for automatically linking detections into tracks. Access these through
+<strong>Algorithms &gt; Tracking</strong> in the main menu.</p>
+<img alt="Run trackers" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_trackers.gif" />
+<section id="simple-tracker">
+<span id="id3"></span><h3>Simple Tracker<a class="headerlink" href="#simple-tracker" title="Link to this heading">¶</a></h3>
+<p>The <strong>Simple Tracker</strong> is a nearest-neighbor tracker that uses frame-to-frame association with velocity prediction. It’s
+the easiest algorithm to use and requires minimal configuration.</p>
+<p><strong>How it Works</strong></p>
+<ol class="arabic simple">
+<li><p>Associates detections between consecutive frames based on proximity</p></li>
+<li><p>Uses linear velocity prediction for position estimates</p></li>
+<li><p>Creates new tracks for unassociated detections</p></li>
+<li><p>Deletes tracks after too many consecutive missed detections</p></li>
+<li><p>Automatically adapts search radius based on detection density</p></li>
+</ol>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><strong>Tracker Name</strong>: Name for the output tracker</p></li>
+<li><p><strong>Input Detectors</strong>: Select which detectors to use as input</p></li>
+<li><p><strong>Max Search Radius</strong>: Maximum distance (pixels) to search for associations. If not provided, automatically computed from detection statistics</p></li>
+<li><p><strong>Max Age</strong>: Maximum consecutive frames without detection before track deletion. If not provided, automatically computed from frame gaps</p></li>
+<li><p><strong>Min Track Length</strong>: Minimum number of detections required for a valid track (default: 5)</p></li>
+</ul>
+<p><strong>When to Use</strong></p>
+<ul class="simple">
+<li><p>Fast-moving objects with consistent motion</p></li>
+<li><p>Scenes with low to moderate detection density</p></li>
+<li><p>When you want automatic parameter adaptation</p></li>
+<li><p>As a baseline for comparison with more sophisticated algorithms</p></li>
+</ul>
+<p><strong>Example Usage</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.trackers.simple_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_simple_tracker</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'tracker_name'</span><span class="p">:</span> <span class="s1">'Simple Tracker'</span><span class="p">,</span>
+    <span class="s1">'max_search_radius'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span>      <span class="c1"># Optional: auto-computed if not provided</span>
+    <span class="s1">'max_age'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>                    <span class="c1"># Optional: auto-computed if not provided</span>
+    <span class="s1">'min_track_length'</span><span class="p">:</span> <span class="mi">5</span>
+<span class="p">}</span>
+
+<span class="c1"># Run tracker on detectors</span>
+<span class="n">track_data_list</span> <span class="o">=</span> <span class="n">run_simple_tracker</span><span class="p">(</span><span class="n">detectors</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="kalman-tracker">
+<span id="id4"></span><h3>Kalman Tracker<a class="headerlink" href="#kalman-tracker" title="Link to this heading">¶</a></h3>
+<p>The <strong>Kalman Tracker</strong> uses a constant velocity Kalman filter for state estimation, providing better prediction in the
+presence of measurement noise.</p>
+<p><strong>How it Works</strong></p>
+<ol class="arabic simple">
+<li><p>Maintains state estimate (position + velocity) with uncertainty covariance</p></li>
+<li><p>Predicts future positions using constant velocity motion model</p></li>
+<li><p>Associates detections using Mahalanobis distance (accounts for uncertainty)</p></li>
+<li><p>Updates state estimates when detections are associated</p></li>
+<li><p>Uses tentative track confirmation based on detection rate</p></li>
+</ol>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><strong>Tracker Name</strong>: Name for the output tracker</p></li>
+<li><p><strong>Input Detectors</strong>: Select which detectors to use as input</p></li>
+<li><p><strong>Process Noise</strong>: Process noise parameter for motion model (default: 1.0). Higher values allow more velocity variation</p></li>
+<li><p><strong>Measurement Noise</strong>: Measurement noise covariance (default: 1.0). Higher values indicate less trust in detection positions</p></li>
+<li><p><strong>Gating Distance</strong>: Mahalanobis distance threshold for association (default: 5.0). Larger values allow more distant associations</p></li>
+<li><p><strong>Min Detections</strong>: Minimum detections before track confirmation (default: 3)</p></li>
+<li><p><strong>Delete Threshold</strong>: Covariance trace threshold for track deletion (default: 100.0). Tracks with high uncertainty are deleted</p></li>
+</ul>
+<p><strong>When to Use</strong></p>
+<ul class="simple">
+<li><p>Noisy detection positions</p></li>
+<li><p>Objects with relatively constant velocity</p></li>
+<li><p>Scenes where prediction quality matters</p></li>
+<li><p>When you need probabilistic state estimation</p></li>
+</ul>
+<p><strong>Example Usage</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.trackers.kalman_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_kalman_tracker</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'tracker_name'</span><span class="p">:</span> <span class="s1">'Kalman Tracker'</span><span class="p">,</span>
+    <span class="s1">'process_noise'</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s1">'measurement_noise'</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s1">'gating_distance'</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>
+    <span class="s1">'min_detections'</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s1">'delete_threshold'</span><span class="p">:</span> <span class="mf">100.0</span>
+<span class="p">}</span>
+
+<span class="n">track_data_list</span> <span class="o">=</span> <span class="n">run_kalman_tracker</span><span class="p">(</span><span class="n">detectors</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="network-flow-tracker">
+<span id="id5"></span><h3>Network Flow Tracker<a class="headerlink" href="#network-flow-tracker" title="Link to this heading">¶</a></h3>
+<p>The <strong>Network Flow Tracker</strong> formulates tracking as a minimum-cost flow optimization problem, finding globally optimal
+track assignments rather than greedy frame-to-frame associations.</p>
+<p><strong>How it Works</strong></p>
+<ol class="arabic simple">
+<li><p>Builds a graph where nodes are detections and edges represent possible associations</p></li>
+<li><p>Assigns costs to edges based on distance, smoothness, and temporal gaps</p></li>
+<li><p>Adds entrance/exit costs to control track initiation/termination</p></li>
+<li><p>Uses Bellman-Ford algorithm to find minimum-cost flow from source to sink</p></li>
+<li><p>Reconstructs tracks from flow solution</p></li>
+</ol>
+<p><strong>Key Features</strong></p>
+<ul class="simple">
+<li><p><strong>Negative link costs</strong> incentivize longer tracks over many short tracks</p></li>
+<li><p><strong>Smoothness penalties</strong> encourage constant-velocity motion</p></li>
+<li><p><strong>Global optimization</strong> finds better solutions than greedy association</p></li>
+<li><p><strong>Gap bridging</strong> can link detections across multiple frames</p></li>
+</ul>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><strong>Tracker Name</strong>: Name for the output tracker</p></li>
+<li><p><strong>Input Detectors</strong>: Select which detectors to use as input</p></li>
+<li><p><strong>Max Gap</strong>: Maximum frame gap to search for associations (default: 5)</p></li>
+<li><p><strong>Max Distance</strong>: Maximum spatial distance for associations (default: 50.0 pixels)</p></li>
+<li><p><strong>Entrance Cost</strong>: Cost for starting a new track (default: 50.0). Higher values prefer longer tracks</p></li>
+<li><p><strong>Exit Cost</strong>: Cost for ending a track (default: 50.0). Higher values prefer longer tracks</p></li>
+<li><p><strong>Min Track Length</strong>: Minimum detections for a valid track (default: 3)</p></li>
+</ul>
+<p><strong>When to Use</strong></p>
+<ul class="simple">
+<li><p>Complex scenarios with occlusions or detection gaps</p></li>
+<li><p>When global optimization is preferred over local greedy decisions</p></li>
+<li><p>Scenarios where you want to minimize fragmented tracks</p></li>
+<li><p>When track smoothness is important</p></li>
+</ul>
+<p><strong>Example Usage</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.trackers.network_flow_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_network_flow_tracker</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'tracker_name'</span><span class="p">:</span> <span class="s1">'Network Flow'</span><span class="p">,</span>
+    <span class="s1">'max_gap'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="s1">'max_distance'</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>
+    <span class="s1">'entrance_cost'</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>
+    <span class="s1">'exit_cost'</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>
+    <span class="s1">'min_track_length'</span><span class="p">:</span> <span class="mi">3</span>
+<span class="p">}</span>
+
+<span class="n">track_data_list</span> <span class="o">=</span> <span class="n">run_network_flow_tracker</span><span class="p">(</span><span class="n">detectors</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tracklet-tracker">
+<span id="id6"></span><h3>Tracklet Tracker<a class="headerlink" href="#tracklet-tracker" title="Link to this heading">¶</a></h3>
+<p>The <strong>Tracklet Tracker</strong> uses a two-stage hierarchical approach optimized for high false alarm scenarios. It first forms
+high-confidence “tracklets” with strict criteria, then links tracklets using global optimization.</p>
+<p><strong>How it Works</strong></p>
+<p><strong>Stage 1: Tracklet Formation</strong></p>
+<ol class="arabic simple">
+<li><p>Associates detections using strict criteria (small search radius, velocity consistency)</p></li>
+<li><p>Implements “M out of N” logic (allows small detection gaps)</p></li>
+<li><p>Filters tracklets by detection rate and quality score</p></li>
+<li><p>Only retains high-confidence trajectory segments</p></li>
+</ol>
+<p><strong>Stage 2: Tracklet Linking</strong></p>
+<ol class="arabic simple">
+<li><p>Extrapolates tracklets forward/backward in time</p></li>
+<li><p>Scores potential links based on position and velocity consistency</p></li>
+<li><p>Uses Hungarian algorithm for optimal non-overlapping links</p></li>
+<li><p>Combines linked tracklets into final tracks</p></li>
+</ol>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><strong>Tracker Name</strong>: Name for the output tracker</p></li>
+<li><p><strong>Input Detectors</strong>: Select which detectors to use as input</p></li>
+<li><p><strong>Initial Search Radius</strong>: Max distance for tracklet formation (default: 10.0 pixels). Keep small to avoid false associations</p></li>
+<li><p><strong>Max Velocity Change</strong>: Max velocity change for tracklet formation (default: 5.0 pixels/frame). Enforces smooth motion</p></li>
+<li><p><strong>Min Tracklet Length</strong>: Minimum detections for valid tracklet (default: 3)</p></li>
+<li><p><strong>Max Consecutive Misses</strong>: Max consecutive missed detections in Stage 1 (default: 2)</p></li>
+<li><p><strong>Min Detection Rate</strong>: Minimum detection rate (hits/age) for tracklets (default: 0.6)</p></li>
+<li><p><strong>Max Linking Gap</strong>: Maximum frame gap to link tracklets (default: 10)</p></li>
+<li><p><strong>Linking Search Radius</strong>: Max distance for tracklet linking (default: 30.0 pixels)</p></li>
+<li><p><strong>Smoothness Weight</strong>: Weight for smoothness in linking cost (default: 1.0)</p></li>
+<li><p><strong>Min Track Length</strong>: Minimum detections for final track (default: 5)</p></li>
+</ul>
+<p><strong>When to Use</strong></p>
+<ul class="simple">
+<li><p><strong>High false alarm scenarios</strong> (100:1 false alarm ratio or higher)</p></li>
+<li><p>Real targets with smooth, consistent motion</p></li>
+<li><p>When you want to filter out spurious detections early</p></li>
+<li><p>Scenarios where tracklet-based reasoning is beneficial</p></li>
+</ul>
+<p><strong>Example Usage</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.trackers.tracklet_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_tracklet_tracker</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'tracker_name'</span><span class="p">:</span> <span class="s1">'Tracklet Tracker'</span><span class="p">,</span>
+    <span class="s1">'initial_search_radius'</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="s1">'max_velocity_change'</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>
+    <span class="s1">'min_tracklet_length'</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s1">'max_consecutive_misses'</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s1">'min_detection_rate'</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">,</span>
+    <span class="s1">'max_linking_gap'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s1">'linking_search_radius'</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span>
+    <span class="s1">'smoothness_weight'</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s1">'min_track_length'</span><span class="p">:</span> <span class="mi">5</span>
+<span class="p">}</span>
+
+<span class="n">track_data_list</span> <span class="o">=</span> <span class="n">run_tracklet_tracker</span><span class="p">(</span><span class="n">detectors</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="algorithm-comparison">
+<h3>Algorithm Comparison<a class="headerlink" href="#algorithm-comparison" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper colwidths-given docutils container" id="id9">
+<table class="docutils align-default" id="id9">
+<caption><span class="caption-text">Tracking Algorithm Comparison</span><a class="headerlink" href="#id9" title="Link to this table">¶</a></caption>
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 20.0%" />
+<col style="width: 15.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Algorithm</p></th>
+<th class="head"><p>Best For</p></th>
+<th class="head"><p>Strengths</p></th>
+<th class="head"><p>Weaknesses</p></th>
+<th class="head"><p>Complexity</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Simple</p></td>
+<td><p>Fast objects, low clutter</p></td>
+<td><p>Fast, automatic parameters</p></td>
+<td><p>Local associations only</p></td>
+<td><p>Low</p></td>
+</tr>
+<tr class="row-odd"><td><p>Kalman</p></td>
+<td><p>Noisy measurements</p></td>
+<td><p>Probabilistic, smooth predictions</p></td>
+<td><p>Assumes constant velocity</p></td>
+<td><p>Medium</p></td>
+</tr>
+<tr class="row-even"><td><p>Network Flow</p></td>
+<td><p>Complex scenarios, gaps</p></td>
+<td><p>Global optimization, gap bridging</p></td>
+<td><p>Higher computational cost</p></td>
+<td><p>High</p></td>
+</tr>
+<tr class="row-odd"><td><p>Tracklet</p></td>
+<td><p>High false alarms</p></td>
+<td><p>Robust to clutter, two-stage filtering</p></td>
+<td><p>Many parameters to tune</p></td>
+<td><p>High</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="tracks-panel-overview">
+<h2>Tracks Panel Overview<a class="headerlink" href="#tracks-panel-overview" title="Link to this heading">¶</a></h2>
+<p>The <strong>Tracks</strong> tab in the Data Manager provides tools for viewing, modifying, and analyzing tracks. The Tracks panel
+displays all tracks for the selected Sensor in a table with columns:</p>
+<ul class="simple">
+<li><p><strong>Visible</strong>: Checkbox to show/hide track</p></li>
+<li><p><strong>Tracker</strong>: Tracker name (resizable)</p></li>
+<li><p><strong>Name</strong>: Track identifier (resizable)</p></li>
+<li><p><strong>Labels</strong>: Text labels for categorization (resizable)</p></li>
+<li><p><strong>Length</strong>: Total trajectory length in pixels</p></li>
+<li><p><strong>Color</strong>: Track color (click to change)</p></li>
+<li><p><strong>Marker</strong>: Marker style for current position</p></li>
+<li><p><strong>Line Width</strong>: Width of trajectory line</p></li>
+<li><p><strong>Marker Size</strong>: Size of position marker</p></li>
+<li><p><strong>Tail Length</strong>: Number of previous frames to show (0 = all)</p></li>
+<li><p><strong>Complete</strong>: Show entire track regardless of current frame</p></li>
+<li><p><strong>Show Line</strong>: Whether to draw connecting line</p></li>
+<li><p><strong>Line Style</strong>: Line style (solid, dashed, etc.)</p></li>
+<li><p><strong>Extracted</strong>: Indicates what track has been extracted</p></li>
+<li><p><strong>Avg SNR</strong>: Average target signal-to-noise ratio (resizable)</p></li>
+<li><p><strong>Show Uncertainty</strong>: Toggle track uncertainty ellipse on/off</p></li>
+</ul>
+<section id="reorder-hide-columns">
+<h3>Reorder / Hide Columns<a class="headerlink" href="#reorder-hide-columns" title="Link to this heading">¶</a></h3>
+<p>Users can reorder columns by clicking and dragging. Users can hide columns by right clicking on the table header and
+navigating to the “Show/Hide Columns” menu.</p>
+<img alt="Bulk track actions" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_reorder_columns.gif" />
+</section>
+<section id="bulk-actions">
+<h3>Bulk Actions<a class="headerlink" href="#bulk-actions" title="Link to this heading">¶</a></h3>
+<p>Apply property changes to multiple selected tracks:</p>
+<ol class="arabic simple">
+<li><p>Select tracks in the table (Ctrl+Click or Shift+Click for multiple)</p></li>
+<li><p>Choose a <strong>Property</strong> from the dropdown (Visibility, Color, Marker, etc.)</p></li>
+<li><p>Set the <strong>Value</strong> using the appropriate control</p></li>
+<li><p>Click <strong>Apply to Selected</strong></p></li>
+</ol>
+<img alt="Bulk track actions" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_bulk.gif" />
+<p>This is useful for:</p>
+<ul class="simple">
+<li><p>Hiding multiple tracks at once</p></li>
+<li><p>Applying consistent styling across tracks</p></li>
+<li><p>Batch labeling tracks</p></li>
+<li><p>Setting tail length for multiple tracks</p></li>
+</ul>
+<section id="order-by-multiple-columns">
+<h4>Order By Multiple Columns<a class="headerlink" href="#order-by-multiple-columns" title="Link to this heading">¶</a></h4>
+<p>Press the</p>
+<img alt="Order by multiple columns" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_orderby.gif" />
+</section>
+<section id="undo">
+<h4>Undo<a class="headerlink" href="#undo" title="Link to this heading">¶</a></h4>
+<p>Users can also undo previous actions in the Track Panel by pressing the Undo button or pressing <code class="docutils literal notranslate"><span class="pre">ctrl</span></code> + <code class="docutils literal notranslate"><span class="pre">z</span></code>. The
+undo depth is configurable through the global VISTA settings on the Data Manager tab.</p>
+</section>
+</section>
+<section id="track-selection-actions">
+<h3>Track Selection Actions<a class="headerlink" href="#track-selection-actions" title="Link to this heading">¶</a></h3>
+<p>These actions work on one or more selected tracks:</p>
+<section id="export-tracks">
+<h4>Export Tracks<a class="headerlink" href="#export-tracks" title="Link to this heading">¶</a></h4>
+<p>Export selected tracks to CSV file with all coordinates and styling.</p>
+</section>
+<section id="copy-to-sensor">
+<h4>Copy to Sensor<a class="headerlink" href="#copy-to-sensor" title="Link to this heading">¶</a></h4>
+<p>Copy selected tracks to a different sensor or the same sensor (useful for comparing across sensors).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For real world applications, copying tracks between sensors may require mapping tracks in one sensor to
+another through some transform operation. The functionality built into VISTA directly copies the tracks’ frames,
+rows, columns. It is left to users to add any transforms needed for their real-world applications.</p>
+</div>
+</section>
+<section id="merge-selected">
+<h4>Merge Selected<a class="headerlink" href="#merge-selected" title="Link to this heading">¶</a></h4>
+<p>To combine multiple tracks into one:</p>
+<ol class="arabic simple">
+<li><p>Select two or more tracks in the Tracks panel</p></li>
+<li><p>Click <strong>Merge Selected</strong></p></li>
+<li><p>A new track is created containing all points from selected tracks</p></li>
+<li><p>Points are automatically sorted by frame number</p></li>
+<li><p>Original tracks are preserved</p></li>
+</ol>
+<img alt="Bulk track actions" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_merge.gif" />
+<p>Use cases:</p>
+<ul class="simple">
+<li><p>Combining fragmented tracks from the same object</p></li>
+<li><p>Manually fixing tracking gaps</p></li>
+<li><p>Consolidating results from multiple tracking runs</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Merging tracks does not remove duplicate frames. If tracks overlap in time, you may need to manually edit the merged result.</p>
+</div>
+</section>
+<section id="delete-selected">
+<h4>Delete Selected<a class="headerlink" href="#delete-selected" title="Link to this heading">¶</a></h4>
+<p>Remove selected tracks from the tracker</p>
+</section>
+<section id="label-selected">
+<h4>Label Selected<a class="headerlink" href="#label-selected" title="Link to this heading">¶</a></h4>
+<p>Apply labels to selected tracks for categorization</p>
+</section>
+<section id="plot-track-details">
+<h4>Plot Track Details<a class="headerlink" href="#plot-track-details" title="Link to this heading">¶</a></h4>
+<p>Open plotting windows showing track details as a static plot or animated over time.</p>
+</section>
+<section id="manually-reorder-columns">
+<span id="track-operations"></span><h4>Manually Reorder Columns<a class="headerlink" href="#manually-reorder-columns" title="Link to this heading">¶</a></h4>
+<p>Users can manually re-order columns by selecting rows in the table content and dragging them. Rows cannot be dragged
+from the row header.</p>
+<img alt="Track reordering" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_reorder.gif" />
+</section>
+</section>
+<section id="id7">
+<h3>Track Operations<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<p>These actions require selecting exactly one track.</p>
+<section id="split-track">
+<h4>Split Track<a class="headerlink" href="#split-track" title="Link to this heading">¶</a></h4>
+<p>To split a track at a specific frame:</p>
+<ol class="arabic simple">
+<li><p>Select a single track in the Tracks panel</p></li>
+<li><p>Navigate to the frame number where the split should occur</p></li>
+<li><p>Click <strong>Split Track</strong></p></li>
+</ol>
+<img alt="Split track" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_split.gif" />
+<p>Use cases:</p>
+<ul class="simple">
+<li><p>Correcting tracking errors where two objects were merged</p></li>
+<li><p>Isolating specific trajectory segments for analysis</p></li>
+<li><p>Removing problematic sections while preserving good data</p></li>
+</ul>
+</section>
+<section id="edit-track">
+<h4>Edit Track<a class="headerlink" href="#edit-track" title="Link to this heading">¶</a></h4>
+<p>Interactive track editing allows manual refinement:</p>
+<ol class="arabic simple">
+<li><p>Select a single track</p></li>
+<li><p>Press <strong>Edit Track</strong></p></li>
+<li><p>Edit track points:</p>
+<ul class="simple">
+<li><p><strong>Add point</strong>: Navigate to frame, Ctrl+Click at desired location</p></li>
+<li><p><strong>Delete point</strong>: Click on point that already exists</p></li>
+<li><p><strong>Navigate</strong>: Use left/right arrow keys and A/D to change frames</p></li>
+</ul>
+</li>
+<li><p>Uncheck <strong>Edit Track</strong> to complete edited track</p></li>
+</ol>
+<img alt="Split track" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_edit.gif" />
+<p>Tips for editing:</p>
+<ul class="simple">
+<li><p>Zoom in for precise positioning</p></li>
+<li><p>Use keyboard navigation for efficiency</p></li>
+<li><p>Changes are shown in real-time</p></li>
+</ul>
+</section>
+</section>
+</section>
+<section id="track-extraction">
+<span id="id8"></span><h2>Track Extraction<a class="headerlink" href="#track-extraction" title="Link to this heading">¶</a></h2>
+<p>Track extraction analyzes imagery around track points to extract signal information and refine positions.</p>
+<section id="what-is-track-extraction">
+<h3>What is Track Extraction?<a class="headerlink" href="#what-is-track-extraction" title="Link to this heading">¶</a></h3>
+<p>For each track point, extraction:</p>
+<ol class="arabic simple">
+<li><p>Extracts a square image chip centered on the track position</p></li>
+<li><p>Detects signal pixels using CFAR-like thresholding</p></li>
+<li><p>Computes local noise statistics from background annulus</p></li>
+<li><p>Optionally updates track coordinates to signal blob centroid</p></li>
+</ol>
+<img alt="Extract tracks" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_extraction.gif" />
+<p>Extraction results are stored in the track’s <code class="docutils literal notranslate"><span class="pre">extraction_metadata</span></code> and can be:</p>
+<ul class="simple">
+<li><p>Viewed as overlays in the viewer</p></li>
+<li><p>Edited interactively to refine signal masks</p></li>
+<li><p>Exported for external analysis</p></li>
+</ul>
+</section>
+<section id="running-track-extraction">
+<h3>Running Track Extraction<a class="headerlink" href="#running-track-extraction" title="Link to this heading">¶</a></h3>
+<p>To extract signal information for a track:</p>
+<ol class="arabic">
+<li><p>Select a single track in the Tracks panel</p></li>
+<li><p>Press <strong>Extract</strong> button</p></li>
+<li><p>Configure extraction parameters:</p>
+<dl class="simple">
+<dt><strong>Chip Parameters</strong></dt><dd><ul class="simple">
+<li><p><strong>Chip Radius</strong>: Radius of square chip to extract (pixels)</p></li>
+<li><p>Chip diameter = 2 × radius + 1</p></li>
+</ul>
+</dd>
+<dt><strong>Background Estimation</strong></dt><dd><ul class="simple">
+<li><p><strong>Background Radius</strong>: Outer radius for noise calculation (pixels)</p></li>
+<li><p><strong>Ignore Radius</strong>: Inner guard region to exclude (pixels)</p></li>
+<li><p><strong>Annulus Shape</strong>: Circular or square background region</p></li>
+</ul>
+</dd>
+<dt><strong>Detection Parameters</strong></dt><dd><ul class="simple">
+<li><p><strong>Threshold Deviation</strong>: Number of standard deviations above mean for signal detection</p></li>
+<li><p><strong>Search Radius</strong>: Only keep signal blobs within central search region (optional)</p></li>
+</ul>
+</dd>
+<dt><strong>Centroid Update</strong></dt><dd><ul class="simple">
+<li><p><strong>Update Centroids</strong>: If checked, refine track positions using signal blob centroids</p></li>
+<li><p><strong>Max Centroid Shift</strong>: Maximum allowed position update (pixels)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Press <strong>Run</strong></p></li>
+<li><p>Extraction metadata is stored in the track</p></li>
+</ol>
+</section>
+<section id="viewing-extraction-results">
+<h3>Viewing Extraction Results<a class="headerlink" href="#viewing-extraction-results" title="Link to this heading">¶</a></h3>
+<p>To view extracted signal pixels:</p>
+<ol class="arabic simple">
+<li><p>Select a track with extraction metadata</p></li>
+<li><p>Press <strong>View Extraction</strong></p></li>
+<li><p>Navigate through frames to see signal pixel overlay</p></li>
+<li><p>Signal pixels are highlighted in the viewer</p></li>
+<li><p>Press <strong>View Extraction</strong> again to hide overlay</p></li>
+</ol>
+</section>
+<section id="editing-extraction-results">
+<h3>Editing Extraction Results<a class="headerlink" href="#editing-extraction-results" title="Link to this heading">¶</a></h3>
+<p>To manually refine signal masks:</p>
+<ol class="arabic simple">
+<li><p>Select an extracted track</p></li>
+<li><p>Press <strong>Edit Extraction</strong></p></li>
+<li><p>Paint or erase signal pixels:</p>
+<ul class="simple">
+<li><p><strong>Paint</strong>: Left-click and drag to mark pixels as signal</p></li>
+<li><p><strong>Erase</strong>: Right-click and drag to remove signal pixels</p></li>
+<li><p><strong>Adjust brush</strong>: Use mouse wheel to change brush size</p></li>
+<li><p><strong>Navigate</strong>: Arrow keys or Page Up/Down to change frames</p></li>
+</ul>
+</li>
+<li><p>Press <strong>Save Changes</strong> to update extraction metadata</p></li>
+<li><p>Press <strong>Cancel</strong> or press Escape to discard changes</p></li>
+</ol>
+<img alt="Edit extracted tracks" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_edit_extraction.gif" />
+<p>Use cases:</p>
+<ul class="simple">
+<li><p>Correcting false positives in signal detection</p></li>
+<li><p>Adding missed signal pixels</p></li>
+<li><p>Refining masks before exporting for machine learning</p></li>
+</ul>
+</section>
+</section>
+<section id="track-uncertainty-visualization">
+<span id="track-uncertainty"></span><h2>Track Uncertainty Visualization<a class="headerlink" href="#track-uncertainty-visualization" title="Link to this heading">¶</a></h2>
+<p>Tracks can optionally include positional uncertainty information, displayed as ellipses around track points.</p>
+<section id="what-is-track-uncertainty">
+<h3>What is Track Uncertainty?<a class="headerlink" href="#what-is-track-uncertainty" title="Link to this heading">¶</a></h3>
+<p>Track uncertainty represents the estimated position error for each track point, typically arising from:</p>
+<ul class="simple">
+<li><p>Detection noise and measurement error</p></li>
+<li><p>Tracking filter state covariance (e.g., Kalman filter)</p></li>
+<li><p>Interpolation or extrapolation uncertainty</p></li>
+<li><p>Sensor geolocation accuracy</p></li>
+</ul>
+<img alt="Track covariance" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_covariance.gif" />
+<p><strong>Covariance Matrix Representation</strong></p>
+<p>VISTA stores uncertainty as a 2D position covariance matrix with three elements:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}\Sigma = \begin{bmatrix}
+C_{00} &amp; C_{01} \\
+C_{01} &amp; C_{11}
+\end{bmatrix}\end{split}\]</div>
+</div>
+<p>Where:
+- <strong>C₀₀</strong> (Covariance 00): Row variance (pixels²)
+- <strong>C₀₁</strong> (Covariance 01): Row-column covariance (pixels²)
+- <strong>C₁₁</strong> (Covariance 11): Column variance (pixels²)</p>
+<p>This format directly matches the output from most tracking algorithms (Kalman filters, particle filters) and
+unambiguously represents any 2D Gaussian uncertainty distribution.</p>
+<p><strong>Visualization</strong></p>
+<p>Uncertainty is visualized as an ellipse at each track point, where:</p>
+<ul class="simple">
+<li><p>Ellipse axes are derived from the covariance matrix eigenvalues</p></li>
+<li><p>Ellipse orientation shows the direction of maximum uncertainty</p></li>
+<li><p>Ellipse color matches the track color</p></li>
+<li><p>Line style is configurable (default: dashed)</p></li>
+</ul>
+</section>
+<section id="enabling-uncertainty-display">
+<h3>Enabling Uncertainty Display<a class="headerlink" href="#enabling-uncertainty-display" title="Link to this heading">¶</a></h3>
+<p>To show uncertainty ellipses for a track:</p>
+<ol class="arabic simple">
+<li><p>Ensure track has uncertainty data (loaded from CSV or generated by tracking algorithm)</p></li>
+<li><p>In the Tracks panel, check the <strong>Show Uncertainty</strong> checkbox for that track</p></li>
+<li><p>Ellipses will appear at each visible track point</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The “Show Uncertainty” checkbox is only enabled for tracks that have uncertainty data.</p>
+</div>
+</section>
+<section id="configuring-uncertainty-display">
+<h3>Configuring Uncertainty Display<a class="headerlink" href="#configuring-uncertainty-display" title="Link to this heading">¶</a></h3>
+<p>Customize uncertainty ellipse appearance in <strong>Settings &gt; Track Visualization</strong>:</p>
+<ul class="simple">
+<li><p><strong>Line Style</strong>: Solid, Dashed (default), Dotted, Dash-Dot, Dash-Dot-Dot</p></li>
+<li><p><strong>Line Width</strong>: 1-10 pixels (default: 1)</p></li>
+<li><p><strong>Scale Factor</strong>: 0.1-10.0 (default: 1.0) - multiplier for ellipse size</p></li>
+</ul>
+<p>The scale factor allows you to visualize different confidence levels:</p>
+<ul class="simple">
+<li><p>Scale = 1.0: 1-sigma ellipse (~68% confidence)</p></li>
+<li><p>Scale = 2.0: 2-sigma ellipse (~95% confidence)</p></li>
+<li><p>Scale = 3.0: 3-sigma ellipse (~99.7% confidence)</p></li>
+</ul>
+</section>
+</section>
+<section id="track-analysis-and-refinement">
+<span id="track-analysis"></span><h2>Track Analysis and Refinement<a class="headerlink" href="#track-analysis-and-refinement" title="Link to this heading">¶</a></h2>
+<p>VISTA provides several algorithms for analyzing and refining track trajectories, accessible through
+<strong>Algorithms &gt; Track Analysis</strong> in the main menu.</p>
+<img alt="Interpolate tracks" class="align-center" src="https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_interpolate.gif" />
+<section id="interpolation">
+<h3>Interpolation<a class="headerlink" href="#interpolation" title="Link to this heading">¶</a></h3>
+<p><strong>Track Interpolation</strong> fills gaps in track data by interpolating missing frames between existing track points.</p>
+<p><strong>How it Works</strong></p>
+<ul class="simple">
+<li><p>Identifies missing frames between first and last tracked frames</p></li>
+<li><p>Uses scipy interpolation to estimate positions for missing frames</p></li>
+<li><p>Creates a new track with continuous frame coverage</p></li>
+</ul>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><strong>Track</strong>: Select track to interpolate</p></li>
+<li><p><strong>Method</strong>: Interpolation method</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">linear</span></code>: Linear interpolation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nearest</span></code>: Nearest-neighbor</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">quadratic</span></code>: Quadratic spline</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cubic</span></code>: Cubic spline</p></li>
+</ul>
+</li>
+<li><p><strong>Output Name</strong>: Name for interpolated track</p></li>
+</ul>
+<p><strong>When to Use</strong></p>
+<ul class="simple">
+<li><p>Filling detection gaps in sparse tracks</p></li>
+<li><p>Creating uniform time sampling for analysis</p></li>
+<li><p>Preparing tracks for smoothing algorithms</p></li>
+</ul>
+<p><strong>Example</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.tracks.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">TrackInterpolation</span>
+
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">TrackInterpolation</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">'cubic'</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">interpolator</span><span class="p">()</span>
+<span class="n">interpolated_track</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">'interpolated_track'</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="smoothing-savitzky-golay">
+<h3>Smoothing (Savitzky-Golay)<a class="headerlink" href="#smoothing-savitzky-golay" title="Link to this heading">¶</a></h3>
+<p><strong>Savitzky-Golay Filter</strong> smooths track positions while preserving trajectory features better than simple averaging.</p>
+<p><strong>How it Works</strong></p>
+<ul class="simple">
+<li><p>Fits polynomial to successive windows of track points</p></li>
+<li><p>Uses least-squares to determine optimal polynomial coefficients</p></li>
+<li><p>Preserves features like relative maxima, minima, and width</p></li>
+</ul>
+<p><strong>Parameters</strong></p>
+<ul class="simple">
+<li><p><strong>Track</strong>: Select track to smooth</p></li>
+<li><p><strong>Radius</strong>: Radius of smoothing window (window length = 2 × radius + 1)</p></li>
+<li><p><strong>Poly Order</strong>: Polynomial order (must be &lt; window length)</p></li>
+<li><p><strong>Output Name</strong>: Name for smoothed track</p></li>
+</ul>
+<p><strong>When to Use</strong></p>
+<ul class="simple">
+<li><p>Noisy track positions from detections</p></li>
+<li><p>Before computing velocities or accelerations</p></li>
+<li><p>Visualizing underlying motion trends</p></li>
+</ul>
+<p><strong>Constraints</strong></p>
+<ul class="simple">
+<li><p>Requires at least 3 track points</p></li>
+<li><p>Window length must be ≤ number of points</p></li>
+<li><p>Polynomial order must be &lt; window length</p></li>
+</ul>
+<p><strong>Example</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">vista.algorithms.tracks.savitzky_golay</span><span class="w"> </span><span class="kn">import</span> <span class="n">SavitzkyGolayFilter</span>
+
+<span class="nb">filter</span> <span class="o">=</span> <span class="n">SavitzkyGolayFilter</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">()</span>
+<span class="n">smoothed_track</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">'smoothed_track'</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="exporting-and-importing-tracks">
+<h2>Exporting and Importing Tracks<a class="headerlink" href="#exporting-and-importing-tracks" title="Link to this heading">¶</a></h2>
+<section id="csv-format">
+<span id="tracks-csv-format"></span><h3>CSV Format<a class="headerlink" href="#csv-format" title="Link to this heading">¶</a></h3>
+<p>Tracks can be exported to and imported from CSV files with the following format:</p>
+<p><strong>Required Columns</strong></p>
+<dl class="simple">
+<dt>One temporal coordinate (choose one):</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Frames</span></code>: Frame numbers (preferred)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Times</span></code>: Timestamps in ISO format (requires sensor with imagery times)</p></li>
+</ul>
+</dd>
+<dt>One spatial coordinate system (choose one):</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Rows</span></code> and <code class="docutils literal notranslate"><span class="pre">Columns</span></code>: Pixel coordinates (preferred)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Latitude</span> <span class="pre">(deg)</span></code>, <code class="docutils literal notranslate"><span class="pre">Longitude</span> <span class="pre">(deg)</span></code>, <code class="docutils literal notranslate"><span class="pre">Altitude</span> <span class="pre">(km)</span></code>: Geodetic coordinates (requires sensor with geolocation)</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Optional Columns</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Track</span></code>: Track name (required for multi-track files)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Tracker</span></code>: Tracker name</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Color</span></code>: PyQtGraph color string (e.g., ‘r’, ‘g’, ‘b’, ‘#FF0000’)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Marker</span></code>: Marker style (‘o’, ‘s’, ‘t’, ‘d’, ‘+’, ‘x’, ‘star’)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Line</span> <span class="pre">Width</span></code>: Integer line width</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Marker</span> <span class="pre">Size</span></code>: Integer marker size</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Visible</span></code>: Boolean visibility</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Complete</span></code>: Boolean to show entire track</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Show</span> <span class="pre">Line</span></code>: Boolean to draw connecting line</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Line</span> <span class="pre">Style</span></code>: Line style string (‘SolidLine’, ‘DashLine’, ‘DotLine’, ‘DashDotLine’, ‘DashDotDotLine’)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Tail</span> <span class="pre">Length</span></code>: Integer (0 = show all history)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Labels</span></code>: Comma-separated label strings</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Covariance</span> <span class="pre">00</span></code>: Position covariance matrix element (row variance, in pixels²)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Covariance</span> <span class="pre">01</span></code>: Position covariance matrix element (row-column covariance, in pixels²)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Covariance</span> <span class="pre">11</span></code>: Position covariance matrix element (column variance, in pixels²)</p></li>
+</ul>
+<p><strong>Example CSV (Pixel Coordinates)</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track,Frames,Rows,Columns,Color,Marker,Visible
+Object_1,100,250.5,300.2,r,o,True
+Object_1,101,252.3,305.8,r,o,True
+Object_1,102,254.1,311.4,r,o,True
+Object_2,100,180.2,420.5,g,s,True
+Object_2,101,182.5,422.1,g,s,True
+</pre></div>
+</div>
+<p><strong>Example CSV (Geodetic Coordinates)</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track,Frames,Latitude (deg),Longitude (deg),Altitude (km),Color
+Satellite_1,100,38.5,77.0,400.0,y
+Satellite_1,101,38.6,77.1,401.0,y
+Satellite_1,102,38.7,77.2,402.0,y
+</pre></div>
+</div>
+<p><strong>Example CSV (Time-based)</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track,Times,Rows,Columns,Labels
+Target_A,2024-01-15T10:30:00.000,250.5,300.2,"aircraft,commercial"
+Target_A,2024-01-15T10:30:01.000,252.3,305.8,"aircraft,commercial"
+Target_A,2024-01-15T10:30:02.000,254.1,311.4,"aircraft,commercial"
+</pre></div>
+</div>
+<p><strong>Example CSV (With Uncertainty)</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Track,Frames,Rows,Columns,Covariance 00,Covariance 01,Covariance 11,Color
+Track_1,100,250.5,300.2,4.0,0.5,2.25,r
+Track_1,101,252.3,305.8,4.2,0.6,2.5,r
+Track_1,102,254.1,311.4,4.5,0.7,2.8,r
+</pre></div>
+</div>
+</section>
+<section id="loading-from-csv">
+<h3>Loading from CSV<a class="headerlink" href="#loading-from-csv" title="Link to this heading">¶</a></h3>
+<p>Via GUI:</p>
+<ol class="arabic simple">
+<li><p>Open Data Manager &gt; Tracks tab</p></li>
+<li><p>Select a Sensor</p></li>
+<li><p>Press <strong>Load Tracks</strong></p></li>
+<li><p>Browse to CSV file</p></li>
+<li><p>Tracks are loaded and added to the sensor</p></li>
+</ol>
+<p>Via Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vista.tracks.track</span><span class="w"> </span><span class="kn">import</span> <span class="n">Track</span>
+
+<span class="c1"># Load CSV</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">'tracks.csv'</span><span class="p">)</span>
+
+<span class="c1"># Create tracks from DataFrame</span>
+<span class="k">for</span> <span class="n">track_name</span><span class="p">,</span> <span class="n">track_df</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'Track'</span><span class="p">):</span>
+    <span class="n">track</span> <span class="o">=</span> <span class="n">Track</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">track_df</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">track_name</span><span class="p">)</span>
+    <span class="c1"># Add to sensor or tracker</span>
+</pre></div>
+</div>
+</section>
+<section id="exporting-to-csv">
+<h3>Exporting to CSV<a class="headerlink" href="#exporting-to-csv" title="Link to this heading">¶</a></h3>
+<p>Via GUI:</p>
+<ol class="arabic simple">
+<li><p>Select tracks in Tracks panel</p></li>
+<li><p>Press <strong>Export Tracks</strong></p></li>
+<li><p>Choose save location</p></li>
+<li><p>Tracks are exported with all columns</p></li>
+</ol>
+<p>Via Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Export single track</span>
+<span class="n">track</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'my_track.csv'</span><span class="p">)</span>
+
+<span class="c1"># Export tracker with multiple tracks</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">'all_tracks.csv'</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="common-workflows">
+<h2>Common Workflows<a class="headerlink" href="#common-workflows" title="Link to this heading">¶</a></h2>
+<section id="workflow-1-manual-tracking">
+<h3>Workflow 1: Manual Tracking<a class="headerlink" href="#workflow-1-manual-tracking" title="Link to this heading">¶</a></h3>
+<p>Create tracks by clicking through frames:</p>
+<ol class="arabic simple">
+<li><p>Load imagery for a sensor</p></li>
+<li><p>Open Data Manager &gt; Tracks tab</p></li>
+<li><p>Press <strong>Manual Track</strong></p></li>
+<li><p>Navigate through frames, clicking object positions</p></li>
+<li><p>Press Enter to finish</p></li>
+<li><p>Repeat for additional objects</p></li>
+<li><p>Export tracks to CSV when complete</p></li>
+</ol>
+</section>
+<section id="workflow-2-automated-tracking">
+<h3>Workflow 2: Automated Tracking<a class="headerlink" href="#workflow-2-automated-tracking" title="Link to this heading">¶</a></h3>
+<p>Use detection algorithms to create tracks automatically:</p>
+<ol class="arabic simple">
+<li><p>Run detection algorithm (e.g., Simple Threshold or CFAR)</p></li>
+<li><p>Review detections in Data Manager &gt; Detections tab</p></li>
+<li><p>Go to <strong>Algorithms &gt; Tracking</strong> menu</p></li>
+<li><p>Select tracking algorithm (e.g., Simple Tracker)</p></li>
+<li><p>Configure parameters and select input detectors</p></li>
+<li><p>Run algorithm</p></li>
+<li><p>Review tracks in Tracks tab</p></li>
+<li><p>Refine using split, merge, or edit operations</p></li>
+</ol>
+</section>
+<section id="workflow-3-track-refinement">
+<h3>Workflow 3: Track Refinement<a class="headerlink" href="#workflow-3-track-refinement" title="Link to this heading">¶</a></h3>
+<p>Improve track quality through analysis operations:</p>
+<ol class="arabic simple">
+<li><p>Load or create initial tracks</p></li>
+<li><p>Run <strong>Algorithms &gt; Track Analysis &gt; Interpolation</strong> to fill gaps</p></li>
+<li><p>Run <strong>Algorithms &gt; Track Analysis &gt; Savitzky-Golay</strong> to smooth positions</p></li>
+<li><p>Select track and click <strong>Extract</strong> for signal analysis</p></li>
+<li><p>Press <strong>Edit Extraction</strong> to refine signal masks</p></li>
+<li><p>Export refined tracks for further analysis</p></li>
+</ol>
+</section>
+<section id="workflow-4-comparative-analysis">
+<h3>Workflow 4: Comparative Analysis<a class="headerlink" href="#workflow-4-comparative-analysis" title="Link to this heading">¶</a></h3>
+<p>Compare multiple tracking algorithms:</p>
+<ol class="arabic simple">
+<li><p>Run detection algorithm on your data</p></li>
+<li><p>Run multiple tracking algorithms with different parameters:</p>
+<ul class="simple">
+<li><p>Simple Tracker with default settings</p></li>
+<li><p>Kalman Tracker for smooth motion</p></li>
+<li><p>Network Flow for global optimization</p></li>
+<li><p>Tracklet Tracker for high clutter</p></li>
+</ul>
+</li>
+<li><p>Each produces a separate Tracker in the Tracks panel</p></li>
+<li><p>Use <strong>Plot Track Details</strong> to compare trajectories</p></li>
+<li><p>Use <strong>Copy to Sensor</strong> to compare across sensors</p></li>
+<li><p>Export best results to CSV</p></li>
+</ol>
+</section>
+</section>
+<section id="tips-and-best-practices">
+<h2>Tips and Best Practices<a class="headerlink" href="#tips-and-best-practices" title="Link to this heading">¶</a></h2>
+<section id="track-creation-tips">
+<h3>Track Creation Tips<a class="headerlink" href="#track-creation-tips" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Use appropriate tracking algorithm for your scenario</strong>:</p>
+<ul>
+<li><p>Fast objects with low clutter → Simple Tracker</p></li>
+<li><p>Noisy detections → Kalman Tracker</p></li>
+<li><p>Complex scenarios with gaps → Network Flow</p></li>
+<li><p>High false alarms → Tracklet Tracker</p></li>
+</ul>
+</li>
+<li><p><strong>Start with conservative parameters</strong>:</p>
+<ul>
+<li><p>Smaller search radius reduces false associations</p></li>
+<li><p>Higher minimum track length filters spurious tracks</p></li>
+<li><p>Let automatic parameter estimation guide you</p></li>
+</ul>
+</li>
+<li><p><strong>Review detection quality first</strong>:</p>
+<ul>
+<li><p>Poor detections → poor tracks</p></li>
+<li><p>Filter detections by confidence before tracking</p></li>
+<li><p>Adjust detection thresholds if needed</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="track-management-tips">
+<h3>Track Management Tips<a class="headerlink" href="#track-management-tips" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Use labels for organization</strong>:</p>
+<ul>
+<li><p>Label tracks by object type (aircraft, vehicle, person)</p></li>
+<li><p>Label by behavior (inbound, stationary, turning)</p></li>
+<li><p>Label by quality (verified, suspicious)</p></li>
+</ul>
+</li>
+<li><p><strong>Use tail length for visualization</strong>:</p>
+<ul>
+<li><p>Set tail length = 10-20 for recent history</p></li>
+<li><p>Set tail length = 0 to see full trajectory</p></li>
+<li><p>Use “Complete” mode to show track regardless of frame</p></li>
+</ul>
+</li>
+<li><p><strong>Adjust styling for clarity</strong>:</p>
+<ul>
+<li><p>Use distinct colors for different objects</p></li>
+<li><p>Increase line width for long-range objects</p></li>
+<li><p>Use dashed lines for predicted/interpolated sections</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="analysis-tips">
+<h3>Analysis Tips<a class="headerlink" href="#analysis-tips" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Interpolate before smoothing</strong>:</p>
+<ul>
+<li><p>Fill gaps with interpolation first</p></li>
+<li><p>Then apply Savitzky-Golay smoothing</p></li>
+<li><p>This produces better results than smoothing sparse tracks</p></li>
+</ul>
+</li>
+<li><p><strong>Choose appropriate smoothing parameters</strong>:</p>
+<ul>
+<li><p>Larger radius = more smoothing</p></li>
+<li><p>Cubic polynomials preserve features better than linear</p></li>
+<li><p>Window length should be &lt; 10% of track length</p></li>
+</ul>
+</li>
+<li><p><strong>Use extraction for quality assessment</strong>:</p>
+<ul>
+<li><p>Extract chips to verify object presence</p></li>
+<li><p>Check noise_std values for track reliability</p></li>
+<li><p>Use signal masks to identify tracking errors</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="performance-tips">
+<h3>Performance Tips<a class="headerlink" href="#performance-tips" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Limit track visualization</strong>:</p>
+<ul>
+<li><p>Hide tracks you’re not currently analyzing</p></li>
+<li><p>Use tail length to reduce rendering overhead</p></li>
+<li><p>Toggle off “Show Line” for many tracks</p></li>
+</ul>
+</li>
+<li><p><strong>Use appropriate tracking algorithm complexity</strong>:</p>
+<ul>
+<li><p>Simple Tracker is fastest</p></li>
+<li><p>Network Flow is slower but more accurate</p></li>
+<li><p>Consider computational cost for large datasets</p></li>
+</ul>
+</li>
+<li><p><strong>Filter detections before tracking</strong>:</p>
+<ul>
+<li><p>Remove low-confidence detections</p></li>
+<li><p>Apply spatial or temporal filtering</p></li>
+<li><p>This improves both speed and accuracy</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="troubleshooting">
+<h3>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h3>
+<p><strong>No tracks created by algorithm</strong></p>
+<ul class="simple">
+<li><p>Check that detectors have sufficient detections</p></li>
+<li><p>Reduce minimum track length parameter</p></li>
+<li><p>Increase max search radius or max gap</p></li>
+<li><p>Verify detection density is adequate</p></li>
+</ul>
+<p><strong>Fragmented tracks</strong></p>
+<ul class="simple">
+<li><p>Increase max gap or max age parameters</p></li>
+<li><p>Use Network Flow tracker for better gap bridging</p></li>
+<li><p>Consider interpolation to fill gaps post-tracking</p></li>
+<li><p>Manually merge related track fragments</p></li>
+</ul>
+<p><strong>Track switches (two objects swap identities)</strong></p>
+<ul class="simple">
+<li><p>Reduce max search radius to prevent ambiguous associations</p></li>
+<li><p>Use Kalman or Tracklet tracker for better discrimination</p></li>
+<li><p>Increase process noise in Kalman tracker</p></li>
+<li><p>Manually split incorrectly merged tracks</p></li>
+</ul>
+<p><strong>Tracks drift from objects over time</strong></p>
+<ul class="simple">
+<li><p>Run extraction to identify tracking errors</p></li>
+<li><p>Use Edit Track to manually correct positions</p></li>
+<li><p>Try smoothing with smaller window radius</p></li>
+<li><p>Check if detections are properly centered on objects</p></li>
+</ul>
+</section>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="detections.html"><span class="doc">Object Detection</span></a> - Creating and managing detections</p></li>
+<li><p><a class="reference internal" href="../api/tracks.html"><span class="doc">Tracks Module</span></a> - Track API reference</p></li>
+<li><p><a class="reference internal" href="../api/algorithms.html"><span class="doc">Algorithms Module</span></a> - Tracking algorithms API reference</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="interface.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">User Interface</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="detections.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Object Detection</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Stephen Hartzell
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Object Tracking</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a><ul>
+<li><a class="reference internal" href="#what-are-tracks">What are Tracks?</a></li>
+<li><a class="reference internal" href="#tracks-in-vista">Tracks in VISTA</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#manual-track-creation">Manual Track Creation</a><ul>
+<li><a class="reference internal" href="#creating-tracks-manually">Creating Tracks Manually</a></li>
+<li><a class="reference internal" href="#loading-tracks-from-csv">Loading Tracks from CSV</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tracking-algorithms">Tracking Algorithms</a><ul>
+<li><a class="reference internal" href="#simple-tracker">Simple Tracker</a></li>
+<li><a class="reference internal" href="#kalman-tracker">Kalman Tracker</a></li>
+<li><a class="reference internal" href="#network-flow-tracker">Network Flow Tracker</a></li>
+<li><a class="reference internal" href="#tracklet-tracker">Tracklet Tracker</a></li>
+<li><a class="reference internal" href="#algorithm-comparison">Algorithm Comparison</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tracks-panel-overview">Tracks Panel Overview</a><ul>
+<li><a class="reference internal" href="#reorder-hide-columns">Reorder / Hide Columns</a></li>
+<li><a class="reference internal" href="#bulk-actions">Bulk Actions</a><ul>
+<li><a class="reference internal" href="#order-by-multiple-columns">Order By Multiple Columns</a></li>
+<li><a class="reference internal" href="#undo">Undo</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#track-selection-actions">Track Selection Actions</a><ul>
+<li><a class="reference internal" href="#export-tracks">Export Tracks</a></li>
+<li><a class="reference internal" href="#copy-to-sensor">Copy to Sensor</a></li>
+<li><a class="reference internal" href="#merge-selected">Merge Selected</a></li>
+<li><a class="reference internal" href="#delete-selected">Delete Selected</a></li>
+<li><a class="reference internal" href="#label-selected">Label Selected</a></li>
+<li><a class="reference internal" href="#plot-track-details">Plot Track Details</a></li>
+<li><a class="reference internal" href="#manually-reorder-columns">Manually Reorder Columns</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id7">Track Operations</a><ul>
+<li><a class="reference internal" href="#split-track">Split Track</a></li>
+<li><a class="reference internal" href="#edit-track">Edit Track</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#track-extraction">Track Extraction</a><ul>
+<li><a class="reference internal" href="#what-is-track-extraction">What is Track Extraction?</a></li>
+<li><a class="reference internal" href="#running-track-extraction">Running Track Extraction</a></li>
+<li><a class="reference internal" href="#viewing-extraction-results">Viewing Extraction Results</a></li>
+<li><a class="reference internal" href="#editing-extraction-results">Editing Extraction Results</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#track-uncertainty-visualization">Track Uncertainty Visualization</a><ul>
+<li><a class="reference internal" href="#what-is-track-uncertainty">What is Track Uncertainty?</a></li>
+<li><a class="reference internal" href="#enabling-uncertainty-display">Enabling Uncertainty Display</a></li>
+<li><a class="reference internal" href="#configuring-uncertainty-display">Configuring Uncertainty Display</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#track-analysis-and-refinement">Track Analysis and Refinement</a><ul>
+<li><a class="reference internal" href="#interpolation">Interpolation</a></li>
+<li><a class="reference internal" href="#smoothing-savitzky-golay">Smoothing (Savitzky-Golay)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#exporting-and-importing-tracks">Exporting and Importing Tracks</a><ul>
+<li><a class="reference internal" href="#csv-format">CSV Format</a></li>
+<li><a class="reference internal" href="#loading-from-csv">Loading from CSV</a></li>
+<li><a class="reference internal" href="#exporting-to-csv">Exporting to CSV</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#common-workflows">Common Workflows</a><ul>
+<li><a class="reference internal" href="#workflow-1-manual-tracking">Workflow 1: Manual Tracking</a></li>
+<li><a class="reference internal" href="#workflow-2-automated-tracking">Workflow 2: Automated Tracking</a></li>
+<li><a class="reference internal" href="#workflow-3-track-refinement">Workflow 3: Track Refinement</a></li>
+<li><a class="reference internal" href="#workflow-4-comparative-analysis">Workflow 4: Comparative Analysis</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tips-and-best-practices">Tips and Best Practices</a><ul>
+<li><a class="reference internal" href="#track-creation-tips">Track Creation Tips</a></li>
+<li><a class="reference internal" href="#track-management-tips">Track Management Tips</a></li>
+<li><a class="reference internal" href="#analysis-tips">Analysis Tips</a></li>
+<li><a class="reference internal" href="#performance-tips">Performance Tips</a></li>
+<li><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=8f5b6f32"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/version-selector.js?v=8b61e4d4"></script>
+    </body>
+</html>

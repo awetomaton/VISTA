@@ -1,0 +1,30 @@
+﻿vista.algorithms.detectors.pstnn.PSTNN
+======================================
+
+.. currentmodule:: vista.algorithms.detectors.pstnn
+
+.. autoclass:: PSTNN
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PSTNN.__init__
+      ~PSTNN.decompose
+      ~PSTNN.detect
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~PSTNN.name
+   
+   

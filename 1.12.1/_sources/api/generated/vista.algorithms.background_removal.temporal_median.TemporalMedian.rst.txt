@@ -1,0 +1,31 @@
+﻿vista.algorithms.background\_removal.temporal\_median.TemporalMedian
+====================================================================
+
+.. currentmodule:: vista.algorithms.background_removal.temporal_median
+
+.. autoclass:: TemporalMedian
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TemporalMedian.__init__
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TemporalMedian.background
+      ~TemporalMedian.name
+      ~TemporalMedian.offset
+      ~TemporalMedian.imagery
+   
+   

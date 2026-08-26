@@ -1,0 +1,25 @@
+﻿vista.known\_sources.stars.Stars
+================================
+
+.. currentmodule:: vista.known_sources.stars
+
+.. autoclass:: Stars
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Stars.__init__
+      ~Stars.create_tracks
+      ~Stars.get_geodetics
+      ~Stars.get_pixels
+   
+   
+
+   
+   
+   
