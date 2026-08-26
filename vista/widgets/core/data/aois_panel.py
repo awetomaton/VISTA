@@ -39,11 +39,13 @@ class AOIsPanel(DataPanel):
         self.delete_aoi_btn = QPushButton("Delete Selected")
         self.delete_aoi_btn.clicked.connect(self.delete_selected_aois)
         button_layout.addWidget(self.delete_aoi_btn)
+        self.delete_aoi_btn.setEnabled(False)
 
         # Export button
         self.export_aoi_btn = QPushButton("Export Selection")
         self.export_aoi_btn.clicked.connect(self.export_aois)
         button_layout.addWidget(self.export_aoi_btn)
+        self.export_aoi_btn.setEnabled(False)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -119,6 +121,10 @@ class AOIsPanel(DataPanel):
         """Handle AOI selection changes from table"""
         # Get selected rows
         selected_rows = set(index.row() for index in self.aois_table.selectedIndexes())
+
+        has_selection = len(selected_rows) > 0
+        self.delete_aoi_btn.setEnabled(has_selection)
+        self.export_aoi_btn.setEnabled(has_selection)
 
         # Update all AOIs selectability based on selection
         for row, aoi in enumerate(self.viewer.aois):
