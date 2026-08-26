@@ -35,15 +35,16 @@ class FeaturesPanel(DataPanel):
         # Button bar for actions
         button_layout = QHBoxLayout()
 
-        # Create Placemark button
-        self.create_placemark_btn = QPushButton("Create Placemark")
-        self.create_placemark_btn.clicked.connect(self.create_placemark)
-        button_layout.addWidget(self.create_placemark_btn)
-
         # Delete button
         self.delete_feature_btn = QPushButton("Delete Selected")
         self.delete_feature_btn.clicked.connect(self.delete_selected_features)
         button_layout.addWidget(self.delete_feature_btn)
+        self.delete_feature_btn.setEnabled(False)
+
+        # Create Placemark button
+        self.create_placemark_btn = QPushButton("Create Placemark")
+        self.create_placemark_btn.clicked.connect(self.create_placemark)
+        button_layout.addWidget(self.create_placemark_btn)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
