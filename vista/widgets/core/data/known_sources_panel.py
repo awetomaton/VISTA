@@ -34,12 +34,16 @@ class KnownSourcesPanel(DataPanel):
         self.delete_known_sources_btn = QPushButton("Delete Selected")
         self.delete_known_sources_btn.clicked.connect(self.delete_selected_known_sources)
         button_layout.addWidget(self.delete_known_sources_btn)
+        # Button disabled by default
+        self.delete_known_sources_btn.setEnabled(False)
 
         # Create tracks button
         self.create_tracks_btn = QPushButton("Create Tracks")
         self.create_tracks_btn.clicked.connect(self.create_tracks)
         self.create_tracks_btn.setToolTip("Create tracks in the currently selected imagery for the selected source(s)")
         button_layout.addWidget(self.create_tracks_btn)
+        # Button disabled by default
+        self.create_tracks_btn.setEnabled(False)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -47,7 +51,10 @@ class KnownSourcesPanel(DataPanel):
         # Known Sources table
         self.known_sources_table = QTableWidget()
         self.known_sources_table.setColumnCount(2)
-        self.known_sources_table.setHorizontalHeaderLabels(["Name", "Types of source"])
+        self.known_sources_table.setHorizontalHeaderLabels(["Name", "Source Types"])
+
+        # Enable Delete and Create Tracks buttons when rows are selected
+        self.known_sources_table.itemSelectionChanged.connect(self.on_known_source_selection_changed)
 
         # Enable row selection via vertical header
         self.known_sources_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -73,6 +80,13 @@ class KnownSourcesPanel(DataPanel):
         backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         backspace_shortcut.activated.connect(self.delete_selected_known_sources)
 
+    def on_known_source_selection_changed(self):
+        """Handle selection changes in the Known Sources table"""
+        selected_rows = self.known_sources_table.selectionModel().selectedRows()
+        has_selection = len(selected_rows) > 0
+        self.delete_known_sources_btn.setEnabled(has_selection)
+        self.create_tracks_btn.setEnabled(has_selection)
+
     def refresh_known_sources_table(self):
         """Refresh the Known Sources table"""
         self.known_sources_table.blockSignals(True)
@@ -87,12 +101,14 @@ class KnownSourcesPanel(DataPanel):
             self.known_sources_table.setItem(row, 0, name_item)
 
             # Source Types (read-only)
-            type_text = str(list(set(source.source_types)))  # string of list of unique source types
-            type_item = QTableWidgetItem(type_text)
+            source_types = list(set(source.source_types))  # list of unique source types
+            source_types = [stype.capitalize() for stype in source_types]  # capitalize each source type
+            type_item = QTableWidgetItem(", ".join(source_types))
             type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.known_sources_table.setItem(row, 1, type_item)
 
         self.known_sources_table.blockSignals(False)
+        self.on_known_source_selection_changed()
 
     def on_known_sources_cell_changed(self, row, column):
         """Handle Known Source cell changes"""
