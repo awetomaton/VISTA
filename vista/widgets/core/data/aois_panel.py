@@ -90,11 +90,14 @@ class AOIsPanel(DataPanel):
     def clear_selection(self):
         """Clear all AOI selections in the table, which deselects AOIs in the viewer"""
         self.aois_table.clearSelection()
+        self.on_aoi_selection_changed()
 
     def refresh_aois_table(self):
         """Refresh the AOIs table"""
         self.aois_table.blockSignals(True)
         self.aois_table.setRowCount(0)
+        selection_model = self.aois_table.selectionModel()
+        model = self.aois_table.model()
 
         for row, aoi in enumerate(self.viewer.aois):
             self.aois_table.insertRow(row)
@@ -110,12 +113,15 @@ class AOIsPanel(DataPanel):
             bounds_item.setFlags(bounds_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.aois_table.setItem(row, 1, bounds_item)
 
-        self.aois_table.blockSignals(False)
-
-        # Select rows for AOIs that are marked as selected
-        for row, aoi in enumerate(self.viewer.aois):
+            # Select row if AOIs is marked as selected
             if hasattr(aoi, "_selected") and aoi._selected:
-                self.aois_table.selectRow(row)
+                index = model.index(row, 0)
+                selection_model.select(
+                    index, selection_model.SelectionFlag.Select | selection_model.SelectionFlag.Rows
+                )
+
+        self.aois_table.blockSignals(False)
+        self.on_aoi_selection_changed()
 
     def on_aoi_selection_changed(self):
         """Handle AOI selection changes from table"""
