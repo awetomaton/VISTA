@@ -19,12 +19,20 @@ Known sources can be loaded from the file menu. A 'known source' in this regard 
     The limiting magnitude used to filter catalogs when loading in stars can be changed in the Settings → Known Sources tab.
 3. **Solar System Bodies**: Known solar system bodies can be loaded via astropy. VISTA currently supports the major planets.
 
-Once loaded, known sources will be visible in the Known Sources tab of the Data Manager. For star catalog queries, the name will default to "{CATALOG} stars", while for stars loaded via csv and satellites loaded via TLEs, the name will typically be the filename (minus the extension). Names can be changed if desired. 
+The example files provided include simulated small and large FOV imagery, a TLE for satellites (at the appropriate epoch of the simulated imagery), and a csv file of stars from Hipparcos that are brighter than 5th magnitude. Once loaded, known sources will be visible in the Known Sources tab of the Data Manager. For star catalog queries, the name will default to "{CATALOG} stars", while for stars loaded via csv and satellites loaded via TLEs, the name will typically be the filename (minus the extension). Names can be changed if desired. 
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_known_sources_load.gif
+   :alt: Loading satellites and stars
+   :align: center
 
 If imagery has been loaded in, tracks can be created for the currently selected imagery for any selected source(s) by clicking the "Create Tracks" button.
 
 .. note::
     Remember, each 'known source' in the Known Sources tab is actually a collection of multiple sources. Clicking the "Create Tracks" button for a single known source will in general create multiple tracks.
+
+.. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_known_sources_create_tracks.gif
+   :alt: Creating tracks from known sources
+   :align: center
 
 Tracks
 ------
@@ -45,6 +53,6 @@ The tracker for each track will typically be the name of the 'known source' it c
 .. important::
     While individual track names will typically be unique for each object in a single known source, they may not be unique if creating tracks from multiple known sources.
 
-    E.g., loading in one TLE file of *just* GEO satellites, and loading in another TLE file of *all* satellites, will likely produce tracks with duplicate names. Similarly, loading in a TLE file of all satellites at one epoch, and a second TLE of all satellites at a later epoch, will produce similar (though not the exact same, due to sgp4 propogations) tracks with duplicate names.
+    E.g., loading in one TLE file of *just* GEO satellites, and loading in another TLE file of *all* satellites, will likely produce tracks with duplicate names. Similarly, loading in a TLE file of all satellites at one epoch, and a second TLE of all satellites at a later epoch, will produce similar (though not the exact same, due to sgp4 propagations) tracks with duplicate names.
     
     In those cases, the tracker (i.e., the 'known source' that created the track) can be used to disambiguate.

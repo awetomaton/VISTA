@@ -190,3 +190,5 @@ class KnownSourcesPanel(DataPanel):
 
         # Refresh table
         self.refresh_known_sources_table()
+        # and check whether buttons should be enabled
+        self.on_selection_changed()
