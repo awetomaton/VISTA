@@ -93,31 +93,30 @@ class FeaturesPanel(DataPanel):
         self.features_table.blockSignals(True)
         self.features_table.setRowCount(0)
 
-        if hasattr(self.viewer, "features"):
-            for row, feature in enumerate(self.viewer.features):
-                self.features_table.insertRow(row)
+        for row, feature in enumerate(self.viewer.features):
+            self.features_table.insertRow(row)
 
-                # Visible checkbox
-                checkbox = QCheckBox()
-                checkbox.setChecked(feature.visible)
-                checkbox.stateChanged.connect(lambda state, f=feature: self.on_feature_visibility_changed(f, state))
-                # Center the checkbox in the cell
-                checkbox_widget = QWidget()
-                checkbox_layout = QHBoxLayout(checkbox_widget)
-                checkbox_layout.addWidget(checkbox)
-                checkbox_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                checkbox_layout.setContentsMargins(0, 0, 0, 0)
-                self.features_table.setCellWidget(row, 0, checkbox_widget)
+            # Visible checkbox
+            checkbox = QCheckBox()
+            checkbox.setChecked(feature.visible)
+            checkbox.stateChanged.connect(lambda state, f=feature: self.on_feature_visibility_changed(f, state))
+            # Center the checkbox in the cell
+            checkbox_widget = QWidget()
+            checkbox_layout = QHBoxLayout(checkbox_widget)
+            checkbox_layout.addWidget(checkbox)
+            checkbox_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            checkbox_layout.setContentsMargins(0, 0, 0, 0)
+            self.features_table.setCellWidget(row, 0, checkbox_widget)
 
-                # Name (editable)
-                name_item = QTableWidgetItem(feature.name)
-                name_item.setData(Qt.ItemDataRole.UserRole, feature.uuid)  # Store feature UUID
-                self.features_table.setItem(row, 1, name_item)
+            # Name (editable)
+            name_item = QTableWidgetItem(feature.name)
+            name_item.setData(Qt.ItemDataRole.UserRole, feature.uuid)  # Store feature UUID
+            self.features_table.setItem(row, 1, name_item)
 
-                # Type (read-only)
-                type_item = QTableWidgetItem(feature.feature_type)
-                type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.features_table.setItem(row, 2, type_item)
+            # Type (read-only)
+            type_item = QTableWidgetItem(feature.feature_type)
+            type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.features_table.setItem(row, 2, type_item)
 
         self.features_table.blockSignals(False)
         self.on_selection_changed()
