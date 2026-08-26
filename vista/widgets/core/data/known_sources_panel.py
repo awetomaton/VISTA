@@ -54,7 +54,7 @@ class KnownSourcesPanel(DataPanel):
         self.known_sources_table.setHorizontalHeaderLabels(["Name", "Source Types"])
 
         # Enable Delete and Create Tracks buttons when rows are selected
-        self.known_sources_table.itemSelectionChanged.connect(self.on_selection_changed)
+        self.known_sources_table.itemSelectionChanged.connect(self.on_known_source_selection_changed)
 
         # Enable row selection via vertical header
         self.known_sources_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -80,7 +80,7 @@ class KnownSourcesPanel(DataPanel):
         backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         backspace_shortcut.activated.connect(self.delete_selected_known_sources)
 
-    def on_selection_changed(self):
+    def on_known_source_selection_changed(self):
         """Handle selection changes in the Known Sources table"""
         selected_rows = self.known_sources_table.selectionModel().selectedRows()
         has_selection = len(selected_rows) > 0
@@ -191,4 +191,4 @@ class KnownSourcesPanel(DataPanel):
         # Refresh table
         self.refresh_known_sources_table()
         # and check whether buttons should be enabled
-        self.on_selection_changed()
+        self.on_known_source_selection_changed()
