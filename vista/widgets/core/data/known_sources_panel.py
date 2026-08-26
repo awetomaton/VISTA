@@ -43,7 +43,7 @@ class KnownSourcesPanel(DataPanel):
         self.create_tracks_btn.setToolTip("Create tracks in the currently selected imagery for the selected source(s)")
         button_layout.addWidget(self.create_tracks_btn)
         # Button disabled by default
-        self.create_tracks_btn.setEnabled(False) 
+        self.create_tracks_btn.setEnabled(False)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -102,7 +102,7 @@ class KnownSourcesPanel(DataPanel):
 
             # Source Types (read-only)
             source_types = list(set(source.source_types))  # list of unique source types
-            source_types = [stype.capitalize() for stype in source_types] # capitalize each source type
+            source_types = [stype.capitalize() for stype in source_types]  # capitalize each source type
             type_item = QTableWidgetItem(", ".join(source_types))
             type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.known_sources_table.setItem(row, 1, type_item)
