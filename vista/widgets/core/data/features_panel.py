@@ -54,6 +54,9 @@ class FeaturesPanel(DataPanel):
         self.features_table.setColumnCount(3)
         self.features_table.setHorizontalHeaderLabels(["Visible", "Name", "Type"])
 
+        # Enable Delete and Create Tracks buttons when rows are selected
+        self.features_table.itemSelectionChanged.connect(self.on_selection_changed)
+
         # Enable row selection via vertical header
         self.features_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.features_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -78,6 +81,12 @@ class FeaturesPanel(DataPanel):
         backspace_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Backspace), self)
         backspace_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         backspace_shortcut.activated.connect(self.delete_selected_features)
+
+    def on_selection_changed(self):
+        """Enable or disable buttons based on selection"""
+        selected_rows = self.features_table.selectionModel().selectedRows()
+        has_selection = len(selected_rows) > 0
+        self.delete_feature_btn.setEnabled(has_selection)
 
     def refresh_features_table(self):
         """Refresh the features table"""
@@ -111,6 +120,7 @@ class FeaturesPanel(DataPanel):
                 self.features_table.setItem(row, 2, type_item)
 
         self.features_table.blockSignals(False)
+        self.on_selection_changed()
 
     def on_feature_visibility_changed(self, feature, state):
         """Handle feature visibility checkbox changes"""
@@ -178,6 +188,7 @@ class FeaturesPanel(DataPanel):
                     self.features_table.selectRow(row)
 
         self.features_table.blockSignals(False)
+        self.on_selection_changed()
 
     def create_placemark(self):
         """Open dialog to create a new placemark"""
