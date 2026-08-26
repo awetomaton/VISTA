@@ -118,9 +118,7 @@ class AOIsPanel(DataPanel):
             # Select row if AOI is marked as selected
             if hasattr(aoi, "_selected") and aoi._selected:
                 index = model.index(row, 0)
-                selection_model.select(
-                    index, selection_model.SelectionFlag.Select | selection_model.SelectionFlag.Rows
-                )
+                selection_model.select(index, selection_model.SelectionFlag.Select | selection_model.SelectionFlag.Rows)
 
         self.aois_table.blockSignals(False)
         self.on_aoi_selection_changed()
