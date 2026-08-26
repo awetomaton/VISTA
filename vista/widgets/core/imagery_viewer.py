@@ -795,13 +795,17 @@ class ImageryViewer(QWidget):
 
             # Filter by sensor if one is selected
             if self.selected_sensor is not None and track.sensor != self.selected_sensor:
-                path.setData(x=[], y=[])  # Hide track from different sensor
-                marker.setData(x=[], y=[])
-                # Clear uncertainty ellipses for this track
-                if track_id in self.track_uncertainty_items:
-                    for item in self.track_uncertainty_items[track_id]:
-                        self.plot_item.removeItem(item)
-                    del self.track_uncertainty_items[track_id]
+                # if path or marker is visible, hide them so future loops don't touch them and quickly continue
+                if path.isVisible() or marker.isVisible():
+                    # we don't bother clearing out coordinates, since if these items are shown
+                    # in the future when the sensor is changed, coordinates will be recalculated
+                    path.hide()
+                    marker.hide()
+                    # Clear uncertainty ellipses for this track
+                    if track_id in self.track_uncertainty_items:
+                        for item in self.track_uncertainty_items[track_id]:
+                            self.plot_item.removeItem(item)
+                        del self.track_uncertainty_items[track_id]
                 continue
 
             # Update visibility
@@ -809,6 +813,11 @@ class ImageryViewer(QWidget):
                 path.setData(x=[], y=[])
                 marker.setData(x=[], y=[])
                 continue
+
+            # if path or marker were previously hidden, make them visible
+            if not path.isVisible() or not marker.isVisible():
+                path.show()
+                marker.show()
 
             # Check if track is selected for highlighting
             is_selected = track_id in self.selected_track_ids

@@ -4,7 +4,7 @@ import pathlib
 
 import numpy as np
 import pandas as pd
-from PyQt6.QtCore import QEvent, QSettings, Qt
+from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
     QApplication,
@@ -1695,12 +1695,10 @@ class TracksPanel(DataPanel):
             if track.has_uncertainty():
                 item = self.tracks_table.item(row, column)
                 track.show_uncertainty = item.checkState() == Qt.CheckState.Checked
-                self.viewer.update_overlays()  # Refresh viewer to show/hide uncertainty ellipses
 
         # Invalidate caches if styling properties were modified
         if column in [5, 6, 7, 8, 12]:  # Color, Marker, Line Width, Marker Size, Line Style
             track.invalidate_caches()
-            self.viewer.update_overlays()  # Refresh viewer to show styling changes
 
         self.data_changed.emit()
 
@@ -1916,7 +1914,6 @@ class TracksPanel(DataPanel):
         if selected_track_uuids:
             self.select_tracks_by_uuid(selected_track_uuids)
 
-        self.viewer.update_overlays()  # Refresh viewer to show changes
         self.data_changed.emit()
 
     def merge_selected_tracks(self):
@@ -2022,9 +2019,6 @@ class TracksPanel(DataPanel):
                     self.viewer.plot_item.removeItem(ellipse)
                 del self.viewer.track_uncertainty_items[track_id]
 
-        # Update the viewer to create plot items for the new merged track
-        self.viewer.update_overlays()
-
         # Refresh table
         self.refresh_tracks_table()
         self.data_changed.emit()
@@ -2127,9 +2121,6 @@ class TracksPanel(DataPanel):
         second_track.tracker = track_to_split.tracker
         self.viewer.tracks.append(first_track)
         self.viewer.tracks.append(second_track)
-
-        # Update the viewer to create plot items for the new tracks
-        self.viewer.update_overlays()
 
         # Refresh table
         self.refresh_tracks_table()
@@ -2384,17 +2375,18 @@ class TracksPanel(DataPanel):
         """
         self.tracks_table.blockSignals(True)
         self.tracks_table.clearSelection()
+        selection_model = self.tracks_table.selectionModel()
+        model = self.tracks_table.model()
 
         for row in range(self.tracks_table.rowCount()):
             track_name_item = self.tracks_table.item(row, 2)  # Track name column
             if track_name_item:
                 track_uuid = track_name_item.data(Qt.ItemDataRole.UserRole)
                 if track_uuid in track_uuids:
-                    # Manually select all items in the row to ensure multiple rows can be selected
-                    for col in range(self.tracks_table.columnCount()):
-                        item = self.tracks_table.item(row, col)
-                        if item:
-                            item.setSelected(True)
+                    index = model.index(row, 0)
+                    selection_model.select(
+                        index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                    )
 
         self.tracks_table.blockSignals(False)
         self.on_track_selection_changed()  # Trigger selection changed handler
@@ -3086,7 +3078,6 @@ class TracksPanel(DataPanel):
         self.viewer.tracks = snapshot.data
         self.viewer.selected_track_ids.clear()
 
-        self.viewer.update_overlays()
         self.refresh_tracks_table()
         self.data_changed.emit()
 

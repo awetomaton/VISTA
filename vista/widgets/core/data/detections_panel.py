@@ -1031,7 +1031,6 @@ class DetectionsPanel(DataPanel):
         if selected_detector_uuids:
             self._select_detectors_by_uuid(selected_detector_uuids)
 
-        self.viewer.update_overlays()  # Refresh viewer to show changes
         self.data_changed.emit()
 
     def _select_detectors_by_uuid(self, detector_uuids):
@@ -1593,9 +1592,6 @@ class DetectionsPanel(DataPanel):
         # Clear our selection
         self.clear_detection_selection()
 
-        # Update viewer display
-        self.viewer.update_overlays()
-
         # Refresh the table
         self.refresh_detections_table()
 
@@ -1664,18 +1660,6 @@ class DetectionsPanel(DataPanel):
 
         # Clear selection
         self.clear_detection_selection()
-
-        # Refresh displays
-        self.viewer.update_overlays()
-
-        # Explicitly refresh the tracks table to show the new track
-        # Get the tracks panel from the parent data manager
-        parent_widget = self.parent()
-        while parent_widget is not None:
-            if hasattr(parent_widget, "tracks_panel"):
-                parent_widget.tracks_panel.refresh_tracks_table()
-                break
-            parent_widget = parent_widget.parent()
 
         self.data_changed.emit()
 
@@ -1809,7 +1793,6 @@ class DetectionsPanel(DataPanel):
             self.cancel_add_to_existing_track()
 
             # Refresh displays
-            self.viewer.update_overlays()
             self.data_changed.emit()
 
             # Exit detection selection mode
@@ -1988,7 +1971,6 @@ class DetectionsPanel(DataPanel):
         self.viewer.detectors = snapshot.data
         self.clear_detection_selection()
 
-        self.viewer.update_overlays()
         self.refresh_detections_table()
         self.data_changed.emit()
 
