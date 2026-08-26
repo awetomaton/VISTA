@@ -1,18 +1,80 @@
 """Known Sources panel for data manager"""
 
-from PyQt6.QtCore import QSettings, Qt
+import traceback
+
+from PyQt6.QtCore import QSettings, Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QMessageBox,
+    QProgressDialog,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
 )
 
+from vista.imagery.imagery import Imagery
+from vista.known_sources.known_sources import KnownSources
+from vista.tracks.track import Track
 from vista.widgets.core.data.data_panel import DataPanel
+
+
+class KnownSourcesTrackCreationThread(QThread):
+    """Create tracks from known sources without blocking the GUI thread."""
+
+    progress_updated = pyqtSignal(str)
+    tracks_created = pyqtSignal(object)
+    creation_cancelled = pyqtSignal()
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, known_sources: list[KnownSources], imagery: Imagery):
+        """
+        Initialize the track creation thread.
+
+        Parameters
+        ----------
+        known_sources : list[KnownSources]
+            Known source groups from which to create tracks.
+        imagery : Imagery
+            Imagery onto which the sources will be projected.
+        """
+        super().__init__()
+        self.known_sources = known_sources
+        self.imagery = imagery
+
+    def cancel(self) -> None:
+        """Request cancellation between known source groups."""
+        self.requestInterruption()
+
+    def run(self) -> None:
+        """Create tracks and return them to the GUI thread."""
+        try:
+            tracks: list[Track] = []
+            total_sources = len(self.known_sources)
+            for index, source in enumerate(self.known_sources, start=1):
+                if self.isInterruptionRequested():
+                    self.creation_cancelled.emit()
+                    return
+
+                self.progress_updated.emit(
+                    f"Creating tracks from {source.name} ({index} of {total_sources})..."
+                )
+                source_tracks = source.create_tracks(self.imagery)
+
+                if self.isInterruptionRequested():
+                    self.creation_cancelled.emit()
+                    return
+
+                tracks.extend(source_tracks)
+
+            self.tracks_created.emit(tracks)
+        except Exception as error:
+            traceback_string = traceback.format_exc()
+            self.error_occurred.emit(
+                f"Track creation failed: {str(error)}\n\nTraceback:\n{traceback_string}"
+            )
 
 
 class KnownSourcesPanel(DataPanel):
@@ -20,6 +82,9 @@ class KnownSourcesPanel(DataPanel):
 
     def __init__(self, viewer):
         super().__init__(viewer)
+        self.create_tracks_thread = None
+        self.track_creation_source_count = 0
+        self.progress_dialog = None
         self.settings = QSettings("VISTA", "DataManager")
         self.init_ui()
 
@@ -85,7 +150,8 @@ class KnownSourcesPanel(DataPanel):
         selected_rows = self.known_sources_table.selectionModel().selectedRows()
         has_selection = len(selected_rows) > 0
         self.delete_known_sources_btn.setEnabled(has_selection)
-        self.create_tracks_btn.setEnabled(has_selection)
+        thread_is_running = self.create_tracks_thread is not None and self.create_tracks_thread.isRunning()
+        self.create_tracks_btn.setEnabled(has_selection and not thread_is_running)
 
     def refresh_known_sources_table(self):
         """Refresh the Known Sources table"""
@@ -125,6 +191,9 @@ class KnownSourcesPanel(DataPanel):
                         break
 
     def create_tracks(self):
+        if self.create_tracks_thread is not None and self.create_tracks_thread.isRunning():
+            return
+
         known_sources = []
 
         # Get selected rows from the table
@@ -150,18 +219,78 @@ class KnownSourcesPanel(DataPanel):
                         known_sources.append(source)
                         break
 
-        # Create the tracks
-        total_tracks = 0
-        for source in known_sources:
-            tracks = source.create_tracks(self.viewer.imagery)
-            self.viewer.add_tracks(tracks)
-            total_tracks += len(tracks)
+        if not known_sources:
+            return
+
+        self.track_creation_source_count = len(known_sources)
+        self.create_tracks_btn.setEnabled(False)
+
+        # Create progress dialog (indeterminate mode)
+        self.progress_dialog = QProgressDialog("Creating tracks...", "Cancel", 0, 0, self)
+        self.progress_dialog.setWindowTitle("Creating Tracks")
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.canceled.connect(self.cancel_track_creation)
+        self.progress_dialog.show()
+
+        # Create tracks in a worker thread. Viewer updates remain on the GUI thread.
+        self.create_tracks_thread = KnownSourcesTrackCreationThread(known_sources, self.viewer.imagery)
+        self.create_tracks_thread.progress_updated.connect(self.on_track_creation_progress)
+        self.create_tracks_thread.tracks_created.connect(self.on_tracks_created)
+        self.create_tracks_thread.creation_cancelled.connect(self.on_track_creation_cancelled)
+        self.create_tracks_thread.error_occurred.connect(self.on_track_creation_error)
+        self.create_tracks_thread.finished.connect(self.on_track_creation_thread_finished)
+        self.create_tracks_thread.start()
+
+    def on_track_creation_progress(self, message: str) -> None:
+        """Update the track creation progress message."""
+        if self.progress_dialog is not None:
+            self.progress_dialog.setLabelText(message)
+
+    def on_tracks_created(self, tracks: list[Track]) -> None:
+        """Add tracks produced by the worker to the viewer."""
+        self._close_track_creation_progress_dialog()
+        self.viewer.add_tracks(tracks)
 
         self.data_changed.emit()
 
         QMessageBox.information(
-            self, "Tracks Created", f"Created {total_tracks} Track(s) from {len(known_sources)} Known Source(s)."
+            self,
+            "Tracks Created",
+            f"Created {len(tracks)} Track(s) from {self.track_creation_source_count} Known Source(s).",
         )
+
+    def cancel_track_creation(self) -> None:
+        """Request cancellation of track creation."""
+        if self.create_tracks_thread is not None and self.create_tracks_thread.isRunning():
+            self.create_tracks_thread.cancel()
+
+    def shutdown_track_creation(self) -> None:
+        """Cancel and wait for track creation before the application exits."""
+        if self.create_tracks_thread is not None and self.create_tracks_thread.isRunning():
+            self.create_tracks_thread.cancel()
+            self.create_tracks_thread.wait()
+
+    def on_track_creation_cancelled(self) -> None:
+        """Handle cancellation of track creation."""
+        self._close_track_creation_progress_dialog()
+
+    def on_track_creation_error(self, error_message: str) -> None:
+        """Handle an error raised while creating tracks."""
+        self._close_track_creation_progress_dialog()
+        QMessageBox.critical(self, "Track Creation Error", error_message)
+
+    def on_track_creation_thread_finished(self) -> None:
+        """Release the completed worker thread and restore panel controls."""
+        self.create_tracks_thread = None
+        self.track_creation_source_count = 0
+        self.on_known_source_selection_changed()
+
+    def _close_track_creation_progress_dialog(self) -> None:
+        """Close and release the track creation progress dialog."""
+        if self.progress_dialog is not None:
+            self.progress_dialog.close()
+            self.progress_dialog = None
 
     def delete_selected_known_sources(self):
         """Delete Known Sources that are selected in the table"""

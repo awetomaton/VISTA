@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-8-26
+
+### Credits
+ - Thanks to [@weisluke] for implementing the features in this release!
+ - Thanks to [@nolanking90] reviewing the features in this release!
+
+### Improvements
+
+ - ✨ Added "Known Sources" to the data panel which may include stars, satellites, and other celestial bodies. These can be used to create tracks corresponding to the currently selected sensor.
+
 ## [1.12.4] - 2026-8-13
 
 Major thanks to [@nolanking90] for the contributions that made this release possible!
@@ -383,6 +393,9 @@ Major thanks to [@nolanking90] for the contributions that made this release poss
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[1.13.0]: https://github.com/awetomaton/VISTA/releases/tag/1.13.0
+[1.12.4]: https://github.com/awetomaton/VISTA/releases/tag/1.12.4
+[1.12.3]: https://github.com/awetomaton/VISTA/releases/tag/1.12.3
 [1.12.2]: https://github.com/awetomaton/VISTA/releases/tag/1.12.2
 [1.12.1]: https://github.com/awetomaton/VISTA/releases/tag/1.12.1
 [1.12.0]: https://github.com/awetomaton/VISTA/releases/tag/1.12.0

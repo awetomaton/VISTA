@@ -3163,6 +3163,8 @@ class VistaMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Handle window close event - save window geometry and histogram state"""
+        self.data_manager.known_sources_panel.shutdown_track_creation()
+
         # Cancel any active imagery loading threads
         for uid, thread in list(self._loading_imageries.items()):
             thread.cancel()

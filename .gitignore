@@ -171,6 +171,7 @@ data/**
 # vscode folder
 .vscode/*
 
-# claude folder
+# Agents folder(s)
+AGENTS.md
 .claude/*
 CLAUDE.md
