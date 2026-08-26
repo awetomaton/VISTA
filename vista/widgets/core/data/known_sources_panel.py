@@ -101,8 +101,9 @@ class KnownSourcesPanel(DataPanel):
             self.known_sources_table.setItem(row, 0, name_item)
 
             # Source Types (read-only)
-            type_text = str(list(set(source.source_types)))  # string of list of unique source types
-            type_item = QTableWidgetItem(type_text)
+            source_types = list(set(source.source_types))  # list of unique source types
+            source_types = [stype.capitalize() for stype in source_types] # capitalize each source type
+            type_item = QTableWidgetItem(", ".join(source_types))
             type_item.setFlags(type_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.known_sources_table.setItem(row, 1, type_item)
 
