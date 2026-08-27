@@ -219,7 +219,7 @@ class VistaMainWindow(QMainWindow):
         self.load_detections_action.triggered.connect(self.load_detections_file)
         file_menu.addAction(self.load_detections_action)
 
-        self.load_tracks_action = QAction("Load Tracks (CSV)", self)
+        self.load_tracks_action = QAction("Load Tracks (CSV, HDF5)", self)
         self.load_tracks_action.triggered.connect(self.load_tracks_file)
         file_menu.addAction(self.load_tracks_action)
 
@@ -1276,7 +1276,7 @@ class VistaMainWindow(QMainWindow):
         self.statusBar().showMessage(f"Loaded {len(detectors)} detector(s)", 3000)
 
     def load_tracks_file(self, file_paths=None):
-        """Load tracks from CSV file(s) using background thread
+        """Load tracks from CSV or HDF5 file(s) using background thread
 
         Parameters
         ----------
@@ -1287,11 +1287,14 @@ class VistaMainWindow(QMainWindow):
             # Get last used directory from settings
             last_dir = self.settings.value("last_tracks_dir", "")
 
-            file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Tracks", last_dir, "CSV Files (*.csv)")
+            file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Tracks", last_dir, "CSV, HDF5 Files (*.csv *.h5 *.hdf5)")
 
         if file_paths:
             # Save the directory for next time
             self.settings.setValue("last_tracks_dir", str(Path(file_paths[0]).parent))
+
+            # get file formats
+            file_formats = [Path(f).suffix.lower() for f in file_paths]
 
             # Get currently selected sensor and imagery from data manager
             selected_sensor = self.data_manager.selected_sensor
@@ -1303,7 +1306,12 @@ class VistaMainWindow(QMainWindow):
 
             try:
                 # Check all files to see if any need sensor/imagery
-                for file_path in file_paths:
+                for file_path, file_format in zip(file_paths, file_formats):
+                    if file_format in [".h5", ".hdf5"]:
+                        # HDF5 tracks always need time mapping (no frame indices stored)
+                        overall_needs_time_mapping = True
+                        continue  
+
                     # Quick peek at CSV to check columns
                     df_peek = pd.read_csv(file_path, nrows=1)
                     has_times = "Times" in df_peek.columns
