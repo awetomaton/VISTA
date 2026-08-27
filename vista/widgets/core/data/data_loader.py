@@ -45,7 +45,7 @@ class DataLoaderThread(QThread):
     warning_occurred = pyqtSignal(str, str)  # Emits (title, message) for warnings
     progress_updated = pyqtSignal(str, int, int)  # Emits (message, current, total) for non-imagery data types
 
-    def __init__(self, file_path, data_type, file_format="hdf5", sensor=None, imagery=None):
+    def __init__(self, file_path, data_type, sensor=None, imagery=None):
         """
         Initialize the data loader thread
 
@@ -55,8 +55,6 @@ class DataLoaderThread(QThread):
             Path to the file to load
         data_type : str
             Type of data to load ('imagery', 'detections', 'tracks', 'aois', 'satellites', 'stars', 'solar system bodies')
-        file_format : str, optional
-            Format of the file ('hdf5', 'csv', or 'tle'), by default 'hdf5'
         sensor : Sensor, optional
             Optional Sensor object for track/detection association and geodetic mapping, by default None
         imagery : Imagery, optional
@@ -65,10 +63,12 @@ class DataLoaderThread(QThread):
         super().__init__()
         self.file_path = file_path
         self.data_type = data_type
-        self.file_format = file_format
         self.sensor = sensor
         self.imagery = imagery
         self._cancelled = False
+
+        # determine file format from file path 
+        self.file_format = Path(self.file_path).suffix.lower()
 
     def cancel(self):
         """Request cancellation of the loading operation"""

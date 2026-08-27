@@ -1222,7 +1222,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.detections_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, "detections", "csv", sensor=self.detections_selected_sensor)
+        self.loader_thread = DataLoaderThread(file_path, "detections", sensor=self.detections_selected_sensor)
         self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -1425,7 +1425,7 @@ class VistaMainWindow(QMainWindow):
 
         # Create and start loader thread
         self.loader_thread = DataLoaderThread(
-            file_path, "tracks", "csv", sensor=self.tracks_selected_sensor, imagery=self.tracks_selected_imagery
+            file_path, "tracks", sensor=self.tracks_selected_sensor, imagery=self.tracks_selected_imagery
         )
         self.loader_thread.tracks_loaded.connect(self.on_tracks_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
@@ -1578,7 +1578,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.aois_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, "aois", "csv")
+        self.loader_thread = DataLoaderThread(file_path, "aois")
         self.loader_thread.aois_loaded.connect(self.on_aois_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -1919,7 +1919,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.satellites_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, "satellites", "tle")
+        self.loader_thread = DataLoaderThread(file_path, "satellites")
         self.loader_thread.satellites_loaded.connect(self.on_satellites_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -2004,7 +2004,7 @@ class VistaMainWindow(QMainWindow):
         file_path = self.stars_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, "stars", "csv")
+        self.loader_thread = DataLoaderThread(file_path, "stars")
         self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -2051,7 +2051,7 @@ class VistaMainWindow(QMainWindow):
         # Create and start loader thread
         # loading via astroquery has no file type
         # but we use the catalog name as the file path
-        self.loader_thread = DataLoaderThread(catalog, "stars", None)
+        self.loader_thread = DataLoaderThread(catalog, "stars")
         self.loader_thread.stars_loaded.connect(self.on_stars_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
@@ -2101,7 +2101,7 @@ class VistaMainWindow(QMainWindow):
 
         # Create and start loader thread
         # loading via astropy has no file path or type
-        self.loader_thread = DataLoaderThread(None, "solar system bodies", None)
+        self.loader_thread = DataLoaderThread(None, "solar system bodies")
         self.loader_thread.solar_system_bodies_loaded.connect(self.on_solar_system_bodies_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)
