@@ -1384,7 +1384,7 @@ class VistaMainWindow(QMainWindow):
                     msg.setIcon(QMessageBox.Icon.Information)
                     msg.setWindowTitle("Track Loading Information")
                     msg.setText("The following will be used for track data mapping:")
-                    msg.setInformativeText("\n".join(preamble) + "\n\n".join(mapping_info))
+                    msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
                     msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                     if msg.exec() != QMessageBox.StandardButton.Ok:
                         return
