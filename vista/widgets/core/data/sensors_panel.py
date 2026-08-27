@@ -204,6 +204,7 @@ class SensorsPanel(DataPanel):
 
             # Clear selected sensor
             self.selected_sensor = None
+            self.sensor_selected.emit(None)
 
             # Update viewer display if it was showing imagery from the deleted sensor
             if self.viewer.imagery is not None and self.viewer.imagery.sensor == sensor:
