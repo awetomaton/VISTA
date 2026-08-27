@@ -82,7 +82,10 @@ class DataLoaderThread(QThread):
             elif self.data_type == "detections":
                 self._load_detections_csv()
             elif self.data_type == "tracks":
-                self._load_tracks_csv()
+                if self.file_format == ".csv":
+                    self._load_tracks_csv()
+                elif self.file_format in [".h5", ".hdf5"]:
+                    self._load_tracks_hdf5()
             elif self.data_type == "aois":
                 self._load_aois_csv()
             elif self.data_type == "satellites":
@@ -536,6 +539,36 @@ class DataLoaderThread(QThread):
             return  # Exit early if cancelled
 
         # Emit the loaded tracks
+        self.tracks_loaded.emit(tracks)
+
+    def _load_tracks_hdf5(self):
+        """Load tracks from HDF5 file"""
+
+        # observations are groups that contain the track info
+        observations = []
+        # observables are groups that can contain observations and other observables
+        observables = []
+
+        with h5py.File(self.file_path, "r") as f:
+            # all times inside groups are respective to this time
+            base_time = np.datetime64(f.attrs.get("base_time"))
+
+            # start with initial file
+            observables.append(f)
+            for obs in observables:
+                # add any observables to the list to be checked in the next loop
+                if "observables" in obs.keys():
+                    for item in obs["observables"].values():
+                        observables.append(item)
+                if "observations" in obs.keys():
+                    for item in obs["observations"].values():
+                        observations.append(item)
+
+            tracks = []
+            for obs in observations:
+                track = Track.from_hdf5(obs, base_time, sensor=self.sensor)
+                tracks.append(track)
+
         self.tracks_loaded.emit(tracks)
 
     def _load_aois_csv(self):

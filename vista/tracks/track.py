@@ -11,6 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Optional
 
+import h5py
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -569,7 +570,7 @@ class Track:
         elif times is not None:
             sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
             if len(sensor_imagery_times) == 0:
-                # Times present but no cannot map to frames using sensor - raise error
+                # Times present but cannot map to frames using sensor - raise error
                 raise ValueError(
                     f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping."
                 )
@@ -662,6 +663,64 @@ class Track:
             track._cached_lats = initial_lats
 
         return track
+
+    @classmethod
+    def from_hdf5(cls, group: h5py.Group, base_time: np.datetime64, sensor: Sensor):
+        """
+        Create Track from HDF5 group.
+
+        Parameters
+        ----------
+        group : h5py.Group
+            HDF5 group containing track data
+        base_time : datetime
+            Base time from the hdf5 file, used to convert relative times in the group to absolute times
+        sensor : Sensor
+            Sensor object for coordinate conversions
+
+        Returns
+        -------
+        Track
+            New Track object with data loaded from HDF5
+        """
+        # Load required datasets
+        name = group.name.split("/")[-1]  # Use group name as track name
+        rows = group["row"][:]
+        columns = group["column"][:]
+        times = base_time + group["time"][:].astype("timedelta64[s]")
+
+        sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
+        if len(sensor_imagery_times) == 0:
+            # Times present but cannot map to frames using sensor - raise error
+            raise ValueError(
+                f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping."
+            )
+
+        where = (times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])
+        rows = rows[where]
+        columns = columns[where]
+        times = times[where]
+        if len(times) == 0:
+            raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
+        
+        # Map times to frames using the sensor imagery
+        frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
+
+        extraction_metadata = {}
+        chips = group['imagery']['radiometry'][:]
+        extraction_metadata["chip_size"] = chips.shape[1]  # Assuming square chips. Axis 0 is time, 1 and 2 are subframe
+        extraction_metadata["chips"] = chips
+        extraction_metadata["signal_masks"] = group['imagery']['signal_mask'][:]
+        extraction_metadata["noise_stds"] = group['noise'][:]
+
+        return cls(
+            name=name,
+            frames=frames,
+            rows=rows,
+            columns=columns,
+            sensor=sensor,
+            extraction_metadata=extraction_metadata,
+        )
 
     @property
     def length(self):
