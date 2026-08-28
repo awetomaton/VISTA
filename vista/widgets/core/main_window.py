@@ -804,6 +804,9 @@ class VistaMainWindow(QMainWindow):
                 track.tracker = "Manual"
                 self.viewer.add_track(track)
                 self.data_manager.refresh()
+                # refresh() clears the Tracks table selection with its signals
+                # blocked. Propagate that empty selection to open detail plots.
+                self.data_manager.tracks_panel.on_track_selection_changed()
                 self.statusBar().showMessage(f"Track created: {track.name} with {len(track.frames)} points", 3000)
             else:
                 self.statusBar().showMessage("Track creation cancelled (no points added)", 3000)
