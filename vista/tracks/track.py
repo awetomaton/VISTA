@@ -629,7 +629,7 @@ class Track:
             initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
             # Map geodetic to pixel using sensor
             rows, columns = map_geodetic_to_pixel(
-                df["Latitude (deg)"].to_numpy(),
+                initial_lats,
                 initial_lons,
                 df["Altitude (km)"].to_numpy(),
                 frames,
