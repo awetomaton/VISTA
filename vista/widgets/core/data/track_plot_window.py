@@ -65,7 +65,7 @@ class TrackPlotWindow(QWidget):
         # Store plot data items for hover detection
         self._plot_items = []  # List of (track, PlotDataItem)
 
-        self.setWindowTitle("Track Details Plot")
+        self.setWindowTitle("Track Details")
         self.setWindowFlags(Qt.WindowType.Window)
         self.resize(800, 600)
 

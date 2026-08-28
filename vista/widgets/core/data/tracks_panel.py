@@ -472,7 +472,7 @@ class TracksPanel(DataPanel):
         tracks_actions_layout.addWidget(self.label_selected_btn)
 
         # Add plot track details button
-        self.plot_details_btn = QPushButton("Plot Track Details")
+        self.plot_details_btn = QPushButton("View Track Details")
         self.plot_details_btn.setEnabled(False)  # Disabled until tracks selected
         self.plot_details_btn.clicked.connect(self.on_plot_track_details_clicked)
         self.plot_details_btn.setToolTip("Plot point-by-point data for selected tracks")
