@@ -209,7 +209,7 @@ class TrackExtraction:
         largest_region = max(regions, key=lambda r: r.area)
 
         # Get weighted centroid
-        centroid = largest_region.weighted_centroid
+        centroid = largest_region.centroid_weighted
 
         # Convert to offset from chip center (accounting for pixel center at 0.5, 0.5)
         chip_center = self.chip_diameter // 2
