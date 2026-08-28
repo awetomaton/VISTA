@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -65,6 +66,9 @@ class TrackPlotWindow(QWidget):
         # Store plot data items for hover detection
         self._plot_items = []  # List of (track, PlotDataItem)
 
+        # The Image Chips tab deliberately displays one extracted track at a time.
+        self._chip_levels = {}  # track.uuid -> (low, high)
+
         self.setWindowTitle("Track Details")
         self.setWindowFlags(Qt.WindowType.Window)
         self.resize(800, 600)
@@ -82,6 +86,31 @@ class TrackPlotWindow(QWidget):
         self.tracks_label = QLabel("Selected Tracks: None")
         self.tracks_label.setWordWrap(True)
         layout.addWidget(self.tracks_label)
+
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+
+        self._init_details_tab()
+        self._init_image_chips_tab()
+
+        # Window-level buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        self.close_btn = QPushButton("Close")
+        self.close_btn.clicked.connect(self.close)
+        button_layout.addWidget(self.close_btn)
+
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def _init_details_tab(self):
+        """Create the Track Details display tab"""
+        self.details_tab = QWidget()
+        layout = QVBoxLayout(self.details_tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.tabs.addTab(self.details_tab, "Track Details")
 
         # Axis selection
         axis_layout = QHBoxLayout()
@@ -188,14 +217,132 @@ class TrackPlotWindow(QWidget):
         button_layout.addWidget(self.export_plot_btn)
 
         button_layout.addStretch()
-
-        self.close_btn = QPushButton("Close")
-        self.close_btn.clicked.connect(self.close)
-        button_layout.addWidget(self.close_btn)
-
         layout.addLayout(button_layout)
 
-        self.setLayout(layout)
+    def _init_image_chips_tab(self):
+        """Create the single-track, current-frame image-chip view."""
+        self.image_chips_tab = QWidget()
+        layout = QVBoxLayout(self.image_chips_tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.tabs.addTab(self.image_chips_tab, "Image Chips")
+
+        selection_layout = QHBoxLayout()
+        selection_layout.addWidget(QLabel("Select Track:"))
+        self.image_chip_track_combo = QComboBox()
+        self.image_chip_track_combo.setToolTip(
+            "Choose the extracted track whose image chips should be displayed"
+        )
+        self.image_chip_track_combo.currentIndexChanged.connect(self.update_image_chip)
+        selection_layout.addWidget(self.image_chip_track_combo, 1)
+        layout.addLayout(selection_layout)
+
+        self.image_chip_plot = pg.PlotWidget()
+        self.image_chip_plot.setAspectLocked(True)
+        self.image_chip_plot.invertY(True)
+        self.image_chip_plot.hideAxis("bottom")
+        self.image_chip_plot.hideAxis("left")
+        self.image_chip_plot.setMenuEnabled(False)
+        self.image_chip_plot.setMouseEnabled(x=True, y=True)
+        self.image_chip_image = pg.ImageItem(axisOrder="row-major")
+        self.image_chip_mask = pg.ImageItem(axisOrder="row-major")
+        self.image_chip_plot.addItem(self.image_chip_image)
+        self.image_chip_plot.addItem(self.image_chip_mask)
+        layout.addWidget(self.image_chip_plot, 1)
+
+        self.image_chip_info_label = QLabel("No extracted tracks selected.")
+        self.image_chip_info_label.setWordWrap(True)
+        self.image_chip_info_label.setStyleSheet("color: gray; font-style: italic;")
+        layout.addWidget(self.image_chip_info_label)
+
+    def _refresh_image_chip_track_options(self):
+        """Populate the image-chip inspector with extracted tracks."""
+        previous_uuid = self.image_chip_track_combo.currentData()
+        extracted_tracks = [track for track in self.tracks if track.extraction_metadata is not None]
+
+        self.image_chip_track_combo.blockSignals(True)
+        self.image_chip_track_combo.clear()
+        for track in extracted_tracks:
+            tracker_name = self.tracker_map.get(track.uuid)
+            label = f"{track.name} ({tracker_name})" if tracker_name else track.name
+            self.image_chip_track_combo.addItem(label, track.uuid)
+
+        previous_index = self.image_chip_track_combo.findData(previous_uuid)
+        if previous_index >= 0:
+            self.image_chip_track_combo.setCurrentIndex(previous_index)
+        self.image_chip_track_combo.setEnabled(bool(extracted_tracks))
+        self.image_chip_track_combo.blockSignals(False)
+
+    def _selected_image_chip_track(self):
+        """Return the currently selected extracted track, if any."""
+        selected_uuid = self.image_chip_track_combo.currentData()
+        for track in self.tracks:
+            if track.uuid == selected_uuid:
+                return track
+
+        return None
+
+    def _get_image_chip_levels(self, track, chips):
+        """Return stable display levels for all image chips of one track."""
+        if track.uuid not in self._chip_levels:
+            finite_chips = chips[np.isfinite(chips)]
+            if finite_chips.size == 0:
+                levels = (0.0, 1.0)
+            else:
+                levels = tuple(np.percentile(finite_chips, (1, 99)))
+                if levels[0] == levels[1]:
+                    levels = (levels[0] - 0.5, levels[1] + 0.5)
+            self._chip_levels[track.uuid] = levels
+        return self._chip_levels[track.uuid]
+
+    def update_image_chip(self):
+        """Display the selected track's image chip and signal mask at the current frame."""
+        track = self._selected_image_chip_track()
+        if track is None:
+            self.image_chip_image.clear()
+            self.image_chip_mask.clear()
+            self.image_chip_info_label.setText("No extracted tracks selected.")
+            return
+
+        metadata = track.extraction_metadata
+        chips = metadata.get("chips") if metadata is not None else None
+        if chips is None:
+            self.image_chip_image.clear()
+            self.image_chip_mask.clear()
+            self.image_chip_info_label.setText(f"{track.name} has no extracted image chips.")
+            return
+
+        current_frame = self.viewer.current_frame_number if self.viewer else 0
+        frame_indices = np.flatnonzero(track.frames == current_frame)
+        if len(frame_indices) == 0:
+            self.image_chip_image.clear()
+            self.image_chip_mask.clear()
+            self.image_chip_info_label.setText(
+                f"{track.name} has no image chip at frame {current_frame}."
+            )
+            return
+
+        index = frame_indices[0]
+        chip = chips[index]
+        self.image_chip_image.setImage(
+            chip,
+            levels=self._get_image_chip_levels(track, chips),
+        )
+
+        mask = metadata.get("signal_masks")
+        signal_pixel_count = 0
+        if mask is not None and index < len(mask):
+            signal_mask = mask[index].astype(bool)
+            signal_pixel_count = int(np.count_nonzero(signal_mask))
+            overlay = np.zeros((*signal_mask.shape, 4), dtype=np.uint8)
+            overlay[signal_mask, 0] = 255
+            overlay[signal_mask, 3] = 150
+            self.image_chip_mask.setImage(overlay, autoLevels=False)
+        else:
+            self.image_chip_mask.clear()
+        self.image_chip_info_label.setText(
+            f"{track.name}  |  Frame: {current_frame}"
+        )
+        self.image_chip_plot.autoRange()
 
     def _on_settings_changed(self):
         """Handle plot settings change"""
@@ -619,10 +766,13 @@ class TrackPlotWindow(QWidget):
             track_names = [t.name for t in tracks]
             self.tracks_label.setText(f"Selected Tracks: {', '.join(track_names)}")
 
+        self._refresh_image_chip_track_options()
+
         # Refresh available axis options based on data
         self._refresh_axis_options()
 
         self.update_plot()
+        self.update_image_chip()
 
     def on_frame_changed(self, _frame: int):
         """
@@ -634,6 +784,7 @@ class TrackPlotWindow(QWidget):
             Current frame number (unused, frame is read from viewer)
         """
         self.update_plot()
+        self.update_image_chip()
 
     def _refresh_axis_options(self):
         """Refresh axis combo boxes based on available data"""
@@ -1023,4 +1174,5 @@ class TrackPlotWindow(QWidget):
         self.tracker_map = {}
         self._cached_data = {}
         self._plot_items = []
+        self._chip_levels = {}
         super().closeEvent(event)
