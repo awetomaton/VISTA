@@ -417,9 +417,9 @@ class Track:
         if not self.has_uncertainty():
             return None
 
-        # Geometric mean radius = sqrt(det(covariance_matrix))
+        # Geometric mean radius = sqrt(sqrt(det(covariance_matrix)))
         det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
-        return np.sqrt(np.maximum(det, 0))
+        return np.sqrt(np.sqrt(np.maximum(det, 0)))
 
     def get_times(self) -> NDArray[np.datetime64]:
         """
