@@ -113,7 +113,8 @@ class SensorsPanel(DataPanel):
                     if imagery.uuid in sensor._added_imagery_uuids:
                         loaded_imagery_fnames.append(imagery.filename)
             loaded_imagery_fnames = list(set(loaded_imagery_fnames))  # list of unique fnames
-            short_names = [Path(fname).stem for fname in loaded_imagery_fnames]  # just use stem for display
+            # just use stem for display, but only if not blank
+            short_names = [Path(fname).stem for fname in loaded_imagery_fnames if fname != ""]
             loaded_imagery_fname_item = QTableWidgetItem(", ".join(short_names))
             loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
@@ -204,6 +205,7 @@ class SensorsPanel(DataPanel):
 
             # Clear selected sensor
             self.selected_sensor = None
+            self.sensor_selected.emit(None)
 
             # Update viewer display if it was showing imagery from the deleted sensor
             if self.viewer.imagery is not None and self.viewer.imagery.sensor == sensor:

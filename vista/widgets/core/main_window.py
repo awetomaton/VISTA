@@ -1173,8 +1173,8 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_detections_dir", str(Path(file_paths[0]).parent))
 
-            # Get currently selected sensor from data manager
-            selected_sensor = self.data_manager.selected_sensor
+            # Get currently selected sensor from viewer
+            selected_sensor = self.viewer.selected_sensor
 
             # Check if sensor is selected (required for detection association)
             if not selected_sensor:
@@ -1293,8 +1293,8 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_tracks_dir", str(Path(file_paths[0]).parent))
 
-            # Get currently selected sensor and imagery from data manager
-            selected_sensor = self.data_manager.selected_sensor
+            # Get currently selected sensor and imagery from viewer
+            selected_sensor = self.viewer.selected_sensor
             selected_imagery = self.viewer.imagery
 
             # Check if any tracks need sensor or imagery for conversion
