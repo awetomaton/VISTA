@@ -2198,10 +2198,9 @@ class TracksPanel(DataPanel):
 
         # Refresh table
         self.refresh_tracks_table()
-
-        # Clear selection in both table and viewer to prevent stale indices from being highlighted
-        self.tracks_table.clearSelection()
-        self.viewer.set_selected_tracks(set())
+        # refreshing the table already clears the selection, so we can just call the handler
+        # to explicitly refresh selection-dependent UI state and update the viewer's selected_tracks
+        self.on_track_selection_changed()
 
         self.data_changed.emit()
 
