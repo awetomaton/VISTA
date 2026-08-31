@@ -77,5 +77,5 @@ this dataset to test known sources satellites passing through the field of view.
 `sample_stars.csv <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_stars.csv>`_
 An example of a CSV file that defines star locations for inclusion in imagery.
 
-`sample_satellites.csv <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_satellites.csv>`_
-An example of a CSV file that provides satellite Two-Line Element (TLE) data for inclusion in imagery.
+`sample_satellites.tle <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_satellites.tle>`_
+An example of a file that provides satellite Two-Line Element (TLE) data for inclusion in imagery.
