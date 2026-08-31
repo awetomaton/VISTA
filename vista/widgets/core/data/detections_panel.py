@@ -1112,6 +1112,17 @@ class DetectionsPanel(DataPanel):
         # Delete the detectors
         detectors_to_delete_uuids = set(d.uuid for d in detectors_to_delete)
 
+        # Stop detector editing before deleting its backing detector. Edit mode
+        # keeps a separate temporary plot that is not part of detector_plot_items.
+        editing_detector = self.viewer.editing_detector
+        if (
+            self.viewer.detection_editing_mode
+            and editing_detector is not None
+            and editing_detector.uuid in detectors_to_delete_uuids
+        ):
+            self.viewer.finish_detection_editing()
+            self.edit_detector_btn.setChecked(False)
+
         # Remove from viewer list (use uuid comparison to avoid numpy array comparison)
         self.viewer.detectors = [d for d in self.viewer.detectors if d.uuid not in detectors_to_delete_uuids]
 
