@@ -707,7 +707,7 @@ class Track:
         frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
 
         extraction_metadata = {}
-        chips = group["imagery"].get(["radiometry"])
+        chips = group["imagery"].get("radiometry")
         if chips is not None:
             extraction_metadata["chip_size"] = chips.shape[1]  # Assuming square chips. Axis 0 is time, 1 and 2 are chip
             extraction_metadata["chips"] = chips[:]
