@@ -708,7 +708,7 @@ class Track:
 
         extraction_metadata = {}
         chips = group['imagery']['radiometry'][:]
-        extraction_metadata["chip_size"] = chips.shape[1]  # Assuming square chips. Axis 0 is time, 1 and 2 are subframe
+        extraction_metadata["chip_size"] = chips.shape[1]  # Assuming square chips. Axis 0 is time, 1 and 2 are chip
         extraction_metadata["chips"] = chips
         extraction_metadata["signal_masks"] = group['imagery']['signal_mask'][:]
         extraction_metadata["noise_stds"] = group['noise'][:]
