@@ -9,7 +9,7 @@ from astropy import units
 from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsRectItem, QVBoxLayout, QWidget
 from shapely.geometry import Point, Polygon
 
 from vista.aoi.aoi import AOI
@@ -146,6 +146,7 @@ class ImageryViewer(QWidget):
         self.extraction_view_mode = False
         self.viewing_extraction_track = None  # Track object whose extraction is being viewed
         self.extraction_overlay = None  # ImageItem for displaying extraction signal pixels
+        self.extraction_bounds = None  # Chip-boundary rectangle
 
         # Extraction editing mode
         self.extraction_editing_mode = False
@@ -2239,6 +2240,14 @@ class ImageryViewer(QWidget):
             self.extraction_overlay.setOpacity(0.5)  # Semi-transparent
             self.plot_item.addItem(self.extraction_overlay)
 
+        # Create a boundary for the extraction chip
+        if self.extraction_bounds is None:
+            self.extraction_bounds = QGraphicsRectItem()
+            self.extraction_bounds.setPen(pg.mkPen("y", width=2, style=Qt.PenStyle.DashLine))
+            self.extraction_bounds.setZValue(11)
+            self.plot_item.addItem(self.extraction_bounds)
+        self.extraction_bounds.setToolTip(f"Extraction footprint: {track.name}")
+
         # Update display
         self._update_extraction_overlay()
         return True
@@ -2253,8 +2262,13 @@ class ImageryViewer(QWidget):
             self.plot_item.removeItem(self.extraction_overlay)
             self.extraction_overlay = None
 
+        # Remove temporary extraction boundary
+        if self.extraction_bounds is not None:
+            self.plot_item.removeItem(self.extraction_bounds)
+            self.extraction_bounds = None
+
     def _update_extraction_overlay(self):
-        """Update the extraction overlay for the current frame"""
+        """Update the extraction overlay and chip boundary for the current frame"""
         if not self.extraction_view_mode or self.viewing_extraction_track is None:
             return
 
@@ -2267,7 +2281,9 @@ class ImageryViewer(QWidget):
         if not np.any(frame_mask):
             # No track point at current frame
             if self.extraction_overlay is not None:
-                self.extraction_overlay.setImage(np.zeros((1, 1)))
+                self.extraction_overlay.setVisible(False)
+            if self.extraction_bounds is not None:
+                self.extraction_bounds.setVisible(False)
             return
 
         track_idx = np.where(frame_mask)[0][0]
@@ -2290,9 +2306,13 @@ class ImageryViewer(QWidget):
         chip_top = int(np.round(track_row)) - radius
         chip_left = int(np.round(track_col)) - radius
 
-        # Update overlay image
+        # Update overlay image and chip boundary
         self.extraction_overlay.setImage(overlay, autoLevels=False)
         self.extraction_overlay.setPos(chip_left, chip_top)
+        self.extraction_overlay.setVisible(True)
+
+        self.extraction_bounds.setRect(chip_left, chip_top, chip_size, chip_size)
+        self.extraction_bounds.setVisible(True)
 
     def start_extraction_editing(self, track, imagery):
         """Start extraction editing mode for a specific track"""

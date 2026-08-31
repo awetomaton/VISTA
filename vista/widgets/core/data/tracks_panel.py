@@ -509,7 +509,9 @@ class TracksPanel(DataPanel):
         self.view_extraction_btn.setCheckable(True)
         self.view_extraction_btn.setEnabled(False)  # Disabled until single track with extraction selected
         self.view_extraction_btn.clicked.connect(self.on_view_extraction_clicked)
-        self.view_extraction_btn.setToolTip("View signal pixel overlay for selected extracted track")
+        self.view_extraction_btn.setToolTip(
+            "View the signal pixel overlay and extraction footprint for the selected track"
+        )
         track_actions_layout.addWidget(self.view_extraction_btn)
 
         # Add edit extraction button
@@ -2635,8 +2637,8 @@ class TracksPanel(DataPanel):
                 return
 
             self.status_message.emit(
-                f"Viewing extraction for '{track.name}'. Signal pixels shown in red. "
-                "Uncheck 'View Extraction' when finished.",
+                f"Viewing extraction for '{track.name}'. Signal pixels shown in red, "
+                "extraction footprint shown in yellow. Uncheck 'View Extraction' when finished.",
                 0,
             )
         else:
