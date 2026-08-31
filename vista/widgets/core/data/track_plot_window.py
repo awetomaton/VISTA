@@ -329,10 +329,8 @@ class TrackPlotWindow(QWidget):
         )
 
         mask = metadata.get("signal_masks")
-        signal_pixel_count = 0
         if mask is not None and index < len(mask):
             signal_mask = mask[index].astype(bool)
-            signal_pixel_count = int(np.count_nonzero(signal_mask))
             overlay = np.zeros((*signal_mask.shape, 4), dtype=np.uint8)
             overlay[signal_mask, 0] = 255
             overlay[signal_mask, 3] = 150
