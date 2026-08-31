@@ -2160,6 +2160,25 @@ class TracksPanel(DataPanel):
         # Save state before delete
         self.save_undo_state(f"Delete {len(tracks_to_delete)} tracks")
 
+        # Stop extraction viewing/editing before deleting the track.
+        # Both modes keep direct references to the track and share the extraction
+        # overlay, so removing the track from viewer.tracks is not sufficient.
+        viewing_track = self.viewer.viewing_extraction_track
+        if (
+            self.viewer.extraction_view_mode
+            and viewing_track is not None
+            and viewing_track in tracks_to_delete
+        ):
+            self.viewer.finish_extraction_viewing()
+
+        editing_track = self.viewer.editing_extraction_track
+        if (
+            self.viewer.extraction_editing_mode
+            and editing_track is not None
+            and editing_track in tracks_to_delete
+        ):
+            self.viewer.finish_extraction_editing()
+
         # Delete the tracks
         for track in tracks_to_delete:
             self.viewer.tracks.remove(track)
