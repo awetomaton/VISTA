@@ -2164,19 +2164,11 @@ class TracksPanel(DataPanel):
         # Both modes keep direct references to the track and share the extraction
         # overlay, so removing the track from viewer.tracks is not sufficient.
         viewing_track = self.viewer.viewing_extraction_track
-        if (
-            self.viewer.extraction_view_mode
-            and viewing_track is not None
-            and viewing_track in tracks_to_delete
-        ):
+        if self.viewer.extraction_view_mode and viewing_track is not None and viewing_track in tracks_to_delete:
             self.viewer.finish_extraction_viewing()
 
         editing_track = self.viewer.editing_extraction_track
-        if (
-            self.viewer.extraction_editing_mode
-            and editing_track is not None
-            and editing_track in tracks_to_delete
-        ):
+        if self.viewer.extraction_editing_mode and editing_track is not None and editing_track in tracks_to_delete:
             self.viewer.finish_extraction_editing()
 
         # Delete the tracks

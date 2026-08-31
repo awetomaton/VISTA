@@ -121,7 +121,7 @@ class Sensor:
         times = self._imagery_frames_dataframe["times"].to_numpy()
 
         sorter = np.argsort(frames)
-        
+
         return frames[sorter], times[sorter]
 
     def add_imagery(self, imagery):

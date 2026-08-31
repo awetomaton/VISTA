@@ -181,11 +181,7 @@ class SensorsPanel(DataPanel):
             # to the viewed track, so removing the track from viewer.tracks alone would leave the overlay
             # and stale reference active.
             viewing_track = self.viewer.viewing_extraction_track
-            if (
-                self.viewer.extraction_view_mode
-                and viewing_track is not None
-                and viewing_track.sensor == sensor
-            ):
+            if self.viewer.extraction_view_mode and viewing_track is not None and viewing_track.sensor == sensor:
                 self.viewer.finish_extraction_viewing()
 
             # Delete all tracks for this sensor
