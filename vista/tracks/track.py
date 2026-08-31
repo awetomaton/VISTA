@@ -702,7 +702,7 @@ class Track:
         times = times[where]
         if len(times) == 0:
             raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
-        
+
         # Map times to frames using the sensor imagery
         frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
 

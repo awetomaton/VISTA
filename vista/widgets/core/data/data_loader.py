@@ -67,7 +67,7 @@ class DataLoaderThread(QThread):
         self.imagery = imagery
         self._cancelled = False
 
-        # determine file format from file path 
+        # determine file format from file path
         self.file_format = Path(self.file_path).suffix.lower()
 
     def cancel(self):

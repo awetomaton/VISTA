@@ -1287,7 +1287,9 @@ class VistaMainWindow(QMainWindow):
             # Get last used directory from settings
             last_dir = self.settings.value("last_tracks_dir", "")
 
-            file_paths, _ = QFileDialog.getOpenFileNames(self, "Load Tracks", last_dir, "CSV, HDF5 Files (*.csv *.h5 *.hdf5)")
+            file_paths, _ = QFileDialog.getOpenFileNames(
+                self, "Load Tracks", last_dir, "CSV, HDF5 Files (*.csv *.h5 *.hdf5)"
+            )
 
         if file_paths:
             # Save the directory for next time
@@ -1310,7 +1312,7 @@ class VistaMainWindow(QMainWindow):
                     if file_format in [".h5", ".hdf5"]:
                         # HDF5 tracks always need time mapping (no frame indices stored)
                         overall_needs_time_mapping = True
-                        continue  
+                        continue
 
                     # Quick peek at CSV to check columns
                     df_peek = pd.read_csv(file_path, nrows=1)

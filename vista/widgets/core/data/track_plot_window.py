@@ -229,9 +229,7 @@ class TrackPlotWindow(QWidget):
         selection_layout = QHBoxLayout()
         selection_layout.addWidget(QLabel("Select Track:"))
         self.image_chip_track_combo = QComboBox()
-        self.image_chip_track_combo.setToolTip(
-            "Choose the extracted track whose image chips should be displayed"
-        )
+        self.image_chip_track_combo.setToolTip("Choose the extracted track whose image chips should be displayed")
         self.image_chip_track_combo.currentIndexChanged.connect(self.update_image_chip)
         selection_layout.addWidget(self.image_chip_track_combo, 1)
         layout.addLayout(selection_layout)
@@ -316,9 +314,7 @@ class TrackPlotWindow(QWidget):
         if len(frame_indices) == 0:
             self.image_chip_image.clear()
             self.image_chip_mask.clear()
-            self.image_chip_info_label.setText(
-                f"{track.name} has no image chip at frame {current_frame}."
-            )
+            self.image_chip_info_label.setText(f"{track.name} has no image chip at frame {current_frame}.")
             return
 
         index = frame_indices[0]
@@ -337,9 +333,7 @@ class TrackPlotWindow(QWidget):
             self.image_chip_mask.setImage(overlay, autoLevels=False)
         else:
             self.image_chip_mask.clear()
-        self.image_chip_info_label.setText(
-            f"{track.name}  |  Frame: {current_frame}"
-        )
+        self.image_chip_info_label.setText(f"{track.name}  |  Frame: {current_frame}")
         self.image_chip_plot.autoRange()
 
     def _on_settings_changed(self):
