@@ -892,6 +892,7 @@ class TracksPanel(DataPanel):
         self._apply_track_column_visibility()
 
         self.tracks_table.blockSignals(False)
+        self.on_track_selection_changed()
 
     def _apply_track_column_visibility(self):
         """Apply column visibility settings to tracks table"""
@@ -2190,9 +2191,6 @@ class TracksPanel(DataPanel):
 
         # Refresh table
         self.refresh_tracks_table()
-        # refreshing the table already clears the selection, so we can just call the handler
-        # to explicitly refresh selection-dependent UI state and update the viewer's selected_tracks
-        self.on_track_selection_changed()
 
         self.data_changed.emit()
 

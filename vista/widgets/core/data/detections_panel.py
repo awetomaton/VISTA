@@ -440,6 +440,8 @@ class DetectionsPanel(DataPanel):
             traceback.print_exc()
             self.detections_table.blockSignals(False)
 
+        self.on_detector_selection_changed()
+
     def _update_detections_header_icons(self):
         """Update header labels to show filter indicators"""
         base_names = ["Visible", "Name", "Labels", "Color", "Marker", "Marker Size", "Line Thickness", "Complete"]
