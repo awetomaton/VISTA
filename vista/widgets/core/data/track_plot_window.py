@@ -2,7 +2,7 @@
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -67,7 +67,13 @@ class TrackPlotWindow(QWidget):
         self._plot_items = []  # List of (track, PlotDataItem)
 
         # The Image Chips tab deliberately displays one extracted track at a time.
-        self._chip_levels = {}  # track.uuid -> (low, high)
+        # Like the main imagery histogram, automatic levels are frame-specific until
+        # the user adjusts them; user-selected levels then persist for that track.
+        self._chip_user_levels = {}  # track.uuid -> (low, high)
+        self._updating_image_chip_histogram = False
+        self._image_chip_histogram_track_uuid = None
+        # Share main window histogram computation settings and color map
+        self.settings = QSettings("Vista", "VistaApp")
 
         self.setWindowTitle("Track Details")
         self.setWindowFlags(Qt.WindowType.Window)
@@ -247,6 +253,31 @@ class TrackPlotWindow(QWidget):
         self.image_chip_plot.addItem(self.image_chip_mask)
         layout.addWidget(self.image_chip_plot, 1)
 
+        self.image_chip_hist_widget = pg.GraphicsLayoutWidget()
+        self.image_chip_hist_widget.setMaximumHeight(150)
+        self.image_chip_histogram = pg.HistogramLUTItem(orientation="horizontal")
+        self.image_chip_hist_widget.addItem(self.image_chip_histogram)
+        self.image_chip_histogram.setImageItem(self.image_chip_image)
+        self.image_chip_histogram.sigLevelChangeFinished.connect(self._on_image_chip_levels_changed)
+
+        # Block signals to prevent histogram recomputation
+        try:
+            self.image_chip_image.sigImageChanged.disconnect(self.image_chip_histogram.imageChanged)
+        except TypeError:
+            pass
+
+        # Restore histogram gradient state from settings
+        histogram_state = self.settings.value("histogram_gradient_state")
+        if histogram_state:
+            # Apply the state to the histogram immediately
+            try:
+                self.image_chip_histogram.restoreState(histogram_state)
+            except Exception:
+                # If restoration fails, just continue with defaults
+                pass
+
+        layout.addWidget(self.image_chip_hist_widget)
+
         self.image_chip_info_label = QLabel("No extracted tracks selected.")
         self.image_chip_info_label.setWordWrap(True)
         self.image_chip_info_label.setStyleSheet("color: gray; font-style: italic;")
@@ -279,50 +310,101 @@ class TrackPlotWindow(QWidget):
 
         return None
 
-    def _get_image_chip_levels(self, track, chips):
-        """Return stable display levels for all image chips of one track."""
-        if track.uuid not in self._chip_levels:
-            finite_chips = chips[np.isfinite(chips)]
-            if finite_chips.size == 0:
-                levels = (0.0, 1.0)
-            else:
-                levels = tuple(np.percentile(finite_chips, (1, 99)))
-                if levels[0] == levels[1]:
-                    levels = (levels[0] - 0.5, levels[1] + 0.5)
-            self._chip_levels[track.uuid] = levels
-        return self._chip_levels[track.uuid]
+    def _compute_image_chip_histogram(self, chip):
+        """Return histogram counts and bin centers for one image chip."""
+        finite_chip = chip[np.isfinite(chip)]
+        if finite_chip.size == 0:
+            return np.array([]), np.array([])
+
+        bins = max(1, self.settings.value("imagery/histogram_bins", 256, type=int))
+        hist_y, bin_edges = np.histogram(finite_chip, bins=bins)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        nonzero_hist = hist_y > 0
+        return hist_y[nonzero_hist], bin_centers[nonzero_hist]
+
+    def _get_default_image_chip_levels(self, chip):
+        """Return the main-viewer-style automatic levels for one image chip."""
+        finite_chip = chip[np.isfinite(chip)]
+        if finite_chip.size == 0:
+            return (-1.0, 1.0)
+
+        # defaults are 1st and 99th percentiles if no values in settings
+        min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
+        max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
+        levels = tuple(np.percentile(finite_chip, (min_percentile, max_percentile)))
+
+        # PyQtGraph requires a nonzero level range for a useful display.
+        if levels[0] == levels[1]:
+            levels = (levels[0] - 0.5, levels[1] + 0.5)
+        return levels
+
+    def _get_image_chip_levels(self, track, chip):
+        """Return a user override or automatic levels for the current chip."""
+        if track.uuid in self._chip_user_levels:
+            return self._chip_user_levels[track.uuid]
+        return self._get_default_image_chip_levels(chip)
+
+    def _clear_image_chip_display(self, message):
+        """Clear the chip, mask, and histogram while preserving user level choices."""
+        self.image_chip_image.clear()
+        self.image_chip_mask.clear()
+        self.image_chip_histogram.plot.setData([], [])
+        self._image_chip_histogram_track_uuid = None
+        self.image_chip_info_label.setText(message)
+
+    def _on_image_chip_levels_changed(self):
+        """Store user-adjusted chip levels for the selected track."""
+        if self._updating_image_chip_histogram:
+            return
+
+        track = self._selected_image_chip_track()
+        if track is None:
+            return
+
+        levels = tuple(self.image_chip_histogram.getLevels())
+        self._chip_user_levels[track.uuid] = levels
+        self.image_chip_image.setLevels(levels)
 
     def update_image_chip(self):
         """Display the selected track's image chip and signal mask at the current frame."""
         track = self._selected_image_chip_track()
         if track is None:
-            self.image_chip_image.clear()
-            self.image_chip_mask.clear()
-            self.image_chip_info_label.setText("No extracted tracks selected.")
+            self._clear_image_chip_display("No extracted tracks selected.")
             return
 
         metadata = track.extraction_metadata
         chips = metadata.get("chips") if metadata is not None else None
         if chips is None:
-            self.image_chip_image.clear()
-            self.image_chip_mask.clear()
-            self.image_chip_info_label.setText(f"{track.name} has no extracted image chips.")
+            self._clear_image_chip_display(f"{track.name} has no extracted image chips.")
             return
 
         current_frame = self.viewer.current_frame_number if self.viewer else 0
         frame_indices = np.flatnonzero(track.frames == current_frame)
         if len(frame_indices) == 0:
-            self.image_chip_image.clear()
-            self.image_chip_mask.clear()
-            self.image_chip_info_label.setText(f"{track.name} has no image chip at frame {current_frame}.")
+            self._clear_image_chip_display(f"{track.name} has no image chip at frame {current_frame}.")
             return
 
         index = frame_indices[0]
         chip = chips[index]
-        self.image_chip_image.setImage(
-            chip,
-            levels=self._get_image_chip_levels(track, chips),
-        )
+        levels = self._get_image_chip_levels(track, chip)
+        hist_y, hist_x = self._compute_image_chip_histogram(chip)
+        track_changed = track.uuid != self._image_chip_histogram_track_uuid
+
+        self._updating_image_chip_histogram = True
+        try:
+            self.image_chip_image.setImage(chip, autoLevels=False)
+            self.image_chip_histogram.plot.setData(hist_x, hist_y)
+            self.image_chip_histogram.setLevels(*levels)
+
+            # As in the main imagery viewer, explicitly synchronize levels because
+            # setting an unchanged histogram region does not always notify ImageItem.
+            self.image_chip_image.setLevels(self.image_chip_histogram.getLevels())
+            if track_changed:
+                self.image_chip_histogram.vb.autoRange()
+        finally:
+            self._updating_image_chip_histogram = False
+
+        self._image_chip_histogram_track_uuid = track.uuid
 
         mask = metadata.get("signal_masks")
         if mask is not None and index < len(mask):
@@ -1166,5 +1248,5 @@ class TrackPlotWindow(QWidget):
         self.tracker_map = {}
         self._cached_data = {}
         self._plot_items = []
-        self._chip_levels = {}
+        self._chip_user_levels = {}
         super().closeEvent(event)
