@@ -1216,11 +1216,13 @@ class DetectionsPanel(DataPanel):
                     break
 
         # Select all moved rows
+        selection_model = self.detections_table.selectionModel()
+        model = self.detections_table.model()
         for row in rows_to_select:
-            for col in range(self.detections_table.columnCount()):
-                item = self.detections_table.item(row, col)
-                if item:
-                    item.setSelected(True)
+            index = model.index(row, 0)
+            selection_model.select(
+                index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+            )
         self.detections_table.blockSignals(False)
 
         self.data_changed.emit()

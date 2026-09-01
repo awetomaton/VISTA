@@ -2280,11 +2280,13 @@ class TracksPanel(DataPanel):
                     break
 
         # Select all moved rows
+        selection_model = self.tracks_table.selectionModel()
+        model = self.tracks_table.model()
         for row in rows_to_select:
-            for col in range(self.tracks_table.columnCount()):
-                item = self.tracks_table.item(row, col)
-                if item:
-                    item.setSelected(True)
+            index = model.index(row, 0)
+            selection_model.select(
+                index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+            )
         self.tracks_table.blockSignals(False)
 
         self.data_changed.emit()
@@ -2410,6 +2412,8 @@ class TracksPanel(DataPanel):
         )
 
         # Find the row in the tracks table that matches this track
+        selection_model = self.tracks_table.selectionModel()
+        model = self.tracks_table.model()
         for row in range(self.tracks_table.rowCount()):
             track_name_item = self.tracks_table.item(row, 2)
             if track_name_item and track_name_item.data(Qt.ItemDataRole.UserRole) == track.uuid:
@@ -2417,16 +2421,16 @@ class TracksPanel(DataPanel):
                     # Add to selection (toggle if already selected)
                     if self.tracks_table.item(row, 0).isSelected():
                         # Deselect this row
-                        for col in range(self.tracks_table.columnCount()):
-                            item = self.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(False)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Deselect | QItemSelectionModel.SelectionFlag.Rows
+                        )
                     else:
                         # Add this row to selection
-                        for col in range(self.tracks_table.columnCount()):
-                            item = self.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
                 else:
                     # Replace selection with this row
                     self.tracks_table.selectRow(row)
@@ -2580,6 +2584,8 @@ class TracksPanel(DataPanel):
 
         # Restore track selection after refresh
         if selected_track_ids:
+            selection_model = self.tracks_table.selectionModel()
+            model = self.tracks_table.model()
             self.tracks_table.blockSignals(True)
             for row in range(self.tracks_table.rowCount()):
                 track_name_item = self.tracks_table.item(row, 2)
@@ -2587,10 +2593,10 @@ class TracksPanel(DataPanel):
                     track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
                     if track_id in selected_track_ids:
                         # Select all columns in this row
-                        for col in range(self.tracks_table.columnCount()):
-                            item = self.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
             self.tracks_table.blockSignals(False)
             # Manually trigger selection changed to update button states
             self.on_track_selection_changed()
