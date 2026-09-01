@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QSlider,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -531,6 +532,27 @@ class TracksPanel(DataPanel):
 
         track_actions_layout.addStretch()
         layout.addLayout(track_actions_layout)
+
+        # Contextual extraction display controls. Keep these on their own row so
+        # the already-crowded single-track action row remains usable.
+        self.signal_opacity_widget = QWidget()
+        signal_opacity_layout = QHBoxLayout(self.signal_opacity_widget)
+        signal_opacity_layout.setContentsMargins(0, 0, 0, 0)
+        signal_opacity_layout.addWidget(QLabel("Extracted Signal Overlay Opacity:"))
+        self.signal_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.signal_opacity_slider.setRange(0, 100)
+        self.signal_opacity_slider.setValue(round(self.viewer.extraction_signal_opacity * 100))
+        self.signal_opacity_slider.setToolTip("Adjust the signal overlay opacity in the main imagery viewer")
+        self.signal_opacity_slider.valueChanged.connect(self._on_signal_opacity_changed)
+        signal_opacity_layout.addWidget(self.signal_opacity_slider, 1)
+        self.signal_opacity_label = QLabel(f"{self.signal_opacity_slider.value()}%")
+        self.signal_opacity_label.setMinimumWidth(40)
+        signal_opacity_layout.addWidget(self.signal_opacity_label)
+        self.signal_opacity_widget.setVisible(False)
+        layout.addWidget(self.signal_opacity_widget)
+
+        self.view_extraction_btn.toggled.connect(self._update_signal_opacity_control_visibility)
+        self.edit_extraction_btn.toggled.connect(self._update_signal_opacity_control_visibility)
 
         # Track column visibility (all columns visible by default except what we decide to hide)
         # Column 0 (Visible) is always shown and cannot be hidden
@@ -2645,6 +2667,16 @@ class TracksPanel(DataPanel):
             # Finish extraction viewing
             self.viewer.finish_extraction_viewing()
             self.status_message.emit("Extraction viewing ended", 3000)
+
+    def _on_signal_opacity_changed(self, value):
+        """Update the main imagery viewer's extraction overlay opacity."""
+        self.signal_opacity_label.setText(f"{value}%")
+        self.viewer.set_extraction_signal_opacity(value / 100.0)
+
+    def _update_signal_opacity_control_visibility(self, _checked=None):
+        """Show opacity controls only while viewing or editing an extraction."""
+        extraction_active = self.view_extraction_btn.isChecked() or self.edit_extraction_btn.isChecked()
+        self.signal_opacity_widget.setVisible(extraction_active and not self.viewer.map_view_mode)
 
     def on_edit_extraction_clicked(self, checked):
         """Handle Edit Extraction button click"""

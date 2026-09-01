@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QSlider,
     QSpinBox,
     QTabWidget,
     QVBoxLayout,
@@ -74,6 +75,8 @@ class TrackPlotWindow(QWidget):
         self._image_chip_histogram_track_uuid = None
         # Share main window histogram computation settings and color map
         self.settings = QSettings("Vista", "VistaApp")
+        signal_opacity_percent = self.settings.value("track_details/signal_opacity", 50, type=int)
+        self._image_chip_signal_opacity = min(1.0, max(0.0, signal_opacity_percent / 100.0))
 
         self.setWindowTitle("Track Details")
         self.setWindowFlags(Qt.WindowType.Window)
@@ -240,6 +243,19 @@ class TrackPlotWindow(QWidget):
         selection_layout.addWidget(self.image_chip_track_combo, 1)
         layout.addLayout(selection_layout)
 
+        opacity_layout = QHBoxLayout()
+        opacity_layout.addWidget(QLabel("Extracted Signal Overlay Opacity:"))
+        self.signal_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.signal_opacity_slider.setRange(0, 100)
+        self.signal_opacity_slider.setValue(round(self._image_chip_signal_opacity * 100))
+        self.signal_opacity_slider.setToolTip("Adjust the opacity of detected signal pixels")
+        self.signal_opacity_slider.valueChanged.connect(self._on_signal_opacity_changed)
+        opacity_layout.addWidget(self.signal_opacity_slider, 1)
+        self.signal_opacity_label = QLabel(f"{self.signal_opacity_slider.value()}%")
+        self.signal_opacity_label.setMinimumWidth(40)
+        opacity_layout.addWidget(self.signal_opacity_label)
+        layout.addLayout(opacity_layout)
+
         self.image_chip_plot = pg.PlotWidget()
         self.image_chip_plot.setAspectLocked(True)
         self.image_chip_plot.invertY(True)
@@ -249,6 +265,7 @@ class TrackPlotWindow(QWidget):
         self.image_chip_plot.setMouseEnabled(x=True, y=True)
         self.image_chip_image = pg.ImageItem(axisOrder="row-major")
         self.image_chip_mask = pg.ImageItem(axisOrder="row-major")
+        self.image_chip_mask.setOpacity(self._image_chip_signal_opacity)
         self.image_chip_plot.addItem(self.image_chip_image)
         self.image_chip_plot.addItem(self.image_chip_mask)
         layout.addWidget(self.image_chip_plot, 1)
@@ -365,6 +382,13 @@ class TrackPlotWindow(QWidget):
         self._chip_user_levels[track.uuid] = levels
         self.image_chip_image.setLevels(levels)
 
+    def _on_signal_opacity_changed(self, value):
+        """Update and persist the signal-mask opacity for image chips."""
+        self._image_chip_signal_opacity = value / 100.0
+        self.signal_opacity_label.setText(f"{value}%")
+        self.image_chip_mask.setOpacity(self._image_chip_signal_opacity)
+        self.settings.setValue("track_details/signal_opacity", value)
+
     def update_image_chip(self):
         """Display the selected track's image chip and signal mask at the current frame."""
         track = self._selected_image_chip_track()
@@ -411,7 +435,7 @@ class TrackPlotWindow(QWidget):
             signal_mask = mask[index].astype(bool)
             overlay = np.zeros((*signal_mask.shape, 4), dtype=np.uint8)
             overlay[signal_mask, 0] = 255
-            overlay[signal_mask, 3] = 150
+            overlay[signal_mask, 3] = 255
             self.image_chip_mask.setImage(overlay, autoLevels=False)
         else:
             self.image_chip_mask.clear()

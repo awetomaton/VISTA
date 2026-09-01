@@ -204,6 +204,8 @@ class ImageryViewer(QWidget):
 
         # Persistent settings (avoid constructing QSettings on every frame)
         self.settings = QSettings("Vista", "VistaApp")
+        signal_opacity_percent = self.settings.value("extraction/signal_opacity", 50, type=int)
+        self.extraction_signal_opacity = min(1.0, max(0.0, signal_opacity_percent / 100.0))
 
         # EWMA background filter state
         self.ewma_filter_enabled = False
@@ -2237,7 +2239,7 @@ class ImageryViewer(QWidget):
         if self.extraction_overlay is None:
             self.extraction_overlay = pg.ImageItem()
             self.extraction_overlay.setZValue(10)  # Show on top of imagery
-            self.extraction_overlay.setOpacity(0.5)  # Semi-transparent
+            self.extraction_overlay.setOpacity(self.extraction_signal_opacity)
             self.plot_item.addItem(self.extraction_overlay)
 
         # Create a boundary for the extraction chip
@@ -2295,7 +2297,7 @@ class ImageryViewer(QWidget):
         # Create RGBA overlay (red for signal pixels)
         overlay = np.zeros((chip_size, chip_size, 4), dtype=np.uint8)
         overlay[signal_mask, 0] = 255  # Red channel
-        overlay[signal_mask, 3] = 180  # Alpha channel (semi-transparent)
+        overlay[signal_mask, 3] = 255  # Opacity is controlled by the ImageItem
 
         # Get track point position
         track_row = track.rows[track_idx]
@@ -2345,7 +2347,7 @@ class ImageryViewer(QWidget):
         if self.extraction_overlay is None:
             self.extraction_overlay = pg.ImageItem()
             self.extraction_overlay.setZValue(10)
-            self.extraction_overlay.setOpacity(0.5)
+            self.extraction_overlay.setOpacity(self.extraction_signal_opacity)
             self.plot_item.addItem(self.extraction_overlay)
 
         # Update overlay
@@ -2443,7 +2445,7 @@ class ImageryViewer(QWidget):
         # Create RGBA overlay (red for signal pixels)
         overlay = np.zeros((chip_size, chip_size, 4), dtype=np.uint8)
         overlay[signal_mask, 0] = 255  # Red channel
-        overlay[signal_mask, 3] = 180  # Alpha channel
+        overlay[signal_mask, 3] = 255  # Opacity is controlled by the ImageItem
 
         # Update overlay image
         self.extraction_overlay.setImage(overlay, autoLevels=False)
@@ -3696,6 +3698,22 @@ class ImageryViewer(QWidget):
             and self.imagery.uuid == imagery_uuid
         ):
             self.projected_image_item.setOpacity(opacity)
+
+    def set_extraction_signal_opacity(self, opacity: float) -> None:
+        """Set and persist the main-viewer extraction signal opacity.
+
+        Parameters
+        ----------
+        opacity : float
+            Opacity value from 0.0 (transparent) to 1.0 (opaque).
+        """
+        self.extraction_signal_opacity = min(1.0, max(0.0, opacity))
+        self.settings.setValue(
+            "extraction/signal_opacity",
+            int(round(self.extraction_signal_opacity * 100)),
+        )
+        if self.extraction_overlay is not None:
+            self.extraction_overlay.setOpacity(self.extraction_signal_opacity)
 
     def _project_overlay_coords(
         self, sensor, frame: int, rows: np.ndarray, cols: np.ndarray
