@@ -56,6 +56,7 @@ class DetectionsPanel(DataPanel):
         self.settings = QSettings("VISTA", "DataManager")
         self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
         self.waiting_for_track_selection = False  # Flag when waiting for user to select track
+        self.viewer.detection_editing_ended.connect(self.on_detection_editing_ended)
         self.init_ui()
 
         # Initialize undo stack with configurable depth from settings
@@ -1302,6 +1303,12 @@ class DetectionsPanel(DataPanel):
             else:
                 self.status_message.emit("Detector editing cancelled", 3000)
 
+    def on_detection_editing_ended(self):
+        """Handle detector editing ending outside the panel."""
+        if self.edit_detector_btn.isChecked():
+            self.edit_detector_btn.setChecked(False)
+        self.refresh_detections_table()
+
     def export_detections(self):
         """Export selected detections to CSV file"""
         # Get selected rows from the table
@@ -1526,6 +1533,12 @@ class DetectionsPanel(DataPanel):
 
     def on_detections_selected_in_viewer(self, detections):
         """Handle detection selection from viewer"""
+        if not detections:
+            if self.waiting_for_track_selection:
+                self.cancel_add_to_existing_track()
+            self.clear_detection_selection()
+            return
+
         if not self.waiting_for_track_selection:
             self.selected_detections = detections
             self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)

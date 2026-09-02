@@ -131,6 +131,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
         self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
         self.viewer.wms_status_changed.connect(self._on_wms_status_changed)
+        self.viewer.sensor_context_reset.connect(self.on_sensor_context_reset)
 
         # Connect imagery panel cancel signal for incremental loading
         self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
@@ -665,6 +666,15 @@ class VistaMainWindow(QMainWindow):
                 self.data_manager.detections_panel.edit_detector_btn.blockSignals(True)
                 self.data_manager.detections_panel.edit_detector_btn.setChecked(False)
                 self.data_manager.detections_panel.edit_detector_btn.blockSignals(False)
+
+    def on_sensor_context_reset(self):
+        """Synchronize creation actions after sensor-specific state is cleared."""
+        for action_name in ("create_track_action", "create_detection_action"):
+            action = getattr(self, action_name, None)
+            if action is not None and action.isChecked():
+                action.blockSignals(True)
+                action.setChecked(False)
+                action.blockSignals(False)
 
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""

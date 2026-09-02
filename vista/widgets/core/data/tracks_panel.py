@@ -299,6 +299,7 @@ class TracksPanel(DataPanel):
 
         # Connect to viewer signals
         self.viewer.extraction_editing_ended.connect(self.on_extraction_editing_ended)
+        self.viewer.extraction_viewing_ended.connect(self.on_extraction_viewing_ended)
 
         self.init_ui()
 
@@ -2734,6 +2735,11 @@ class TracksPanel(DataPanel):
         # Uncheck the Edit Extraction button if it's checked
         if self.edit_extraction_btn.isChecked():
             self.edit_extraction_btn.setChecked(False)
+
+    def on_extraction_viewing_ended(self):
+        """Handle extraction viewing ended signal from viewer."""
+        if self.view_extraction_btn.isChecked():
+            self.view_extraction_btn.setChecked(False)
 
     def export_tracks(self):
         """Export selected tracks to CSV file"""
