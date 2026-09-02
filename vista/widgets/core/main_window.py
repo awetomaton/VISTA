@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from astropy import units
 from astropy.coordinates import EarthLocation
-from PyQt6.QtCore import QSettings, Qt
+from PyQt6.QtCore import QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
     QDockWidget,
@@ -2963,17 +2963,18 @@ class VistaMainWindow(QMainWindow):
 
         # Restore track selection after refresh
         if selected_track_ids:
+            selection_model = self.data_manager.tracks_table.selectionModel()
+            model = self.data_manager.tracks_table.model()
             self.data_manager.tracks_panel.tracks_table.blockSignals(True)
             for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
                 track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
                 if track_name_item:
                     track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
                     if track_id in selected_track_ids:
-                        # Select all columns in this row
-                        for col in range(self.data_manager.tracks_panel.tracks_table.columnCount()):
-                            item = self.data_manager.tracks_panel.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
             self.data_manager.tracks_panel.tracks_table.blockSignals(False)
 
     def open_savitzky_golay_dialog(self):
@@ -3054,6 +3055,8 @@ class VistaMainWindow(QMainWindow):
 
         # Restore track selection after refresh
         if selected_track_ids:
+            selection_model = self.data_manager.tracks_table.selectionModel()
+            model = self.data_manager.tracks_table.model()
             self.data_manager.tracks_panel.tracks_table.blockSignals(True)
             for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
                 track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
@@ -3061,10 +3064,10 @@ class VistaMainWindow(QMainWindow):
                     track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
                     if track_id in selected_track_ids:
                         # Select all columns in this row
-                        for col in range(self.data_manager.tracks_panel.tracks_table.columnCount()):
-                            item = self.data_manager.tracks_panel.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
             self.data_manager.tracks_panel.tracks_table.blockSignals(False)
 
     def load_data_programmatically(self, imagery=None, tracks=None, detections=None):
