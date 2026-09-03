@@ -1,7 +1,7 @@
 """Module that contains the default imagery object
 
-The Imagery object in this class can be subclassed by third-party objects to implement their own logic including
-file readers and pixel-to-geodetic conversions
+The Imagery object in this class can be subclassed by third-party objects
+to implement their own logic such as file readers
 """
 
 import pathlib
@@ -27,11 +27,11 @@ except ImportError:
 @dataclass
 class Imagery:
     """
-    Container for multi-frame imagery datasets with metadata and coordinate conversion capabilities.
+    Container for multi-frame imagery datasets with metadata.
 
-    VISTA's Imagery class represents a temporal sequence of image frames with associated metadata
-    including timestamps, geodetic coordinate conversion polynomials, and sensor calibration data.
-    This class serves as the foundation for all image-based analysis in VISTA.
+    VISTA's Imagery class represents a temporal sequence of image frames with associated
+    metadata including timestamps and sensor. This class serves as the foundation for all
+    image-based analysis in VISTA.
 
     Core Attributes
     ---------------
@@ -53,14 +53,14 @@ class Imagery:
     Temporal Metadata
     -----------------
     times : NDArray[np.datetime64], optional
-        Timestamp for each frame with microsecond precision.
+        Timestamp for each frame with nanosecond precision.
         Enables time-based analysis and temporal coordinate conversion.
 
     Sensor Information
     ------------------
     sensor : Sensor
         Sensor object containing projection polynomials and radiometric calibration data.
-        The Sensor provides geodetic coordinate conversion capabilities, sensor positions,
+        The Sensor provides geodetic coordinate conversion capabilities through its platform
         and optional point spread function modeling for irradiance estimation.
 
     Internal Attributes
@@ -68,7 +68,7 @@ class Imagery:
     description : str, optional
         Long-form description of the imagery (default: "")
     filename : str, optional
-        Filename the imagery was loaded from
+        Filename the imagery was loaded from (default: "")
     _histograms : dict, optional
         Cached histograms for performance. Maps frame_index -> (hist_y, hist_x).
         Computed lazily via get_histogram() method.
@@ -81,10 +81,6 @@ class Imagery:
         Slice imagery by frame range, preserving metadata
     get_aoi(aoi)
         Extract spatial subset defined by Area of Interest
-    pixel_to_geodetic(frame, rows, columns)
-        Convert pixel coordinates to geodetic (lat/lon/alt)
-    (frame, location)
-        Convert geodetic coordinates to pixel (row/column)
     get_histogram(frame_index)
         Compute or retrieve cached histogram for a frame
     to_hdf5(file)
@@ -116,10 +112,7 @@ class Imagery:
     Notes
     -----
     - Frame numbers in the `frames` array need not be contiguous or zero-indexed
-    - All optional metadata (times, polynomials, calibration data) is preserved during
-      slicing operations
-    - Geodetic conversion requires valid polynomial coefficients for the frame of interest
-    - Calibration frame arrays define ranges: frame N applies until frame N+1 starts
+    - All optional metadata is preserved during slicing operations
     """
 
     name: str
@@ -130,11 +123,11 @@ class Imagery:
     column_offset: int = None
     times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
+    filename: str = ""  # filename where this imagery came from
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
     default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
     uuid: str = field(init=None, default=None)
-    filename: str = ""  # filename where this imagery came from
 
     # Incremental loading support: tracks how many frames have valid image data.
     # None = fully loaded (default for programmatically created imagery).

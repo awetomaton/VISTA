@@ -6,7 +6,7 @@ sensor platforms and their characteristics. Sensor platforms support position an
 retrieval via interpolation/extrapolation from discrete samples.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 import uuid
 
@@ -56,11 +56,37 @@ class SensorPlatform:
     - Duplicate times and corresponding positions/pointings are automatically removed
     - For 1 sample: returns the same value for all query times
     - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside    
+    
+    Examples
+    --------
+    >>> import numpy as np
+    >>> # Create sensor platform with multiple position samples
+    >>> positions = np.array([[1000, 1100, 1200],
+    ...                       [2000, 2100, 2200],
+    ...                       [3000, 3100, 3200]])  # (3, 3) array
+    >>> times = np.array(['2024-01-01T00:00:00',
+    ...                   '2024-01-01T00:01:00',
+    ...                   '2024-01-01T00:02:00'], dtype='datetime64')
+    >>> platform = SensorPlatform(positions=positions, times=times)
+
+    >>> # Get interpolated position
+    >>> query_times = np.array(['2024-01-01T00:00:30'], dtype='datetime64')
+    >>> pos = platform.get_positions(query_times)
+    >>> pos.shape
+    (3, 1)
+
+    >>> # Create stationary platform with single position
+    >>> positions_static = np.array([[1000], [2000], [3000]])  # (3, 1) array
+    >>> times_static = np.array(['2024-01-01T00:00:00'], dtype='datetime64')
+    >>> platform_static = SensorPlatform(positions=positions_static, times=times_static)
+    >>> # Returns same position for any query time
+    >>> pos = platform_static.get_positions(query_times)
     """
     name: Optional[str] = None
     times: Optional[NDArray[np.datetime64]] = None
     positions: Optional[NDArray[np.float64]] = None
     pointings: Optional[NDArray[np.float64]] = None
+    uuid: str = field(init=None, default=None)
     # Class variable to track total number of sensor platform instances created
     _instance_count: int = 0
 

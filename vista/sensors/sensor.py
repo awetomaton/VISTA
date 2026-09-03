@@ -1,10 +1,9 @@
 """
-Base sensor class for position, line-of-sight, geodetic conversion, and radiometric modeling.
+Base sensor class for geodetic conversion and radiometric modeling.
 
-This module defines the Sensor base class which provides a framework for representing
-sensor platforms and their characteristics. Sensors support position queries, geodetic
-coordinate conversion, radiometric calibration data (bias, gain, bad pixels), and
-optional point spread function modeling.
+This module defines the Sensor base class which provides a framework for representing sensors
+and their characteristics. Sensors support geodetic coordinate conversion, radiometric
+calibration data (bias, gain, bad pixels), and optional point spread function modeling.
 """
 
 import uuid
@@ -24,12 +23,12 @@ from vista.sensor_platforms.sensor_platform import SensorPlatform
 @dataclass
 class Sensor:
     """
-    Base class for sensor position, line-of-sight, geodetic conversion, and radiometric modeling
+    Base class for sensor geodetic conversion and radiometric modeling
 
-    The Sensor class provides a framework for representing sensor platforms and their
-    associated characteristics including projection polynomials and radiometric calibration data.
+    The Sensor class provides a framework for representing sensors and their associated
+    characteristics including projection polynomials and radiometric calibration data.
 
-    Attributes
+    Core Attributes
     ----------
     name : str
         Unique name for this sensor. Used as the primary identifier.
@@ -53,20 +52,11 @@ class Sensor:
 
     Notes
     -----
-    - All positions are in Earth-Centered Earth-Fixed (ECEF) Cartesian coordinates
-    - Position units are kilometers
-    - Positions are represented as (3, N) arrays with x, y, z in each column
     - PSF modeling is optional and can be used for fitting signal blobs to estimate irradiance
     - Sensor names must be unique within a VISTA session
     - Class variable _instance_count tracks the total number of Sensor instances created
-
-    Examples
-    --------
-    >>> # Subclass can implement get_positions
-    >>> class MySensor(Sensor):
-    ...     def get_positions(self, times):
-    ...         # Return sensor positions for given times
-    ...         return np.array([[x1, x2], [y1, y2], [z1, z2]])
+    - Geodetic conversion requires valid polynomial coefficients for the time of interest
+    - Calibration frame arrays define ranges: frame N applies until frame N+1 starts
     """
 
     name: Optional[str] = None

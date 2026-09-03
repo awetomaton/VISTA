@@ -1,9 +1,8 @@
 """
-Sampled sensor with interpolated position and geodetic conversion capabilities.
+Sampled sensor with geodetic conversion capabilities.
 
-This module defines the SampledSensor class, which extends the base Sensor class to provide
-position retrieval via interpolation/extrapolation from discrete position samples. It also
-supports geodetic coordinate conversion using ARF (Attitude Reference Frame) polynomials and
+This module defines the SampledSensor class, which extends the base Sensor class to support
+geodetic coordinate conversion using ARF (Attitude Reference Frame) polynomials and
 radiometric gain calibration.
 """
 
@@ -30,36 +29,34 @@ from vista.transforms import (
 @dataclass(eq=False)
 class SampledSensor(Sensor):
     """
-    Sensor implementation using sampled position data with interpolation/extrapolation.
+    Sensor implementation providing ARF polynomials.
 
-    SampledSensor stores discrete position samples at known times and provides
-    position estimates at arbitrary times through interpolation (within the time range)
-    or extrapolation (outside the time range). For single-position sensors, the same
-    position is returned for all query times.
+    SampledSensor stores ARF polynomials and radiometric gain at known times,
+    providing geodetic coordinate conversion capabilities and gain calibration. 
 
     Attributes
     ----------
     times : NDArray[np.datetime64]
-        Times corresponding to each position sample. Must have length N.
+        Times corresponding to each ARF polynomial. Must have length N.
         Required - will raise ValueError in __post_init__ if not provided.
     frames : NDArray[np.int64]
         Sensor frames numbers corresponding to each time sample. Must have length N.
         Required - will raise ValueError in __post_init__ if not provided.
     radiometric_gain : NDArray, optional
-        1D array of multiplicative factors for each frame to convert from counts to
+        1D array of multiplicative factors for each time to convert from counts to
         irradiance in units of kW/km²/sr.
     poly_pixel_to_arf_azimuth : NDArray[np.float64], optional
         Polynomial coefficients for converting (column, row) to ARF azimuth (radians).
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
     poly_pixel_to_arf_elevation : NDArray[np.float64], optional
         Polynomial coefficients for converting (column, row) to ARF elevation (radians).
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
     poly_arf_to_row : NDArray[np.float64], optional
         Polynomial coefficients for converting (azimuth, elevation) to row.
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
     poly_arf_to_col : NDArray[np.float64], optional
         Polynomial coefficients for converting (azimuth, elevation) to column.
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
 
     Notes
     -----
@@ -70,31 +67,6 @@ class SampledSensor(Sensor):
     - All coordinates are in ECEF Cartesian frame with units of kilometers
     - ARF (Attitude Reference Frame) is a local coordinate system where the X-axis
       points along the sensor pointing direction
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> # Create sensor with multiple position samples
-    >>> positions = np.array([[1000, 1100, 1200],
-    ...                       [2000, 2100, 2200],
-    ...                       [3000, 3100, 3200]])  # (3, 3) array
-    >>> times = np.array(['2024-01-01T00:00:00',
-    ...                   '2024-01-01T00:01:00',
-    ...                   '2024-01-01T00:02:00'], dtype='datetime64')
-    >>> sensor = SampledSensor(positions=positions, times=times)
-
-    >>> # Get interpolated position
-    >>> query_times = np.array(['2024-01-01T00:00:30'], dtype='datetime64')
-    >>> pos = sensor.get_positions(query_times)
-    >>> pos.shape
-    (3, 1)
-
-    >>> # Create stationary sensor with single position
-    >>> positions_static = np.array([[1000], [2000], [3000]])  # (3, 1) array
-    >>> times_static = np.array(['2024-01-01T00:00:00'], dtype='datetime64')
-    >>> sensor_static = SampledSensor(positions=positions_static, times=times_static)
-    >>> # Returns same position for any query time
-    >>> pos = sensor_static.get_positions(query_times)
     """
 
     times: Optional[NDArray[np.datetime64]] = None
@@ -138,7 +110,7 @@ class SampledSensor(Sensor):
         Returns
         -------
         bool
-            True if sensor has all required ARF geolocation data: pointing vectors
+            True if sensor has all required ARF geolocation data: platform pointing vectors
             and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
         return (
