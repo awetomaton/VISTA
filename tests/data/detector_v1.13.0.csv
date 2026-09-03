@@ -1,0 +1,4 @@
+Detector,Frames,Rows,Columns,Color,Marker,Marker Size,Line Thickness,Visible,Complete,Labels,Label Time,Labeler
+main-detector,3,10.25,101.5,cyan,x,13,4,False,True,"confirmed, vehicle",2025-01-02T03:04:05,alice
+main-detector,7,20.5,202.25,cyan,x,13,4,False,True,,,
+main-detector,11,30.75,303.0,cyan,x,13,4,False,True,review,2025-06-07T08:09:10,bob
