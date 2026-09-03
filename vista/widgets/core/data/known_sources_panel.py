@@ -58,9 +58,7 @@ class KnownSourcesTrackCreationThread(QThread):
                     self.creation_cancelled.emit()
                     return
 
-                self.progress_updated.emit(
-                    f"Creating tracks from {source.name} ({index} of {total_sources})..."
-                )
+                self.progress_updated.emit(f"Creating tracks from {source.name} ({index} of {total_sources})...")
                 source_tracks = source.create_tracks(self.imagery)
 
                 if self.isInterruptionRequested():
@@ -72,9 +70,7 @@ class KnownSourcesTrackCreationThread(QThread):
             self.tracks_created.emit(tracks)
         except Exception as error:
             traceback_string = traceback.format_exc()
-            self.error_occurred.emit(
-                f"Track creation failed: {str(error)}\n\nTraceback:\n{traceback_string}"
-            )
+            self.error_occurred.emit(f"Track creation failed: {str(error)}\n\nTraceback:\n{traceback_string}")
 
 
 class KnownSourcesPanel(DataPanel):
