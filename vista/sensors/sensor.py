@@ -257,11 +257,10 @@ class Sensor:
         this method to provide geodetic-to-pixel conversion using their specific
         projection model (e.g., polynomial coefficients).
         """
-        empty = np.empty_like(loc.x.value)
-        empty.fill(np.nan)
-        return empty, empty.copy()
+        invalid = np.full_like(loc.x.value, np.nan, dtype=np.float64)
+        return invalid, invalid.copy()
 
-    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray):
+    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray) -> EarthLocation:
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 
@@ -280,19 +279,16 @@ class Sensor:
         -------
         EarthLocation
             Astropy EarthLocation object(s) with geodetic coordinates
-            (zeros for base implementation)
+            (NaN for base implementation)
 
         Notes
         -----
-        The default implementation returns EarthLocation with zero coordinates.
+        The default implementation returns EarthLocation with NaN coordinates.
         Subclasses should override this method to provide pixel-to-geodetic
         conversion using their specific projection model.
         """
-        return EarthLocation.from_geodetic(
-            lon=np.zeros_like(rows) * units.deg,
-            lat=np.zeros_like(rows) * units.deg,
-            height=np.zeros_like(rows) * units.km,
-        )
+        invalid = np.full_like(rows, np.nan, dtype=np.float64)
+        return EarthLocation(lon=invalid * units.deg, lat=invalid * units.deg, height=invalid * units.km)
 
     def to_hdf5(self, group: h5py.Group):
         """

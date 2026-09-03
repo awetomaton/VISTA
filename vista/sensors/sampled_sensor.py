@@ -198,7 +198,7 @@ class SampledSensor(Sensor):
         EarthLocation
             Astropy EarthLocation object(s) with geodetic coordinates.
             Returns NaN coordinates for pixels that do not intersect Earth.
-            Returns zero coordinates if polynomials are not available or frame not found.
+            Returns NaN coordinates if polynomials are not available or frame not found.
 
         Notes
         -----
@@ -206,10 +206,10 @@ class SampledSensor(Sensor):
         - Frame must exist in self.frames array
         - Off-Earth pixels will have NaN lat/lon/height values
         """
-        # If no polynomial coefficients provided, return zeros
+        # If no polynomial coefficients provided, return NaN
         if not self.can_geolocate() or self.frames is None:
-            invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+            invalid = np.full_like(rows, np.nan, dtype=np.float64)
+            return EarthLocation(x=invalid, y=invalid, z=invalid, unit=units.km)
 
         # Handle array of frames: group by unique frame for efficient batch processing
         if isinstance(frame, np.ndarray):
@@ -231,17 +231,18 @@ class SampledSensor(Sensor):
                 )
                 all_intersections[:, point_mask] = intersections
 
-            return EarthLocation.from_geocentric(
-                x=all_intersections[0] * units.km,
-                y=all_intersections[1] * units.km,
-                z=all_intersections[2] * units.km,
+            return EarthLocation(
+                x=all_intersections[0],
+                y=all_intersections[1],
+                z=all_intersections[2],
+                unit=units.km,
             )
 
         # Single frame path (original fast path)
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
-            invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(
+            invalid = np.full_like(rows, np.nan, dtype=np.float64)
+            return EarthLocation(
                 x=invalid,
                 y=invalid,
                 z=invalid,
@@ -251,10 +252,11 @@ class SampledSensor(Sensor):
         frame_idx = np.where(frame_mask)[0][0]
         intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
 
-        return EarthLocation.from_geocentric(
-            x=intersections[0] * units.km,
-            y=intersections[1] * units.km,
-            z=intersections[2] * units.km,
+        return EarthLocation(
+            x=intersections[0],
+            y=intersections[1],
+            z=intersections[2],
+            unit=units.km,
         )
 
     def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -327,15 +329,15 @@ class SampledSensor(Sensor):
         Returns
         -------
         rows : np.ndarray
-            Array of row pixel coordinates (zeros if polynomials unavailable)
+            Array of row pixel coordinates (NaNs if polynomials unavailable)
         columns : np.ndarray
-            Array of column pixel coordinates (zeros if polynomials unavailable)
+            Array of column pixel coordinates (NaNs if polynomials unavailable)
 
         Notes
         -----
         - Requires ARF polynomials and pointing vectors to be defined
         - Frame must exist in self.frames array
-        - Returns zero coordinates if polynomials are not available or frame not found
+        - Returns NaN coordinates if polynomials are not available or frame not found
         - Properly handles targets at any altitude (not limited to ground level)
         """
         # If no polynomial coefficients provided, return zeros
@@ -344,8 +346,8 @@ class SampledSensor(Sensor):
                 n_points = len(loc.lat)
             except TypeError:
                 n_points = 1
-            invalid = np.zeros(n_points)
-            return invalid, invalid
+            invalid = np.full_like((n_points,), np.nan, dtype=np.float64)
+            return invalid, invalid.copy()
 
         # Convert geodetic → ECEF Cartesian (km) once for all points
         target_ecef = np.array(
@@ -383,7 +385,7 @@ class SampledSensor(Sensor):
         # Single frame path (original fast path)
         frame_mask = self.frames == frame
         if not np.any(frame_mask):
-            invalid = np.zeros(target_ecef.shape[1])
+            invalid = np.full_like((target_ecef.shape[1],), np.nan, np.float64)
             return invalid, invalid.copy()
 
         frame_idx = np.where(frame_mask)[0][0]
