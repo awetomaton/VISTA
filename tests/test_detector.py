@@ -35,3 +35,30 @@ def test_deserialize_csv(sensor: Sensor):
     detector = Detector.from_dataframe(pd.read_csv(csv_path), sensor)
 
     assert_constructor_fields_equal(detector, expected)
+
+
+def test_dataframe_round_trip(sensor: Sensor):
+    expected = Detector(
+        name="round-trip-detector",
+        frames=np.array([2, 4, 8]),
+        rows=np.array([12.5, 24.0, 48.75]),
+        columns=np.array([120.0, 240.25, 480.5]),
+        sensor=sensor,
+        color="yellow",
+        marker="+",
+        marker_size=17,
+        line_thickness=3,
+        visible=False,
+        complete=True,
+        labels=[{"first"}, set(), {"last", "review"}],
+        label_times=[
+            datetime.datetime(2025, 3, 4, 5, 6, 7),
+            None,
+            datetime.datetime(2025, 8, 9, 10, 11, 12),
+        ],
+        labelers=["alice", None, "charlie"],
+    )
+
+    detector = Detector.from_dataframe(expected.to_dataframe(), sensor)
+
+    assert_constructor_fields_equal(detector, expected)
