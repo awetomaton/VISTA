@@ -12,6 +12,7 @@ from scipy.ndimage import shift
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery, save_imagery_hdf5
 from vista.sensors.sampled_sensor import SampledSensor
+from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.simulate.data import EARTH_IMAGE
 from vista.tracks.track import Track
 from vista.transforms import fit_2d_polynomial
@@ -475,12 +476,13 @@ class Simulation:
         if self.enable_radiometric_gain:
             radiometric_gain = self._generate_radiometric_gains()
 
+        # Create SensorPlatform
+        platform = SensorPlatform(times=sensor_times, positions=sensor_positions, pointings=pointing)
         # Create SampledSensor
         sensor = SampledSensor(
-            positions=sensor_positions,
+            platform=platform,
             times=sensor_times,
             frames=frames_array,
-            pointing=pointing,
             poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
             poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
             poly_arf_to_row=poly_arf_to_row,

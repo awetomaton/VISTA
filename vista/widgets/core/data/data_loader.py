@@ -14,6 +14,7 @@ from vista.imagery.imagery import Imagery
 from vista.known_sources.satellites import Satellites
 from vista.known_sources.solar_system_bodies import SolarSystemBodies
 from vista.known_sources.stars import Stars
+from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
@@ -172,9 +173,9 @@ class DataLoaderThread(QThread):
             dtype="datetime64[ns]",
         )
 
+        platform = SensorPlatform(times = sensor_times, positions=sensor_positions)
         sensor = SampledSensor(
-            name=f"Unknown {SampledSensor._instance_count + 1}",
-            positions=sensor_positions,
+            platform=platform,
             times=sensor_times,
             frames=frames,
             radiometric_gain=radiometric_gain,
@@ -313,12 +314,12 @@ class DataLoaderThread(QThread):
             if frames is None:
                 frames = np.array([0], dtype=np.int64)
 
+            platform = SensorPlatform(times = times, positions=positions, pointings=pointing)
             sensor = SampledSensor(
                 name=sensor_name,
-                positions=positions,
+                platform=platform,
                 times=times,
                 frames=frames,
-                pointing=pointing,
                 poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
                 poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
                 poly_arf_to_row=poly_arf_to_row,

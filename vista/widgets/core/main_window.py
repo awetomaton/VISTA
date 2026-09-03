@@ -1192,8 +1192,7 @@ class VistaMainWindow(QMainWindow):
             # Check if sensor is selected (required for detection association)
             if not selected_sensor:
                 # Create an "Unknown" sensor if no sensor is selected
-                sensor_name = f"Unknown {Sensor._instance_count + 1}"
-                selected_sensor = Sensor(name=sensor_name)
+                selected_sensor = Sensor()
                 self.viewer.sensors.append(selected_sensor)
                 self.data_manager.refresh()
 
@@ -1201,7 +1200,7 @@ class VistaMainWindow(QMainWindow):
                 msg = QMessageBox(self)
                 msg.setIcon(QMessageBox.Icon.Information)
                 msg.setWindowTitle("Detection Loading Information")
-                msg.setText(f"Detections will be associated with '{sensor_name}' sensor.")
+                msg.setText(f"Detections will be associated with '{selected_sensor.name}' sensor.")
                 msg.setInformativeText("No sensor was selected, so an 'Unknown' sensor has been created automatically.")
                 msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                 if msg.exec() != QMessageBox.StandardButton.Ok:
@@ -1370,11 +1369,10 @@ class VistaMainWindow(QMainWindow):
                 if not selected_sensor:
                     if not overall_needs_geodetic_mapping:
                         # Create an "Unknown" sensor if no sensor is selected
-                        sensor_name = f"Unknown {Sensor._instance_count + 1}"
-                        selected_sensor = Sensor(name=sensor_name)
+                        selected_sensor = Sensor()
                         self.viewer.sensors.append(selected_sensor)
                         self.data_manager.refresh()
-                        mapping_info.insert(0, f"• Sensor association: {sensor_name} (created automatically)")
+                        mapping_info.insert(0, f"• Sensor association: {selected_sensor.name} (created automatically)")
                 else:
                     mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
 

@@ -125,7 +125,7 @@ class Imagery:
     name: str
     images: NDArray[np.float32]
     frames: NDArray[np.int_]
-    sensor: Sensor
+    sensor: Optional[Sensor] = None
     row_offset: int = None
     column_offset: int = None
     times: Optional[NDArray[np.datetime64]] = None
@@ -156,6 +156,8 @@ class Imagery:
             self.row_offset = 0
         if self.column_offset is None:
             self.column_offset = 0
+        if self.sensor is None:
+            self.sensor = Sensor()
         self.uuid = uuid.uuid4()
         self.sensor.add_imagery(self)
 

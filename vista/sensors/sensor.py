@@ -69,8 +69,8 @@ class Sensor:
     ...         return np.array([[x1, x2], [y1, y2], [z1, z2]])
     """
 
-    name: str
-    platform: SensorPlatform
+    name: Optional[str] = None
+    platform: Optional[SensorPlatform] = None
     bias_images: Optional[NDArray] = None
     bias_image_frames: Optional[NDArray] = None
     uniformity_gain_images: Optional[NDArray] = None
@@ -94,6 +94,10 @@ class Sensor:
         """
         # Increment the class-level counter
         Sensor._instance_count += 1
+        if self.name is None or self.name == "":
+            self.name = f"Unknown Sensor {Sensor._instance_count}"
+        if self.platform is None:
+            self.platform = SensorPlatform()
         # Generate UUID if not set
         if self.uuid is None:
             self.uuid = uuid.uuid4()

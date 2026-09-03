@@ -6,8 +6,9 @@ sensor platforms and their characteristics. Sensor platforms support position an
 retrieval via interpolation/extrapolation from discrete samples.
 """
 
-import uuid
 from dataclasses import dataclass
+from typing import Optional
+import uuid
 
 import numpy as np
 from numpy.typing import NDArray
@@ -56,10 +57,12 @@ class SensorPlatform:
     - For 1 sample: returns the same value for all query times
     - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside    
     """
-    name: str
-    times: NDArray[np.datetime64] = np.empty((0,), dtype='datetime64[ns]')
-    positions: NDArray[np.float64] = np.empty((3, 0), dtype=np.float64)
-    pointings: NDArray[np.float64] = np.empty((3, 0), dtype=np.float64)
+    name: Optional[str] = None
+    times: Optional[NDArray[np.datetime64]] = None
+    positions: Optional[NDArray[np.float64]] = None
+    pointings: Optional[NDArray[np.float64]] = None
+    # Class variable to track total number of sensor platform instances created
+    _instance_count: int = 0
 
     def __post_init__(self):
         """
@@ -73,6 +76,17 @@ class SensorPlatform:
         ValueError
             If times, positions, or pointings have incompatible shapes.
         """
+        # Increment the class-level counter
+        SensorPlatform._instance_count += 1
+        if self.name is None or self.name == "":
+            self.name = f"Unknown SensorPlatform {SensorPlatform._instance_count}"
+        # Check for None and initialize empty arrays if necessary
+        if self.times is None:
+            self.times = np.empty((0,), dtype='datetime64[ns]')
+        if self.positions is None:
+            self.positions = np.empty((3, 0), dtype=np.float64)
+        if self.pointings is None:
+            self.pointings = np.empty((3, 0), dtype=np.float64)
         self._validate_arrays(self.times, self.positions, self.pointings)
         self._sort_unique()
         self.uuid = uuid.uuid4()
