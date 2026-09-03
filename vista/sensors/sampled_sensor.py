@@ -39,10 +39,6 @@ class SampledSensor(Sensor):
 
     Attributes
     ----------
-    positions : NDArray[np.float64]
-        Sensor positions as (3, N) array where N is the number of samples.
-        Each column contains [x, y, z] ECEF coordinates in kilometers.
-        Required - will raise ValueError in __post_init__ if not provided.
     times : NDArray[np.datetime64]
         Times corresponding to each position sample. Must have length N.
         Required - will raise ValueError in __post_init__ if not provided.
@@ -52,9 +48,6 @@ class SampledSensor(Sensor):
     radiometric_gain : NDArray, optional
         1D array of multiplicative factors for each frame to convert from counts to
         irradiance in units of kW/km²/sr.
-    pointing : NDArray[np.float64], optional
-        Sensor pointing unit vectors in ECEF coordinates. Shape: (3, num_frames).
-        Each column is the direction the sensor is pointing for that frame.
     poly_pixel_to_arf_azimuth : NDArray[np.float64], optional
         Polynomial coefficients for converting (column, row) to ARF azimuth (radians).
         Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
@@ -67,11 +60,6 @@ class SampledSensor(Sensor):
     poly_arf_to_col : NDArray[np.float64], optional
         Polynomial coefficients for converting (azimuth, elevation) to column.
         Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
-
-    Methods
-    -------
-    get_positions(times)
-        Return interpolated/extrapolated sensor positions for given times
 
     Notes
     -----
@@ -109,11 +97,9 @@ class SampledSensor(Sensor):
     >>> pos = sensor_static.get_positions(query_times)
     """
 
-    positions: Optional[NDArray[np.float64]] = None
     times: Optional[NDArray[np.datetime64]] = None
     frames: Optional[NDArray[np.int64]] = None
     radiometric_gain: Optional[NDArray] = None
-    pointing: Optional[NDArray[np.float64]] = None
     poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]] = None
     poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]] = None
     poly_arf_to_row: Optional[NDArray[np.float64]] = None
@@ -133,24 +119,10 @@ class SampledSensor(Sensor):
         """
         # Call parent's __post_init__ to increment instance counter
         super().__post_init__()
-
-        # Validate required fields
-        if self.positions is None:
-            raise ValueError("positions is required for SampledSensor")
         if self.times is None:
             raise ValueError("times is required for SampledSensor")
         if self.frames is None:
             raise ValueError("frame numbers are required for SampledSensor")
-
-        # Validate shape of positions
-        if self.positions.ndim != 2 or self.positions.shape[0] != 3:
-            raise ValueError(f"positions must be a (3, N) array, got shape {self.positions.shape}")
-
-        # Validate that times and positions have matching counts
-        n_positions = self.positions.shape[1]
-        n_times = len(self.times)
-        if n_positions != n_times:
-            raise ValueError(f"Number of positions ({n_positions}) must match number of times ({n_times})")
 
         # Remove duplicate times and corresponding positions
         unique_times, unique_indices = np.unique(self.times, return_index=True)
@@ -158,7 +130,6 @@ class SampledSensor(Sensor):
         if len(unique_times) < len(self.times):
             # Duplicates were found, keep only unique entries
             self.times = unique_times
-            self.positions = self.positions[:, unique_indices]
 
     def can_geolocate(self) -> bool:
         """
@@ -171,60 +142,12 @@ class SampledSensor(Sensor):
             and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
         return (
-            self.pointing is not None
+            self.platform.pointings.shape[1] > 0
             and self.poly_pixel_to_arf_azimuth is not None
             and self.poly_pixel_to_arf_elevation is not None
             and self.poly_arf_to_row is not None
             and self.poly_arf_to_col is not None
         )
-
-    def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
-        """
-        Return sensor positions for given times via interpolation/extrapolation.
-
-        Parameters
-        ----------
-        times : NDArray[np.datetime64]
-            Array of times for which to retrieve sensor positions
-
-        Returns
-        -------
-        NDArray[np.float64]
-            Sensor positions as (3, N) array where N is the number of query times.
-            Each column contains [x, y, z] coordinates in ECEF frame (km).
-
-        Notes
-        -----
-        - For sensors with 1 sample: returns the single position for all times
-        - For sensors with 2+ samples: uses linear interpolation within the time
-          range and linear extrapolation outside the range
-        """
-        # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
-
-        # Handle single-position case (stationary sensor)
-        if self.positions.shape[1] == 1:
-            # Return the same position for all query times
-            return np.tile(self.positions, (1, len(times)))
-
-        # Multi-position case: use interpolation/extrapolation
-        # Convert sample times to numeric values
-        sample_times_ns = self.times.astype("datetime64[ns]").astype(np.float64)
-
-        # Create interpolators for each coordinate (x, y, z)
-        # fill_value='extrapolate' enables linear extrapolation outside the range
-        interpolated_positions = np.zeros((3, len(times)))
-
-        for i in range(3):
-            interpolator = interp1d(
-                sample_times_ns,
-                self.positions[i, :],
-                kind="linear",
-                fill_value="extrapolate",
-            )
-            interpolated_positions[i, :] = interpolator(query_times_ns)
-
-        return interpolated_positions
 
     def _pixel_to_geodetic_single_frame(self, frame_idx: int, rows: np.ndarray, columns: np.ndarray) -> np.ndarray:
         """
@@ -256,13 +179,13 @@ class SampledSensor(Sensor):
         arf_vectors = spherical_to_cartesian(azimuth, elevation)
 
         # Get sensor position for this frame
-        if self.positions.shape[1] == 1:
-            sensor_pos = self.positions[:, 0]
+        if self.platform.positions.shape[1] == 1:
+            sensor_pos = self.platform.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
             sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
-        sensor_pointing = self.pointing[:, frame_idx]
+        sensor_pointing = self.platform.pointings[:, frame_idx]
 
         # Get ARF transform and invert (transpose for orthonormal matrix)
         arf_to_ecef = get_arf_transform(sensor_pos, sensor_pointing).T
@@ -381,8 +304,8 @@ class SampledSensor(Sensor):
             Column pixel coordinates
         """
         # Get sensor position for this frame
-        if self.positions.shape[1] == 1:
-            sensor_pos = self.positions[:, 0]
+        if self.platform.positions.shape[1] == 1:
+            sensor_pos = self.platform.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
             sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
@@ -393,7 +316,7 @@ class SampledSensor(Sensor):
         los_vectors = los_vectors / los_norms
 
         # Get sensor pointing and compute ECEF → ARF transform
-        sensor_pointing = self.pointing[:, frame_idx]
+        sensor_pointing = self.platform.pointings[:, frame_idx]
         ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
 
         # Transform ECEF LOS → ARF Cartesian

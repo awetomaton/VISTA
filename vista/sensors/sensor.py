@@ -18,6 +18,8 @@ from astropy import units
 from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
 
+from vista.sensor_platforms.sensor_platform import SensorPlatform
+
 
 @dataclass
 class Sensor:
@@ -44,6 +46,11 @@ class Sensor:
     bad_pixel_mask_frames : NDArray, optional
         1D array specifying frame ranges for each bad pixel mask.
 
+    Sensor Platform Information
+    ------------------
+    platform : SensorPlatform
+        SensorPlatform object containing sensor position and pointing information.
+
     Notes
     -----
     - All positions are in Earth-Centered Earth-Fixed (ECEF) Cartesian coordinates
@@ -63,6 +70,7 @@ class Sensor:
     """
 
     name: str
+    platform: SensorPlatform
     bias_images: Optional[NDArray] = None
     bias_image_frames: Optional[NDArray] = None
     uniformity_gain_images: Optional[NDArray] = None
@@ -152,25 +160,7 @@ class Sensor:
         self._imagery_frames_dataframe = self._imagery_frames_dataframe.drop_duplicates()
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
-        """
-        Return sensor positions in Cartesian ECEF coordinates for given times.
-
-        Parameters
-        ----------
-        times : NDArray[np.datetime64]
-            Array of times for which to retrieve sensor positions
-
-        Returns
-        -------
-        NDArray[np.float64]
-            Sensor positions as (3, N) array where N is the number of times.
-            Each column contains [x, y, z] coordinates in ECEF frame (km).
-
-        Notes
-        -----
-        The default implementation returns None. Subclasses should override this method
-        """
-        return None
+        return self.platform.get_positions(times)
 
     def model_psf(self, sigma: Optional[float] = None, size: Optional[int] = None) -> Optional[NDArray[np.float64]]:
         """
