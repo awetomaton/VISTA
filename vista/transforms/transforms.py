@@ -1,12 +1,12 @@
 """General transform support functions"""
 
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 from numpy.typing import NDArray
 
 
-def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[float, NDArray]) -> NDArray:
+def spherical_to_cartesian(azimuth: Union[float, NDArray], elevation: Union[float, NDArray]) -> NDArray:
     """Convert spherical angle(s) to Cartesian vector(s)
 
     Parameters
@@ -32,7 +32,7 @@ def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[floa
     ).squeeze()
 
 
-def cartesian_to_spherical(unit_vector) -> Tuple[NDArray, NDArray]:
+def cartesian_to_spherical(unit_vector: NDArray) -> Tuple[NDArray, NDArray]:
     """Convert Cartesian vector(s) to spherical angle(s)
 
     Parameters

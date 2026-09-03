@@ -1,7 +1,10 @@
+from typing import Optional, Union
+
 import numpy as np
+from numpy.typing import NDArray
 
 
-def fit_2d_polynomial(x, y, f, order):
+def fit_2d_polynomial(x: NDArray, y: NDArray, f: NDArray, order: int) -> tuple[NDArray, float, int, NDArray]:
     """
     Fit a 2D polynomial to data using least squares.
 
@@ -105,7 +108,7 @@ def fit_2d_polynomial(x, y, f, order):
     return coeffs, residuals, rank, singular_values
 
 
-def evaluate_2d_polynomial(coeffs, x, y, order=None):
+def evaluate_2d_polynomial(coeffs: NDArray, x: Union[NDArray, float], y: Union[NDArray, float], order: Optional[int] = None) -> Union[NDArray, float]:
     """
     Evaluate a 2D polynomial of arbitrary order.
 
