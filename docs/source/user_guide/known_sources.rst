@@ -17,7 +17,7 @@ objects contained within a single file or data structure.
 2. **Stars**: Stars can be loaded in two ways
 
    a. Stars can be loaded via astroquery. VISTA currently supports querying the Hipparcos and Gaia catalogs. Note that such queries will depend on internet speed and VizieR and ESA servers.
-   b. Stars can be loaded via csv file. The file is expected to contain (at minimum) the following columns: ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"]. Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and parallax error must be mas. It is assumed that the csv contains values at the J2000 epoch.
+   b. Stars can be loaded via csv file. The file is expected to contain (at minimum) the following columns: ["ID", "RA", "Dec", "V_mag"]. It may optionally also include the columns ["pmRA", "pmDec", "parallax", "parallax_error"]. If any optional columns are not present, they are assumed to be zero. Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and parallax error must be mas. It is assumed that the csv contains values at the J2000 epoch.
 
 .. note::
     The limiting magnitude used to filter catalogs when loading in stars can be changed in the Settings → Known Sources tab.
@@ -77,5 +77,5 @@ this dataset to test known sources satellites passing through the field of view.
 `sample_stars.csv <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_stars.csv>`_
 An example of a CSV file that defines star locations for inclusion in imagery.
 
-`sample_satellites.csv <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_satellites.csv>`_
-An example of a CSV file that provides satellite Two-Line Element (TLE) data for inclusion in imagery.
+`sample_satellites.tle <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_satellites.tle>`_
+An example of a file that provides satellite Two-Line Element (TLE) data for inclusion in imagery.

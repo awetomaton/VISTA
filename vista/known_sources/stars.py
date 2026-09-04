@@ -41,8 +41,9 @@ class Stars(KnownSources):
         catalog : str, None
             Name of the catalog to query.
             If value is one of ["Hipparcos", "Gaia"], it will query data from online.
-            Otherwise, it is assumed to be the name of a csv file of star data that contains at least
-            the columns ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"].
+            Otherwise, it is assumed to be the name of a csv file of star data that contains at least the columns
+            ["ID", "RA", "Dec", "V_mag"]. It may optionally also include the columns ["pmRA", "pmDec", "parallax",
+            "parallax_error"]. If any optional columns are not present, they are assumed to be zero.
             Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and
             parallax error must be mas. It is assumed that the csv contains values at the J2000 epoch.
         V_max : int, default=7
@@ -214,8 +215,9 @@ class Stars(KnownSources):
         Parameters
         ----------
         file : str
-            Name of the file to load. Must be a csv file of data that contains at least the
-            columns ["ID", "RA", "pmRA", "Dec", "pmDec", "parallax", "parallax_error", "V_mag"].
+            Name of the file to load. Must be a csv file of data that contains at least the columns
+            ["ID", "RA", "Dec", "V_mag"]. It may optionally also include the columns ["pmRA", "pmDec", "parallax",
+            "parallax_error"]. If any optional columns are not present, they are assumed to be zero.
             Units of RA and Dec must be degrees, pmRA and pmDec must be mas / year, and parallax and
             parallax error must be mas. Values are assumed to be at the J2000 epoch.
             Note: "pmRA" should denote μ_α * cos(δ) (which most modern catalogs already do report).

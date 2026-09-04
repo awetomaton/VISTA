@@ -56,6 +56,7 @@ class DetectionsPanel(DataPanel):
         self.settings = QSettings("VISTA", "DataManager")
         self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
         self.waiting_for_track_selection = False  # Flag when waiting for user to select track
+        self.viewer.detection_editing_ended.connect(self.on_detection_editing_ended)
         self.init_ui()
 
         # Initialize undo stack with configurable depth from settings
@@ -439,6 +440,8 @@ class DetectionsPanel(DataPanel):
             print(f"Error in refresh_detections_table: {e}")
             traceback.print_exc()
             self.detections_table.blockSignals(False)
+
+        self.on_detector_selection_changed()
 
     def _update_detections_header_icons(self):
         """Update header labels to show filter indicators"""
@@ -1112,6 +1115,17 @@ class DetectionsPanel(DataPanel):
         # Delete the detectors
         detectors_to_delete_uuids = set(d.uuid for d in detectors_to_delete)
 
+        # Stop detector editing before deleting its backing detector. Edit mode
+        # keeps a separate temporary plot that is not part of detector_plot_items.
+        editing_detector = self.viewer.editing_detector
+        if (
+            self.viewer.detection_editing_mode
+            and editing_detector is not None
+            and editing_detector.uuid in detectors_to_delete_uuids
+        ):
+            self.viewer.finish_detection_editing()
+            self.edit_detector_btn.setChecked(False)
+
         # Remove from viewer list (use uuid comparison to avoid numpy array comparison)
         self.viewer.detectors = [d for d in self.viewer.detectors if d.uuid not in detectors_to_delete_uuids]
 
@@ -1205,11 +1219,13 @@ class DetectionsPanel(DataPanel):
                     break
 
         # Select all moved rows
+        selection_model = self.detections_table.selectionModel()
+        model = self.detections_table.model()
         for row in rows_to_select:
-            for col in range(self.detections_table.columnCount()):
-                item = self.detections_table.item(row, col)
-                if item:
-                    item.setSelected(True)
+            index = model.index(row, 0)
+            selection_model.select(
+                index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+            )
         self.detections_table.blockSignals(False)
 
         self.data_changed.emit()
@@ -1286,6 +1302,12 @@ class DetectionsPanel(DataPanel):
                 )
             else:
                 self.status_message.emit("Detector editing cancelled", 3000)
+
+    def on_detection_editing_ended(self):
+        """Handle detector editing ending outside the panel."""
+        if self.edit_detector_btn.isChecked():
+            self.edit_detector_btn.setChecked(False)
+        self.refresh_detections_table()
 
     def export_detections(self):
         """Export selected detections to CSV file"""
@@ -1511,6 +1533,12 @@ class DetectionsPanel(DataPanel):
 
     def on_detections_selected_in_viewer(self, detections):
         """Handle detection selection from viewer"""
+        if not detections:
+            if self.waiting_for_track_selection:
+                self.cancel_add_to_existing_track()
+            self.clear_detection_selection()
+            return
+
         if not self.waiting_for_track_selection:
             self.selected_detections = detections
             self.create_track_from_detections_btn.setEnabled(len(detections) >= 2)

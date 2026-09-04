@@ -94,7 +94,7 @@ class SimpleThreshold:
         for region in regions:
             if self.min_area <= region.area <= self.max_area:
                 # Use weighted centroid (intensity-weighted) and account for center of pixel being at 0.5, 0.5
-                centroid = region.weighted_centroid
+                centroid = region.centroid_weighted
                 rows.append(centroid[0] + 0.5)
                 columns.append(centroid[1] + 0.5)
 

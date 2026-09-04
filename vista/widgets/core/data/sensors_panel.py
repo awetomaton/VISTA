@@ -177,6 +177,13 @@ class SensorsPanel(DataPanel):
             # Delete all imagery for this sensor
             self.viewer.imageries = [img for img in self.viewer.imageries if img.sensor != sensor]
 
+            # Stop extraction viewing before deleting its backing track. The viewer keeps a direct reference
+            # to the viewed track, so removing the track from viewer.tracks alone would leave the overlay
+            # and stale reference active.
+            viewing_track = self.viewer.viewing_extraction_track
+            if self.viewer.extraction_view_mode and viewing_track is not None and viewing_track.sensor == sensor:
+                self.viewer.finish_extraction_viewing()
+
             # Delete all tracks for this sensor
             tracks_to_delete = [track for track in self.viewer.tracks if track.sensor == sensor]
             for track in tracks_to_delete:

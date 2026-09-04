@@ -335,7 +335,7 @@ class ExtractionEditorWidget(QDialog):
         largest_region = max(regions, key=lambda r: r.area)
 
         # Get weighted centroid
-        centroid = largest_region.weighted_centroid
+        centroid = largest_region.centroid_weighted
 
         # Convert to offset from chip center
         chip_center = self.working_extraction["chip_size"] // 2

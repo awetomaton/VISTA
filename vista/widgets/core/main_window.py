@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from astropy import units
 from astropy.coordinates import EarthLocation
-from PyQt6.QtCore import QSettings, Qt
+from PyQt6.QtCore import QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
     QDockWidget,
@@ -131,6 +131,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
         self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
         self.viewer.wms_status_changed.connect(self._on_wms_status_changed)
+        self.viewer.sensor_context_reset.connect(self.on_sensor_context_reset)
 
         # Connect imagery panel cancel signal for incremental loading
         self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
@@ -666,6 +667,15 @@ class VistaMainWindow(QMainWindow):
                 self.data_manager.detections_panel.edit_detector_btn.setChecked(False)
                 self.data_manager.detections_panel.edit_detector_btn.blockSignals(False)
 
+    def on_sensor_context_reset(self):
+        """Synchronize creation actions after sensor-specific state is cleared."""
+        for action_name in ("create_track_action", "create_detection_action"):
+            action = getattr(self, action_name, None)
+            if action is not None and action.isChecked():
+                action.blockSignals(True)
+                action.setChecked(False)
+                action.blockSignals(False)
+
     def on_geolocation_toggled(self, checked):
         """Handle geolocation tooltip toggle"""
         self.viewer.set_geolocation_enabled(checked)
@@ -804,6 +814,9 @@ class VistaMainWindow(QMainWindow):
                 track.tracker = "Manual"
                 self.viewer.add_track(track)
                 self.data_manager.refresh()
+                # refresh() clears the Tracks table selection with its signals
+                # blocked. Propagate that empty selection to open detail plots.
+                self.data_manager.tracks_panel.on_track_selection_changed()
                 self.statusBar().showMessage(f"Track created: {track.name} with {len(track.frames)} points", 3000)
             else:
                 self.statusBar().showMessage("Track creation cancelled (no points added)", 3000)
@@ -1384,7 +1397,7 @@ class VistaMainWindow(QMainWindow):
                     msg.setIcon(QMessageBox.Icon.Information)
                     msg.setWindowTitle("Track Loading Information")
                     msg.setText("The following will be used for track data mapping:")
-                    msg.setInformativeText("\n".join(preamble) + "\n\n".join(mapping_info))
+                    msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
                     msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                     if msg.exec() != QMessageBox.StandardButton.Ok:
                         return
@@ -2960,17 +2973,18 @@ class VistaMainWindow(QMainWindow):
 
         # Restore track selection after refresh
         if selected_track_ids:
+            selection_model = self.data_manager.tracks_table.selectionModel()
+            model = self.data_manager.tracks_table.model()
             self.data_manager.tracks_panel.tracks_table.blockSignals(True)
             for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
                 track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
                 if track_name_item:
                     track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
                     if track_id in selected_track_ids:
-                        # Select all columns in this row
-                        for col in range(self.data_manager.tracks_panel.tracks_table.columnCount()):
-                            item = self.data_manager.tracks_panel.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
             self.data_manager.tracks_panel.tracks_table.blockSignals(False)
 
     def open_savitzky_golay_dialog(self):
@@ -3051,6 +3065,8 @@ class VistaMainWindow(QMainWindow):
 
         # Restore track selection after refresh
         if selected_track_ids:
+            selection_model = self.data_manager.tracks_table.selectionModel()
+            model = self.data_manager.tracks_table.model()
             self.data_manager.tracks_panel.tracks_table.blockSignals(True)
             for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
                 track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
@@ -3058,10 +3074,10 @@ class VistaMainWindow(QMainWindow):
                     track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
                     if track_id in selected_track_ids:
                         # Select all columns in this row
-                        for col in range(self.data_manager.tracks_panel.tracks_table.columnCount()):
-                            item = self.data_manager.tracks_panel.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
             self.data_manager.tracks_panel.tracks_table.blockSignals(False)
 
     def load_data_programmatically(self, imagery=None, tracks=None, detections=None):
