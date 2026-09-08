@@ -166,7 +166,7 @@ The HDF5 file has the following hierarchical structure:
            │   ├── uuid: "uuid-string"
            │   └── sensor_type: "Sensor" or "SampledSensor"
            ├── position/              (SampledSensor only)
-           │   ├── positions          [3 × N array: x, y, z in ECEF meters]
+           │   ├── positions          [3 × N array: x, y, z in ECEF kilometers]
            │   └── unix_nanoseconds   [N array: nanoseconds since epoch]
            ├── geolocation/           (optional, for coordinate transforms)
            │   ├── frames             [M array: frame numbers for polynomials]
