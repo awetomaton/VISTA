@@ -1592,6 +1592,8 @@ class DetectionsPanel(DataPanel):
             detector.frames = detector.frames[keep_mask]
             detector.rows = detector.rows[keep_mask]
             detector.columns = detector.columns[keep_mask]
+            detector._cached_lats = detector._cached_lats[keep_mask] if detector._cached_lats is not None else None
+            detector._cached_lons = detector._cached_lons[keep_mask] if detector._cached_lons is not None else None
 
             # Update labels if they exist
             if detector.labels and len(detector.labels) > 0:
