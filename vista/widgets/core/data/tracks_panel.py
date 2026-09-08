@@ -1946,6 +1946,17 @@ class TracksPanel(DataPanel):
             QMessageBox.warning(self, "Cannot Merge", "Could not find enough valid tracks to merge.")
             return
 
+        # Check that all tracks are from the same sensor (compare by UUID)
+        first_track = tracks_to_merge[0]
+        sensor = first_track.sensor
+        if not all(t.sensor == sensor for t in tracks_to_merge):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected tracks belong to different sensors. Please select tracks from the same sensor.",
+            )
+            return
+
         # Save state before merge
         self.save_undo_state(f"Merge {len(tracks_to_merge)} tracks")
 
@@ -1965,7 +1976,6 @@ class TracksPanel(DataPanel):
         combined_df = combined_df.drop_duplicates(subset=["Frames"], keep="first")
 
         # Use styling from the first track
-        first_track = tracks_to_merge[0]
         merged_name = f"Merged_{first_track.name}"
 
         # Make sure the merged name is unique
