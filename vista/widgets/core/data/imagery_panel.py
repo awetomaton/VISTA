@@ -25,6 +25,7 @@ _HDF5_EXTENSIONS = (".h5", ".hdf5")
 class ImageryPanel(DataPanel):
     """Panel for managing imagery"""
 
+    imagery_selected = pyqtSignal()  # Signal when imagery selection changes
     cancel_loading_requested = pyqtSignal(object)  # Emits imagery UUID to cancel loading
 
     def __init__(self, viewer):
@@ -244,14 +245,13 @@ class ImageryPanel(DataPanel):
                         # Skip if the viewer is already displaying this imagery
                         if self.viewer.imagery is None or self.viewer.imagery.uuid != imagery_uuid:
                             self.viewer.select_imagery(imagery)
-                        # Update frame range in main window
-                        self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+                        self.imagery_selected.emit()
                         break
         else:
             # No imagery selected - clear the viewer display
             self.viewer.imagery = None
             self.viewer.image_item.clear()
-            self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+            self.imagery_selected.emit()
 
     def on_imagery_cell_changed(self, row, column):
         """Handle imagery cell changes"""
@@ -399,7 +399,7 @@ class ImageryPanel(DataPanel):
         # If there are still imageries and none is selected, select the first one
         if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
             self.viewer.select_imagery(self.viewer.imageries[0])
-            self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+            self.imagery_selected.emit()
 
         # Refresh table
         self.refresh_imagery_table()

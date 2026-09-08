@@ -123,6 +123,8 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.data_changed.connect(self.on_data_changed)
         self.data_manager.setMinimumWidth(400)
 
+        self.data_manager.imagery_panel.imagery_selected.connect(self.update_frame_range_from_imagery)
+
         # Set data_manager reference on viewer for label filtering
         self.viewer.data_manager = self.data_manager
 
