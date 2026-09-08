@@ -110,7 +110,7 @@ Key Points
   enables time-based track loading.
 - ``sensor`` is required. Use the base ``Sensor`` if you have no calibration or geolocation data.
 - You can pass multiple imagery objects as a list: ``VistaApp(imagery=[img1, img2])``.
-- You can pass detections, tracks, and sensors alongside imagery — see ``VistaApp`` documentation
+- You can pass detections, tracks, and imagery — see ``VistaApp`` documentation
   in ``vista/app.py``.
 
 Loading Multiple Sensors or Imagery
