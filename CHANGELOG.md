@@ -8,8 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.14.0] - 2026-9-9
 
 ### Credits
- - Thanks to [@weisluke] for implementing the features in this release!
- - Thanks to [@nolanking90] reviewing the features in this release!
+ - Thanks to [@nolanking90] and [@weisluke] for implementing the features in this release!
+
+### Improvements
+ - ✨ Updated minimum supported python version to 3.11.
+ - ✨ Added github actions and tests for Track and Detector csv serialization.
+ - 🛠️ Further improve when buttons are enabled / disabled in data panels based on allowed actions. 
+ - 🛠️ Ensure stale overlays from Tracks and Detectors are removed when swapping imagery, completing editing actions, or deleting items.
+ - 🛠️ Update deprecated sci-kit image property from weighted_centroid to centroid_weighted.
+ - 🔧 Fixed units in geodetic mapping.
+ - 🔧 Fix frame / time mapping for KnownSources.
+ - 🔧 Fix uncertainty radius calculation.
+ - 🔧 Fix frame stacking range calculation.
+ - 🔧 Ensure frames and times are sorted in Imagery.
+ - 🔧 Swap to using selectionModel in QTables that didn't already, for consistency.
 
 ## [1.13.0] - 2026-8-26
 
