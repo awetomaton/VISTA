@@ -29,7 +29,6 @@ class DataManagerPanel(QWidget):
         super().__init__()
         self.viewer = viewer
         self.settings = QSettings("VISTA", "DataManager")
-        self.selected_sensor = None
         self.init_ui()
 
     def init_ui(self):
@@ -80,7 +79,6 @@ class DataManagerPanel(QWidget):
 
     def on_sensor_selected(self, sensor):
         """Handle sensor selection change"""
-        self.selected_sensor = sensor
         # Filter the viewer to show only data for selected sensor
         self.viewer.filter_by_sensor(sensor)
         # Refresh other panels to show only data for selected sensor
