@@ -162,7 +162,6 @@ cython_debug/
 # User defined - cache directories only
 _cache
 
-tests/data/*
 data/**
 
 # Mac nonsense
