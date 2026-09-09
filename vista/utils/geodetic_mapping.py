@@ -23,7 +23,7 @@ def map_geodetic_to_pixel(
     longitudes : NDArray[np.float64]
         Array of longitude values in degrees
     altitudes : NDArray[np.float64]
-        Array of altitude values in meters
+        Array of altitude values in kilometers
     frames : NDArray[np.int_]
         Array of frame numbers corresponding to each position
     sensor : Sensor
@@ -48,7 +48,7 @@ def map_geodetic_to_pixel(
         raise ValueError("Latitude, longitude, altitude, and frames arrays must have the same length")
 
     # Build EarthLocation for all points at once
-    locations = EarthLocation(lat=latitudes * u.deg, lon=longitudes * u.deg, height=altitudes * u.m)
+    locations = EarthLocation(lat=latitudes * u.deg, lon=longitudes * u.deg, height=altitudes * u.km)
 
     # Single vectorized call — sensor handles frame grouping internally
     rows, columns = sensor.geodetic_to_pixel(frames, locations)

@@ -56,7 +56,7 @@ class Coaddition:
 
         # Calculate start and end indices, clamping to valid range
         start_idx = max(0, self.current_frame_idx - half_window)
-        end_idx = min(len(self.imagery), self.current_frame_idx + half_window + 1)
+        end_idx = min(len(self.imagery), self.current_frame_idx - half_window + self.window_size)
 
         # Ensure we always get window_size frames if possible
         # If we're at the beginning, extend to the right

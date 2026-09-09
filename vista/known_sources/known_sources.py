@@ -64,7 +64,9 @@ class KnownSources:
         """
         raise NotImplementedError
 
-    def get_pixels(self, imagery: Imagery, frame: Union[int, NDArray]) -> Tuple[NDArray, NDArray]:
+    def get_pixels(
+        self, imagery: Imagery, frame: Union[int, NDArray], time: Union[np.datetime64, NDArray[np.datetime64], Time]
+    ) -> Tuple[NDArray, NDArray]:
         """
         Return the pixel positions of the source for the provided imagery and frame number(s).
         Sources which are off-frame or behind the Earth have NaN locations
@@ -75,6 +77,8 @@ class KnownSources:
             The imagery we want to project the source onto
         frame : int, NDArray
             The frame number(s) to project onto
+        time : np.datetime64, NDArray[np.datetime64], astropy.time.Time
+            The time(s) corresponding to the frame number(s)
 
         Returns
         -------
@@ -85,15 +89,11 @@ class KnownSources:
         """
         sensor = imagery.sensor  # get the imagery sensor
 
-        # get times for the desired frame(s)
-        _, times = sensor.get_imagery_frames_and_times()
-        times = times[frame]
-
         # geodetic positions for the source at those times
-        source_positions = self.get_geodetics(times)
+        source_positions = self.get_geodetics(time)
 
         # check if object is on the other side of the earth via intersection along LOS
-        sensor_positions = sensor.get_positions(np.atleast_1d(times))
+        sensor_positions = sensor.get_positions(np.atleast_1d(time))
         dx = source_positions.x.to(u.km).value - sensor_positions[0]
         dy = source_positions.y.to(u.km).value - sensor_positions[1]
         dz = source_positions.z.to(u.km).value - sensor_positions[2]
@@ -156,13 +156,15 @@ class KnownSources:
         tracks : list[Tracks]
             list of Track objects
         """
+        if imagery.times is None:
+            raise ValueError("imagery.times is None, cannot create tracks without frame <-> time mapping")
 
         tracks = []
 
         rows = []
         columns = []
-        for frame in imagery.frames:
-            r, c = self.get_pixels(imagery, frame)
+        for frame, time in zip(imagery.frames, imagery.times):
+            r, c = self.get_pixels(imagery, frame, time)
             rows.append(r)
             columns.append(c)
         # after looping over frames, rows and columns have shape (num_frames, num_sources)

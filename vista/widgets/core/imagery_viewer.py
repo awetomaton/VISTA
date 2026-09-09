@@ -76,6 +76,15 @@ class ImageryViewer(QWidget):
     # Signal emitted when extraction editing mode ends
     extraction_editing_ended = pyqtSignal()
 
+    # Signal emitted when extraction viewing mode ends
+    extraction_viewing_ended = pyqtSignal()
+
+    # Signal emitted when detector editing mode ends
+    detection_editing_ended = pyqtSignal()
+
+    # Signal emitted after sensor-specific interactive state is reset
+    sensor_context_reset = pyqtSignal()
+
     # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
     lasso_selection_completed = pyqtSignal(dict)
 
@@ -1083,6 +1092,9 @@ class ImageryViewer(QWidget):
         sensor : Sensor or None
             Sensor object to filter by, or None to show all
         """
+        if self.selected_sensor != sensor:
+            self._reset_sensor_context_state()
+
         self.selected_sensor = sensor
 
         if sensor is not None:
@@ -1127,24 +1139,15 @@ class ImageryViewer(QWidget):
             Boolean indicating whether detection selection mode is enabled
         """
         self.detection_selection_mode = enabled
-        if enabled:
-            # Clear any previous selections
-            self.selected_detections = []
-        else:
-            # Clear selections
-            self.selected_detections = []
-            # Clear highlighting
-            if self.selected_detections_plot is not None:
-                if isinstance(self.selected_detections_plot, list):
-                    for plot in self.selected_detections_plot:
-                        self.plot_item.removeItem(plot)
-                        plot.deleteLater()  # Prevent memory leak
-                else:
-                    self.plot_item.removeItem(self.selected_detections_plot)
-                    self.selected_detections_plot.deleteLater()  # Prevent memory leak
-                self.selected_detections_plot = None
+        self.clear_selected_detections()
         # Update cursor based on all interactive modes
         self.update_cursor()
+
+    def clear_selected_detections(self):
+        """Clear selected detections and their highlighting overlay."""
+        self.selected_detections = []
+        self._update_selected_detections_display()
+        self.detections_selected.emit([])
 
     def update_cursor(self):
         """Update cursor based on enabled interactive modes"""
@@ -2152,14 +2155,7 @@ class ImageryViewer(QWidget):
         # Update cursor based on all interactive modes
         self.update_cursor()
 
-        # Remove temporary plot
-        if self.temp_track_plot:
-            if isinstance(self.temp_track_plot, list):
-                for plot in self.temp_track_plot:
-                    self.plot_item.removeItem(plot)
-            else:
-                self.plot_item.removeItem(self.temp_track_plot)
-            self.temp_track_plot = None
+        self._remove_temp_track_plot()
 
         # Create Track object if we have data
         if len(self.current_track_data) > 0:
@@ -2183,6 +2179,14 @@ class ImageryViewer(QWidget):
             self.current_track_data = {}
             return None
 
+    def cancel_track_creation(self):
+        """Cancel track creation and discard its temporary data."""
+        self.track_creation_mode = False
+        self.current_track_data = {}
+        self._hide_point_selection_dialog()
+        self._remove_temp_track_plot()
+        self.update_cursor()
+
     def finish_track_editing(self):
         """Finish track editing and update the Track object"""
         self.track_editing_mode = False
@@ -2193,14 +2197,7 @@ class ImageryViewer(QWidget):
         # Update cursor based on all interactive modes
         self.update_cursor()
 
-        # Remove temporary plot
-        if self.temp_track_plot:
-            if isinstance(self.temp_track_plot, list):
-                for plot in self.temp_track_plot:
-                    self.plot_item.removeItem(plot)
-            else:
-                self.plot_item.removeItem(self.temp_track_plot)
-            self.temp_track_plot = None
+        self._remove_temp_track_plot()
 
         # Update Track object with new data
         if editing_track and len(self.current_track_data) > 0:
@@ -2220,6 +2217,16 @@ class ImageryViewer(QWidget):
         else:
             self.current_track_data = {}
             return None
+
+    def _remove_temp_track_plot(self):
+        """Remove the temporary plot used for track creation or editing."""
+        if self.temp_track_plot is not None:
+            if isinstance(self.temp_track_plot, list):
+                for plot in self.temp_track_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_track_plot)
+            self.temp_track_plot = None
 
     def start_extraction_viewing(self, track):
         """Start extraction viewing mode for a specific track"""
@@ -2243,6 +2250,23 @@ class ImageryViewer(QWidget):
         self._update_extraction_overlay()
         return True
 
+    def _reset_sensor_context_state(self):
+        """Clear overlays, selections, and edit modes tied to the selected sensor."""
+        if self.track_creation_mode:
+            self.cancel_track_creation()
+        if self.track_editing_mode:
+            self.finish_track_editing()
+        if self.detection_creation_mode:
+            self.cancel_detection_creation()
+        if self.detection_editing_mode:
+            self.finish_detection_editing()
+        if self.extraction_editing_mode:
+            self.finish_extraction_editing()
+        if self.extraction_view_mode:
+            self.finish_extraction_viewing()
+        self.clear_selected_detections()
+        self.sensor_context_reset.emit()
+
     def finish_extraction_viewing(self):
         """Finish extraction viewing mode"""
         self.extraction_view_mode = False
@@ -2252,6 +2276,8 @@ class ImageryViewer(QWidget):
         if self.extraction_overlay is not None:
             self.plot_item.removeItem(self.extraction_overlay)
             self.extraction_overlay = None
+
+        self.extraction_viewing_ended.emit()
 
     def _update_extraction_overlay(self):
         """Update the extraction overlay for the current frame"""
@@ -2466,14 +2492,7 @@ class ImageryViewer(QWidget):
         # Update cursor based on all interactive modes
         self.update_cursor()
 
-        # Remove temporary plot
-        if self.temp_detection_plot:
-            if isinstance(self.temp_detection_plot, list):
-                for plot in self.temp_detection_plot:
-                    self.plot_item.removeItem(plot)
-            else:
-                self.plot_item.removeItem(self.temp_detection_plot)
-            self.temp_detection_plot = None
+        self._remove_temp_detection_plot()
 
         # Create Detector object if we have data
         if len(self.current_detection_data) > 0:
@@ -2502,24 +2521,26 @@ class ImageryViewer(QWidget):
             self.current_detection_data = {}
             return None
 
+    def cancel_detection_creation(self):
+        """Cancel detection creation and discard its temporary data."""
+        self.detection_creation_mode = False
+        self.current_detection_data = {}
+        self._hide_point_selection_dialog()
+        self._remove_temp_detection_plot()
+        self.update_cursor()
+
     def finish_detection_editing(self):
         """Finish detection editing and update the Detector object"""
         self.detection_editing_mode = False
         editing_detector = self.editing_detector
+        edited_detector = None
         self.editing_detector = None
         # Hide point selection dialog
         self._hide_point_selection_dialog()
         # Update cursor based on all interactive modes
         self.update_cursor()
 
-        # Remove temporary plot
-        if self.temp_detection_plot:
-            if isinstance(self.temp_detection_plot, list):
-                for plot in self.temp_detection_plot:
-                    self.plot_item.removeItem(plot)
-            else:
-                self.plot_item.removeItem(self.temp_detection_plot)
-            self.temp_detection_plot = None
+        self._remove_temp_detection_plot()
 
         # Update Detector object with new data
         if editing_detector and len(self.current_detection_data) > 0:
@@ -2540,14 +2561,23 @@ class ImageryViewer(QWidget):
 
             # Invalidate caches since detector data was modified
             editing_detector.invalidate_caches()
+            edited_detector = editing_detector
 
-            self.current_detection_data = {}
-            # Refresh detection display
-            self.update_overlays()
-            return editing_detector
-        else:
-            self.current_detection_data = {}
-            return None
+        self.current_detection_data = {}
+        # Refresh detection display
+        self.update_overlays()
+        self.detection_editing_ended.emit()
+        return edited_detector
+
+    def _remove_temp_detection_plot(self):
+        """Remove the temporary plot used for detection creation or editing."""
+        if self.temp_detection_plot is not None:
+            if isinstance(self.temp_detection_plot, list):
+                for plot in self.temp_detection_plot:
+                    self.plot_item.removeItem(plot)
+            else:
+                self.plot_item.removeItem(self.temp_detection_plot)
+            self.temp_detection_plot = None
 
     def _show_point_selection_dialog(self):
         """Show the point selection dialog (non-modal, floating)"""
@@ -3087,6 +3117,9 @@ class ImageryViewer(QWidget):
         other_frame_y = []
 
         for detector, frame, index in self.selected_detections:
+            if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
+                continue
+
             row = detector.rows[index]
             col = detector.columns[index]
 

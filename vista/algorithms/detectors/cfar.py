@@ -299,7 +299,7 @@ class CFAR:
             # Find blobs whose weighted centroid is within search_radius
             candidates = []
             for region in valid_regions:
-                centroid = region.weighted_centroid
+                centroid = region.centroid_weighted
 
                 if self.annulus_shape == "circular":
                     dist = np.sqrt((centroid[0] - center_row) ** 2 + (centroid[1] - center_col) ** 2)
@@ -320,7 +320,7 @@ class CFAR:
         rows = []
         columns = []
         for region in valid_regions:
-            centroid = region.weighted_centroid
+            centroid = region.centroid_weighted
             rows.append(centroid[0] + 0.5)
             columns.append(centroid[1] + 0.5)
 
@@ -423,7 +423,7 @@ class CFAR:
                     candidates = []
 
                     for region in regions:
-                        centroid = region.weighted_centroid
+                        centroid = region.centroid_weighted
 
                         if self.annulus_shape == "circular":
                             dist = np.sqrt((centroid[0] - center_row) ** 2 + (centroid[1] - center_col) ** 2)

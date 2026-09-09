@@ -1,0 +1,4 @@
+Tracker,Track,Frames,Rows,Columns,Color,Marker,Line Width,Marker Size,Tail Length,Visible,Complete,Show Line,Line Style,Labels,Label Time,Labeler,Latitude (deg),Longitude (deg),Altitude (km),Covariance 00,Covariance 01,Covariance 11
+legacy-tracker,main-track,5,40.0,400.5,magenta,d,5,15,8,False,True,False,DashLine,"aircraft, confirmed",2025-02-03T04:05:06,legacy-user,,,,4.0,0.25,7.0
+legacy-tracker,main-track,6,41.5,402.0,magenta,d,5,15,8,False,True,False,DashLine,"aircraft, confirmed",2025-02-03T04:05:06,legacy-user,,,,5.0,0.5,8.0
+legacy-tracker,main-track,9,43.25,405.75,magenta,d,5,15,8,False,True,False,DashLine,"aircraft, confirmed",2025-02-03T04:05:06,legacy-user,,,,6.0,0.75,9.0

@@ -203,7 +203,7 @@ class PSTNN:
         rows = []
         columns = []
         for region in valid_regions:
-            centroid = region.weighted_centroid
+            centroid = region.centroid_weighted
             rows.append(centroid[0] + 0.5)
             columns.append(centroid[1] + 0.5)
 

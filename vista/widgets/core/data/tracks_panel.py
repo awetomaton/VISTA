@@ -299,6 +299,7 @@ class TracksPanel(DataPanel):
 
         # Connect to viewer signals
         self.viewer.extraction_editing_ended.connect(self.on_extraction_editing_ended)
+        self.viewer.extraction_viewing_ended.connect(self.on_extraction_viewing_ended)
 
         self.init_ui()
 
@@ -892,6 +893,7 @@ class TracksPanel(DataPanel):
         self._apply_track_column_visibility()
 
         self.tracks_table.blockSignals(False)
+        self.on_track_selection_changed()
 
     def _apply_track_column_visibility(self):
         """Apply column visibility settings to tracks table"""
@@ -2160,6 +2162,17 @@ class TracksPanel(DataPanel):
         # Save state before delete
         self.save_undo_state(f"Delete {len(tracks_to_delete)} tracks")
 
+        # Stop extraction viewing/editing before deleting the track.
+        # Both modes keep direct references to the track and share the extraction
+        # overlay, so removing the track from viewer.tracks is not sufficient.
+        viewing_track = self.viewer.viewing_extraction_track
+        if self.viewer.extraction_view_mode and viewing_track is not None and viewing_track in tracks_to_delete:
+            self.viewer.finish_extraction_viewing()
+
+        editing_track = self.viewer.editing_extraction_track
+        if self.viewer.extraction_editing_mode and editing_track is not None and editing_track in tracks_to_delete:
+            self.viewer.finish_extraction_editing()
+
         # Delete the tracks
         for track in tracks_to_delete:
             self.viewer.tracks.remove(track)
@@ -2179,10 +2192,6 @@ class TracksPanel(DataPanel):
 
         # Refresh table
         self.refresh_tracks_table()
-
-        # Clear selection in both table and viewer to prevent stale indices from being highlighted
-        self.tracks_table.clearSelection()
-        self.viewer.set_selected_tracks(set())
 
         self.data_changed.emit()
 
@@ -2270,11 +2279,13 @@ class TracksPanel(DataPanel):
                     break
 
         # Select all moved rows
+        selection_model = self.tracks_table.selectionModel()
+        model = self.tracks_table.model()
         for row in rows_to_select:
-            for col in range(self.tracks_table.columnCount()):
-                item = self.tracks_table.item(row, col)
-                if item:
-                    item.setSelected(True)
+            index = model.index(row, 0)
+            selection_model.select(
+                index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+            )
         self.tracks_table.blockSignals(False)
 
         self.data_changed.emit()
@@ -2400,6 +2411,8 @@ class TracksPanel(DataPanel):
         )
 
         # Find the row in the tracks table that matches this track
+        selection_model = self.tracks_table.selectionModel()
+        model = self.tracks_table.model()
         for row in range(self.tracks_table.rowCount()):
             track_name_item = self.tracks_table.item(row, 2)
             if track_name_item and track_name_item.data(Qt.ItemDataRole.UserRole) == track.uuid:
@@ -2407,16 +2420,16 @@ class TracksPanel(DataPanel):
                     # Add to selection (toggle if already selected)
                     if self.tracks_table.item(row, 0).isSelected():
                         # Deselect this row
-                        for col in range(self.tracks_table.columnCount()):
-                            item = self.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(False)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Deselect | QItemSelectionModel.SelectionFlag.Rows
+                        )
                     else:
                         # Add this row to selection
-                        for col in range(self.tracks_table.columnCount()):
-                            item = self.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
                 else:
                     # Replace selection with this row
                     self.tracks_table.selectRow(row)
@@ -2570,6 +2583,8 @@ class TracksPanel(DataPanel):
 
         # Restore track selection after refresh
         if selected_track_ids:
+            selection_model = self.tracks_table.selectionModel()
+            model = self.tracks_table.model()
             self.tracks_table.blockSignals(True)
             for row in range(self.tracks_table.rowCount()):
                 track_name_item = self.tracks_table.item(row, 2)
@@ -2577,10 +2592,10 @@ class TracksPanel(DataPanel):
                     track_id = track_name_item.data(Qt.ItemDataRole.UserRole)
                     if track_id in selected_track_ids:
                         # Select all columns in this row
-                        for col in range(self.tracks_table.columnCount()):
-                            item = self.tracks_table.item(row, col)
-                            if item:
-                                item.setSelected(True)
+                        index = model.index(row, 0)
+                        selection_model.select(
+                            index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                        )
             self.tracks_table.blockSignals(False)
             # Manually trigger selection changed to update button states
             self.on_track_selection_changed()
@@ -2720,6 +2735,11 @@ class TracksPanel(DataPanel):
         # Uncheck the Edit Extraction button if it's checked
         if self.edit_extraction_btn.isChecked():
             self.edit_extraction_btn.setChecked(False)
+
+    def on_extraction_viewing_ended(self):
+        """Handle extraction viewing ended signal from viewer."""
+        if self.view_extraction_btn.isChecked():
+            self.view_extraction_btn.setChecked(False)
 
     def export_tracks(self):
         """Export selected tracks to CSV file"""

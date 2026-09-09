@@ -117,7 +117,12 @@ class Sensor:
         This method aggregates frames and times from all imagery objects that have
         been registered with this sensor via add_imagery().
         """
-        return self._imagery_frames_dataframe["frames"].to_numpy(), self._imagery_frames_dataframe["times"].to_numpy()
+        frames = self._imagery_frames_dataframe["frames"].to_numpy()
+        times = self._imagery_frames_dataframe["times"].to_numpy()
+
+        sorter = np.argsort(frames)
+
+        return frames[sorter], times[sorter]
 
     def add_imagery(self, imagery):
         """
