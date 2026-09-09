@@ -1,0 +1,26 @@
+﻿vista.known\_sources.satellites.Satellites
+==========================================
+
+.. currentmodule:: vista.known_sources.satellites
+
+.. autoclass:: Satellites
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Satellites.__init__
+      ~Satellites.create_tracks
+      ~Satellites.get_geodetics
+      ~Satellites.get_pixels
+      ~Satellites.load_tle_file
+   
+   
+
+   
+   
+   

@@ -1,0 +1,6 @@
+﻿vista.algorithms.trackers.tracklet\_tracker.run\_tracklet\_tracker
+==================================================================
+
+.. currentmodule:: vista.algorithms.trackers.tracklet_tracker
+
+.. autofunction:: run_tracklet_tracker

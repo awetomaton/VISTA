@@ -1,0 +1,59 @@
+/* Custom styles for version selector in sidebar */
+.version-selector-sidebar {
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+#version-selector {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--color-sidebar-search-border);
+    border-radius: 0.25rem;
+    background-color: var(--color-sidebar-search-background);
+    color: var(--color-sidebar-search-foreground);
+    font-size: 0.875rem;
+    cursor: pointer;
+    appearance: auto;
+}
+
+#version-selector:hover {
+    border-color: var(--color-sidebar-search-border-focus);
+}
+
+#version-selector:focus {
+    outline: 2px solid var(--color-brand-primary);
+    outline-offset: 2px;
+    border-color: var(--color-brand-primary);
+}
+
+#version-selector option {
+    background-color: var(--color-sidebar-background);
+    color: var(--color-sidebar-search-foreground);
+}
+
+/* Version warning banner for non-stable versions */
+.version-warning {
+    padding: 1rem;
+    margin: 1rem 0;
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 0.25rem;
+    color: #856404;
+}
+
+.version-warning a {
+    color: #533f03;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+/* Dark mode adjustments */
+body[data-theme="dark"] .version-warning {
+    background-color: #3d3200;
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+body[data-theme="dark"] .version-warning a {
+    color: #ffd54f;
+}

@@ -1,0 +1,22 @@
+﻿vista.algorithms.tracks.savitzky\_golay.SavitzkyGolayFilter
+===========================================================
+
+.. currentmodule:: vista.algorithms.tracks.savitzky_golay
+
+.. autoclass:: SavitzkyGolayFilter
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SavitzkyGolayFilter.__init__
+   
+   
+
+   
+   
+   

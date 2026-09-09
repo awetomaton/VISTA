@@ -1,0 +1,6 @@
+﻿vista.algorithms.trackers.simple\_tracker.run\_simple\_tracker
+==============================================================
+
+.. currentmodule:: vista.algorithms.trackers.simple_tracker
+
+.. autofunction:: run_simple_tracker

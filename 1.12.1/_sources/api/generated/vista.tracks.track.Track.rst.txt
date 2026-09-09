@@ -1,0 +1,65 @@
+﻿vista.tracks.track.Track
+========================
+
+.. currentmodule:: vista.tracks.track
+
+.. autoclass:: Track
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Track.__init__
+      ~Track.copy
+      ~Track.from_dataframe
+      ~Track.get_brush
+      ~Track.get_geodetic_coords
+      ~Track.get_pen
+      ~Track.get_times
+      ~Track.get_track_data_at_frame
+      ~Track.get_uncertainty_ellipse_parameters
+      ~Track.get_uncertainty_radius
+      ~Track.get_visible_indices
+      ~Track.has_uncertainty
+      ~Track.invalidate_caches
+      ~Track.to_dataframe
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Track.color
+      ~Track.complete
+      ~Track.covariance_00
+      ~Track.covariance_01
+      ~Track.covariance_11
+      ~Track.extraction_metadata
+      ~Track.label_time
+      ~Track.labeler
+      ~Track.length
+      ~Track.line_style
+      ~Track.line_width
+      ~Track.marker
+      ~Track.marker_size
+      ~Track.show_line
+      ~Track.show_uncertainty
+      ~Track.tail_length
+      ~Track.tracker
+      ~Track.uuid
+      ~Track.visible
+      ~Track.name
+      ~Track.frames
+      ~Track.rows
+      ~Track.columns
+      ~Track.sensor
+      ~Track.labels
+   
+   

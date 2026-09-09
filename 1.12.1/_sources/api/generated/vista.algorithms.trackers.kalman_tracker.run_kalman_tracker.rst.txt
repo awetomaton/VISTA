@@ -1,0 +1,6 @@
+﻿vista.algorithms.trackers.kalman\_tracker.run\_kalman\_tracker
+==============================================================
+
+.. currentmodule:: vista.algorithms.trackers.kalman_tracker
+
+.. autofunction:: run_kalman_tracker
