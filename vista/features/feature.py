@@ -19,7 +19,7 @@ class Feature:
     geometry: Any  # Geometry data (varies by type)
     visible: bool = True
     color: str = "y"  # Yellow by default
-    uuid: str = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
 
     # PyQtGraph plot item (not serialized)
     _plot_items: Optional[list] = field(default=None, init=False, repr=False)

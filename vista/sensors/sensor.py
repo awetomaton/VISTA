@@ -67,10 +67,10 @@ class Sensor:
     uniformity_gain_image_frames: Optional[NDArray] = None
     bad_pixel_masks: Optional[NDArray] = None
     bad_pixel_mask_frames: Optional[NDArray] = None
-    uuid: str = field(init=None, default=None)
-    _added_imagery_uuids: list = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
+    _added_imagery_uuids: list = field(init=False, default=None)
     # Private class attributes
-    _imagery_frames_dataframe: pd.DataFrame = field(init=None, default=None)
+    _imagery_frames_dataframe: pd.DataFrame = field(init=False, default=None)
 
     # Class variable to track total number of sensor instances created
     _instance_count: int = 0

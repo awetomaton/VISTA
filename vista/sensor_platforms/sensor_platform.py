@@ -86,7 +86,7 @@ class SensorPlatform:
     times: Optional[NDArray[np.datetime64]] = None
     positions: Optional[NDArray[np.float64]] = None
     pointings: Optional[NDArray[np.float64]] = None
-    uuid: str = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
     # Class variable to track total number of sensor platform instances created
     _instance_count: int = 0
 

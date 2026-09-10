@@ -100,7 +100,7 @@ class Detector:
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
     _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
     _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
-    uuid: str = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
         self.uuid = uuid.uuid4()

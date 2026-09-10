@@ -127,7 +127,7 @@ class Imagery:
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
     default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
-    uuid: str = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
 
     # Incremental loading support: tracks how many frames have valid image data.
     # None = fully loaded (default for programmatically created imagery).
