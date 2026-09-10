@@ -44,6 +44,8 @@ class Track:
         Column (horizontal) pixel coordinates for each frame
     sensor : Sensor
         Sensor object providing coordinate conversion capabilities
+    times : NDArray[np.datetime64], optional
+        Observation timestamps corresponding to each track point.
 
     Attributes
     ----------
@@ -105,6 +107,7 @@ class Track:
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
+    times: Optional[NDArray[np.datetime64]] = None
     # Styling attributes
     color: str = "g"  # Green by default
     marker: str = "o"  # Circle by default
@@ -140,6 +143,12 @@ class Track:
     uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
+        if self.times is not None:
+            self.times = np.asarray(self.times, dtype="datetime64[ns]")
+            if self.times.ndim != 1:
+                raise ValueError("times must be a one-dimensional array")
+            if len(self.times) != len(self.frames):
+                raise ValueError("times must have the same length as frames")
         self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
@@ -154,6 +163,8 @@ class Track:
             track_slice.frames = track_slice.frames[s]
             track_slice.rows = track_slice.rows[s]
             track_slice.columns = track_slice.columns[s]
+            if track_slice.times is not None:
+                track_slice.times = track_slice.times[s]
 
             # Slice extraction metadata if present
             if track_slice.extraction_metadata is not None:
@@ -421,12 +432,14 @@ class Track:
         det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
         return np.sqrt(np.sqrt(np.maximum(det, 0)))
 
-    def get_times(self) -> NDArray[np.datetime64]:
+    def get_times(self) -> Optional[NDArray[np.datetime64]]:
         """
-        Get timestamps for each track point using sensor imagery times.
+        Get timestamps for each track point.
 
-        Matches track frames to sensor imagery frames and returns corresponding
-        timestamps. Returns NaT (Not-a-Time) for frames without matching imagery.
+        Returns explicitly stored track timestamps when available. Otherwise,
+        matches track frames to sensor imagery frames and returns corresponding
+        timestamps for backward compatibility. Returns NaT (Not-a-Time) for
+        frames without matching imagery.
 
         Returns
         -------
@@ -436,8 +449,12 @@ class Track:
 
         Notes
         -----
-        Uses binary search (searchsorted) for efficient frame matching.
+        Explicitly stored timestamps take precedence over sensor-derived timestamps.
+        The fallback uses binary search (searchsorted) for efficient frame matching.
         """
+        if self.times is not None:
+            return self.times
+
         sensor_imagery_frames, sensor_imagery_times = self.sensor.get_imagery_frames_and_times()
         if len(sensor_imagery_times) < 1:
             return None
@@ -560,7 +577,7 @@ class Track:
         times = None
         if "Times" in df.columns:
             # Parse times as datetime64
-            times = pd.to_datetime(df["Times"]).to_numpy()
+            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
 
         # Determine frames - priority: Frames column > time-to-frame mapping
         if "Frames" in df.columns:
@@ -571,14 +588,15 @@ class Track:
             if len(sensor_imagery_times) == 0:
                 # Times present but no cannot map to frames using sensor - raise error
                 raise ValueError(
-                    f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping."
+                    f"Track '{name}' has times but no frames. "
+                    "Sensor imagery times are required for time-to-frame mapping."
                 )
 
             # Eliminate track points before and after the time bounds of the selected sensor
             df = df[(times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])]
             if len(df) == 0:
                 raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
-            times = pd.to_datetime(df["Times"]).to_numpy()
+            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
 
             # Map times to frames using the sensor imagery
             frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
@@ -653,6 +671,7 @@ class Track:
             rows=rows,
             columns=columns,
             sensor=sensor,
+            times=times,
             **kwargs,
         )
 
@@ -708,6 +727,7 @@ class Track:
             rows=self.rows.copy(),
             columns=self.columns.copy(),
             sensor=self.sensor,
+            times=self.times.copy() if self.times is not None else None,
             color=self.color,
             marker=self.marker,
             line_width=self.line_width,
@@ -779,7 +799,7 @@ class Track:
         # Include times if possible
         track_times = self.get_times()
         if track_times is not None:
-            data["Times"] = pd.to_datetime(track_times).strftime("%Y-%m-%dT%H:%M:%S.%f")
+            data["Times"] = track_times.astype(str)
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:

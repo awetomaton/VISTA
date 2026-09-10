@@ -33,6 +33,8 @@ class Detector:
         Column (horizontal) pixel coordinates for each detection
     sensor : Sensor
         Sensor object associated with these detections
+    times : NDArray[np.datetime64], optional
+        Observation timestamps corresponding to each detection.
     description : str, optional
         Description of detection algorithm or method, by default ""
 
@@ -79,6 +81,7 @@ class Detector:
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
+    times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
 
     # Styling attributes
@@ -103,6 +106,12 @@ class Detector:
     uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
+        if self.times is not None:
+            self.times = np.asarray(self.times, dtype="datetime64[ns]")
+            if self.times.ndim != 1:
+                raise ValueError("times must be a one-dimensional array")
+            if len(self.times) != len(self.frames):
+                raise ValueError("times must have the same length as frames")
         self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
@@ -140,6 +149,17 @@ class Detector:
         if len(indices) > 0:
             return self.rows[indices], self.columns[indices]
         return np.array([]), np.array([])
+
+    def get_times(self) -> Optional[NDArray[np.datetime64]]:
+        """
+        Get observation timestamps for each detection.
+
+        Returns
+        -------
+        NDArray[np.datetime64] or None
+            Detection timestamps, or None if timestamps are not available.
+        """
+        return self.times
 
     def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
         """Get geodetic coordinates for all detection points, computing and caching if needed.
@@ -212,6 +232,8 @@ class Detector:
             detector_slice.frames = detector_slice.frames[s]
             detector_slice.rows = detector_slice.rows[s]
             detector_slice.columns = detector_slice.columns[s]
+            if detector_slice.times is not None:
+                detector_slice.times = detector_slice.times[s]
             # Subset labels if they exist
             if len(detector_slice.labels) > 0:
                 if isinstance(s, slice):
@@ -344,6 +366,9 @@ class Detector:
                 else:
                     labelers_list.append(None)
             kwargs["labelers"] = labelers_list
+        times = None
+        if "Times" in df.columns:
+            times = pd.to_datetime(df["Times"]).to_numpy(dtype="datetime64[ns]")
 
         detector = cls(
             name=name,
@@ -351,6 +376,7 @@ class Detector:
             rows=df["Rows"].to_numpy(),
             columns=df["Columns"].to_numpy(),
             sensor=sensor,
+            times=times,
             **kwargs,
         )
 
@@ -376,6 +402,7 @@ class Detector:
             rows=self.rows.copy(),
             columns=self.columns.copy(),
             sensor=self.sensor,
+            times=self.times.copy() if self.times is not None else None,
             color=self.color,
             marker=self.marker,
             marker_size=self.marker_size,
@@ -414,23 +441,25 @@ class Detector:
             else:
                 labelers_column.append("")
 
-        return pd.DataFrame(
-            {
-                "Detector": len(self) * [self.name],
-                "Frames": self.frames,
-                "Rows": self.rows,
-                "Columns": self.columns,
-                "Color": self.color,
-                "Marker": self.marker,
-                "Marker Size": self.marker_size,
-                "Line Thickness": self.line_thickness,
-                "Visible": self.visible,
-                "Complete": self.complete,
-                "Labels": labels_column,
-                "Label Time": label_times_column,
-                "Labeler": labelers_column,
-            }
-        )
+        data = {
+            "Detector": len(self) * [self.name],
+            "Frames": self.frames,
+            "Rows": self.rows,
+            "Columns": self.columns,
+            "Color": self.color,
+            "Marker": self.marker,
+            "Marker Size": self.marker_size,
+            "Line Thickness": self.line_thickness,
+            "Visible": self.visible,
+            "Complete": self.complete,
+            "Labels": labels_column,
+            "Label Time": label_times_column,
+            "Labeler": labelers_column,
+        }
+        if self.times is not None:
+            data["Times"] = self.times
+
+        return pd.DataFrame(data)
 
     def get_unique_labels(self) -> set[str]:
         """
