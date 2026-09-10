@@ -1425,29 +1425,28 @@ class VistaMainWindow(QMainWindow):
                                 f"• Selected sensor '{selected_sensor.name}' cannot perform geolocation"
                             )
 
-                # Check if sensor is selected (always required for track association)
-                if not selected_sensor:
-                    if not overall_needs_geodetic_mapping:
-                        # Create an "Unknown" sensor if no sensor is selected
-                        selected_sensor = Sensor()
-                        self.viewer.sensors.append(selected_sensor)
-                        self.data_manager.refresh()
-                        mapping_info.insert(0, f"• Sensor association: {selected_sensor.name} (created automatically)")
-                else:
-                    mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
-
                 # Show error if missing requirements
                 if missing_requirements:
                     QMessageBox.critical(
                         self,
                         "Cannot Load Tracks",
-                        "Missing required data for track loading:\n\n"
-                        + "\n\n".join(preamble)
-                        + "\n\n"
+                        "Missing required data for track loading:\n"
+                        + "\n".join(preamble)
+                        + "\n"
                         + "\n".join(missing_requirements),
                         QMessageBox.StandardButton.Ok,
                     )
                     return
+
+                # Check if sensor is selected (always required for track association)
+                if not selected_sensor:
+                    # Create an "Unknown" sensor if no sensor is selected
+                    selected_sensor = Sensor()
+                    self.viewer.sensors.append(selected_sensor)
+                    self.data_manager.refresh()
+                    mapping_info.insert(0, f"• Sensor association: {selected_sensor.name} (created automatically)")
+                else:
+                    mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
 
                 # Show info dialog if mapping is needed
                 if overall_needs_time_mapping or overall_needs_geodetic_mapping:
@@ -1459,7 +1458,6 @@ class VistaMainWindow(QMainWindow):
                     msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                     if msg.exec() != QMessageBox.StandardButton.Ok:
                         return
-
             except Exception as e:
                 QMessageBox.warning(
                     self, "Error Reading File", f"Could not read track file:\n{str(e)}", QMessageBox.StandardButton.Ok
