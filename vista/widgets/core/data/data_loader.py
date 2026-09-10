@@ -62,7 +62,7 @@ class DataLoaderThread(QThread):
         sensor : Sensor, optional
             Optional Sensor object for track/detection association and geodetic mapping, by default None
         imagery : Imagery, optional
-            Optional Imagery object for time-to-frame mapping (for tracks with times), by default None
+            Optional Imagery object for time-to-frame mapping (for tracks or detections with times), by default None
         """
         super().__init__()
         self.file_path = file_path
@@ -492,12 +492,22 @@ class DataLoaderThread(QThread):
             for idx, (detector_name, group_df) in enumerate(detector_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                detector = Detector.from_dataframe(group_df, sensor=self.sensor, name=detector_name)
+                detector = Detector.from_dataframe(
+                    group_df,
+                    sensor=self.sensor,
+                    imagery=self.imagery,
+                    name=str(detector_name),
+                )
                 detectors.append(detector)
                 self.progress_updated.emit("Loading detections...", idx + 1, len(detector_groups))
         else:
             # Single detector
-            detector = Detector.from_dataframe(df, sensor=self.sensor, name=Path(self.file_path).stem)
+            detector = Detector.from_dataframe(
+                df,
+                sensor=self.sensor,
+                imagery=self.imagery,
+                name=Path(self.file_path).stem,
+            )
             detectors.append(detector)
 
         if self._cancelled:

@@ -1188,29 +1188,81 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_detections_dir", str(Path(file_paths[0]).parent))
 
-            # Get currently selected sensor from viewer
+            # Get currently selected sensor and imagery from viewer
             selected_sensor = self.viewer.selected_sensor
+            selected_imagery = self.viewer.imagery
 
-            # Check if sensor is selected (required for detection association)
-            if not selected_sensor:
-                # Create an "Unknown" sensor if no sensor is selected
-                selected_sensor = Sensor()
-                self.viewer.sensors.append(selected_sensor)
-                self.data_manager.refresh()
+            # Check if any detections need imagery for conversion
+            overall_needs_time_mapping = False
 
-                # Show info about auto-created sensor
-                msg = QMessageBox(self)
-                msg.setIcon(QMessageBox.Icon.Information)
-                msg.setWindowTitle("Detection Loading Information")
-                msg.setText(f"Detections will be associated with '{selected_sensor.name}' sensor.")
-                msg.setInformativeText("No sensor was selected, so an 'Unknown' sensor has been created automatically.")
-                msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-                if msg.exec() != QMessageBox.StandardButton.Ok:
+            try:
+                # Check all files to see if any need imagery
+                for file_path in file_paths:
+                    df_peek = pd.read_csv(file_path, nrows=1)
+                    has_times = "Times" in df_peek.columns
+                    has_frames = "Frames" in df_peek.columns
+
+                    needs_time_mapping = has_times and not has_frames
+                    overall_needs_time_mapping = overall_needs_time_mapping or needs_time_mapping
+
+                # Build message explaining what will be used for mapping
+                preamble = []
+                mapping_info = []
+                missing_requirements = []
+
+                if overall_needs_time_mapping:
+                    preamble.append("Detection data is missing frames, but has times. Times must be mapped to frames.")
+                    if selected_imagery:
+                        mapping_info.append(f"• Time mapping: {selected_imagery.name}")
+                    else:
+                        missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
+
+                # Show error if missing requirements
+                if missing_requirements:
+                    QMessageBox.critical(
+                        self,
+                        "Cannot Load Detections",
+                        "Missing required data for detection loading:\n"
+                        + "\n".join(preamble)
+                        + "\n"
+                        + "\n".join(missing_requirements),
+                        QMessageBox.StandardButton.Ok,
+                    )
                     return
 
-            # Store file paths queue and sensor for sequential loading
+                # Check if sensor is selected (always required for detection association)
+                if not selected_sensor:
+                    # Create an "Unknown" sensor if no sensor is selected
+                    selected_sensor = Sensor()
+                    self.viewer.sensors.append(selected_sensor)
+                    self.data_manager.refresh()
+                    mapping_info.insert(0, f"• Sensor association: {selected_sensor.name} (created automatically)")
+                else:
+                    mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
+
+                # Show info dialog if mapping is needed
+                if overall_needs_time_mapping:
+                    msg = QMessageBox(self)
+                    msg.setIcon(QMessageBox.Icon.Information)
+                    msg.setWindowTitle("Detection Loading Information")
+                    msg.setText("The following will be used for detection data mapping:")
+                    msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
+                    msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                    if msg.exec() != QMessageBox.StandardButton.Ok:
+                        return
+            except Exception as e:
+                QMessageBox.warning(
+                    self,
+                    "Error Reading File",
+                    f"Could not read detection file:\n{str(e)}",
+                    QMessageBox.StandardButton.Ok,
+                )
+                return
+
+            # Store file paths queue, sensor, and imagery for sequential loading
             self.detections_file_queue = list(file_paths)
             self.detections_selected_sensor = selected_sensor
+            self.detections_selected_imagery = selected_imagery
             self.detections_loaded_count = 0
             self.detections_total_count = len(file_paths)
 
@@ -1236,7 +1288,13 @@ class VistaMainWindow(QMainWindow):
         file_path = self.detections_file_queue.pop(0)
 
         # Create and start loader thread
-        self.loader_thread = DataLoaderThread(file_path, "detections", "csv", sensor=self.detections_selected_sensor)
+        self.loader_thread = DataLoaderThread(
+            file_path,
+            "detections",
+            "csv",
+            sensor=self.detections_selected_sensor,
+            imagery=self.detections_selected_imagery,
+        )
         self.loader_thread.detectors_loaded.connect(self.on_detectors_loaded)
         self.loader_thread.error_occurred.connect(self.on_loading_error)
         self.loader_thread.warning_occurred.connect(self.on_loading_warning)

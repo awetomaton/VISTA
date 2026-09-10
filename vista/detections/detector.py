@@ -9,7 +9,9 @@ import pandas as pd
 import pyqtgraph as pg
 from numpy.typing import NDArray
 
+from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.utils.time_mapping import map_times_to_frames
 
 
 @dataclass
@@ -297,17 +299,26 @@ class Detector:
         return s
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, sensor, name: str = None):
+    def from_dataframe(
+        cls,
+        df: pd.DataFrame,
+        sensor: Sensor,
+        imagery: Optional[Imagery] = None,
+        name: str = None,
+    ):
         """
         Create Detector from pandas DataFrame.
 
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame containing detection data with required columns:
-            "Detector", "Frames", "Rows", "Columns"
+            DataFrame containing detection data. "Detector", "Rows", and "Columns"
+            are required columns, along with either "Frames" or "Times".
         sensor : Sensor
-            Sensor object for these detections
+            Sensor object for these detections.
+        imagery : Imagery, optional
+            Imagery used to convert times and frames when the DataFrame does not
+            contain both.
         name : str, optional
             Detector name, by default taken from df["Detector"]
 
@@ -315,6 +326,12 @@ class Detector:
         -------
         Detector
             New Detector object
+
+        Raises
+        ------
+        ValueError
+            If temporal columns are missing or time-to-frame mapping cannot be
+            performed.
 
         Notes
         -----
@@ -338,6 +355,30 @@ class Detector:
             kwargs["visible"] = df["Visible"].iloc[0]
         if "Complete" in df.columns:
             kwargs["complete"] = df["Complete"].iloc[0]
+
+        times = None
+        if "Times" in df.columns:
+            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
+
+        if "Frames" in df.columns:
+            frames = df["Frames"].to_numpy()
+        elif times is not None:
+            if imagery is None or imagery.times is None or len(imagery.times) == 0:
+                raise ValueError(
+                    f"Detector '{name}' has times but no frames. "
+                    "Imagery with timestamps is required for time-to-frame mapping."
+                )
+
+            df = df.loc[(times >= np.min(imagery.times)) & (times <= np.max(imagery.times))]
+            if len(df) == 0:
+                raise ValueError(f"Detector '{name}' times are not within the bounds of the selected imagery.")
+            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
+
+            # Map times to frames using the selected imagery
+            frames = map_times_to_frames(times, imagery.times, imagery.frames)
+        else:
+            raise ValueError(f"Detector '{name}' must have either 'Frames' or 'Times' column")
+
         if "Labels" in df.columns:
             # Parse labels from comma-separated string for each detection
             labels_list = []
@@ -366,13 +407,10 @@ class Detector:
                 else:
                     labelers_list.append(None)
             kwargs["labelers"] = labelers_list
-        times = None
-        if "Times" in df.columns:
-            times = pd.to_datetime(df["Times"]).to_numpy(dtype="datetime64[ns]")
 
         detector = cls(
             name=name,
-            frames=df["Frames"].to_numpy(),
+            frames=frames,
             rows=df["Rows"].to_numpy(),
             columns=df["Columns"].to_numpy(),
             sensor=sensor,
