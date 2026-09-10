@@ -55,7 +55,8 @@ class DataLoaderThread(QThread):
         file_path : str or Path
             Path to the file to load
         data_type : str
-            Type of data to load ('imagery', 'detections', 'tracks', 'aois', 'satellites', 'stars', 'solar system bodies')
+            Type of data to load ('imagery', 'detections', 'tracks', 'aois',
+            'satellites', 'stars', 'solar system bodies')
         file_format : str, optional
             Format of the file ('hdf5', 'csv', or 'tle'), by default 'hdf5'
         sensor : Sensor, optional
@@ -173,7 +174,7 @@ class DataLoaderThread(QThread):
             dtype="datetime64[ns]",
         )
 
-        platform = SensorPlatform(times = sensor_times, positions=sensor_positions)
+        platform = SensorPlatform(times=sensor_times, positions=sensor_positions)
         sensor = SampledSensor(
             platform=platform,
             times=sensor_times,
@@ -314,7 +315,7 @@ class DataLoaderThread(QThread):
             if frames is None:
                 frames = np.array([0], dtype=np.int64)
 
-            platform = SensorPlatform(times = times, positions=positions, pointings=pointing)
+            platform = SensorPlatform(times=times, positions=positions, pointings=pointing)
             sensor = SampledSensor(
                 name=sensor_name,
                 platform=platform,
@@ -401,11 +402,7 @@ class DataLoaderThread(QThread):
 
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if imagery_uuid is not None:
-            # remove auto-generated uuid
-            sensor._added_imagery_uuids.remove(imagery.uuid)
             imagery.uuid = uuid.UUID(imagery_uuid)
-            # and add back in the correct one
-            sensor._added_imagery_uuids.append(imagery.uuid)
 
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset, sensor)
@@ -525,12 +522,22 @@ class DataLoaderThread(QThread):
             for idx, (track_name, track_df) in enumerate(track_groups):
                 if self._cancelled:
                     return  # Exit early if cancelled
-                track = Track.from_dataframe(track_df, sensor=self.sensor, name=str(track_name))
+                track = Track.from_dataframe(
+                    track_df,
+                    sensor=self.sensor,
+                    imagery=self.imagery,
+                    name=str(track_name),
+                )
                 tracks.append(track)
                 self.progress_updated.emit("Loading tracks...", idx + 1, len(track_groups))
         else:
             # Single track
-            track = Track.from_dataframe(df, sensor=self.sensor, name="Track 1")
+            track = Track.from_dataframe(
+                df,
+                sensor=self.sensor,
+                imagery=self.imagery,
+                name="Track 1",
+            )
             tracks.append(track)
 
         if self._cancelled:

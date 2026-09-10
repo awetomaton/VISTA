@@ -107,11 +107,7 @@ class SensorsPanel(DataPanel):
             self.sensors_table.setItem(row, 4, bad_pixel_item)
 
             # Loaded imagery filename(s) (not editable)
-            loaded_imagery_fnames = []
-            if sensor._added_imagery_uuids:
-                for imagery in self.viewer.imageries:
-                    if imagery.uuid in sensor._added_imagery_uuids:
-                        loaded_imagery_fnames.append(imagery.filename)
+            loaded_imagery_fnames = [imagery.filename for imagery in self.viewer.imageries if imagery.sensor == sensor]
             loaded_imagery_fnames = list(set(loaded_imagery_fnames))  # list of unique fnames
             # just use stem for display, but only if not blank
             short_names = [Path(fname).stem for fname in loaded_imagery_fnames if fname != ""]

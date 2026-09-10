@@ -152,7 +152,6 @@ class Imagery:
         if self.sensor is None:
             self.sensor = Sensor()
         self.uuid = uuid.uuid4()
-        self.sensor.add_imagery(self)
 
     def __getitem__(self, s):
         if isinstance(s, (list, np.ndarray, slice)):

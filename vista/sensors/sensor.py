@@ -12,7 +12,6 @@ from typing import Optional, Tuple, Union
 
 import h5py
 import numpy as np
-import pandas as pd
 from astropy import units
 from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
@@ -68,9 +67,6 @@ class Sensor:
     bad_pixel_masks: Optional[NDArray] = None
     bad_pixel_mask_frames: Optional[NDArray] = None
     uuid: str = field(init=False, default=None)
-    _added_imagery_uuids: list = field(init=False, default=None)
-    # Private class attributes
-    _imagery_frames_dataframe: pd.DataFrame = field(init=False, default=None)
 
     # Class variable to track total number of sensor instances created
     _instance_count: int = 0
@@ -79,8 +75,8 @@ class Sensor:
         """
         Initialize sensor instance and increment global counter.
 
-        Generates a unique UUID for this sensor instance and initializes internal
-        data structures for tracking associated imagery.
+        Generates a unique UUID for this sensor instance and initializes its
+        name and sensor platform if not provided.
         """
         # Increment the class-level counter
         Sensor._instance_count += 1
@@ -88,70 +84,11 @@ class Sensor:
             self.name = f"Unknown Sensor {Sensor._instance_count}"
         if self.platform is None:
             self.platform = SensorPlatform()
-        # Generate UUID if not set
-        if self.uuid is None:
-            self.uuid = uuid.uuid4()
-        self._added_imagery_uuids = []
-        self._imagery_frames_dataframe = pd.DataFrame(
-            {
-                "frames": pd.Series([], dtype=int),
-                "times": pd.Series([], dtype="datetime64[ns]"),
-            }
-        )
+        self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
         """Compare Sensors based on UUID"""
         return hasattr(other, "uuid") and (self.uuid == other.uuid)
-
-    def get_imagery_frames_and_times(self) -> Tuple[NDArray, NDArray]:
-        """
-        Get all unique imagery frames and corresponding times in increasing order.
-
-        Returns
-        -------
-        frames : NDArray[np.int_]
-            Sorted array of unique frame numbers
-        times : NDArray[np.datetime64]
-            Sorted array of corresponding timestamps
-
-        Notes
-        -----
-        This method aggregates frames and times from all imagery objects that have
-        been registered with this sensor via add_imagery().
-        """
-        frames = self._imagery_frames_dataframe["frames"].to_numpy()
-        times = self._imagery_frames_dataframe["times"].to_numpy()
-
-        sorter = np.argsort(frames)
-
-        return frames[sorter], times[sorter]
-
-    def add_imagery(self, imagery):
-        """
-        Register imagery with this sensor and update frame/time tracking.
-
-        Adds the imagery's frames and times to the sensor's internal registry
-        for coordinate conversion and time-to-frame mapping. Duplicate imagery
-        (by UUID) or imagery without times is ignored.
-
-        Parameters
-        ----------
-        imagery : Imagery
-            Imagery object to register with this sensor
-
-        Notes
-        -----
-        - Only imagery with non-None times are tracked
-        - Duplicate frame/time pairs are automatically removed
-        - This method is typically called automatically when Imagery is created
-        """
-        if (imagery.uuid in self._added_imagery_uuids) or (imagery.times is None):
-            return
-        self._added_imagery_uuids.append(imagery.uuid)
-        self._imagery_frames_dataframe = pd.concat(
-            (self._imagery_frames_dataframe, pd.DataFrame({"frames": imagery.frames, "times": imagery.times}))
-        )
-        self._imagery_frames_dataframe = self._imagery_frames_dataframe.drop_duplicates()
 
     def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         return self.platform.get_positions(times)

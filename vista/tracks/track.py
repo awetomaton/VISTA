@@ -17,6 +17,7 @@ import pyqtgraph as pg
 from numpy.typing import NDArray
 from PyQt6.QtCore import Qt
 
+from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
@@ -82,7 +83,7 @@ class Track:
     __getitem__(slice)
         Slice track by frame range
     get_times()
-        Get timestamps for each track point using sensor imagery times
+        Get timestamps for each track point
     from_dataframe(df, sensor, name)
         Create Track from pandas DataFrame with coordinate conversion
     length
@@ -97,7 +98,7 @@ class Track:
     Notes
     -----
     - Track coordinates can be provided as pixel (row/col) or geodetic (lat/lon/alt)
-    - Times can be used instead of frames with automatic conversion via sensor
+    - Times can be used instead of frames if included at creation
     - The from_dataframe() method handles coordinate system conversions automatically
     - Track length is computed lazily and cached for performance
     """
@@ -436,52 +437,27 @@ class Track:
         """
         Get timestamps for each track point.
 
-        Returns explicitly stored track timestamps when available. Otherwise,
-        matches track frames to sensor imagery frames and returns corresponding
-        timestamps for backward compatibility. Returns NaT (Not-a-Time) for
-        frames without matching imagery.
-
         Returns
         -------
         NDArray[np.datetime64] or None
-            Array of timestamps with same length as track, or None if sensor
-            has no imagery times
-
-        Notes
-        -----
-        Explicitly stored timestamps take precedence over sensor-derived timestamps.
-        The fallback uses binary search (searchsorted) for efficient frame matching.
+            Explicitly stored timestamps with the same length as the track, or
+            None if timestamps are not available.
         """
-        if self.times is not None:
-            return self.times
-
-        sensor_imagery_frames, sensor_imagery_times = self.sensor.get_imagery_frames_and_times()
-        if len(sensor_imagery_times) < 1:
-            return None
-
-        # Find where each track_frame would be inserted in sensor_frames
-        indices = np.searchsorted(sensor_imagery_frames, self.frames)
-
-        # Create output array filled with NaT
-        track_times = np.full(len(self.frames), np.datetime64("NaT"), dtype="datetime64[ns]")
-
-        # Clip so we can safely index; out-of-bounds entries are caught by in_bounds
-        in_bounds = indices < len(sensor_imagery_frames)
-        clipped = np.minimum(indices, len(sensor_imagery_frames) - 1)
-        valid_mask = in_bounds & (sensor_imagery_frames[clipped] == self.frames)
-
-        # Assign matching times
-        track_times[valid_mask] = sensor_imagery_times[indices[valid_mask]]
-
-        return track_times
+        return self.times
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, sensor: Sensor, name: str = None):
+    def from_dataframe(
+        cls,
+        df: pd.DataFrame,
+        sensor: Sensor,
+        imagery: Optional[Imagery] = None,
+        name: str = None,
+    ):
         """
         Create Track from DataFrame with automatic coordinate conversion.
 
         Supports multiple input coordinate systems with automatic conversion:
-        - Frames or Times → Frames (Times require sensor imagery)
+        - Frames or Times (conversion requires imagery if both are not provided)
         - Rows/Columns or Lat/Lon/Alt → Rows/Columns (Geodetic requires sensor)
 
         Priority system: Frames > Times, Rows/Columns > Lat/Lon/Alt
@@ -493,6 +469,9 @@ class Track:
             coordinate system (see Notes)
         sensor : Sensor
             Sensor object for coordinate conversions
+        imagery : Imagery, optional
+            Imagery used to convert times and frames when the DataFrame does not
+            contain both.
         name : str, optional
             Track name, by default taken from df["Track"]
 
@@ -512,7 +491,7 @@ class Track:
 
         Temporal coordinates (choose one):
             - "Frames" : Frame numbers (preferred)
-            - "Times" : Timestamps (requires sensor with imagery times)
+            - "Times" : Timestamps
 
         Spatial coordinates (choose one):
             - "Rows" and "Columns" : Pixel coordinates (preferred)
@@ -584,22 +563,20 @@ class Track:
             # Frames take precedence
             frames = df["Frames"].to_numpy()
         elif times is not None:
-            sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
-            if len(sensor_imagery_times) == 0:
-                # Times present but no cannot map to frames using sensor - raise error
+            if imagery is None or imagery.times is None or len(imagery.times) == 0:
                 raise ValueError(
                     f"Track '{name}' has times but no frames. "
-                    "Sensor imagery times are required for time-to-frame mapping."
+                    "Imagery with timestamps is required for time-to-frame mapping."
                 )
 
-            # Eliminate track points before and after the time bounds of the selected sensor
-            df = df[(times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])]
+            # Eliminate track points before and after the time bounds of the selected imagery
+            df = df[(times >= np.min(imagery.times)) & (times <= np.max(imagery.times))]
             if len(df) == 0:
                 raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
             times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
 
-            # Map times to frames using the sensor imagery
-            frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
+            # Map times to frames using the selected imagery
+            frames = map_times_to_frames(times, imagery.times, imagery.frames)
         else:
             raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
 
