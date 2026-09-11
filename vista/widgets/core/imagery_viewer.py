@@ -2,6 +2,7 @@
 
 import os
 import time
+from typing import Optional, Union
 
 import numpy as np
 import pyqtgraph as pg
@@ -19,6 +20,7 @@ from vista.imagery.imagery import Imagery
 from vista.known_sources.known_sources import KnownSources
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
+from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
 from vista.wms.imagery_projector import ImageryProjector
@@ -1061,6 +1063,35 @@ class ImageryViewer(QWidget):
                 self.tracks.append(track)
         self.update_overlays()
         return self.get_frame_range()
+
+    def set_item_times_from_imagery(
+        self,
+        item: Union[Track, Detector],
+        imagery: Optional[Imagery] = None,
+        overwrite: bool = False,
+    ) -> None:
+        """
+        Populate a track or detector's times from imagery frame timestamps.
+
+        Parameters
+        ----------
+        item : Track or Detector
+            Item whose times should be populated.
+        imagery : Imagery, optional
+            Imagery to use, by default the currently selected imagery.
+        overwrite : bool, optional
+            Recompute existing times, by default False.
+        """
+        if item.times is not None and not overwrite:
+            return
+
+        source_imagery = imagery if imagery is not None else self.imagery
+        if source_imagery is None or source_imagery.sensor != item.sensor:
+            if overwrite:
+                item.times = None
+            return
+
+        item.times = map_frames_to_times(item.frames, source_imagery.frames, source_imagery.times)
 
     def get_tracks_by_tracker(self, tracker_name: str):
         """Get all tracks belonging to a specific tracker"""
@@ -2172,6 +2203,7 @@ class ImageryViewer(QWidget):
                 columns=columns,
                 sensor=self.selected_sensor,
             )
+            self.set_item_times_from_imagery(track)
 
             self.current_track_data = {}
             return track
@@ -2206,6 +2238,7 @@ class ImageryViewer(QWidget):
             editing_track.frames = np.array(sorted_frames, dtype=np.int_)
             editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
             editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
+            self.set_item_times_from_imagery(editing_track, overwrite=True)
 
             # Invalidate caches since track data was modified
             editing_track.invalidate_caches()
@@ -2514,6 +2547,7 @@ class ImageryViewer(QWidget):
                 columns=np.array(columns_list),
                 sensor=self.selected_sensor,
             )
+            self.set_item_times_from_imagery(detector)
 
             self.current_detection_data = {}
             return detector
@@ -2558,6 +2592,7 @@ class ImageryViewer(QWidget):
             editing_detector.frames = np.array(frames_list, dtype=np.int_)
             editing_detector.rows = np.array(rows_list)
             editing_detector.columns = np.array(columns_list)
+            self.set_item_times_from_imagery(editing_detector, overwrite=True)
 
             # Invalidate caches since detector data was modified
             editing_detector.invalidate_caches()
