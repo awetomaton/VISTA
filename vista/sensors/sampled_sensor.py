@@ -155,7 +155,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.platform.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
+            sensor_pos = self.platform.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         sensor_pointing = self.platform.pointings[:, frame_idx]
 
@@ -282,7 +282,7 @@ class SampledSensor(Sensor):
             sensor_pos = self.platform.positions[:, 0]
         else:
             time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
+            sensor_pos = self.platform.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
 
         # Compute line-of-sight vectors from sensor to targets
         los_vectors = target_ecef - sensor_pos.reshape(3, 1)

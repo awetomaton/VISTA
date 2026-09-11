@@ -93,7 +93,7 @@ class KnownSources:
         source_positions = self.get_geodetics(time)
 
         # check if object is on the other side of the earth via intersection along LOS
-        sensor_positions = sensor.get_positions(np.atleast_1d(time))
+        sensor_positions = sensor.platform.get_positions(np.atleast_1d(time))
         dx = source_positions.x.to(u.km).value - sensor_positions[0]
         dy = source_positions.y.to(u.km).value - sensor_positions[1]
         dz = source_positions.z.to(u.km).value - sensor_positions[2]

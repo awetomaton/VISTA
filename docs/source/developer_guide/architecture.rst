@@ -78,7 +78,7 @@ VISTA is organized into the following packages:
 Core Data Model
 ---------------
 
-VISTA's data model is built on Python ``dataclasses``. The four primary data types are:
+VISTA's data model is built on Python ``dataclasses``. The five primary data types are:
 
 Imagery
 ~~~~~~~
@@ -119,12 +119,15 @@ Sensor
 
 :class:`~vista.sensors.sensor.Sensor` is the base class for sensor metadata. It holds optional
 radiometric calibration data (bias images, gain images, bad pixel masks) and defines overridable
-methods for geolocation (``pixel_to_geodetic``, ``geodetic_to_pixel``), position queries
-(``get_positions``), and PSF modeling (``model_psf``).
+methods for geolocation (``pixel_to_geodetic``, ``geodetic_to_pixel``) and PSF modeling (``model_psf``).
 
-:class:`~vista.sensors.sampled_sensor.SampledSensor` extends ``Sensor`` with sampled positions,
-ARF-based geolocation polynomials, and HDF5 serialization. This is the sensor type used by VISTA's
-native HDF5 format.
+:class:`~vista.sensors.sampled_sensor.SampledSensor` extends ``Sensor`` with ARF-based geolocation
+polynomials, and HDF5 serialization. This is the sensor type used by VISTA's native HDF5 format.
+
+SensorPlatform
+~~~~~~~~~~~~~~
+:class:`~vista.sensor_platforms.sensor_platform.SensorPlatform` is the base class for sensor platform
+metadata. It defines methods for position (``get_positions``) and pointing (``get_pointings``) queries.
 
 Design Principles
 -----------------

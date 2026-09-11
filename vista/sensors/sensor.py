@@ -90,9 +90,6 @@ class Sensor:
         """Compare Sensors based on UUID"""
         return hasattr(other, "uuid") and (self.uuid == other.uuid)
 
-    def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
-        return self.platform.get_positions(times)
-
     def model_psf(self, sigma: Optional[float] = None, size: Optional[int] = None) -> Optional[NDArray[np.float64]]:
         """
         Model the sensor's point spread function (PSF).
