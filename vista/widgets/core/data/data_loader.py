@@ -174,7 +174,7 @@ class DataLoaderThread(QThread):
             dtype="datetime64[ns]",
         )
 
-        platform = SensorPlatform(times=sensor_times, positions=sensor_positions)
+        platform = SensorPlatform(positions=sensor_positions, times_positions=sensor_times)
         sensor = SampledSensor(
             platform=platform,
             times=sensor_times,
@@ -315,7 +315,7 @@ class DataLoaderThread(QThread):
             if frames is None:
                 frames = np.array([0], dtype=np.int64)
 
-            platform = SensorPlatform(times=times, positions=positions, pointings=pointing)
+            platform = SensorPlatform(positions=positions, times_positions=times, pointings=pointing, times_pointings=times)
             sensor = SampledSensor(
                 name=sensor_name,
                 platform=platform,

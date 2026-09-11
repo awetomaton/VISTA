@@ -477,7 +477,7 @@ class Simulation:
             radiometric_gain = self._generate_radiometric_gains()
 
         # Create SensorPlatform
-        platform = SensorPlatform(times=sensor_times, positions=sensor_positions, pointings=pointing)
+        platform = SensorPlatform(positions=sensor_positions, times_positions=sensor_times, pointings=pointing, times_pointings=sensor_times)
         # Create SampledSensor
         sensor = SampledSensor(
             platform=platform,
