@@ -181,6 +181,7 @@ class KnownSources:
                     rows=row[slice],
                     columns=column[slice],
                     sensor=imagery.sensor,
+                    times=imagery.times[slice],
                     color=self._color,
                     marker=self._marker,
                     marker_size=self._marker_size,

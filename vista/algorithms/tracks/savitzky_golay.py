@@ -138,6 +138,7 @@ class SavitzkyGolayFilter:
             rows=smoothed_rows,
             columns=smoothed_columns,
             sensor=self.track.sensor,
+            times=self.track.times.copy() if self.track.times is not None else None,
             color=self.track.color,
             marker=self.track.marker,
             line_width=self.track.line_width,

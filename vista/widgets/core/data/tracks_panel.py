@@ -1992,6 +1992,10 @@ class TracksPanel(DataPanel):
         # Merge tracker names
         merged_tracker = " ".join(list(set([track.tracker for track in tracks_to_merge if track.tracker])))
 
+        merged_times = None
+        if "Times" in combined_df.columns and combined_df["Times"].notna().all():
+            merged_times = pd.to_datetime(combined_df["Times"]).to_numpy().astype("datetime64[ns]")
+
         # Create the merged track from the combined DataFrame
         merged_track = Track(
             name=merged_name,
@@ -2000,6 +2004,7 @@ class TracksPanel(DataPanel):
             rows=combined_df["Rows"].to_numpy(),
             columns=combined_df["Columns"].to_numpy(),
             sensor=first_track.sensor,
+            times=merged_times,
             color=first_track.color,
             marker=first_track.marker,
             line_width=first_track.line_width,
@@ -2012,7 +2017,7 @@ class TracksPanel(DataPanel):
         )
 
         # Add merged track to viewer
-        self.viewer.tracks.append(merged_track)
+        self.viewer.add_track(merged_track)
 
         # Delete the original tracks
         for track in tracks_to_merge:
@@ -2131,8 +2136,7 @@ class TracksPanel(DataPanel):
         # Add the new tracks (preserve tracker name)
         first_track.tracker = track_to_split.tracker
         second_track.tracker = track_to_split.tracker
-        self.viewer.tracks.append(first_track)
-        self.viewer.tracks.append(second_track)
+        self.viewer.add_tracks([first_track, second_track])
 
         # Refresh table
         self.refresh_tracks_table()
@@ -2874,10 +2878,11 @@ class TracksPanel(DataPanel):
                 # Create a copy of the track with the new sensor
                 track_copy = track.copy()
                 track_copy.sensor = target_sensor
+                track_copy.times = None
                 track_copy.name = f"{track.name} (copy)"
 
                 # Add to the viewer tracks list
-                self.viewer.tracks.append(track_copy)
+                self.viewer.add_track(track_copy)
 
             # Refresh the table and emit data changed
             self.refresh_tracks_table()
@@ -2925,6 +2930,7 @@ class TracksPanel(DataPanel):
                 rows=track.rows.copy(),
                 columns=track.columns.copy(),
                 sensor=track.sensor,
+                times=track.times.copy() if track.times is not None else None,
                 color=track.color,
                 marker=track.marker,
                 marker_size=track.marker_size,

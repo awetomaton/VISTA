@@ -3020,6 +3020,7 @@ class VistaMainWindow(QMainWindow):
             original_track.frames = interpolated_track.frames
             original_track.rows = interpolated_track.rows
             original_track.columns = interpolated_track.columns
+            original_track.times = interpolated_track.times
             original_track.invalidate_caches()
 
         # Refresh the table and update overlays

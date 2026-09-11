@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 from vista.algorithms.detectors.pstnn import PSTNN
 from vista.detections.detector import Detector
 from vista.imagery.imagery import HAS_TORCH
+from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.utils.algorithm_utils import create_aoi_selector, create_frame_range_spinboxes
 
 if HAS_TORCH:
@@ -187,6 +188,7 @@ class PSTNNProcessingThread(QThread):
                 rows=all_rows,
                 columns=all_columns,
                 sensor=self.imagery.sensor,
+                times=map_frames_to_times(all_frames, temp_imagery.frames, temp_imagery.times),
                 color=self.default_color,
                 marker=self.default_marker,
                 marker_size=self.default_marker_size,

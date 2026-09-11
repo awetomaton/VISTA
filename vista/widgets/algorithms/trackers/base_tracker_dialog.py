@@ -308,6 +308,7 @@ class BaseTrackingDialog(QDialog):
                 rows=track_data["rows"],
                 columns=track_data["columns"],
                 sensor=sensor,
+                times=None,
                 tracker=tracker_name,
                 color=self.default_track_color,
                 marker=self.default_track_marker,
@@ -316,7 +317,7 @@ class BaseTrackingDialog(QDialog):
                 visible=True,
             )
             vista_tracks.append(vista_track)
-            self.viewer.tracks.append(vista_track)
+        self.viewer.add_tracks(vista_tracks)
 
         # Show success message
         QMessageBox.information(self, "Tracking Complete", f"Generated {len(vista_tracks)} track(s).")

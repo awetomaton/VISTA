@@ -11,8 +11,8 @@ from scipy.ndimage import shift
 
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery, save_imagery_hdf5
-from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensor_platforms.sensor_platform import SensorPlatform
+from vista.sensors.sampled_sensor import SampledSensor
 from vista.simulate.data import EARTH_IMAGE
 from vista.tracks.track import Track
 from vista.transforms import fit_2d_polynomial
@@ -456,7 +456,7 @@ class Simulation:
             sensor_kwargs["bad_pixel_mask_frames"] = bad_pixel_mask_frames
 
         # Add ARF geolocation polynomials to sensor if enabled
-        pointing = None
+        pointing = np.array([[0.0], [0.0], [1.0]])
         poly_pixel_to_arf_azimuth = None
         poly_pixel_to_arf_elevation = None
         poly_arf_to_row = None
