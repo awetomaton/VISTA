@@ -11,6 +11,8 @@ Stage 2: Link tracklets based on velocity extrapolation and smoothness
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.algorithms.trackers.utils import get_times_for_track_frames
+
 
 class Tracklet:
     """High-confidence track segment with velocity consistency"""
@@ -172,6 +174,7 @@ def run_tracklet_tracker(detectors, config):
         - 'frames': numpy array of frame numbers
         - 'rows': numpy array of row coordinates
         - 'columns': numpy array of column coordinates
+        - 'times': numpy array of timestamps, or None when unavailable
     """
     # Extract configuration with smart defaults
     initial_search_radius = config.get("initial_search_radius", 10.0)
@@ -427,6 +430,7 @@ def run_tracklet_tracker(detectors, config):
             "frames": frames_array,
             "rows": positions[:, 1],  # y
             "columns": positions[:, 0],  # x
+            "times": get_times_for_track_frames(detectors, frames_array),
         }
         track_data_list.append(track_data)
 

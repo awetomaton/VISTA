@@ -4,6 +4,8 @@ from collections import defaultdict
 
 import numpy as np
 
+from vista.algorithms.trackers.utils import get_times_for_track_frames
+
 
 def run_network_flow_tracker(detectors, config):
     """
@@ -42,6 +44,7 @@ def run_network_flow_tracker(detectors, config):
         - 'frames': numpy array of frame numbers
         - 'rows': numpy array of row coordinates
         - 'columns': numpy array of column coordinates
+        - 'times': numpy array of timestamps, or None when unavailable
     """
     # Extract configuration with defaults
     max_gap = config.get("max_gap", 5)
@@ -199,6 +202,7 @@ def run_network_flow_tracker(detectors, config):
             "frames": frames_array,
             "rows": rows,
             "columns": columns,
+            "times": get_times_for_track_frames(detectors, frames_array),
         }
         track_data_list.append(track_data)
 

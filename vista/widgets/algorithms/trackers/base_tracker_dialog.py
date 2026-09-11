@@ -308,7 +308,7 @@ class BaseTrackingDialog(QDialog):
                 rows=track_data["rows"],
                 columns=track_data["columns"],
                 sensor=sensor,
-                times=None,
+                times=track_data["times"],
                 tracker=tracker_name,
                 color=self.default_track_color,
                 marker=self.default_track_marker,

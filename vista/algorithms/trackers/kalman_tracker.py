@@ -3,6 +3,8 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.algorithms.trackers.utils import get_times_for_track_frames
+
 
 class KalmanTrack:
     """Single track with constant velocity Kalman filter"""
@@ -159,6 +161,7 @@ def run_kalman_tracker(detectors, config):
         - 'frames': numpy array of frame numbers
         - 'rows': numpy array of row coordinates
         - 'columns': numpy array of column coordinates
+        - 'times': numpy array of timestamps, or None when unavailable
     """
     # Extract configuration
     process_noise = config["process_noise"]
@@ -300,6 +303,7 @@ def run_kalman_tracker(detectors, config):
             "frames": frames_array,
             "rows": rows,
             "columns": columns,
+            "times": get_times_for_track_frames(detectors, frames_array),
         }
         track_data_list.append(track_data)
 
