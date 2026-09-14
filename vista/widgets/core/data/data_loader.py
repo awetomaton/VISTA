@@ -167,19 +167,14 @@ class DataLoaderThread(QThread):
             bad_pixel_masks = bad_pixel_masks[:]
             bad_pixel_mask_frames = bad_pixel_mask_frames[:]
 
-        # Create SampledSensor with dummy position data (no geolocation for 1.5 files)
-        sensor_positions = np.array([[0.0], [0.0], [0.0]])
-        sensor_times = np.array(
-            [times[0] if times is not None and len(times) > 0 else np.datetime64("2000-01-01T00:00:00")],
-            dtype="datetime64[ns]",
-        )
-
-        platform = SensorPlatform(positions=sensor_positions, times_positions=sensor_times)
+        # SampledSensor instantiation will make its own SensorPlatform as none is passed in
+        # since no position or pointing information is available
         sensor = SampledSensor(
-            platform=platform,
-            times=sensor_times,
+            times=times if times is not None else np.array([np.datetime64("2000-01-01T00:00:00")]),
             frames=frames,
             radiometric_gain=radiometric_gain,
+            # assumes radiometric gain array is same size as frames array in this file format
+            radiometric_gain_frames=frames,
             bias_images=bias_images,
             bias_image_frames=bias_image_frames,
             uniformity_gain_images=uniformity_gain_images,
@@ -306,10 +301,11 @@ class DataLoaderThread(QThread):
                 # Use radiometric gain frames if geolocation frames not available
                 frames = radiometric_gain_frames
 
-            # If no position data, create dummy position
-            if positions is None or times is None:
-                positions = np.array([[0.0], [0.0], [0.0]])
-                times = np.array([np.datetime64("2000-01-01T00:00:00")], dtype="datetime64[ns]")
+            # If any of no positions, pointings, or times, set all to None
+            if positions is None or times is None or pointing is None:
+                positions = None
+                times = None
+                pointing = None
 
             # If no frames, create dummy frames
             if frames is None:
@@ -326,6 +322,7 @@ class DataLoaderThread(QThread):
                 poly_arf_to_row=poly_arf_to_row,
                 poly_arf_to_col=poly_arf_to_col,
                 radiometric_gain=radiometric_gain,
+                radiometric_gain_frames=radiometric_gain_frames,
                 bias_images=bias_images,
                 bias_image_frames=bias_image_frames,
                 uniformity_gain_images=uniformity_gain_images,

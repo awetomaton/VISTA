@@ -43,8 +43,10 @@ class SampledSensor(Sensor):
         Sensor frames numbers corresponding to each time sample. Must have length N.
         Required - will raise ValueError in __post_init__ if not provided.
     radiometric_gain : NDArray, optional
-        1D array of multiplicative factors for each time to convert from counts to
-        irradiance in units of kW/km²/sr.
+        1D array of multiplicative factors to convert from counts to irradiance
+        in units of kW/km²/sr.
+    radiometric_gain_frames : NDArray, optional
+        1D array specifying frame ranges for each radiometric gain value.
     poly_pixel_to_arf_azimuth : NDArray[np.float64], optional
         Polynomial coefficients for converting (column, row) to ARF azimuth (radians).
         Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
@@ -72,6 +74,7 @@ class SampledSensor(Sensor):
     times: Optional[NDArray[np.datetime64]] = None
     frames: Optional[NDArray[np.int64]] = None
     radiometric_gain: Optional[NDArray] = None
+    radiometric_gain_frames: Optional[NDArray] = None
     poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]] = None
     poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]] = None
     poly_arf_to_row: Optional[NDArray[np.float64]] = None
@@ -440,4 +443,4 @@ class SampledSensor(Sensor):
                 radiometric_group = group.create_group("radiometric")
 
             radiometric_group.create_dataset("radiometric_gain", data=self.radiometric_gain)
-            radiometric_group.create_dataset("radiometric_gain_frames", data=self.frames)
+            radiometric_group.create_dataset("radiometric_gain_frames", data=self.radiometric_gain_frames)

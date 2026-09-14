@@ -473,8 +473,10 @@ class Simulation:
 
         # Add radiometric gain if enabled
         radiometric_gain = None
+        radiometric_gain_frames = None
         if self.enable_radiometric_gain:
             radiometric_gain = self._generate_radiometric_gains()
+            radiometric_gain_frames = frames_array
 
         # Create SensorPlatform
         platform = SensorPlatform(positions=sensor_positions, times_positions=sensor_times, pointings=pointing, times_pointings=sensor_times)
@@ -488,6 +490,7 @@ class Simulation:
             poly_arf_to_row=poly_arf_to_row,
             poly_arf_to_col=poly_arf_to_col,
             radiometric_gain=radiometric_gain,
+            radiometric_gain_frames=radiometric_gain_frames,
             **sensor_kwargs,
         )
 
