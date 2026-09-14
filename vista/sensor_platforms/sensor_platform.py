@@ -243,17 +243,13 @@ class SensorPlatform:
         # Convert query times to numeric values (nanoseconds since epoch)
         query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
 
-        # Create interpolators for each coordinate (x, y, z)
-        interpolated_positions = np.zeros((3, times.shape[0]), dtype=np.float64)
-
-        for i in range(3):
-            interpolator = RegularGridInterpolator(
-                (self.times_positions,),
-                self.positions[i],
-                bounds_error=False,  # do not error outside of bounds
-                fill_value=None,  # extrapolate instead
-            )
-            interpolated_positions[i] = interpolator(query_times_ns)
+        interpolator = RegularGridInterpolator(
+            (self.times_positions,),
+            self.positions.T,  # transpose to make shape (time, xyz)
+            bounds_error=False,  # do not error outside of bounds
+            fill_value=None,  # extrapolate instead
+        )
+        interpolated_positions = interpolator(query_times_ns).T  # transpose to make shape (xyz, time)
 
         return interpolated_positions
 
@@ -282,17 +278,13 @@ class SensorPlatform:
         # Convert query times to numeric values (nanoseconds since epoch)
         query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
 
-        # Create interpolators for each coordinate (x, y, z)
-        interpolated_pointings = np.zeros((3, times.shape[0]), dtype=np.float64)
-
-        for i in range(3):
-            interpolator = RegularGridInterpolator(
-                (self.times_pointings,),
-                self.pointings[i],
-                bounds_error=False,  # do not error outside of bounds
-                fill_value=None,  # extrapolate instead
-            )
-            interpolated_pointings[i] = interpolator(query_times_ns)
+        interpolator = RegularGridInterpolator(
+            (self.times_pointings,),
+            self.pointings.T,  # transpose to make shape (time, xyz)
+            bounds_error=False,  # do not error outside of bounds
+            fill_value=None,  # extrapolate instead
+        )
+        interpolated_pointings = interpolator(query_times_ns).T  # transpose to make shape (xyz, time)
 
         norm = np.linalg.norm(interpolated_pointings, axis=0, keepdims=True)
         interpolated_pointings /= norm  # Normalize pointings to unit vectors
