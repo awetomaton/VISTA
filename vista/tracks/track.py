@@ -615,7 +615,7 @@ class Track:
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no row/column. "
                     "Sensor required for geodetic-to-pixel mapping."
                 )
-            if not hasattr(sensor, "can_geolocate") or not sensor.can_geolocate():
+            if not sensor.can_geolocate():
                 raise ValueError(
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
                     "does not support geolocation."

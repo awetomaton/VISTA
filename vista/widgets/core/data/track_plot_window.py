@@ -648,7 +648,7 @@ class TrackPlotWindow(QWidget):
 
         for track in self.tracks:
             # Check geolocation
-            if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
+            if track.sensor.can_geolocate():
                 has_geolocation = True
 
             # Check extraction metadata
@@ -733,7 +733,7 @@ class TrackPlotWindow(QWidget):
             data["Time"] = times.astype("datetime64[ns]").astype(np.float64) / 1e9
 
         # Add geolocation if sensor supports it
-        if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
+        if track.sensor.can_geolocate():
             if isinstance(track.sensor, SampledSensor):
                 azimuths = []
                 elevations = []

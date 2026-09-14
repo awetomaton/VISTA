@@ -1411,7 +1411,6 @@ class VistaMainWindow(QMainWindow):
                     )
                     if (
                         selected_sensor
-                        and hasattr(selected_sensor, "can_geolocate")
                         and selected_sensor.can_geolocate()
                     ):
                         mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
@@ -1807,7 +1806,7 @@ class VistaMainWindow(QMainWindow):
                         if not self.viewer.imagery:
                             errors.append(f"{Path(file_path).name}: Geodetic coordinates require loaded imagery")
                             continue
-                        if not hasattr(self.viewer.imagery, "sensor") or not self.viewer.imagery.sensor:
+                        if not self.viewer.imagery.sensor:
                             errors.append(f"{Path(file_path).name}: Imagery has no sensor for coordinate conversion")
                             continue
                         if not self.viewer.imagery.sensor.can_geolocate():
@@ -1826,18 +1825,17 @@ class VistaMainWindow(QMainWindow):
 
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
-                                if self.viewer.imagery and hasattr(self.viewer.imagery, "sensor"):
-                                    if self.viewer.imagery.sensor and self.viewer.imagery.sensor.can_geolocate():
-                                        try:
-                                            frame = self.viewer.current_frame_number
-                                            location = self.viewer.imagery.sensor.pixel_to_geodetic(
-                                                frame, np.array([row]), np.array([col])
-                                            )
-                                            lat = np.atleast_1d(location.lat.deg)[0]
-                                            lon = np.atleast_1d(location.lon.deg)[0]
-                                            alt = np.atleast_1d(location.height.to(units.km).value)[0]
-                                        except Exception:
-                                            pass  # Geodetic conversion optional
+                                if self.viewer.imagery and self.viewer.imagery.sensor.can_geolocate():
+                                    try:
+                                        frame = self.viewer.current_frame_number
+                                        location = self.viewer.imagery.sensor.pixel_to_geodetic(
+                                            frame, np.array([row]), np.array([col])
+                                        )
+                                        lat = np.atleast_1d(location.lat.deg)[0]
+                                        lon = np.atleast_1d(location.lon.deg)[0]
+                                        alt = np.atleast_1d(location.height.to(units.km).value)[0]
+                                    except Exception:
+                                        pass  # Geodetic conversion optional
 
                             else:
                                 # Use geodetic coordinates and convert to pixel

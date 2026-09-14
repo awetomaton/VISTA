@@ -29,9 +29,8 @@ class PlacemarkDialog(QDialog):
 
         # Check if geolocation is available
         self.can_geolocate = False
-        if self.viewer.imagery and hasattr(self.viewer.imagery, "sensor"):
-            if self.viewer.imagery.sensor and hasattr(self.viewer.imagery.sensor, "can_geolocate"):
-                self.can_geolocate = self.viewer.imagery.sensor.can_geolocate()
+        if self.viewer.imagery:
+            self.can_geolocate = self.viewer.imagery.sensor.can_geolocate()
 
         self.init_ui()
 
