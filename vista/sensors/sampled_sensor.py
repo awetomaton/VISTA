@@ -14,7 +14,7 @@ import numpy as np
 from astropy import units
 from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RegularGridInterpolator
 
 from vista.sensors.sensor import Sensor
 from vista.transforms import (
@@ -123,6 +123,41 @@ class SampledSensor(Sensor):
             and self.poly_arf_to_row is not None
             and self.poly_arf_to_col is not None
         )
+
+    def get_coefficients(self, coeffs: NDArray[np.float64], times: NDArray[np.datetime64]) -> NDArray[np.float64]:
+        """
+        Return polynomial coefficients for the given times via interpolation/extrapolation.
+
+        Parameters
+        ----------
+        coeffs : NDArray[np.float64]
+            A reference to one of the sensor's already existing ARF polynomial coefficients arrays
+        times : NDArray[np.datetime64]
+            Array of times for which to retrieve polynomial coefficients
+
+        Returns
+        -------
+        NDArray[np.float64]
+            Polynomial coefficients as (N, num_coeffs) array where N is the number of query times.
+
+        Notes
+        -----
+        - For sensors with 1 sample: returns the single set of coefficients for all times
+        - For sensors with 2+ samples: uses linear interpolation within the time
+          range and linear extrapolation outside the range
+        """
+        # Convert query times to numeric values (nanoseconds since epoch)
+        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+
+        interpolator = RegularGridInterpolator(
+            (self.times,),
+            coeffs,  # shape is already (time, num_coeffs)
+            bounds_error=False,  # do not error outside of bounds
+            fill_value=None,  # extrapolate instead
+        )
+        interpolated_coeffs = interpolator(query_times_ns)
+
+        return interpolated_coeffs
 
     def _pixel_to_geodetic_single_frame(self, frame_idx: int, rows: np.ndarray, columns: np.ndarray) -> np.ndarray:
         """
