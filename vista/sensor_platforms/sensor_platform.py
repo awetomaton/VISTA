@@ -230,9 +230,10 @@ class SensorPlatform:
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[np.float64], None
             Sensor positions as (3, N) array where N is the number of query times.
             Each column contains [x, y, z] coordinates in ECEF frame (km).
+            None if no positions available.
 
         Notes
         -----
@@ -240,8 +241,16 @@ class SensorPlatform:
         - For sensors with 2+ samples: uses linear interpolation within the time
           range and linear extrapolation outside the range
         """
+        if self.positions.shape[1] == 0:
+            return None
+        
+        times = np.asarray(times)
+
         # Convert query times to numeric values (nanoseconds since epoch)
         query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+        # interpolator needs array
+        # also, this way, if single number is passed in, return shape is still (3,1)
+        query_times_ns = np.atleast_1d(query_times_ns)
 
         interpolator = RegularGridInterpolator(
             (self.times_positions,),
@@ -265,9 +274,10 @@ class SensorPlatform:
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[np.float64], None
             Sensor pointings as (3, N) array where N is the number of query times.
             Each column contains [x, y, z] pointings in ECEF frame (km).
+            None if no pointings available.
 
         Notes
         -----
@@ -275,8 +285,16 @@ class SensorPlatform:
         - For sensors with 2+ samples: uses linear interpolation within the time
           range and linear extrapolation outside the range
         """
+        if self.pointings.shape[1] == 0:
+            return None
+        
+        times = np.asarray(times)
+
         # Convert query times to numeric values (nanoseconds since epoch)
         query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+        # interpolator needs array
+        # also, this way, if single number is passed in, return shape is still (3,1)
+        query_times_ns = np.atleast_1d(query_times_ns)  
 
         interpolator = RegularGridInterpolator(
             (self.times_pointings,),
@@ -288,4 +306,5 @@ class SensorPlatform:
 
         norm = np.linalg.norm(interpolated_pointings, axis=0, keepdims=True)
         interpolated_pointings /= norm  # Normalize pointings to unit vectors
+
         return interpolated_pointings

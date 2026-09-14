@@ -147,8 +147,11 @@ class SampledSensor(Sensor):
         - For sensors with 2+ samples: uses linear interpolation within the time
           range and linear extrapolation outside the range
         """
+        times = np.asarray(times)
+
         # Convert query times to numeric values (nanoseconds since epoch)
         query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+        query_times_ns = np.atleast_1d(query_times_ns)  # interpolator needs array
 
         interpolator = RegularGridInterpolator(
             (self.times,),
@@ -157,6 +160,10 @@ class SampledSensor(Sensor):
             fill_value=None,  # extrapolate instead
         )
         interpolated_coeffs = interpolator(query_times_ns)
+
+        # squeeze axis if a number was passed in
+        if times.ndim == 0:
+            interpolated_coeffs = interpolated_coeffs.squeeze(axis=0)
 
         return interpolated_coeffs
 
