@@ -25,7 +25,6 @@ class ExtractionEditorWidget(QDialog):
     """Floating dialog widget for editing track extraction interactively"""
 
     # Signals
-    frame_changed = pyqtSignal(int)  # Emitted when user navigates to different frame
     extraction_saved = pyqtSignal(dict)  # Emitted when extraction is saved
     extraction_cancelled = pyqtSignal()  # Emitted when editing is cancelled
     signal_mask_updated = pyqtSignal()  # Emitted when signal mask changes (for viewer update)

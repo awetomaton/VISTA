@@ -2368,7 +2368,6 @@ class ImageryViewer(QWidget):
         # Create extraction editor widget if it doesn't exist
         if self.extraction_editor is None:
             self.extraction_editor = ExtractionEditorWidget(self)
-            self.extraction_editor.frame_changed.connect(self.on_extraction_editor_frame_changed)
             self.extraction_editor.signal_mask_updated.connect(self._update_extraction_overlay_from_editor)
             self.extraction_editor.extraction_saved.connect(self.on_extraction_saved)
             self.extraction_editor.extraction_cancelled.connect(self.on_extraction_cancelled)
@@ -2427,10 +2426,6 @@ class ImageryViewer(QWidget):
 
         # Emit signal so UI can update (e.g., uncheck Edit Extraction button)
         self.extraction_editing_ended.emit()
-
-    def on_extraction_editor_frame_changed(self, frame_number):
-        """Handle frame change from extraction editor"""
-        self.set_frame_number(frame_number)
 
     def on_extraction_saved(self, _extraction_data):
         """Handle save from extraction editor"""
