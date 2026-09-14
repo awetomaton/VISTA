@@ -113,11 +113,12 @@ class SampledSensor(Sensor):
         Returns
         -------
         bool
-            True if sensor has all required ARF geolocation data: platform pointing vectors
-            and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
+            True if sensor has all required ARF geolocation data: platform position and
+            pointing vectors and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
         return (
-            self.platform.pointings.shape[1] > 0
+            self.platform.positions.shape[1] > 0
+            and self.platform.pointings.shape[1] > 0
             and self.poly_pixel_to_arf_azimuth is not None
             and self.poly_pixel_to_arf_elevation is not None
             and self.poly_arf_to_row is not None
