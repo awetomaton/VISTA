@@ -66,7 +66,7 @@ class KnownSources:
         raise NotImplementedError
 
     def get_pixels(
-        self, imagery: Imagery, frame: Union[int, NDArray], time: Union[np.datetime64, NDArray[np.datetime64], Time]
+        self, imagery: Imagery, frames: Union[int, NDArray], times: Union[np.datetime64, NDArray[np.datetime64], Time]
     ) -> Tuple[NDArray, NDArray]:
         """
         Return the pixel positions of the source for the provided imagery and frame number(s).
@@ -76,9 +76,9 @@ class KnownSources:
         ----------
         imagery: Imagery
             The imagery we want to project the source onto
-        frame : int, NDArray
+        frames : int, NDArray
             The frame number(s) to project onto
-        time : np.datetime64, NDArray[np.datetime64], astropy.time.Time
+        times : np.datetime64, NDArray[np.datetime64], astropy.time.Time
             The time(s) corresponding to the frame number(s)
 
         Returns
@@ -90,27 +90,40 @@ class KnownSources:
         """
         sensor = imagery.sensor  # get the imagery sensor
 
-        # geodetic positions for the source at those times
-        source_positions = self.get_geodetics(time)
+        # we want at least a 1d array for now
+        times_array = np.atleast_1d(times)
 
-        # check if object is on the other side of the earth via intersection along LOS
-        sensor_positions = sensor.platform.get_positions(np.atleast_1d(time))
-        dx = source_positions.x.to(u.km).value - sensor_positions[0]
-        dy = source_positions.y.to(u.km).value - sensor_positions[1]
-        dz = source_positions.z.to(u.km).value - sensor_positions[2]
-        # normalize for los_to_earth function
-        los_sensor_to_source = np.array([dx, dy, dz]) / np.sqrt(dx**2 + dy**2 + dz**2)
+        # geodetic positions for the source at those times
+        # source_positions is of shape (..., num_times, 3)
+        x, y, z = self.get_geodetics(times_array).to(u.km).to_geocentric()
+        source_positions = np.stack([x.value, y.value, z.value], axis=-1)
+
+        # Below, we will check if object is on the other side of the earth via intersection along LOS
+
+        # transpose so sensor_positions has shape (num_times, 3)
+        sensor_positions = sensor.platform.get_positions(times_array).T
+        # los_sensor_to_source has shape (..., num_times, 3)
+        los_sensor_to_source = source_positions - sensor_positions
+
         # calculate intersection of los from sensor to source with the Earth
-        d, intersection = los_to_earth(sensor_positions, los_sensor_to_source)
+        # d is of shape (..., num_times)
+        d, _ = los_to_earth(sensor_positions, los_sensor_to_source)
+
         # if intersection distance is farther than the source, los from sensor
         # to source does not intersect the earth
-        d[d**2 > dx**2 + dy**2 + dz**2] = np.nan
+        d[d > np.linalg.norm(los_sensor_to_source, axis=-1)] = np.nan
         # values which are not nan are the ones that are blocked by the earth
         # set their source positions to nan, as we don't care about their pixel positions
         source_positions[~np.isnan(d)] = np.nan
 
+        # now squeeze out time axis if number was passed in
+        if np.asarray(times).ndim == 0:
+            source_positions = np.squeeze(source_positions, axis=-2)
+
         # convert from ECEF to ARF to pixels
-        rows, columns = sensor.geodetic_to_pixel(frame, source_positions)
+        # move xyz axis to start so we can unpack
+        earth_loc = EarthLocation(*np.moveaxis(source_positions, -1, 0), unit=u.km)
+        rows, columns = sensor.geodetic_to_pixel(frames, earth_loc)
 
         # Only display objects within the image frame
         # TODO: Handle when there's a cropped image
@@ -161,17 +174,7 @@ class KnownSources:
             raise ValueError("imagery.times is None, cannot create tracks without frame <-> time mapping")
 
         tracks = []
-
-        rows = []
-        columns = []
-        for frame, time in zip(imagery.frames, imagery.times):
-            r, c = self.get_pixels(imagery, frame, time)
-            rows.append(r)
-            columns.append(c)
-        # after looping over frames, rows and columns have shape (num_frames, num_sources)
-        # transpose so each source has a row and column
-        rows = np.array(rows).T
-        columns = np.array(columns).T
+        rows, columns = self.get_pixels(imagery, imagery.frames, imagery.times)
 
         for source, source_type, row, column in zip(self.source_names, self.source_types, rows, columns):
             slices = self._get_slices(row)  # columns should have the same valid slices
