@@ -45,11 +45,11 @@ class SolarSystemBodies(KnownSources):
         EarthLocation
             Astropy EarthLocation object containing geodetic coordinates in km
         """
-        time = Time(times)
+        astro_times = Time(times)
 
         source_positions = []
         for name in self.source_names:
-            position = get_body(name, time).transform_to(ITRS(obstime=time))
+            position = get_body(name, astro_times).transform_to(ITRS(obstime=astro_times))
             source_positions.append(position.cartesian.xyz.to(u.km).value)
         # array of shape (num_sources, 3, time)
         ecef_coords = np.array(source_positions)

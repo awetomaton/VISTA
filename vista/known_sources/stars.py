@@ -282,13 +282,11 @@ class Stars(KnownSources):
         if len(self.stars) == 0:
             return EarthLocation([], [], [], unit=u.km)
 
-        # TODO: cache results for specific times (frames)?
-
-        times = Time(times)
+        astro_times = Time(times)
 
         # stars is a (num_stars, 3) array
         # need to add a time axis to propagate motion to desired times
-        ecef_coords = self.stars[:, None].apply_space_motion(times).transform_to(ITRS(obstime=times))
+        ecef_coords = self.stars[:, None].apply_space_motion(astro_times).transform_to(ITRS(obstime=astro_times))
         # but we can squeeze missing axes after
         ecef_coords = ecef_coords.squeeze()
 
