@@ -167,60 +167,7 @@ class SampledSensor(Sensor):
 
         return interpolated_coeffs
 
-    def _pixel_to_geodetic_single_frame(self, frame_idx: int, rows: np.ndarray, columns: np.ndarray) -> np.ndarray:
-        """
-        Convert pixel coordinates to ECEF for a single frame index.
-
-        Parameters
-        ----------
-        frame_idx : int
-            Index into self.frames (NOT the frame number itself)
-        rows : np.ndarray
-            Row pixel coordinates
-        columns : np.ndarray
-            Column pixel coordinates
-
-        Returns
-        -------
-        np.ndarray
-            ECEF intersections with shape (3, N). NaN for off-Earth pixels.
-        """
-        # Get polynomial coefficients for this frame
-        az_coeffs = self.poly_pixel_to_arf_azimuth[frame_idx]
-        el_coeffs = self.poly_pixel_to_arf_elevation[frame_idx]
-
-        # Evaluate polynomials: pixel → ARF angles (radians)
-        azimuth = evaluate_2d_polynomial(az_coeffs, columns, rows)
-        elevation = evaluate_2d_polynomial(el_coeffs, columns, rows)
-
-        # Convert ARF spherical → ARF Cartesian unit vectors
-        arf_vectors = spherical_to_cartesian(azimuth, elevation)
-
-        # Get sensor position for this frame
-        if self.platform.positions.shape[1] == 1:
-            sensor_pos = self.platform.positions[:, 0]
-        else:
-            time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.platform.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
-
-        sensor_pointing = self.platform.pointings[:, frame_idx]
-
-        # Get ARF transform and invert (transpose for orthonormal matrix)
-        arf_to_ecef = get_arf_transform(sensor_pos, sensor_pointing).T
-
-        # Transform ARF → ECEF line-of-sight vectors
-        ecef_vectors = arf_to_ecef @ arf_vectors
-
-        # Ray-cast to Earth (returns NaN for non-intersecting rays)
-        _, intersections = los_to_earth(sensor_pos, ecef_vectors)
-
-        # Ensure intersections is 2D (3, N) even for single point
-        if intersections.ndim == 1:
-            intersections = intersections.reshape(3, 1)
-
-        return intersections
-
-    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray):
+    def pixel_to_geodetic(self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray) -> EarthLocation:
         """
         Convert pixel coordinates to geodetic coordinates using ARF polynomials.
 
@@ -230,10 +177,11 @@ class SampledSensor(Sensor):
 
         Parameters
         ----------
-        frame : int or np.ndarray
-            Frame number(s) for which to perform the conversion. If an array,
-            must have the same length as rows/columns and each element specifies
-            the frame for the corresponding pixel coordinate.
+        times : np.datetime64 or np.ndarray
+            Time(s) for which to perform the conversion. If a number, it is assumed
+            that a time axis for the rows and columns is not present. If an array, it
+            is expected to have the same length as the final (time) axis of rows/columns,
+            and each element specifies the time for the corresponding pixel coordinates.
         rows : np.ndarray
             Array of row pixel coordinates
         columns : np.ndarray
@@ -244,66 +192,93 @@ class SampledSensor(Sensor):
         EarthLocation
             Astropy EarthLocation object(s) with geodetic coordinates.
             Returns NaN coordinates for pixels that do not intersect Earth.
-            Returns NaN coordinates if polynomials are not available or frame not found.
+            Returns NaN coordinates if polynomials are not available.
+
+        Raises
+        ------
+        ValueError
+            If times is an array and its length does not match the length of the last
+            axis of rows and columns
 
         Notes
         -----
-        - Requires ARF polynomials and pointing vectors to be defined
-        - Frame must exist in self.frames array
-        - Off-Earth pixels will have NaN lat/lon/height values
+        - Requires ARF polynomials to be defined
+        - Returns NaN coordinates if polynomials are not available
+        - Off-Earth pixels will have NaN x/y/z geocentric coordinates.
+          This corresponds to 90/0/NaN for its lat/lon/height values,
+          so a check for NaN coordinates need only check for NaN height.
         """
         # If no polynomial coefficients provided, return NaN
-        if not self.can_geolocate() or self.frames is None:
+        if not self.can_geolocate():
             invalid = np.full_like(rows, np.nan, dtype=np.float64)
             return EarthLocation(x=invalid, y=invalid, z=invalid, unit=units.km)
 
-        # Handle array of frames: group by unique frame for efficient batch processing
-        if isinstance(frame, np.ndarray):
-            all_intersections = np.full((3, len(rows)), np.nan)
+        # we want to use numpy arrays, so convert if not an array
+        times = np.asarray(times)
 
-            for uframe in np.unique(frame):
-                # Find sensor frame index
-                sensor_mask = self.frames == uframe
-                if not np.any(sensor_mask):
-                    continue  # Unknown frame, leave as NaN
-                frame_idx = np.where(sensor_mask)[0][0]
+        # we don't want to consider the multidimensional case where times is more than 1d
+        if times.ndim > 1:
+            raise ValueError("times should be a number or 1d array")
 
-                # Gather pixels belonging to this frame
-                point_mask = frame == uframe
-                intersections = self._pixel_to_geodetic_single_frame(
-                    frame_idx,
-                    rows[point_mask],
-                    columns[point_mask],
-                )
-                all_intersections[:, point_mask] = intersections
+        # if passing in a number for the times, assume time axis is missing for rows and columns and add it
+        if times.ndim == 0:
+            rows = rows[..., None]
+            columns = columns[..., None]
+        elif (times.shape[-1] != rows.shape[-1]) or (times.shape[-1] != columns.shape[-1]):
+            raise ValueError("Length of times must be the same as the last axis of rows and columns")
 
-            return EarthLocation(
-                x=all_intersections[0],
-                y=all_intersections[1],
-                z=all_intersections[2],
-                unit=units.km,
-            )
+        # utimes = unique times. is an array even if times is a number
+        # also get indices to reconstruct either list
+        # such that times = utimes[times_from_utimes]
+        # and utimes = times[utimes_from_times] (only if times is an array)
+        # indices are number if times is a number, allowing us to extract values without squeezing later
+        utimes, utimes_from_times, times_from_utimes = np.unique(times, return_index=True, return_inverse=True)
 
-        # Single frame path (original fast path)
-        frame_mask = self.frames == frame
-        if not np.any(frame_mask):
-            invalid = np.full_like(rows, np.nan, dtype=np.float64)
-            return EarthLocation(
-                x=invalid,
-                y=invalid,
-                z=invalid,
-                unit=units.km,
-            )
+        # arrays are of shape utimes.shape + (num_coeffs,)
+        az_coeffs = self.get_coefficients(self.poly_pixel_to_arf_azimuth, utimes)
+        el_coeffs = self.get_coefficients(self.poly_pixel_to_arf_elevation, utimes)
 
-        frame_idx = np.where(frame_mask)[0][0]
-        intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
-
-        return EarthLocation(
-            x=intersections[0],
-            y=intersections[1],
-            z=intersections[2],
-            unit=units.km,
+        # arrays are of shape rows.shape[:-1] + utimes.shape
+        azimuth = evaluate_2d_polynomial(
+            az_coeffs,
+            columns[..., utimes_from_times],
+            rows[..., utimes_from_times],
         )
+        elevation = evaluate_2d_polynomial(
+            el_coeffs,
+            columns[..., utimes_from_times],
+            rows[..., utimes_from_times],
+        )
+
+        # Convert ARF spherical → ARF Cartesian unit vectors
+        # output array has shape (3,) + rows.shape[:-1] + utimes.shape
+        arf_vectors = spherical_to_cartesian(azimuth, elevation)
+
+        # get sensor position and pointing at the utimes
+        # transpose so that each array has shape utimes.shape + (3,)
+        sensor_pos = self.platform.get_positions(utimes).T
+        sensor_pointing = self.platform.get_pointings(utimes).T
+
+        # Get ARF transform and invert (transpose for orthonormal matrix) for each time
+        # array has shape utimes.shape + (3,3)
+        # so it is only the last two axes which need swapped
+        arf_to_ecef = np.moveaxis(get_arf_transform(sensor_pos, sensor_pointing), -1, -2)
+
+        # Transform ARF → ECEF line-of-sight vectors
+        # resulting array is of shape rows.shape[:-1] + utimes.shape + (3,)
+        ecef_vectors = np.einsum("tij, j...t -> ...ti", arf_to_ecef, arf_vectors)
+
+        # Ray-cast to Earth (returns NaN for non-intersecting rays)
+        # intersections has shape rows.shape[:-1] + utimes.shape + (3,)
+        _, intersections = los_to_earth(sensor_pos, ecef_vectors)
+
+        # create array matching original time input from array with unique time inputs
+        result = intersections[..., times_from_utimes, :]
+        # move xyz axis from -1 to 0 so shape is (3,) + rows.shape
+        result = np.moveaxis(result, -1, 0)
+
+        # unpack into xyz arguments
+        return EarthLocation.from_geocentric(*result, unit=units.km)
 
     def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """

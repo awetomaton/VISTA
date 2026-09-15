@@ -194,16 +194,17 @@ class Sensor:
         invalid = np.full_like(loc.x.value, np.nan, dtype=np.float64)
         return invalid, invalid.copy()
 
-    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray) -> EarthLocation:
+    def pixel_to_geodetic(self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray) -> EarthLocation:
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 
         Parameters
         ----------
-        frame : int or np.ndarray
-            Frame number(s) for which to perform the conversion. If an array,
-            must have the same length as rows/columns and each element specifies
-            the frame for the corresponding pixel coordinate.
+        times : np.datetime64 or np.ndarray
+            Time(s) for which to perform the conversion. If a number, it is assumed
+            that a time axis for the rows and columns is not present. If an array, it
+            is expected to have the same length as the final (time) axis of rows/columns,
+            and each element specifies the time for the corresponding pixel coordinates.
         rows : np.ndarray
             Array of row pixel coordinates
         columns : np.ndarray
