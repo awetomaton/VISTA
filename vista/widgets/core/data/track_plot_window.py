@@ -750,8 +750,8 @@ class TrackPlotWindow(QWidget):
                             frame_idx = frame_idx[0]
                             az_coeffs = track.sensor.poly_pixel_to_arf_azimuth[frame_idx]
                             el_coeffs = track.sensor.poly_pixel_to_arf_elevation[frame_idx]
-                            az = evaluate_2d_polynomial(az_coeffs, np.array([col]), np.array([row]))[0]
-                            el = evaluate_2d_polynomial(el_coeffs, np.array([col]), np.array([row]))[0]
+                            az = evaluate_2d_polynomial(az_coeffs, col, row)
+                            el = evaluate_2d_polynomial(el_coeffs, col, row)
                             azimuths.append(az)
                             elevations.append(el)
                         else:

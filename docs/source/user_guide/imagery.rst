@@ -555,8 +555,8 @@ geolocation data:
 
    .. code-block:: python
 
-      azimuth = evaluate_2d_polynomial(poly_pixel_to_arf_azimuth, row, col)
-      elevation = evaluate_2d_polynomial(poly_pixel_to_arf_elevation, row, col)
+      azimuth = evaluate_2d_polynomial(poly_pixel_to_arf_azimuth, col, row)
+      elevation = evaluate_2d_polynomial(poly_pixel_to_arf_elevation, col, row)
 
 **Step 2: ARF angles → ECEF direction**
    Convert ARF angles to Cartesian unit vector, then transform to ECEF:

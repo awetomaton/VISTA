@@ -124,18 +124,21 @@ def evaluate_2d_polynomial(coeffs: NDArray, x: Union[NDArray, float], y: Union[N
     Parameters
     ----------
     coeffs : np.ndarray
-        Array of polynomial coefficients, length must be (n+1)*(n+2)/2 for some integer n
+        Array whose last axis corresponds to list of polynomical coefficients. Last axis must
+        be of length (n+1)*(n+2)/2 for some integer n. Other axes must be broadcastable to the
+        shapes of x and y
     x : np.ndarray or float
-        X coordinates (can be scalar or array)
+        X coordinates (can be scalar or array). Must be broadcastable to the shape of y
     y : np.ndarray or float
-        Y coordinates (can be scalar or array)
+        Y coordinates (can be scalar or array). Must be broadcastable to the shape of x
     order : int, optional
-        Order of the polynomial. If None, inferred from length of coeffs.
+        Order of the polynomial. If None, inferred from length of last axis of coeffs.
 
     Returns
     -------
     np.ndarray or float
-        Evaluated polynomial values with same shape as input x and y
+        Evaluated polynomial values. The dimension and shape of the resulting array is the
+        same as whichever of coeffs[...,0], x, or y has higher dimension
 
     Raises
     ------
@@ -155,12 +158,14 @@ def evaluate_2d_polynomial(coeffs: NDArray, x: Union[NDArray, float], y: Union[N
     24.0
     """
     coeffs = np.asarray(coeffs)
+    x = np.asarray(x)
+    y = np.asarray(y)
 
     # Determine polynomial order if not provided
     if order is None:
         # Solve (n+1)*(n+2)/2 = len(coeffs) for n
         # This gives n^2 + 3n + 2 - 2*len(coeffs) = 0
-        n_coeffs = len(coeffs)
+        n_coeffs = coeffs.shape[-1]
         # Using quadratic formula: n = (-3 + sqrt(9 - 8 + 8*n_coeffs)) / 2
         discriminant = 1 + 8 * n_coeffs
         sqrt_disc = np.sqrt(discriminant)
@@ -179,19 +184,26 @@ def evaluate_2d_polynomial(coeffs: NDArray, x: Union[NDArray, float], y: Union[N
 
     # Verify coefficient count matches specified order
     expected_coeffs = (order + 1) * (order + 2) // 2
-    if len(coeffs) != expected_coeffs:
-        raise ValueError(f"For order {order}, expected {expected_coeffs} coefficients, but got {len(coeffs)}")
+    if coeffs.shape[-1] != expected_coeffs:
+        raise ValueError(f"For order {order}, expected {expected_coeffs} coefficients, but got {coeffs.shape[-1]}")
 
-    # Evaluate polynomial
-    result = np.zeros_like(x * y)  # Ensures proper broadcasting
-    coeff_idx = 0
-
-    # Iterate through degrees
+    # lists of powers corresponding to the coefficients list
+    x_powers = []
+    y_powers = []
     for degree in range(order + 1):
-        # For each degree, iterate through powers of x from high to low
-        for x_power in range(degree, -1, -1):
-            y_power = degree - x_power
-            result = result + coeffs[coeff_idx] * (x**x_power) * (y**y_power)
-            coeff_idx += 1
+        powers = np.arange(degree, -1, -1)
+        x_powers.extend(powers)
+        y_powers.extend(degree - powers)
 
+    # append leading dimensions to broadcast over last axis of coeffs
+    x_powers = np.reshape(x_powers, (1,) * x.ndim + coeffs.shape[-1:])
+    y_powers = np.reshape(y_powers, (1,) * y.ndim + coeffs.shape[-1:])
+    # append trailing dimension for powers
+    new_x = x.reshape(x.shape + (1,))
+    new_y = y.reshape(y.shape + (1,))
+
+    # resulting multiplication over all arrays
+    result = coeffs * new_x**x_powers * new_y**y_powers
+    # the resulting sum for the 2d polynomial occurs along the -1 (coefficients) axis
+    result = np.sum(result, axis=-1)
     return result
