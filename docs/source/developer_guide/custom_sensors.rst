@@ -251,14 +251,12 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
            # Intersect with Earth — use your own intersection routine here
            from vista.transforms import los_to_earth
-           _, intersections = los_to_earth(self.position_ecef_km, rays_ecef)
-           if intersections.ndim == 1:
-               intersections = intersections.reshape(3, 1)
+           _, intersections = los_to_earth(self.position_ecef_km, rays_ecef.T) # transpose so last axis is length 3
 
            return EarthLocation.from_geocentric(
-               x=intersections[0] * units.km,
-               y=intersections[1] * units.km,
-               z=intersections[2] * units.km,
+               x=intersections[...,0] * units.km,
+               y=intersections[...,1] * units.km,
+               z=intersections[...,2] * units.km,
            )
 
        def geodetic_to_pixel(self, frame,
