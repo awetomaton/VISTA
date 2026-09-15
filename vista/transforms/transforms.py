@@ -19,17 +19,28 @@ def spherical_to_cartesian(azimuth: Union[float, NDArray], elevation: Union[floa
     Returns
     -------
     NDArray
-        Cartesian unit-vector(s) pointing in the direction of the given anglees
-    """
+        Cartesian unit-vector(s) pointing in the direction of the given angles.
+        Shape is (3,) + azimuth.shape
 
-    cos_elevation = np.cos(elevation)
+    Raises
+    ------
+    ValueError
+        If azimuth and elevation do not have the same shape
+    """
+    az = np.asarray(azimuth)
+    el = np.asarray(elevation)
+
+    if az.shape != el.shape:
+        raise ValueError("azimuth and elevation must have same shape")
+
+    cos_elevation = np.cos(el)
     return np.array(
         [
-            cos_elevation * np.cos(azimuth),
-            cos_elevation * np.sin(azimuth),
-            np.sin(elevation),
+            cos_elevation * np.cos(az),
+            cos_elevation * np.sin(az),
+            np.sin(el),
         ]
-    ).squeeze()
+    )
 
 
 def cartesian_to_spherical(unit_vector: NDArray) -> Tuple[NDArray, NDArray]:
