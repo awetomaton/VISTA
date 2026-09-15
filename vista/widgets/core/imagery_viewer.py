@@ -352,11 +352,11 @@ class ImageryViewer(QWidget):
 
             if self.map_view_mode:
                 # In map mode, update projected imagery and recompute footprint
-                if self.imagery_projector is not None:
-                    frame = imagery.frames[frame_index]
+                if self.imagery_projector is not None and self.imagery.times is not None:
+                    time = imagery.times[frame_index]
                     img_shape = imagery.images[frame_index].shape
                     self._imagery_footprint = self.imagery_projector.compute_footprint(
-                        frame,
+                        time,
                         img_shape[0],
                         img_shape[1],
                         imagery.row_offset,
@@ -3251,15 +3251,17 @@ class ImageryViewer(QWidget):
             self.imagery_projector = ImageryProjector(self.selected_sensor, coarse_grid_size=coarse_size)
 
             # Compute imagery footprint
-            frame = self.imagery.frames[0]
-            img_shape = self.imagery.images[0].shape
-            self._imagery_footprint = self.imagery_projector.compute_footprint(
-                frame,
-                img_shape[0],
-                img_shape[1],
-                self.imagery.row_offset,
-                self.imagery.column_offset,
-            )
+            self._imagery_footprint = None
+            if self.imagery.times is not None:
+                time = self.imagery.times[0]
+                img_shape = self.imagery.images[0].shape
+                self._imagery_footprint = self.imagery_projector.compute_footprint(
+                    time,
+                    img_shape[0],
+                    img_shape[1],
+                    self.imagery.row_offset,
+                    self.imagery.column_offset,
+                )
             if self._imagery_footprint is None:
                 self.map_view_mode = False
                 return False

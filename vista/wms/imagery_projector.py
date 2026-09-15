@@ -40,21 +40,21 @@ class ImageryProjector:
 
     def compute_footprint(
         self,
-        frame: int,
+        time: np.datetime64,
         n_rows: int,
         n_cols: int,
         row_offset: int = 0,
         column_offset: int = 0,
     ) -> tuple[float, float, float, float] | None:
-        """Compute the geodetic bounding box of the imagery footprint for a given frame.
+        """Compute the geodetic bounding box of the imagery footprint for a given time.
 
         Samples the image corners and edges using sensor.pixel_to_geodetic() to find
         the full extent on the ground.
 
         Parameters
         ----------
-        frame : int
-            Frame number.
+        time : np.datetime64
+            Time.
         n_rows : int
             Number of rows in the image.
         n_cols : int
@@ -98,7 +98,7 @@ class ImageryProjector:
         rows_arr = np.array(rows)
         cols_arr = np.array(cols)
 
-        locations = self.sensor.pixel_to_geodetic(frame, rows_arr, cols_arr)
+        locations = self.sensor.pixel_to_geodetic(time, rows_arr, cols_arr)
         lats = locations.lat.deg
         lons = locations.lon.deg
 
