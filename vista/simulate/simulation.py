@@ -372,34 +372,11 @@ class Simulation:
                 tracks_df = tracks_df.drop(columns=["Frames"])
 
         # If requested, convert pixel coordinates to geodetic
-        if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None:
-            # Convert rows/columns to lat/lon/alt for each frame
-            latitudes = []
-            longitudes = []
-            altitudes = []
-
-            for idx, row in tracks_df.iterrows():
-                # Get frame (might be in Times column if save_times_only)
-                if "Frames" in tracks_df.columns:
-                    frame = int(row["Frames"])
-                else:
-                    # Need to map time back to frame
-                    time_str = row["Times"]
-                    time_dt = pd.to_datetime(time_str)
-                    frame_idx = np.where(self.imagery.times == time_dt)[0]
-                    if len(frame_idx) > 0:
-                        frame = self.imagery.frames[frame_idx[0]]
-                    else:
-                        frame = 0  # Default to first frame
-
-                pixel_row = row["Rows"]
-                pixel_col = row["Columns"]
-
-                # Use sensor's pixel_to_geodetic method
-                location = self.imagery.sensor.pixel_to_geodetic(frame, np.array([pixel_row]), np.array([pixel_col]))
-                latitudes.append(location.lat.deg[0])
-                longitudes.append(location.lon.deg[0])
-                altitudes.append(location.height.to("m").value[0])
+        if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None and "Times" in tracks_df.keys():
+            location = self.imagery.sensor.pixel_to_geodetic(tracks_df["Times"].to_numpy(), tracks_df["Rows"].to_numpy(), tracks_df["Columns"].to_numpy())
+            latitudes = location.lat.deg
+            longitudes = location.lon.deg
+            altitudes = location.height.to("km").value
 
             tracks_df["Latitude"] = latitudes
             tracks_df["Longitude"] = longitudes

@@ -733,51 +733,26 @@ class TrackPlotWindow(QWidget):
             data["Time"] = times.astype("datetime64[ns]").astype(np.float64) / 1e9
 
         # Add geolocation if sensor supports it
-        if track.sensor.can_geolocate():
-            if isinstance(track.sensor, SampledSensor):
-                azimuths = []
-                elevations = []
-                lats = []
-                lons = []
+        if track.sensor.can_geolocate() and isinstance(track.sensor, SampledSensor) and track.times is not None:
+            az_coeffs = track.sensor.get_coefficients(track.sensor.poly_pixel_to_arf_azimuth, track.times)
+            el_coeffs = track.sensor.get_coefficients(track.sensor.poly_pixel_to_arf_elevation, track.times)
+            azimuths = evaluate_2d_polynomial(az_coeffs, track.columns, track.rows)
+            elevations = evaluate_2d_polynomial(el_coeffs, track.columns, track.rows)
 
-                for i, frame in enumerate(track.frames):
-                    row, col = track.rows[i], track.columns[i]
+            locations = track.sensor.pixel_to_geodetic(track.times, track.rows, track.columns)
+            lats = locations.lat.deg
+            lons = locations.lon.deg
 
-                    # Get ARF angles
-                    try:
-                        frame_idx = np.where(track.sensor.frames == frame)[0]
-                        if len(frame_idx) > 0:
-                            frame_idx = frame_idx[0]
-                            az_coeffs = track.sensor.poly_pixel_to_arf_azimuth[frame_idx]
-                            el_coeffs = track.sensor.poly_pixel_to_arf_elevation[frame_idx]
-                            az = evaluate_2d_polynomial(az_coeffs, col, row)
-                            el = evaluate_2d_polynomial(el_coeffs, col, row)
-                            azimuths.append(az)
-                            elevations.append(el)
-                        else:
-                            azimuths.append(np.nan)
-                            elevations.append(np.nan)
-                    except (IndexError, KeyError):
-                        azimuths.append(np.nan)
-                        elevations.append(np.nan)
+            # height is only nan value if geodetic conversion failed
+            invalid = np.isnan(locations.height.value)
+            if np.any(invalid):
+                lats[invalid] = np.nan
+                lons[invalid] = np.nan
 
-                    # Get geodetic coordinates
-                    try:
-                        locations = track.sensor.pixel_to_geodetic(frame, np.array([row]), np.array([col]))
-                        if locations is not None and len(locations) > 0:
-                            lats.append(locations[0].lat.deg)
-                            lons.append(locations[0].lon.deg)
-                        else:
-                            lats.append(np.nan)
-                            lons.append(np.nan)
-                    except Exception:
-                        lats.append(np.nan)
-                        lons.append(np.nan)
-
-                data["ARF Azimuth (rad)"] = np.array(azimuths)
-                data["ARF Elevation (rad)"] = np.array(elevations)
-                data["Latitude"] = np.array(lats)
-                data["Longitude"] = np.array(lons)
+            data["ARF Azimuth (rad)"] = azimuths
+            data["ARF Elevation (rad)"] = elevations
+            data["Latitude"] = lats
+            data["Longitude"] = lons
 
         # Add extraction metadata if available
         if track.extraction_metadata is not None:
