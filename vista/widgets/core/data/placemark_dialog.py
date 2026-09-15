@@ -162,16 +162,16 @@ class PlacemarkDialog(QDialog):
 
             # Try to convert to geodetic if possible
             lat, lon, alt = None, None, None
-            if self.can_geolocate:
-                try:
-                    frame = self.viewer.current_frame_number
-                    location = self.viewer.imagery.sensor.pixel_to_geodetic(frame, np.array([row]), np.array([col]))
-                    # Handle both scalar and array returns
-                    lat = np.atleast_1d(location.lat.deg)[0]
-                    lon = np.atleast_1d(location.lon.deg)[0]
-                    alt = np.atleast_1d(location.height.to(units.km).value)[0]
-                except Exception as e:
+            if self.can_geolocate and self.viewer.imagery.times is not None:
+                frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
+                time = self.viewer.imagery.times[frame_index]
+                location = self.viewer.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
+                lat = location.lat.deg[0]
+                lon = location.lon.deg[0]
+                alt = location.height.to(units.km).value[0]
+                if np.isnan(alt):  # altitude is only nan value if conversion fails
                     print(f"Warning: Could not convert pixel to geodetic: {e}")
+                    lat, lon, alt = None, None, None
 
             return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
         else:

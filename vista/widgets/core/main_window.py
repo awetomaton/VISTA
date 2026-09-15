@@ -1825,18 +1825,15 @@ class VistaMainWindow(QMainWindow):
 
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
-                                if self.viewer.imagery and self.viewer.imagery.sensor.can_geolocate():
-                                    try:
-                                        frame = self.viewer.current_frame_number
-                                        location = self.viewer.imagery.sensor.pixel_to_geodetic(
-                                            frame, np.array([row]), np.array([col])
-                                        )
-                                        lat = np.atleast_1d(location.lat.deg)[0]
-                                        lon = np.atleast_1d(location.lon.deg)[0]
-                                        alt = np.atleast_1d(location.height.to(units.km).value)[0]
-                                    except Exception:
-                                        pass  # Geodetic conversion optional
-
+                                if self.viewer.imagery and self.viewer.imagery.sensor.can_geolocate() and self.viewer.imagery.times is not None:
+                                    frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
+                                    time = self.viewer.imagery.times[frame_index]
+                                    location = self.viewer.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
+                                    lat = location.lat.deg[0]
+                                    lon = location.lon.deg[0]
+                                    alt = location.height.to(units.km).value[0]
+                                    if np.isnan(alt):  # altitude is only nan value if conversion fails
+                                        lat, lon, alt = None, None, None
                             else:
                                 # Use geodetic coordinates and convert to pixel
                                 lat = float(row_data["Latitude"])

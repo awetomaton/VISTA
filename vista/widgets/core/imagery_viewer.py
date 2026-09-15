@@ -1590,29 +1590,24 @@ class ImageryViewer(QWidget):
                 valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
                 if len(valid_indices) > 0:
                     image_index = valid_indices[-1]
-                    frame = self.imagery.frames[image_index]
 
-                    if self.geolocation_enabled and self.imagery.sensor.can_geolocate():
+                    if self.geolocation_enabled and self.imagery.sensor.can_geolocate() and self.imagery.times is not None:
+                        time = self.imagery.times[image_index]
                         # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
-                        rows_array = np.array([row])
-                        cols_array = np.array([col])
+                        location = self.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
 
-                        locations = self.imagery.sensor.pixel_to_geodetic(frame, rows_array, cols_array)
+                        lat = location.lat.deg[0]
+                        lon = location.lon.deg[0]
+                        alt = location.height.to(units.km).value[0]
+                        if np.isnan(alt):  # altitude is only nan value if conversion fails
+                            lat, lon, alt = None, None, None
 
-                        # Extract lat/lon from EarthLocation
-                        if locations is not None and len(locations) > 0:
-                            location = locations[0]
-                            lat = location.lat.deg
-                            lon = location.lon.deg
-
-                            # Check if coordinates are valid (not NaN)
-                            if not (np.isnan(lat) or np.isnan(lon)):
-                                # Update text content
-                                text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
-                                self.geolocation_text.setText(text)
-                                self.geolocation_text.setVisible(True)
-                            else:
-                                self.geolocation_text.setVisible(False)
+                        # Check if coordinates are valid (alt is only NaN coordinate if invalid)
+                        if not np.isnan(alt):
+                            # Update text content
+                            text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
+                            self.geolocation_text.setText(text)
+                            self.geolocation_text.setVisible(True)
                         else:
                             self.geolocation_text.setVisible(False)
 
@@ -3742,37 +3737,6 @@ class ImageryViewer(QWidget):
         ):
             self.projected_image_item.setOpacity(opacity)
 
-    def _project_overlay_coords(
-        self, sensor, frame: int, rows: np.ndarray, cols: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Convert pixel coordinates to (lon, lat) for map view overlay display.
-
-        Parameters
-        ----------
-        sensor : Sensor
-            Sensor for geolocation.
-        frame : int
-            Frame number.
-        rows : np.ndarray
-            Row pixel coordinates.
-        cols : np.ndarray
-            Column pixel coordinates.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            (x_coords, y_coords) where x=longitude and y=latitude in degrees.
-            Invalid projections are set to NaN.
-        """
-        if not sensor.can_geolocate() or len(rows) == 0:
-            return cols, rows  # Fallback to pixel coords
-
-        locations = sensor.pixel_to_geodetic(frame, rows, cols)
-        lons = locations.lon.deg
-        lats = locations.lat.deg
-
-        return lons, lats
-
     def _map_click_to_pixel(self, lon: float, lat: float) -> tuple[float, float]:
         """Convert a map view click position (lon, lat) to pixel (row, col).
 
@@ -3814,12 +3778,15 @@ class ImageryViewer(QWidget):
             (lon, lat) in degrees, or (NaN, NaN) if projection fails.
         """
         sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
-        if sensor is None or not sensor.can_geolocate():
+        if sensor is None or not sensor.can_geolocate() or self.imagery is None or self.imagery.times is None:
             return float("nan"), float("nan")
 
-        locations = sensor.pixel_to_geodetic(self.current_frame_number, np.array([row]), np.array([col]))
+        frame_index = self.imagery.get_frame_index(self.current_frame_number)
+        time = self.imagery.times[frame_index]
+        locations = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
-        if not np.isnan(lon) and not np.isnan(lat):
+        alt = float(location.height.to(units.km).value[0])
+        if not np.isnan(alt):
             return lon, lat
         return float("nan"), float("nan")
