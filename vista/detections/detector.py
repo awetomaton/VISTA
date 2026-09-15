@@ -178,18 +178,13 @@ class Detector:
         if self._cached_lons is not None and self._cached_lats is not None:
             return self._cached_lons, self._cached_lats
 
-        if not self.sensor or not self.sensor.can_geolocate():
+        if not self.sensor.can_geolocate() or self.times is None:
             return None
 
-        # Single vectorized call — sensor handles frame grouping internally
-        locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
+        # Single vectorized call — sensor handles time grouping internally
+        locations = self.sensor.pixel_to_geodetic(self.times, self.rows, self.columns)
         lons = np.asarray(locations.lon.deg, dtype=np.float64)
         lats = np.asarray(locations.lat.deg, dtype=np.float64)
-
-        # Set invalid locations to NaN
-        invalid = (locations.y.value == 0) & (locations.z.value == 0)
-        lons[invalid] = np.nan
-        lats[invalid] = np.nan
 
         self._cached_lons = lons
         self._cached_lats = lats

@@ -50,10 +50,10 @@ your sensor needs.
    * - ``can_geolocate()``
      - Whether pixel ↔ geodetic conversion is supported
      - ``False``
-   * - ``pixel_to_geodetic(frame, rows, columns)``
+   * - ``pixel_to_geodetic(times, rows, columns)``
      - Convert pixel coordinates to geodetic (``EarthLocation``).
-       ``frame`` may be an int or an array of per-point frame numbers.
-     - ``EarthLocation`` at (0, 0, 0)
+       ``times`` may be a np.datetime64 or an array of per-point times.
+     - ``EarthLocation`` at (np.nan, np.nan. np.nan)
    * - ``geodetic_to_pixel(frame, loc)``
      - Convert ``EarthLocation`` to pixel (rows, columns).
        ``frame`` may be an int or an array of per-point frame numbers.
@@ -202,12 +202,12 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
 .. note::
 
-   ``pixel_to_geodetic`` and ``geodetic_to_pixel`` accept ``frame`` as either a single ``int``
-   (for converting many pixels at one frame) **or** a ``numpy`` array of per-point frame numbers
-   (for converting pixels that span multiple frames in a single call). If your sensor's geolocation
-   model is frame-invariant (like the pinhole example below, which ignores ``frame``), both cases
-   work automatically. For frame-dependent sensors, see ``SampledSensor`` for how to handle the
-   array case by grouping points by unique frame.
+   ``pixel_to_geodetic`` and ``geodetic_to_pixel`` accept ``times`` as either a single ``np.datetime64``
+   (for converting many pixels at one time) **or** a ``numpy`` array of per-point timestamps
+   (for converting pixels that span multiple times in a single call). If your sensor's geolocation
+   model is time-invariant (like the pinhole example below, which ignores ``times``), both cases
+   work automatically. For time-dependent sensors, see ``SampledSensor`` for how to handle the
+   array case by grouping points by unique times.
 
 .. code-block:: python
 
@@ -216,14 +216,14 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
            return (self.position_ecef_km is not None and
                    self.rotation_matrix is not None)
 
-       def pixel_to_geodetic(self, frame, rows: np.ndarray,
+       def pixel_to_geodetic(self, times, rows: np.ndarray,
                              columns: np.ndarray) -> EarthLocation:
            """Convert pixel coordinates to geodetic via ray-Earth intersection.
 
            Parameters
            ----------
-           frame : int or np.ndarray
-               Frame number(s). Unused for this static model.
+           times : np.datetime64 or np.ndarray
+               Time(s). Unused for this static model.
            rows : np.ndarray
                Row pixel coordinates.
            columns : np.ndarray
@@ -235,7 +235,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
                Geodetic coordinates for each pixel.
            """
            if not self.can_geolocate():
-               return super().pixel_to_geodetic(frame, rows, columns)
+               return super().pixel_to_geodetic(times, rows, columns)
 
            # Build ray directions in camera frame
            pr, pc = self.principal_point

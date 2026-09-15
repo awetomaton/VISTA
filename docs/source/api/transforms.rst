@@ -70,9 +70,9 @@ this module. See :doc:`../developer_guide/custom_sensors` for the full sensor AP
    import astropy.units as u
 
    # Convert pixel coordinates to geodetic (lat/lon/alt)
-   # frame can be a single int or an array of per-point frame numbers
+   # times can be a single time or an array of per-point times
    location = sensor.pixel_to_geodetic(
-       frame=0,
+       times=np.datetime64('now'),
        rows=np.array([100.0, 200.0]),
        columns=np.array([300.0, 400.0]),
    )

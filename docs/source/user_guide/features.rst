@@ -458,7 +458,7 @@ pixel and geodetic coordinates using the sensor's methods directly:
    # Convert pixel coordinates to geodetic (if sensor data available)
    if sensor.can_geolocate():
        location = sensor.pixel_to_geodetic(
-           frame=0,
+           times=np.datetime64('now'),
            rows=np.array([512.5]),
            columns=np.array([1024.3]),
        )
