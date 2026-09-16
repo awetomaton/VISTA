@@ -1903,11 +1903,26 @@ class VistaMainWindow(QMainWindow):
             self.loader_thread.cancel()
         self.statusBar().showMessage("Loading cancelled", 3000)
 
+    def _close_progress_dialog(self) -> None:
+        """Stop, close, and destroy the active loading progress dialog."""
+        if self.progress_dialog is None:
+            return
+
+        progress_dialog = self.progress_dialog
+        self.progress_dialog = None
+
+        try:
+            progress_dialog.canceled.disconnect(self.on_loading_cancelled)
+        except (TypeError, RuntimeError):
+            pass  # Signal was not connected or already disconnected
+
+        # Stop QProgressDialog before deleting it.
+        progress_dialog.reset()
+        progress_dialog.deleteLater()
+
     def on_loading_error(self, error_message):
         """Handle errors from background loading thread"""
-        if self.progress_dialog:
-            self.progress_dialog.close()
-            self.progress_dialog = None
+        self._close_progress_dialog()
 
         # Clean up any partially loaded imagery from this thread
         uuids_to_remove = [uid for uid, thread in self._loading_imageries.items() if thread == self.loader_thread]
@@ -1936,14 +1951,7 @@ class VistaMainWindow(QMainWindow):
 
     def on_loading_finished(self):
         """Handle thread completion"""
-        if self.progress_dialog:
-            # Disconnect canceled signal before closing to prevent false "Loading cancelled" message
-            try:
-                self.progress_dialog.canceled.disconnect(self.on_loading_cancelled)
-            except (TypeError, RuntimeError):
-                pass  # Signal was not connected or already disconnected
-            self.progress_dialog.close()
-            self.progress_dialog = None
+        self._close_progress_dialog()
 
         # Clean up thread reference
         if self.loader_thread:
