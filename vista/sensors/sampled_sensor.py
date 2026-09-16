@@ -280,57 +280,7 @@ class SampledSensor(Sensor):
         # unpack into xyz arguments
         return EarthLocation.from_geocentric(*result, unit=units.km)
 
-    def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Convert ECEF target positions to pixel coordinates for a single frame index.
-
-        Parameters
-        ----------
-        frame_idx : int
-            Index into self.frames (NOT the frame number itself)
-        target_ecef : np.ndarray
-            ECEF coordinates with shape (3, N)
-
-        Returns
-        -------
-        rows : np.ndarray
-            Row pixel coordinates
-        columns : np.ndarray
-            Column pixel coordinates
-        """
-        # Get sensor position for this frame
-        if self.platform.positions.shape[1] == 1:
-            sensor_pos = self.platform.positions[:, 0]
-        else:
-            time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.platform.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
-
-        # Compute line-of-sight vectors from sensor to targets
-        los_vectors = target_ecef - sensor_pos.reshape(3, 1)
-        los_norms = np.linalg.norm(los_vectors, axis=0, keepdims=True)
-        los_vectors = los_vectors / los_norms
-
-        # Get sensor pointing and compute ECEF → ARF transform
-        sensor_pointing = self.platform.pointings[:, frame_idx]
-        ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
-
-        # Transform ECEF LOS → ARF Cartesian
-        arf_vectors = ecef_to_arf @ los_vectors
-
-        # Convert ARF Cartesian → spherical (azimuth, elevation in radians)
-        azimuth, elevation = cartesian_to_spherical(arf_vectors)
-
-        # Get polynomial coefficients for this frame
-        row_coeffs = self.poly_arf_to_row[frame_idx]
-        col_coeffs = self.poly_arf_to_col[frame_idx]
-
-        # Evaluate polynomials: ARF angles → pixel coordinates
-        rows = evaluate_2d_polynomial(row_coeffs, azimuth, elevation)
-        columns = evaluate_2d_polynomial(col_coeffs, azimuth, elevation)
-
-        return rows, columns
-
-    def geodetic_to_pixel(self, frame: Union[int, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(self, times: Union[np.datetime64, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using ARF polynomials.
 
@@ -340,12 +290,13 @@ class SampledSensor(Sensor):
 
         Parameters
         ----------
-        frame : int or np.ndarray
-            Frame number(s) for which to perform the conversion. If an array,
-            must have the same length as loc and each element specifies the frame
-            for the corresponding location.
+        times : np.datetime64 or np.ndarray
+            Time(s) for which to perform the conversion. If a number, it is assumed
+            that a time axis for the location is not present. If an array, it is
+            expected to have the same length as the final (time) axis of the location,
+            and each element specifies the time for the corresponding location.
         loc : EarthLocation
-            Astropy EarthLocation object(s) containing geodetic coordinates
+            Astropy EarthLocation object(s) containing geodetic coordinates in km
 
         Returns
         -------
@@ -354,63 +305,90 @@ class SampledSensor(Sensor):
         columns : np.ndarray
             Array of column pixel coordinates (NaNs if polynomials unavailable)
 
+        Raises
+        ------
+        ValueError
+            If times is an array and its length does not match the length of the last
+            axis of location
+
         Notes
         -----
-        - Requires ARF polynomials and pointing vectors to be defined
-        - Frame must exist in self.frames array
-        - Returns NaN coordinates if polynomials are not available or frame not found
+        - Requires ARF polynomials to be defined
+        - Returns NaN coordinates if polynomials are not available
         - Properly handles targets at any altitude (not limited to ground level)
         """
-        # If no polynomial coefficients provided, return zeros
-        if not self.can_geolocate() or self.frames is None:
-            try:
-                n_points = len(loc.lat)
-            except TypeError:
-                n_points = 1
-            invalid = np.full_like((n_points,), np.nan, dtype=np.float64)
+        # If no polynomial coefficients provided, return NaN
+        if not self.can_geolocate():
+            invalid = np.full_like(loc.x.value, np.nan, dtype=np.float64)
             return invalid, invalid.copy()
 
-        # Convert geodetic → ECEF Cartesian (km) once for all points
-        target_ecef = np.array(
+        # we want to use numpy arrays, so convert if not an array
+        times = np.asarray(times)
+
+        # we don't want to consider the multidimensional case where times is more than 1d
+        if times.ndim > 1:
+            raise ValueError("times should be a number or 1d array")
+
+        # if passing in a number for the times, assume time axis is missing for rows and columns and add it
+        if times.ndim == 0:
+            loc = loc[..., None]
+        elif times.shape[-1] != loc.shape[-1]:
+            raise ValueError("Length of times must be the same as the last axis of location")
+
+        # utimes = unique times. is an array even if times is a number
+        # also get indices to reconstruct either list
+        # such that times = utimes[times_from_utimes]
+        # and utimes = times[utimes_from_times] (only if times is an array)
+        # indices are number if times is a number, allowing us to extract values without squeezing later
+        utimes, utimes_from_times, times_from_utimes = np.unique(times, return_index=True, return_inverse=True)
+
+        # get sensor position and pointing at the utimes
+        # transpose so that each array has shape utimes.shape + (3,)
+        sensor_pos = self.platform.get_positions(utimes).T
+        sensor_pointing = self.platform.get_pointings(utimes).T
+
+        # shape utimes.shape + (3, 3)
+        ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
+
+        # Convert geodetic → ECEF Cartesian (km) once for all points at the utimes
+        x, y, z = loc.to(units.km).to_geocentric()
+        target_ecef = np.stack(
             [
-                loc.geocentric[0].to(units.km).value,
-                loc.geocentric[1].to(units.km).value,
-                loc.geocentric[2].to(units.km).value,
-            ]
+                x.value[..., utimes_from_times],
+                y.value[..., utimes_from_times],
+                z.value[..., utimes_from_times],
+            ],
+            axis=-1,
         )
-        if target_ecef.ndim == 1:
-            target_ecef = target_ecef.reshape(3, 1)
+        # target_ecef now has shape loc.shape[:-1] + utimes.shape + (3,)
 
-        # Handle array of frames: group by unique frame for efficient batch processing
-        if isinstance(frame, np.ndarray):
-            n_points = target_ecef.shape[1]
-            all_rows = np.zeros(n_points, dtype=np.float64)
-            all_cols = np.zeros(n_points, dtype=np.float64)
+        # Compute line-of-sight vectors from sensor to targets
+        # los_vectors has shape loc.shape[:-1] + utimes.shape + (3,)
+        los_vectors = target_ecef - sensor_pos
 
-            for uframe in np.unique(frame):
-                sensor_mask = self.frames == uframe
-                if not np.any(sensor_mask):
-                    continue  # Unknown frame, leave as zeros
-                frame_idx = np.where(sensor_mask)[0][0]
+        # Transform ECEF LOS → ARF Cartesian
+        # resulting array is of shape (3,) + loc.shape[:-1] + utimes.shape
+        arf_vectors = np.einsum("tij, ...tj -> i...t", ecef_to_arf, los_vectors)
 
-                point_mask = frame == uframe
-                r, c = self._geodetic_to_pixel_single_frame(
-                    frame_idx,
-                    target_ecef[:, point_mask],
-                )
-                all_rows[point_mask] = r
-                all_cols[point_mask] = c
+        # Convert ARF Cartesian → spherical (azimuth, elevation in radians)
+        # each resulting array is of shape loc.shape[:-1] + utimes.shape
+        azimuth, elevation = cartesian_to_spherical(arf_vectors)
 
-            return all_rows, all_cols
+        # Get polynomial coefficients for unique times
+        # arrays are of shape utimes.shape + (num_coeffs,)
+        row_coeffs = self.get_coefficients(self.poly_arf_to_row, utimes)
+        col_coeffs = self.get_coefficients(self.poly_arf_to_col, utimes)
 
-        # Single frame path (original fast path)
-        frame_mask = self.frames == frame
-        if not np.any(frame_mask):
-            invalid = np.full_like((target_ecef.shape[1],), np.nan, np.float64)
-            return invalid, invalid.copy()
+        # Evaluate polynomials: ARF angles → pixel coordinates
+        # output is of shape loc.shape[:-1] + utimes.shape
+        rows = evaluate_2d_polynomial(row_coeffs, azimuth, elevation)
+        columns = evaluate_2d_polynomial(col_coeffs, azimuth, elevation)
 
-        frame_idx = np.where(frame_mask)[0][0]
-        return self._geodetic_to_pixel_single_frame(frame_idx, target_ecef)
+        # convert to size of original times
+        final_rows = rows[..., times_from_utimes]
+        final_cols = columns[..., times_from_utimes]
+
+        return final_rows, final_cols
 
     def to_hdf5(self, group: h5py.Group):
         """
