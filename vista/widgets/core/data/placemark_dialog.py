@@ -182,12 +182,10 @@ class PlacemarkDialog(QDialog):
 
             # Convert to pixel coordinates
             try:
-                frame = self.viewer.current_frame_number
+                frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
+                time = self.viewer.imagery.times[frame_index]
                 location = EarthLocation(lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km)
-                rows, cols = self.viewer.imagery.sensor.geodetic_to_pixel(frame, location)
-                # Handle both scalar and array returns
-                row = np.atleast_1d(rows)[0]
-                col = np.atleast_1d(cols)[0]
+                row, col = self.viewer.imagery.sensor.geodetic_to_pixel(time, location)
 
                 if np.isnan(row) or np.isnan(col):
                     QMessageBox.warning(

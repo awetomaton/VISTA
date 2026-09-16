@@ -66,20 +66,18 @@ class KnownSources:
         raise NotImplementedError
 
     def get_pixels(
-        self, imagery: Imagery, frames: Union[int, NDArray], times: Union[np.datetime64, NDArray[np.datetime64], Time]
+        self, imagery: Imagery, times: Union[np.datetime64, NDArray[np.datetime64], Time]
     ) -> Tuple[NDArray, NDArray]:
         """
-        Return the pixel positions of the source for the provided imagery and frame number(s).
+        Return the pixel positions of the source for the provided imagery and time(s).
         Sources which are off-frame or behind the Earth have NaN locations
 
         Parameters
         ----------
         imagery: Imagery
             The imagery we want to project the source onto
-        frames : int, NDArray
-            The frame number(s) to project onto
         times : np.datetime64, NDArray[np.datetime64], astropy.time.Time
-            The time(s) corresponding to the frame number(s)
+            The time(s) to project at
 
         Returns
         -------
@@ -116,14 +114,15 @@ class KnownSources:
         # set their source positions to nan, as we don't care about their pixel positions
         source_positions[~np.isnan(d)] = np.nan
 
-        # now squeeze out time axis if number was passed in
-        if np.asarray(times).ndim == 0:
-            source_positions = np.squeeze(source_positions, axis=-2)
-
         # convert from ECEF to ARF to pixels
         # move xyz axis to start so we can unpack
         earth_loc = EarthLocation(*np.moveaxis(source_positions, -1, 0), unit=u.km)
-        rows, columns = sensor.geodetic_to_pixel(frames, earth_loc)
+        rows, columns = sensor.geodetic_to_pixel(times_array, earth_loc)
+
+        # now squeeze out time axis if number was passed in
+        if np.asarray(times).ndim == 0:
+            rows = np.squeeze(rows, axis=-1)
+            columns = np.squeeze(columns, axis=-1)
 
         # Only display objects within the image frame
         # TODO: Handle when there's a cropped image
@@ -174,7 +173,7 @@ class KnownSources:
             raise ValueError("imagery.times is None, cannot create tracks without frame <-> time mapping")
 
         tracks = []
-        rows, columns = self.get_pixels(imagery, imagery.frames, imagery.times)
+        rows, columns = self.get_pixels(imagery, imagery.times)
 
         for source, source_type, row, column in zip(self.source_names, self.source_types, rows, columns):
             slices = self._get_slices(row)  # columns should have the same valid slices

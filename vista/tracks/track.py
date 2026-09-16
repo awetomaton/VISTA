@@ -557,6 +557,11 @@ class Track:
         if "Frames" in df.columns:
             # Frames take precedence
             frames = df["Frames"].to_numpy()
+            # get time mapping just in case we need it below
+            if times is None and imagery is not None and imagery.times is not None:
+                frame_indices = [imagery.get_frame_index(f) for f in frames]
+                if np.all([f is not None for f in frame_indices]):
+                    times = imagery.times[frame_indices]
         elif times is not None:
             if imagery is None or imagery.times is None or len(imagery.times) == 0:
                 raise ValueError(
@@ -615,6 +620,11 @@ class Track:
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
                     "does not support geolocation."
                 )
+            if times is None:
+                raise ValueError(
+                    f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no corresponding times. "
+                    "Times required for geodetic-to-pixel mapping."
+                )
             initial_lons = df["Longitude (deg)"].to_numpy(dtype=np.float64)
             initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
             # Map geodetic to pixel using sensor
@@ -622,7 +632,7 @@ class Track:
                 initial_lats,
                 initial_lons,
                 df["Altitude (km)"].to_numpy(),
-                frames,
+                times,
                 sensor,
             )
         else:

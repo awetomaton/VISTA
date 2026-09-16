@@ -54,9 +54,9 @@ your sensor needs.
      - Convert pixel coordinates to geodetic (``EarthLocation``).
        ``times`` may be a np.datetime64 or an array of per-point times.
      - ``EarthLocation`` at (np.nan, np.nan. np.nan)
-   * - ``geodetic_to_pixel(frame, loc)``
+   * - ``geodetic_to_pixel(times, loc)``
      - Convert ``EarthLocation`` to pixel (rows, columns).
-       ``frame`` may be an int or an array of per-point frame numbers.
+       ``times`` may be a np.datetime64 or an array of per-point times.
      - ``NaN`` arrays
    * - ``model_psf(sigma, size)``
      - Return a 2D PSF kernel
@@ -259,14 +259,14 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
                z=intersections[...,2] * units.km,
            )
 
-       def geodetic_to_pixel(self, frame,
+       def geodetic_to_pixel(self, times,
                              loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
            """Convert geodetic coordinates to pixel coordinates.
 
            Parameters
            ----------
-           frame : int or np.ndarray
-               Frame number(s). Unused for this static model.
+           times : np.datetime64 or np.ndarray
+               Time(s). Unused for this static model.
            loc : EarthLocation
                Geodetic coordinates to project.
 
@@ -278,7 +278,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
                Column pixel coordinates.
            """
            if not self.can_geolocate():
-               return super().geodetic_to_pixel(frame, loc)
+               return super().geodetic_to_pixel(times, loc)
 
            # Target ECEF positions in km
            target = np.array([

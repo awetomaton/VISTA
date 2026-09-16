@@ -1548,18 +1548,18 @@ class ImageryViewer(QWidget):
                 earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
                 # Get current frame
                 valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
+                if len(valid_indices) > 0 and self.imagery.times is not None:
                     image_index = valid_indices[-1]
-                    frame = self.imagery.frames[image_index]
-                    src_rows, src_cols = self.imagery.sensor.geodetic_to_pixel(frame, earth_loc)
-                    row_int = int(np.round(src_rows[0])) - self.imagery.row_offset
-                    col_int = int(np.round(src_cols[0])) - self.imagery.column_offset
+                    time = self.imagery.times[image_index]
+                    src_rows, src_cols = self.imagery.sensor.geodetic_to_pixel(time, earth_loc)
+                    row_int = int(np.round(src_rows)) - self.imagery.row_offset
+                    col_int = int(np.round(src_cols)) - self.imagery.column_offset
                     img_shape = self.imagery.images[0].shape
                     if (
                         0 <= row_int < img_shape[0]
                         and 0 <= col_int < img_shape[1]
-                        and not np.isnan(src_rows[0])
-                        and not np.isnan(src_cols[0])
+                        and not np.isnan(src_rows)
+                        and not np.isnan(src_cols)
                     ):
                         pixel_value = self.imagery.images[image_index, row_int, col_int]
                         text = f"({col_int}, {row_int}: {pixel_value:.2f})"
@@ -1991,15 +1991,22 @@ class ImageryViewer(QWidget):
         -------
         pixel_x : np.ndarray
             Column (x) pixel coordinates.
+            NaN if current frame has no time.
         pixel_y : np.ndarray
             Row (y) pixel coordinates.
+            NaN if current frame has no time.
         """
         earth_locs = EarthLocation.from_geodetic(
             lon=all_lons * units.deg,
             lat=all_lats * units.deg,
             height=0 * units.m,
         )
-        rows, cols = self.selected_sensor.geodetic_to_pixel(self.current_frame_number, earth_locs)
+        if self.imagery.times is None:
+            invalid = np.full_like(all_lons, np.nan, dtype=np.float64)
+            return invalid, invalid.copy()
+        frame_index = self.imagery.get_frame_index(self.current_frame_number)
+        time = self.imagery.times[frame_index]
+        rows, cols = self.selected_sensor.geodetic_to_pixel(time, earth_locs)
         return cols, rows
 
     def _render_shapefile(self, feature):
@@ -3613,7 +3620,7 @@ class ImageryViewer(QWidget):
 
     def _update_projected_imagery(self, image=None) -> None:
         """Update the projected VISTA imagery display in map mode."""
-        if not self.map_view_mode or self.imagery is None or self.imagery_projector is None:
+        if not self.map_view_mode or self.imagery is None or self.imagery.times is None or self.imagery_projector is None:
             return
 
         if self.projected_image_item is None:
@@ -3679,11 +3686,11 @@ class ImageryViewer(QWidget):
             if image_index >= self.imagery.loaded_frame_count:
                 image_index = max(0, self.imagery.loaded_frame_count - 1)
 
-        frame = self.imagery.frames[image_index]
+        time = self.imagery.times[image_index]
         zoom_level = self._current_zoom_level if self._current_zoom_level is not None else 0
 
         # Check projection cache
-        cached = self.projection_cache.get(self.imagery.uuid, frame, zoom_level, output_bbox)
+        cached = self.projection_cache.get(self.imagery.uuid, time, zoom_level, output_bbox)
         if cached is not None:
             projected = cached
         else:
@@ -3694,7 +3701,7 @@ class ImageryViewer(QWidget):
             # which runs on CPU regardless, so the GPU path only adds transfer overhead.
             projected = self.imagery_projector.project_frame_cpu(
                 image,
-                frame,
+                time,
                 output_bbox,
                 output_width,
                 output_height,
@@ -3703,7 +3710,7 @@ class ImageryViewer(QWidget):
             )
 
             # Cache the result
-            self.projection_cache.put(self.imagery.uuid, frame, zoom_level, output_bbox, projected)
+            self.projection_cache.put(self.imagery.uuid, time, zoom_level, output_bbox, projected)
 
         # Display the projected image
         self.projected_image_item.setImage(projected, autoLevels=False)
@@ -3753,13 +3760,15 @@ class ImageryViewer(QWidget):
             (row, col) in pixel coordinates, or (NaN, NaN) if projection fails.
         """
         sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
-        if sensor is None or not sensor.can_geolocate():
+        if sensor is None or not sensor.can_geolocate() or self.imagery is None or self.imagery.times is None:
             return float("nan"), float("nan")
 
         earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
-        rows, cols = sensor.geodetic_to_pixel(self.current_frame_number, earth_loc)
-        if len(rows) > 0 and not np.isnan(rows[0]) and not np.isnan(cols[0]):
-            return float(rows[0]), float(cols[0])
+        frame_index = self.imagery.get_frame_index(self.current_frame_number)
+        time = self.imagery.times[frame_index]
+        row, col = sensor.geodetic_to_pixel(time, earth_loc)
+        if not np.isnan(row) and not np.isnan(col):
+            return float(row), float(col)
         return float("nan"), float("nan")
 
     def _pixel_to_map(self, row: float, col: float) -> tuple[float, float]:

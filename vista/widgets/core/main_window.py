@@ -591,7 +591,7 @@ class VistaMainWindow(QMainWindow):
         self.map_view_action.setCheckable(True)
         self.map_view_action.setChecked(False)
         self.map_view_action.setEnabled(False)
-        self.map_view_action.setToolTip("Toggle WMS map view (requires geolocatable sensor)")
+        self.map_view_action.setToolTip("Toggle WMS map view (requires geolocatable sensor and imagery with times)")
         self.map_view_action.toggled.connect(self.on_map_view_toggled)
         toolbar.addAction(self.map_view_action)
 
@@ -1825,7 +1825,7 @@ class VistaMainWindow(QMainWindow):
 
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
-                                if self.viewer.imagery and self.viewer.imagery.sensor.can_geolocate() and self.viewer.imagery.times is not None:
+                                if self.viewer.imagery is not None and self.viewer.imagery.sensor.can_geolocate() and self.viewer.imagery.times is not None:
                                     frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
                                     time = self.viewer.imagery.times[frame_index]
                                     location = self.viewer.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
@@ -1840,13 +1840,18 @@ class VistaMainWindow(QMainWindow):
                                 lon = float(row_data["Longitude"])
                                 alt = float(row_data.get("Altitude", 0.0))
 
-                                frame = self.viewer.current_frame_number
+                                if self.viewer.imagery.times is None:
+                                    errors.append(
+                                        f"{Path(file_path).name} row {idx}: Current imagery has no times to map geodetics to pixels"
+                                    )
+                                    continue
+
                                 location = EarthLocation(
                                     lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km
                                 )
-                                rows, cols = self.viewer.imagery.sensor.geodetic_to_pixel(frame, location)
-                                row = np.atleast_1d(rows)[0]
-                                col = np.atleast_1d(cols)[0]
+                                frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
+                                time = self.viewer.imagery.times[frame_index]
+                                row, col = self.viewer.imagery.sensor.geodetic_to_pixel(time, location)
 
                                 if np.isnan(row) or np.isnan(col):
                                     errors.append(

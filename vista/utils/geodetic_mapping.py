@@ -5,13 +5,15 @@ import numpy as np
 from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
 
+from vista.sensors.sensor import Sensor
+
 
 def map_geodetic_to_pixel(
     latitudes: NDArray[np.float64],
     longitudes: NDArray[np.float64],
     altitudes: NDArray[np.float64],
-    frames: NDArray[np.int_],
-    sensor,
+    times: NDArray[np.datetime64],
+    sensor: Sensor,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """
     Map geodetic coordinates (lat/lon/alt) to pixel coordinates (row/col) using sensor.
@@ -24,8 +26,8 @@ def map_geodetic_to_pixel(
         Array of longitude values in degrees
     altitudes : NDArray[np.float64]
         Array of altitude values in kilometers
-    frames : NDArray[np.int_]
-        Array of frame numbers corresponding to each position
+    times : NDArray[np.datetime64]
+        Array of times corresponding to each position
     sensor : Sensor
         Sensor object with geodetic_to_pixel conversion capability
 
@@ -44,13 +46,13 @@ def map_geodetic_to_pixel(
             "Sensor does not have geodetic conversion capability. Cannot convert lat/lon to row/col coordinates."
         )
 
-    if len(latitudes) != len(longitudes) or len(latitudes) != len(altitudes) or len(latitudes) != len(frames):
-        raise ValueError("Latitude, longitude, altitude, and frames arrays must have the same length")
+    if len(latitudes) != len(longitudes) or len(latitudes) != len(altitudes) or len(latitudes) != len(times):
+        raise ValueError("Latitude, longitude, altitude, and times arrays must have the same length")
 
     # Build EarthLocation for all points at once
     locations = EarthLocation(lat=latitudes * u.deg, lon=longitudes * u.deg, height=altitudes * u.km)
 
-    # Single vectorized call — sensor handles frame grouping internally
-    rows, columns = sensor.geodetic_to_pixel(frames, locations)
+    # Single vectorized call — sensor handles time grouping internally
+    rows, columns = sensor.geodetic_to_pixel(times, locations)
 
     return rows, columns

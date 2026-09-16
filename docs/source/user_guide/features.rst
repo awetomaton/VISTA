@@ -472,7 +472,7 @@ pixel and geodetic coordinates using the sensor's methods directly:
            lon=-80.6480 * u.deg,
            height=0.0 * u.m,
        )
-       rows, cols = sensor.geodetic_to_pixel(frame=0, loc=loc)
+       rows, cols = sensor.geodetic_to_pixel(times=np.datetime64('now'), loc=loc)
 
 Use Cases
 ~~~~~~~~~
@@ -591,7 +591,7 @@ transforms these to pixel coordinates using the imagery's geolocation data:
            lon=shapefile_lon * u.deg,
            height=0.0 * u.m,
        )
-       rows, cols = imagery.sensor.geodetic_to_pixel(frame=0, loc=loc)
+       rows, cols = imagery.sensor.geodetic_to_pixel(times=np.datetime64('now'), loc=loc)
 
 Shapefile Attributes
 ~~~~~~~~~~~~~~~~~~~~
