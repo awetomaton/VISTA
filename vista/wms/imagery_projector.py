@@ -174,7 +174,7 @@ class ImageryProjector:
             earth_locs = EarthLocation.from_geodetic(
                 lon=coarse_lon_grid.ravel() * units.deg,
                 lat=coarse_lat_grid.ravel() * units.deg,
-                height=0 * units.m,
+                height=0 * units.km,
             )
             c_rows, c_cols = self.sensor.geodetic_to_pixel(time, earth_locs)
             c_rows = np.asarray(c_rows).ravel()
@@ -216,7 +216,7 @@ class ImageryProjector:
             earth_locs = EarthLocation.from_geodetic(
                 lon=lon_grid.ravel() * units.deg,
                 lat=lat_grid.ravel() * units.deg,
-                height=0 * units.m,
+                height=0 * units.km,
             )
             src_rows, src_cols = self.sensor.geodetic_to_pixel(time, earth_locs)
             src_rows = np.asarray(src_rows).ravel() - row_offset
@@ -379,7 +379,7 @@ class ImageryProjector:
         earth_locs = EarthLocation.from_geodetic(
             lon=flat_lons * units.deg,
             lat=flat_lats * units.deg,
-            height=0 * units.m,
+            height=0 * units.km,
         )
         src_rows, src_cols = self.sensor.geodetic_to_pixel(time, earth_locs)
         src_rows = src_rows - row_offset

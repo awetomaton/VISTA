@@ -1545,7 +1545,7 @@ class ImageryViewer(QWidget):
 
             if self.pixel_value_enabled and self.imagery.sensor.can_geolocate():
                 # Reverse-project (lon, lat) to pixel coordinates to read pixel value
-                earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
+                earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
                 # Get current frame
                 valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
                 if len(valid_indices) > 0 and self.imagery.times is not None:
@@ -1999,7 +1999,7 @@ class ImageryViewer(QWidget):
         earth_locs = EarthLocation.from_geodetic(
             lon=all_lons * units.deg,
             lat=all_lats * units.deg,
-            height=0 * units.m,
+            height=0 * units.km,
         )
         if self.imagery.times is None:
             invalid = np.full_like(all_lons, np.nan, dtype=np.float64)
@@ -3763,7 +3763,7 @@ class ImageryViewer(QWidget):
         if sensor is None or not sensor.can_geolocate() or self.imagery is None or self.imagery.times is None:
             return float("nan"), float("nan")
 
-        earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
+        earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
         frame_index = self.imagery.get_frame_index(self.current_frame_number)
         time = self.imagery.times[frame_index]
         row, col = sensor.geodetic_to_pixel(time, earth_loc)
