@@ -262,9 +262,8 @@ class PlaybackControls(QWidget):
     def on_fps_spinbox_changed(self, value):
         """Handle FPS spinbox change"""
         if value == 0:
-            # Don't allow 0 FPS, skip to 1 or -1
-            if self.fps_spinbox.value() == 0:
-                self.fps_spinbox.setValue(1 if self.playback_direction > 0 else -1)
+            # Don't allow 0 FPS, skip to 1 or -1 (-playback direction)
+            self.fps_spinbox.setValue(-self.playback_direction)
             return
 
         self.fps = abs(value)
