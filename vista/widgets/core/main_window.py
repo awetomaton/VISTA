@@ -178,7 +178,7 @@ class VistaMainWindow(QMainWindow):
 
         # Create playback controls
         self.controls = PlaybackControls()
-        self.controls.frame_changed = self.on_frame_changed
+        self.controls.index_changed = self.on_frame_changed
         # Connect time display to imagery viewer
         self.controls.get_current_time = self.viewer.get_current_time
         main_layout.addWidget(self.controls)
@@ -1039,13 +1039,13 @@ class VistaMainWindow(QMainWindow):
         else:
             self.viewer.select_imagery(imagery)
 
-        # Update playback controls with frame range (block slider signals to avoid
-        # a redundant set_frame_number call via on_frame_changed)
+        # Update playback controls with index range (block slider signals to avoid
+        # a redundant set_index_number call via on_frame_changed)
         min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_frame_range(min_frame, max_frame)
-        self.controls.frame_slider.blockSignals(True)
-        self.controls.set_frame(min_frame)
-        self.controls.frame_slider.blockSignals(False)
+        self.controls.set_index_range(min_frame, max_frame)
+        self.controls.index_slider.blockSignals(True)
+        self.controls.set_index(min_frame)
+        self.controls.index_slider.blockSignals(False)
 
         # Disable algorithm actions while loading
         self._update_algorithm_actions_state()
@@ -1065,7 +1065,7 @@ class VistaMainWindow(QMainWindow):
         # If the currently displayed imagery just got more frames, update frame range and status bar
         if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
             min_frame, max_frame = self.viewer.get_frame_range()
-            self.controls.set_frame_range(min_frame, max_frame)
+            self.controls.set_index_range(min_frame, max_frame)
             total = len(self.viewer.imagery.frames)
             self.statusBar().showMessage(
                 f"Loading imagery: {self.viewer.imagery.name} ({loaded_count}/{total} frames)...", 0
@@ -1115,7 +1115,7 @@ class VistaMainWindow(QMainWindow):
         # Update frame range
         if self.viewer.imagery is not None:
             min_frame, max_frame = self.viewer.get_frame_range()
-            self.controls.set_frame_range(min_frame, max_frame)
+            self.controls.set_index_range(min_frame, max_frame)
 
         if imagery is not None and imagery in self.viewer.imageries:
             self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery.frames)} frames)", 3000)
@@ -1160,15 +1160,15 @@ class VistaMainWindow(QMainWindow):
         """Update frame range controls to match the viewer's current state.
 
         Syncs the slider range and position to the viewer without calling
-        set_frame_number again (the caller is expected to have already
-        updated the viewer via select_imagery or set_frame_number).
+        set_index_number again (the caller is expected to have already
+        updated the viewer via select_imagery or set_index_number).
         """
         min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_frame_range(min_frame, max_frame)
+        self.controls.set_index_range(min_frame, max_frame)
         # Sync the slider to the viewer's current frame without triggering on_frame_changed
-        self.controls.frame_slider.blockSignals(True)
-        self.controls.set_frame(self.viewer.current_frame_number)
-        self.controls.frame_slider.blockSignals(False)
+        self.controls.index_slider.blockSignals(True)
+        self.controls.set_index(self.viewer.current_frame_number)
+        self.controls.index_slider.blockSignals(False)
 
     def load_detections_file(self, file_paths=None):
         """Load detections from CSV file(s) using background thread
@@ -1340,7 +1340,7 @@ class VistaMainWindow(QMainWindow):
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
         if max_frame > 0:
-            self.controls.set_frame_range(min_frame, max_frame)
+            self.controls.set_index_range(min_frame, max_frame)
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -1599,7 +1599,7 @@ class VistaMainWindow(QMainWindow):
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
         if max_frame > 0:
-            self.controls.set_frame_range(min_frame, max_frame)
+            self.controls.set_index_range(min_frame, max_frame)
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -2261,7 +2261,7 @@ class VistaMainWindow(QMainWindow):
         frame_range = self.viewer.clear_overlays()
         min_frame, max_frame = frame_range
         if max_frame > 0:
-            self.controls.set_frame_range(min_frame, max_frame)
+            self.controls.set_index_range(min_frame, max_frame)
         self.data_manager.refresh()
 
     def toggle_data_manager(self, checked):
@@ -3207,7 +3207,7 @@ class VistaMainWindow(QMainWindow):
         # Update playback controls with new frame range
         min_frame, max_frame = self.viewer.get_frame_range()
         if max_frame > 0:
-            self.controls.set_frame_range(min_frame, max_frame)
+            self.controls.set_index_range(min_frame, max_frame)
 
         # Refresh data manager to show loaded data
         self.data_manager.refresh()
@@ -3284,11 +3284,11 @@ class VistaMainWindow(QMainWindow):
             return
 
         if (key == Qt.Key.Key_Left) or (key == Qt.Key.Key_A):
-            # Left arrow - previous frame
-            self.controls.prev_frame()
+            # Left arrow - previous index
+            self.controls.prev_index()
         elif (key == Qt.Key.Key_Right) or (key == Qt.Key.Key_D):
-            # Right arrow - next frame
-            self.controls.next_frame()
+            # Right arrow - next index
+            self.controls.next_index()
         elif key == Qt.Key.Key_Space:
             # Spacebar - toggle play/pause
             self.controls.toggle_play()
