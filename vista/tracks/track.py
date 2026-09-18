@@ -19,12 +19,13 @@ from PyQt6.QtCore import Qt
 
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
 from vista.utils.time_mapping import map_times_to_frames
 
 
-@dataclass
-class Track:
+@dataclass(kw_only=True)
+class Track(TemporalData):
     """
     Represents a single object trajectory across multiple frames.
 
@@ -102,11 +103,10 @@ class Track:
     """
 
     name: str
-    frames: NDArray[np.int_]
+    frames: NDArray[np.int_] = field()  # make frames a requirement for Tracks
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
-    times: Optional[NDArray[np.datetime64]] = None
     # Styling attributes
     color: str = "g"  # Green by default
     marker: str = "o"  # Circle by default
@@ -132,7 +132,6 @@ class Track:
     _length: int = field(init=False, default=None)
 
     # Performance optimization: cached data structures
-    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> index
     _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
     _cached_brush: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph brush
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
@@ -142,12 +141,7 @@ class Track:
     uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
-        if self.times is not None:
-            self.times = np.asarray(self.times, dtype="datetime64[ns]")
-            if self.times.ndim != 1:
-                raise ValueError("times must be a one-dimensional array")
-            if len(self.times) != len(self.frames):
-                raise ValueError("times must have the same length as frames")
+        super().__post_init__()
         self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
@@ -203,13 +197,6 @@ class Track:
         s += "\n" + len(s) * "-" + "\n"
         s += str(self.to_dataframe())
         return s
-
-    def _build_frame_index(self):
-        """Build index mapping frame numbers to track indices for O(1) lookup."""
-        if self._frame_index is None:
-            self._frame_index = {}
-            for i, frame in enumerate(self.frames):
-                self._frame_index[frame] = i
 
     def get_track_data_at_frame(self, frame_num):
         """
@@ -289,7 +276,7 @@ class Track:
 
     def invalidate_caches(self):
         """Invalidate cached data structures when track data changes."""
-        self._frame_index = None
+        super().invalidate_caches()
         self._cached_pen = None
         self._cached_brush = None
         self._pen_params = None

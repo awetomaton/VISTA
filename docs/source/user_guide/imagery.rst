@@ -710,7 +710,7 @@ VISTA supports efficient imagery slicing:
    frame_0 = imagery.images[0]  # First frame as 2D array
 
    # Frame number lookup
-   frame_idx = imagery.get_frame_index(42)  # Index of frame number 42
+   frame_idx = imagery.get_index(42, is_time=False)  # Index of frame number 42
    if frame_idx is not None:
        frame_data = imagery.images[frame_idx]
 

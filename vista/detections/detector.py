@@ -11,11 +11,12 @@ from numpy.typing import NDArray
 
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 from vista.utils.time_mapping import map_times_to_frames
 
 
-@dataclass
-class Detector:
+@dataclass(kw_only=True)
+class Detector(TemporalData):
     """
     Collection of detection points from a detection algorithm or manual creation.
 
@@ -79,11 +80,10 @@ class Detector:
     """
 
     name: str
-    frames: NDArray[np.int_]
+    frames: NDArray[np.int_] = field()  # make frames a requirement for Detectors
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
-    times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
 
     # Styling attributes
@@ -100,7 +100,6 @@ class Detector:
     labelers: list[Optional[str]] = field(default_factory=list)  # Username that last labeled each detection
 
     # Performance optimization: cached data structures
-    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
     _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
     _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
@@ -108,12 +107,7 @@ class Detector:
     uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
-        if self.times is not None:
-            self.times = np.asarray(self.times, dtype="datetime64[ns]")
-            if self.times.ndim != 1:
-                raise ValueError("times must be a one-dimensional array")
-            if len(self.times) != len(self.frames):
-                raise ValueError("times must have the same length as frames")
+        super().__post_init__()
         self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
@@ -122,9 +116,16 @@ class Detector:
         return self.uuid == other.uuid
 
     def _build_frame_index(self):
-        """Build index mapping frame numbers to detection indices for O(1) lookup."""
+        """
+        Build index mapping frame numbers to detection indices for O(1) lookup.
+
+        Since multiple detections can share a frame, this index needs to override
+        the parent class method to return a list of indices.
+        """
         if self._frame_index is None:
             self._frame_index = {}
+            if self.frames is None:
+                return
             for i, frame in enumerate(self.frames):
                 if frame not in self._frame_index:
                     self._frame_index[frame] = []
@@ -181,7 +182,7 @@ class Detector:
 
     def invalidate_caches(self):
         """Invalidate cached data structures when detector data changes."""
-        self._frame_index = None
+        super().invalidate_caches()
         self._cached_pen = None
         self._pen_params = None
         self._cached_lons = None

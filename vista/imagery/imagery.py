@@ -15,6 +15,7 @@ from numpy.typing import NDArray
 
 from vista.aoi import AOI
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 
 try:
     import torch
@@ -24,8 +25,8 @@ except ImportError:
     HAS_TORCH = False
 
 
-@dataclass
-class Imagery:
+@dataclass(kw_only=True)
+class Imagery(TemporalData):
     """
     Container for multi-frame imagery datasets with metadata.
 
@@ -117,11 +118,10 @@ class Imagery:
 
     name: str
     images: NDArray[np.float32]
-    frames: NDArray[np.int_]
+    frames: NDArray[np.int_] = field()  # make frames a requirement for Imagery
     sensor: Optional[Sensor] = None
     row_offset: int = None
     column_offset: int = None
-    times: Optional[NDArray[np.datetime64]] = None
     description: str = ""
     filename: str = ""  # filename where this imagery came from
     # Cached histograms for performance (computed lazily)
@@ -140,13 +140,10 @@ class Imagery:
     _gpu_device: Optional[str] = field(default=None, init=False, repr=False)
 
     # Performance optimization: cached data structures
-    _frame_index: Optional[dict[int, int]] = field(default=None, init=False, repr=False)  # Frame number -> index
-    _frames_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether frames are sorted
-    _time_index: Optional[dict[np.datetime64, int]] = field(default=None, init=False, repr=False)  # Time -> index
-    _times_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether times are sorted
     _histogram_bins: Optional[NDArray] = field(default=None, init=False, repr=False)  # Pre-computed histogram bin edges
 
     def __post_init__(self):
+        super().__post_init__()
         if self.row_offset is None:
             self.row_offset = 0
         if self.column_offset is None:
@@ -313,94 +310,9 @@ class Imagery:
             pass
         return device
 
-    def _check_frames_sorted(self):
-        """Check if frames array is sorted for binary search optimization."""
-        if self._frames_sorted is None:
-            self._frames_sorted = np.all(self.frames[:-1] <= self.frames[1:])
-        return self._frames_sorted
-
-    def _check_times_sorted(self):
-        """Check if times array is sorted for binary search optimization."""
-        if self.times is not None and self._times_sorted is None:
-            self._times_sorted = np.all(self.times[:-1] <= self.times[1:])
-        return self._times_sorted
-    
-    def _build_frame_index(self):
-        """Build index mapping frame numbers to indices for O(1) lookup."""
-        if self._frame_index is None:
-            self._frame_index = {}
-            for i, frame in enumerate(self.frames):
-                self._frame_index[frame] = i
-
-    def _build_time_index(self):
-        """Build index mapping times to indices for O(1) lookup."""
-        if self._time_index is None:
-            self._time_index = {}
-            for i, time in enumerate(self.times):
-                self._time_index[time] = i
-
-    def get_frame_index(self, frame_num: int) -> Optional[int]:
-        """
-        Get array index for a specific frame number using efficient lookup.
-
-        Uses binary search if frames are sorted (O(log n)), otherwise uses
-        cached dictionary lookup (O(1)).
-
-        Parameters
-        ----------
-        frame_num : int
-            Frame number to find
-
-        Returns
-        -------
-        int or None
-            Array index for the frame, or None if frame not found
-        """
-        # If frames are sorted, use binary search
-        if self._check_frames_sorted():
-            idx = np.searchsorted(self.frames, frame_num)
-            if idx < len(self.frames) and self.frames[idx] == frame_num:
-                return idx
-            return None
-        else:
-            # Use dictionary lookup for unsorted frames
-            self._build_frame_index()
-            return self._frame_index.get(frame_num)
-
-    def get_time_index(self, time: np.datetime64) -> Optional[int]:
-        """
-        Get array index for a specific time using efficient lookup.
-
-        Uses binary search if times are sorted (O(log n)), otherwise uses
-        cached dictionary lookup (O(1)).
-
-        Parameters
-        ----------
-        time : np.datetime64[ns]
-            Time to find
-
-        Returns
-        -------
-        int or None
-            Array index for the time, or None if time not found
-        """
-        # If times are sorted, use binary search
-        if self._check_times_sorted():
-            idx = np.searchsorted(self.times, time)
-            if idx < len(self.times) and self.times[idx] == time:
-                return idx
-            return None
-        else:
-            # Use dictionary lookup for unsorted frames
-            self._build_time_index()
-            return self._time_index.get(time)
-
     def invalidate_caches(self):
         """Invalidate cached data structures when imagery data changes."""
-        self._frame_index = None
-        self._frames_sorted = None
-        self._time_index = None
-        self._times_sorted = None
+        super().invalidate_caches()
         self._histograms = None
         self._histogram_bins = None
         self.default_histogram_bounds = {}
