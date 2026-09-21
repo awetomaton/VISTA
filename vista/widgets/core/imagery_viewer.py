@@ -642,8 +642,6 @@ class ImageryViewer(QWidget):
 
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
-        # Get current frame number
-        frame_num = self.current_frame_number
 
         # Clean up orphaned detector plot items (detectors that have been removed)
         current_detector_uuids = {detector.uuid for detector in self.detectors}
@@ -678,7 +676,10 @@ class ImageryViewer(QWidget):
             if detector.complete:
                 det_mask = np.ones(len(detector.frames), dtype=bool)
             else:
-                det_mask = detector.frames == frame_num
+                if self.timeline.is_time:
+                    det_mask = detector.times == self.timeline.current_value
+                else:
+                    det_mask = detector.frames == self.timeline.current_value
 
             # Apply label filter if detections panel has active filters
             if np.any(det_mask):
@@ -794,9 +795,8 @@ class ImageryViewer(QWidget):
                 else:
                     path.setData(x=[], y=[])  # Hide line
 
-                # Update current position marker (show marker at current frame if it exists)
-                track._build_frame_index()
-                idx = track._frame_index.get(frame_num)
+                # Update current position marker (show marker at current index if it exists)
+                idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
                 if idx is not None:
                     if _map_mode:
                         mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
@@ -813,10 +813,10 @@ class ImageryViewer(QWidget):
                 else:
                     marker.setData(x=[], y=[])  # No current position
             else:
-                # Show track history up to current frame using optimized method
-                visible_indices = track.get_visible_indices(frame_num)
+                # Show track history up to current index using optimized method
+                visible_indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
 
-                if visible_indices is not None and len(visible_indices) > 0:
+                if visible_indices is not None:
                     # Get coordinates for visible portion
                     if _map_mode:
                         path_x, path_y = geodetic[0][visible_indices], geodetic[1][visible_indices]
@@ -834,8 +834,7 @@ class ImageryViewer(QWidget):
                         path.setData(x=[], y=[])  # Hide line
 
                     # Update current position marker
-                    track._build_frame_index()
-                    idx = track._frame_index.get(frame_num)
+                    idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
                     if idx is not None:
                         if _map_mode:
                             mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
@@ -1210,9 +1209,9 @@ class ImageryViewer(QWidget):
             if self.selected_sensor is not None and track.sensor != self.selected_sensor:
                 continue
 
-            # Get visible indices for current frame
-            visible_indices = track.get_visible_indices(self.current_frame_number)
-            if visible_indices is None or len(visible_indices) == 0:
+            # Get visible track indices for current display index
+            visible_indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
+            if visible_indices is None:
                 continue
 
             # Check if ALL visible points are contained
@@ -1457,11 +1456,8 @@ class ImageryViewer(QWidget):
             if self.pixel_value_enabled and self.imagery.sensor.can_geolocate():
                 # Reverse-project (lon, lat) to pixel coordinates to read pixel value
                 earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
-                # Get current frame
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0 and self.imagery.times is not None:
-                    image_index = valid_indices[-1]
-                    time = self.imagery.times[image_index]
+                if self.timeline.is_time:
+                    time = self.timeline.current_value
                     src_rows, src_cols = self.imagery.sensor.geodetic_to_pixel(time, earth_loc)
                     row_int = int(np.round(src_rows)) - self.imagery.row_offset
                     col_int = int(np.round(src_cols)) - self.imagery.column_offset
@@ -1472,10 +1468,15 @@ class ImageryViewer(QWidget):
                         and not np.isnan(src_rows)
                         and not np.isnan(src_cols)
                     ):
-                        pixel_value = self.imagery.images[image_index, row_int, col_int]
-                        text = f"({col_int}, {row_int}: {pixel_value:.2f})"
-                        self.pixel_value_text.setText(text)
-                        self.pixel_value_text.setVisible(True)
+                        image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+                        if image_index is None:
+                            # this case should only occur if viewing detectors or tracks with a timestamp before the imagery
+                            self.pixel_value_text.setVisible(False)
+                        else:
+                            pixel_value = self.imagery.images[image_index, row_int, col_int]
+                            text = f"({col_int}, {row_int}: {pixel_value:.2f})"
+                            self.pixel_value_text.setText(text)
+                            self.pixel_value_text.setVisible(True)
                     else:
                         self.pixel_value_text.setVisible(False)
                 else:
@@ -1497,44 +1498,37 @@ class ImageryViewer(QWidget):
         if self.imagery.images is not None and len(self.imagery.images) > 0:
             img_shape = self.imagery.images[0].shape
             if 0 <= imagery_relative_row < img_shape[0] and 0 <= imagery_relative_col < img_shape[1]:
-                # Get current frame index
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
+                image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+                if self.geolocation_enabled and self.imagery.sensor.can_geolocate() and self.timeline.is_time:
+                    time = self.timeline.current_value
+                    # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
+                    location = self.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
 
-                    if self.geolocation_enabled and self.imagery.sensor.can_geolocate() and self.imagery.times is not None:
-                        time = self.imagery.times[image_index]
-                        # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
-                        location = self.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
-
-                        lat = location.lat.deg[0]
-                        lon = location.lon.deg[0]
-                        alt = location.height.to(units.km).value[0]
-                        if np.isnan(alt):  # altitude is only nan value if conversion fails
-                            lat, lon, alt = None, None, None
-
-                        # Check if coordinates are valid (alt is only NaN coordinate if invalid)
-                        if not np.isnan(alt):
-                            # Update text content
-                            text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
-                            self.geolocation_text.setText(text)
-                            self.geolocation_text.setVisible(True)
-                        else:
-                            self.geolocation_text.setVisible(False)
-
-                    if self.pixel_value_enabled:
-                        # Extract pixel value from floored imagery-relative coordinates
-                        row_floor = int(np.floor(imagery_relative_row))
-                        col_floor = int(np.floor(imagery_relative_col))
-                        pixel_value = self.imagery.images[image_index, row_floor, col_floor]
-
+                    lat = location.lat.deg[0]
+                    lon = location.lon.deg[0]
+                    alt = location.height.to(units.km).value[0]
+                    if np.isnan(alt):  # altitude is only nan value if conversion fails
+                        lat, lon, alt = None, None, None
+                        self.geolocation_text.setVisible(False)
+                    else:
                         # Update text content
-                        text = f"({col_floor}, {row_floor} {pixel_value:.2f})"
-                        self.pixel_value_text.setText(text)
-                        self.pixel_value_text.setVisible(True)
+                        text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
+                        self.geolocation_text.setText(text)
+                        self.geolocation_text.setVisible(True)
 
-                    # Update positions of text items
-                    self.update_text_positions()
+                if self.pixel_value_enabled:
+                    # Extract pixel value from floored imagery-relative coordinates
+                    row_floor = int(np.floor(imagery_relative_row))
+                    col_floor = int(np.floor(imagery_relative_col))
+                    pixel_value = self.imagery.images[image_index, row_floor, col_floor]
+
+                    # Update text content
+                    text = f"({col_floor}, {row_floor} {pixel_value:.2f})"
+                    self.pixel_value_text.setText(text)
+                    self.pixel_value_text.setVisible(True)
+
+                # Update positions of text items
+                self.update_text_positions()
             else:
                 if self.geolocation_enabled:
                     self.geolocation_text.setVisible(False)
@@ -1563,8 +1557,6 @@ class ImageryViewer(QWidget):
         # Clear data lists
         self.detectors = []
         self.tracks = []
-
-        return self.get_frame_range()  # Return updated frame range
 
     def set_draw_roi_mode(self, enabled):
         """Enable or disable ROI drawing mode"""
@@ -2235,7 +2227,10 @@ class ImageryViewer(QWidget):
             return
 
         # Find track point index for current frame
-        frame_mask = track.frames == self.current_frame_number
+        if self.timeline.is_time:
+            frame_mask = track.times == self.timeline.current_value
+        else:
+            frame_mask = track.frames == self.timeline.current_value
         if not np.any(frame_mask):
             # No track point at current frame
             if self.extraction_overlay is not None:
@@ -2370,7 +2365,10 @@ class ImageryViewer(QWidget):
         # This is a safeguard to prevent desynchronization
         if self.editing_extraction_track is not None:
             track = self.editing_extraction_track
-            frame_mask = track.frames == self.current_frame_number
+            if self.timeline.is_time:
+                frame_mask = track.times == self.timeline.current_value
+            else:
+                frame_mask = track.frames == self.timeline.current_value
             if np.any(frame_mask):
                 correct_idx = int(np.where(frame_mask)[0][0])
                 if self.extraction_editor.current_track_idx != correct_idx:
@@ -2588,11 +2586,10 @@ class ImageryViewer(QWidget):
             return row, col
 
         # Get the current frame index
-        frame_index = np.where(self.imagery.frames == self.current_frame_number)[0]
-        if len(frame_index) == 0:
+        frame_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time)
+        if frame_index is None:
             # Current frame not in imagery, return verbatim
             return row, col
-        frame_index = frame_index[0]
 
         # Get parameters from dialog
         params = self.point_selection_dialog.get_parameters()
@@ -2774,31 +2771,28 @@ class ImageryViewer(QWidget):
                         continue
 
                     # Determine which points to check based on track settings
+                    indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
+                    if indices is None:
+                        continue
+
                     if track.complete:
                         # Show all points regardless of current frame
-                        frame_mask = np.ones(len(track.frames), dtype=bool)
-                    elif track.tail_length > 0:
-                        # Show only last N frames
-                        frame_mask = track.frames >= (self.current_frame_number - track.tail_length)
-                        frame_mask &= track.frames <= self.current_frame_number
+                        mask = np.ones(len(track.frames), dtype=bool)
                     else:
-                        # Show all history up to current frame
-                        frame_mask = track.frames <= self.current_frame_number
-
-                    if not np.any(frame_mask):
-                        continue
+                        mask = np.zeros(len(track.frames), dtype=bool)
+                        mask[indices] = True
 
                     if self.map_view_mode:
                         geodetic = track.get_geodetic_coords()
                         if geodetic is not None:
-                            track_x, track_y = geodetic[0][frame_mask], geodetic[1][frame_mask]
+                            track_x, track_y = geodetic[0][mask], geodetic[1][mask]
                         else:
-                            track_x = track.columns[frame_mask]
-                            track_y = track.rows[frame_mask]
+                            track_x = track.columns[mask]
+                            track_y = track.rows[mask]
                         distances = np.sqrt((track_x - col) ** 2 + (track_y - row) ** 2)
                     else:
-                        visible_cols = track.columns[frame_mask]
-                        visible_rows = track.rows[frame_mask]
+                        visible_cols = track.columns[mask]
+                        visible_rows = track.rows[mask]
                         distances = np.sqrt((visible_cols - col) ** 2 + (visible_rows - row) ** 2)
 
                     valid = ~np.isnan(distances)
@@ -2836,7 +2830,10 @@ class ImageryViewer(QWidget):
                         indices = np.arange(len(detector.frames))
                     else:
                         # Only detections at current frame
-                        mask = detector.frames == self.current_frame_number
+                        if self.timeline.is_time:
+                            mask = detector.times == self.timeline.current_value
+                        else:
+                            mask = detector.frames == self.timeline.current_value
                         if not np.any(mask):
                             continue
                         rows = detector.rows[mask]
@@ -2861,9 +2858,12 @@ class ImageryViewer(QWidget):
                                             rows, cols = np.array([]), np.array([])
                                             indices = np.array([])
                                     else:
-                                        # For current frame mode, combine frame and label filters
-                                        frame_mask = detector.frames == self.current_frame_number
-                                        combined_mask = frame_mask & label_mask
+                                        # For current index mode, combine index and label filters
+                                        if self.timeline.is_time:
+                                            mask = detector.times == self.timeline.current_value
+                                        else:
+                                            mask = detector.frames == self.timeline.current_value
+                                        combined_mask = mask & label_mask
                                         if np.any(combined_mask):
                                             rows = detector.rows[combined_mask]
                                             cols = detector.columns[combined_mask]
@@ -3326,7 +3326,7 @@ class ImageryViewer(QWidget):
         # Re-project selected detection highlights for the new coordinate system
         self._update_selected_detections_display()
 
-        self.set_frame_number(self.current_frame_number)
+        self.set_index(self.timeline.current_index)
         return True
 
     def _on_map_view_range_changed(self) -> None:
@@ -3400,13 +3400,9 @@ class ImageryViewer(QWidget):
             self._update_projected_imagery(image=self.ewma_image)
         else:
             # Get current frame
-            image_index = self.imagery.get_frame_index(self.current_frame_number)
+            image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
             if image_index is None:
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                else:
-                    return
+                return
             self._update_projected_imagery(self.imagery.images[image_index])
 
     def _on_wms_tile_fetched(self, tile) -> None:
@@ -3583,21 +3579,7 @@ class ImageryViewer(QWidget):
             output_width = max(1, int(output_width * scale))
             output_height = max(1, int(output_height * scale))
 
-        # Get current frame
-        image_index = self.imagery.get_frame_index(self.current_frame_number)
-        if image_index is None:
-            valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-            if len(valid_indices) > 0:
-                image_index = valid_indices[-1]
-            else:
-                return
-
-        # Clamp to loaded frames
-        if self.imagery.loaded_frame_count is not None:
-            if image_index >= self.imagery.loaded_frame_count:
-                image_index = max(0, self.imagery.loaded_frame_count - 1)
-
-        time = self.imagery.times[image_index]
+        time = self.timeline.current_value
         zoom_level = self._current_zoom_level if self._current_zoom_level is not None else 0
 
         # Check projection cache
@@ -3607,6 +3589,11 @@ class ImageryViewer(QWidget):
         else:
             # Project imagery
             if image is None:
+                image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+                if image_index is None:
+                    # should only occur if attempting to project for a timestamp that exists
+                    # for a detector or track, but not the imagery
+                    return
                 image = self.imagery.images[image_index]
             # Always use CPU projection — the bottleneck is sensor.geodetic_to_pixel()
             # which runs on CPU regardless, so the GPU path only adds transfer overhead.
@@ -3675,8 +3662,7 @@ class ImageryViewer(QWidget):
             return float("nan"), float("nan")
 
         earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
-        frame_index = self.imagery.get_frame_index(self.current_frame_number)
-        time = self.imagery.times[frame_index]
+        time = self.timeline.current_value
         row, col = sensor.geodetic_to_pixel(time, earth_loc)
         if not np.isnan(row) and not np.isnan(col):
             return float(row), float(col)
@@ -3701,8 +3687,7 @@ class ImageryViewer(QWidget):
         if sensor is None or not sensor.can_geolocate() or not self.timeline.is_time:
             return float("nan"), float("nan")
 
-        frame_index = self.imagery.get_frame_index(self.current_frame_number)
-        time = self.imagery.times[frame_index]
+        time = self.timeline.current_value
         locations = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
