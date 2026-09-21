@@ -9,7 +9,7 @@ time-based), visualization styling, and data persistence.
 import datetime
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -198,34 +198,16 @@ class Track(TemporalData):
         s += str(self.to_dataframe())
         return s
 
-    def get_track_data_at_frame(self, frame_num):
+    def get_visible_indices(self, val: Union[np.datetime64, int], is_time: bool):
         """
-        Get track position at a specific frame using O(1) cached lookup.
+        Get indices of track points that should be visible at the current value.
 
         Parameters
         ----------
-        frame_num : int
-            Frame number to query
-
-        Returns
-        -------
-        tuple or None
-            (row, column) coordinates at this frame, or None if frame not in track
-        """
-        self._build_frame_index()
-        idx = self._frame_index.get(frame_num)
-        if idx is not None:
-            return self.rows[idx], self.columns[idx]
-        return None
-
-    def get_visible_indices(self, current_frame):
-        """
-        Get indices of track points that should be visible at the current frame.
-
-        Parameters
-        ----------
-        current_frame : int
-            Current frame number
+        val : np.datetime64, int
+            Current value, either a time or frame number
+        is_time : bool
+            Whether the value is a time (True) or frame (False)
 
         Returns
         -------
@@ -235,14 +217,35 @@ class Track(TemporalData):
         if self.complete:
             # Show entire track
             return np.arange(len(self.frames))
+        
+        if val is None:
+            return None
 
-        # Find points up to current frame
-        mask = self.frames <= current_frame
+        # Find points up to current value
+        if is_time:
+            mask = self.times <= val
+        else:
+            mask = self.frames <= val
 
-        if self.tail_length > 0:
-            # Only show last N frames
-            frame_diff = current_frame - self.frames
-            mask &= (frame_diff <= self.tail_length) & (frame_diff >= 0)
+        if self.tail_length > 0 and np.any(mask):
+            if is_time:
+                index = np.where(mask)[0][-1]  # last true index
+                index = max(index - self.tail_length, 0)  # start of tail
+
+                time_diff = val - self.times
+
+                # Only show last N times
+                # need to use the index of the tail to get the maximum allowed length
+                if val <= np.max(self.times):
+                    max_time_diff = (val - self.times[index])
+                else:
+                    max_time_diff = (np.max(self.times) - self.times[index])
+
+                mask &= (time_diff <= max_time_diff) & (time_diff >= 0)
+            else:
+                # Only show last N frames
+                frame_diff = val - self.frames
+                mask &= (frame_diff <= self.tail_length) & (frame_diff >= 0)
 
         indices = np.where(mask)[0]
         return indices if len(indices) > 0 else None
@@ -532,9 +535,9 @@ class Track(TemporalData):
             frames = df["Frames"].to_numpy()
             # get time mapping just in case we need it below
             if times is None and imagery is not None and imagery.times is not None:
-                frame_indices = [imagery.get_frame_index(f) for f in frames]
-                if np.all([f is not None for f in frame_indices]):
-                    times = imagery.times[frame_indices]
+                indices = [imagery.get_index(f, False) for f in frames]
+                if np.all([f is not None for f in indices]):
+                    times = imagery.times[indices]
         elif times is not None:
             if imagery is None or imagery.times is None or len(imagery.times) == 0:
                 raise ValueError(

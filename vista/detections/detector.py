@@ -131,28 +131,6 @@ class Detector(TemporalData):
                     self._frame_index[frame] = []
                 self._frame_index[frame].append(i)
 
-    def get_detections_at_frame(self, frame_num):
-        """
-        Get detection coordinates at a specific frame using O(1) cached lookup.
-
-        Parameters
-        ----------
-        frame_num : int
-            Frame number to query
-
-        Returns
-        -------
-        rows : NDArray
-            Row coordinates of detections at this frame
-        cols : NDArray
-            Column coordinates of detections at this frame
-        """
-        self._build_frame_index()
-        indices = self._frame_index.get(frame_num, [])
-        if len(indices) > 0:
-            return self.rows[indices], self.columns[indices]
-        return np.array([]), np.array([])
-
     def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
         """Get geodetic coordinates for all detection points, computing and caching if needed.
 
