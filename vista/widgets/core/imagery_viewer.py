@@ -22,6 +22,7 @@ from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
+from vista.widgets.core.display_timeline import DisplayTimeline
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
 from vista.wms.imagery_projector import ImageryProjector
 from vista.wms.projection_cache import ProjectionCache
@@ -90,15 +91,18 @@ class ImageryViewer(QWidget):
     # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
     lasso_selection_completed = pyqtSignal(dict)
 
-    # Signal emitted when frame changes (emits frame number)
-    frame_changed = pyqtSignal(int)
+    # Signal emitted when timeline index changes (emits index)
+    index_changed = pyqtSignal(int)
+
+    # Signal emitted when timeline is updated
+    timeline_updated = pyqtSignal()
 
     # Signals for WMS tile loading status (emits status message string; empty string = done)
     wms_status_changed = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
-        self.current_frame_number = 0  # Actual frame number from imagery
+        self.timeline = DisplayTimeline()  # Timeline object holding times or frames for imagery, detectors, and tracks
         self.sensors = []  # List of Sensor objects
         self.selected_sensor = None  # Currently selected sensor for filtering display
         self.imageries = []  # List of Imagery objects
@@ -220,7 +224,7 @@ class ImageryViewer(QWidget):
         self.ewma_background = None  # Running EWMA background estimate (float64 array)
         self.ewma_image = None
         self.ewma_frame_counter = 0  # Number of unique frames viewed since filter enabled
-        self.ewma_last_frame_number = None  # Last frame_number passed to set_frame_number
+        self.ewma_last_frame_number = None  # Last frame_number changed in set_index
 
         # Performance monitoring
         self.perf_frame_times = []  # List of frame update times
@@ -307,6 +311,20 @@ class ImageryViewer(QWidget):
 
         self.setLayout(layout)
 
+    def update_timeline(self):
+        """Update timeline object based on current imagery, detectors, and tracks"""
+        # try to save current value to load back in
+        curr_value = self.timeline.current_value
+        self.timeline = DisplayTimeline([self.imagery] if self.imagery is not None else [], self.detectors, self.tracks)
+        self.timeline.set_index_from_value(curr_value)
+
+        min_index, max_index = self.timeline.get_range()
+        # if value loading failed, but there is a valid range of indices, use index 0
+        if self.timeline.current_index is None and max_index >= min_index:
+            self.timeline.current_index = 0
+
+        self.timeline_updated.emit()
+
     def add_imagery(self, imagery: Imagery):
         """Add imagery to the list of available imageries"""
         if imagery not in self.imageries:
@@ -318,89 +336,51 @@ class ImageryViewer(QWidget):
     def select_imagery(self, imagery: Imagery, preserve_ewma: bool = False):
         """Select which imagery to display"""
         self.ignore_changing_histogram_levels = True
-        if imagery in self.imageries:
-            self.imagery = imagery
+        self.imagery = imagery
+        self.update_timeline()
 
-            # Reset EWMA state when switching imagery
-            if not preserve_ewma:
-                self.ewma_background = None
-                self.ewma_image = None
-                self.ewma_frame_counter = 0
-                self.ewma_last_frame_number = None
+        # Reset EWMA state when switching imagery
+        if not preserve_ewma:
+            self.ewma_background = None
+            self.ewma_image = None
+            self.ewma_frame_counter = 0
+            self.ewma_last_frame_number = None
 
-            # Try to retain the current frame number if it exists in the new imagery
-            if len(imagery.frames) > 0:
-                if self.current_frame_number in imagery.frames:
-                    # Current frame exists in new imagery, keep it
-                    frame_to_display = self.current_frame_number
-                else:
-                    # Current frame doesn't exist, use first frame
-                    frame_to_display = imagery.frames[0]
-            else:
-                frame_to_display = 0
+        if self.map_view_mode:
+            # In map mode, update projected imagery and recompute footprint
+            if self.imagery_projector is not None and self.timeline.is_time:
+                time = self.timeline.current_value
+                _, nrows, ncols = imagery.images.shape
+                self._imagery_footprint = self.imagery_projector.compute_footprint(
+                    time,
+                    nrows,
+                    ncols,
+                    imagery.row_offset,
+                    imagery.column_offset,
+                )
+            # Apply opacity
+            if self.projected_image_item is not None:
+                opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
+                self.projected_image_item.setOpacity(opacity)
+        else:
+            # Apply imagery offsets for positioning
+            self.image_item.setPos(imagery.column_offset, imagery.row_offset)
 
-            self.current_frame_number = frame_to_display
+        # Refresh the current display
+        self.set_index(self.timeline.current_index)
+        self.histogram.vb.autoRange()
 
-            # Display the selected frame using optimized lookup
-            frame_index = imagery.get_frame_index(frame_to_display)
-            if frame_index is None:
-                frame_index = 0
-
-            # Clamp to loaded frames if imagery is still loading incrementally
-            if imagery.loaded_frame_count is not None and frame_index >= imagery.loaded_frame_count:
-                frame_index = max(0, imagery.loaded_frame_count - 1)
-
-            if self.map_view_mode:
-                # In map mode, update projected imagery and recompute footprint
-                if self.imagery_projector is not None and self.imagery.times is not None:
-                    time = imagery.times[frame_index]
-                    img_shape = imagery.images[frame_index].shape
-                    self._imagery_footprint = self.imagery_projector.compute_footprint(
-                        time,
-                        img_shape[0],
-                        img_shape[1],
-                        imagery.row_offset,
-                        imagery.column_offset,
-                    )
-                # Apply opacity
-                if self.projected_image_item is not None:
-                    opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
-                    self.projected_image_item.setOpacity(opacity)
-            else:
-                self.image_item.setImage(imagery.images[frame_index], autoLevels=False)
-
-                # Apply imagery offsets for positioning
-                self.image_item.setPos(imagery.column_offset, imagery.row_offset)
-
-            # Refresh the current frame display
-            self.set_frame_number(self.current_frame_number)
-            self.histogram.vb.autoRange()
-        self.ignore_changing_histogram_levels = False
-
-    def set_frame_number(self, frame_number: int):
-        """Set the current frame to display by frame number"""
+    def set_index(self, index: int):
+        """Set the current index to display"""
         perf_start = time.time() if ENABLE_PERF_MONITORING else None
         self.ignore_changing_histogram_levels = True
 
-        self.current_frame_number = frame_number
+        self.timeline.current_index = index
 
         # Update imagery if available
-        if self.imagery is not None and len(self.imagery.frames) > 0:
-            # Try exact frame match first using optimized lookup
-            image_index = self.imagery.get_frame_index(frame_number)
-
-            # If exact match not found, find closest frame <= frame_number
-            if image_index is None:
-                valid_indices = np.where(self.imagery.frames <= frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                else:
-                    image_index = None
-
-            # Clamp to loaded frames if imagery is still loading incrementally
-            if image_index is not None and self.imagery.loaded_frame_count is not None:
-                if image_index >= self.imagery.loaded_frame_count:
-                    image_index = max(0, self.imagery.loaded_frame_count - 1)
+        if self.imagery is not None:
+            # Find nearest image index
+            image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
 
             if image_index is not None:
                 ewma_active = False  # Whether we're displaying a filtered image
@@ -412,9 +392,9 @@ class ImageryViewer(QWidget):
                     ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
 
                     # Check if frame_number changed from last call
-                    if frame_number != self.ewma_last_frame_number:
+                    if self.images.frames[image_index] != self.ewma_last_frame_number:
                         self.ewma_frame_counter += 1
-                        self.ewma_last_frame_number = frame_number
+                        self.ewma_last_frame_number = self.images.frames[image_index]
 
                         # Update EWMA background model once past the offset
                         if self.ewma_background is None:
@@ -526,8 +506,8 @@ class ImageryViewer(QWidget):
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
             self._update_tooltips_at_position(self.last_mouse_pos)
 
-        # Emit frame_changed signal
-        self.frame_changed.emit(frame_number)
+        # Emit index_changed signal
+        self.index_changed.emit(index)
 
         # Performance monitoring
         if ENABLE_PERF_MONITORING and perf_start is not None:
@@ -543,50 +523,11 @@ class ImageryViewer(QWidget):
         self.ignore_changing_histogram_levels = False
 
     def get_current_time(self):
-        """Get the current time for the displayed frame (if available)"""
-        if self.imagery is not None and self.imagery.times is not None and len(self.imagery.frames) > 0:
-            # Try exact frame match first using optimized lookup
-            image_index = self.imagery.get_frame_index(self.current_frame_number)
-
-            # If exact match not found, find closest frame <= current_frame_number
-            if image_index is None:
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                else:
-                    image_index = None
-
-            if image_index is not None:
-                return self.imagery.times[image_index]
-
+        """Get the current time (if available)"""
+        if self.timeline.is_time:
+            return self.timeline.current_value
+        
         return None
-
-    def get_frame_range(self):
-        """Get the min and max frame numbers from all data sources (imagery, tracks, detections)"""
-        all_frames = []
-
-        # Collect frames from imagery
-        if self.imagery is not None and len(self.imagery.frames) > 0:
-            all_frames.extend(self.imagery.frames)
-
-        # Collect frames from detectors
-        for detector in self.detectors:
-            if (self.selected_sensor is not None) and (self.selected_sensor != detector.sensor):
-                continue
-            if len(detector.frames) > 0:
-                all_frames.extend(detector.frames)
-
-        # Collect frames from tracks
-        for track in self.tracks:
-            if (self.selected_sensor is not None) and (self.selected_sensor != track.sensor):
-                continue
-            if len(track.frames) > 0:
-                all_frames.extend(track.frames)
-
-        if len(all_frames) > 0:
-            return int(np.min(all_frames)), int(np.max(all_frames))
-
-        return 0, 0
 
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
@@ -606,9 +547,9 @@ class ImageryViewer(QWidget):
         """
         Show or hide the histogram widget.
 
-        When hidden, histogram updates are skipped during frame changes for improved performance.
-        The image levels/LUT remain frozen at their last values so rendering is unaffected.
-        When shown again, the histogram is refreshed to match the current frame.
+        When hidden, histogram updates are skipped during display index changes for improved
+        performance. The image levels/LUT remain frozen at their last values so rendering is
+        unaffected. When shown again, the histogram is refreshed to match the current display index.
 
         Parameters
         ----------
@@ -618,9 +559,9 @@ class ImageryViewer(QWidget):
         self.histogram_visible = visible
         self.hist_widget.setVisible(visible)
 
-        # Refresh histogram for the current frame when becoming visible
+        # Refresh histogram for the current index when becoming visible
         if visible and self.imagery is not None:
-            self.set_frame_number(self.current_frame_number)
+            self.set_index(self.timeline.current_index)
 
     def set_ewma_filter_enabled(self, enabled: bool):
         """
@@ -649,12 +590,12 @@ class ImageryViewer(QWidget):
         if not enabled:
             # Refresh display to show original image
             if self.imagery is not None:
-                self.set_frame_number(self.current_frame_number)
+                self.set_index(self.timeline.current_index)
                 self.histogram.vb.autoRange()
         else:
             # Refresh to apply filter logic from the start
             if self.imagery is not None:
-                self.set_frame_number(self.current_frame_number)
+                self.set_index(self.timeline.current_index)
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
@@ -1016,14 +957,12 @@ class ImageryViewer(QWidget):
         """Add a detector's detections to display"""
         self.detectors.append(detector)
         self.update_overlays()
-        return self.get_frame_range()  # Return updated frame range
 
     def add_track(self, track: Track):
         """Add a single track to display"""
         if track not in self.tracks:
             self.tracks.append(track)
         self.update_overlays()
-        return self.get_frame_range()
 
     def add_tracks(self, tracks, tracker_name: str = None):
         """
@@ -1042,7 +981,6 @@ class ImageryViewer(QWidget):
             if track not in self.tracks:
                 self.tracks.append(track)
         self.update_overlays()
-        return self.get_frame_range()
 
     def set_item_times_from_imagery(
         self,
@@ -1984,8 +1922,8 @@ class ImageryViewer(QWidget):
         if self.imagery.times is None:
             invalid = np.full_like(all_lons, np.nan, dtype=np.float64)
             return invalid, invalid.copy()
-        frame_index = self.imagery.get_frame_index(self.current_frame_number)
-        time = self.imagery.times[frame_index]
+        index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time)
+        time = self.imagery.times[index]
         rows, cols = self.selected_sensor.geodetic_to_pixel(time, earth_locs)
         return cols, rows
 

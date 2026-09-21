@@ -624,14 +624,14 @@ class TrackPlotWindow(QWidget):
 
         self.update_plot()
 
-    def on_frame_changed(self, _frame: int):
+    def on_index_changed(self, _index: int):
         """
-        Handle frame change from main viewer.
+        Handle index change from main viewer.
 
         Parameters
         ----------
-        _frame : int
-            Current frame number (unused, frame is read from viewer)
+        _index : int
+            Current index (unused, index is read from viewer)
         """
         self.update_plot()
 

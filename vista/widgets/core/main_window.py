@@ -123,8 +123,6 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.data_changed.connect(self.on_data_changed)
         self.data_manager.setMinimumWidth(400)
 
-        self.data_manager.imagery_panel.imagery_selected.connect(self.update_frame_range_from_imagery)
-
         # Set data_manager reference on viewer for label filtering
         self.viewer.data_manager = self.data_manager
 
@@ -134,6 +132,9 @@ class VistaMainWindow(QMainWindow):
         self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
         self.viewer.wms_status_changed.connect(self._on_wms_status_changed)
         self.viewer.sensor_context_reset.connect(self.on_sensor_context_reset)
+
+        self.viewer.timeline_updated.connect(self.update_index_range_from_imagery)
+        self.data_manager.data_changed.connect(self.viewer.update_timeline)
 
         # Connect imagery panel cancel signal for incremental loading
         self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
@@ -178,7 +179,7 @@ class VistaMainWindow(QMainWindow):
 
         # Create playback controls
         self.controls = PlaybackControls()
-        self.controls.index_changed = self.on_frame_changed
+        self.controls.index_changed = self.on_index_changed
         # Connect time display to imagery viewer
         self.controls.get_current_time = self.viewer.get_current_time
         main_layout.addWidget(self.controls)
@@ -1008,7 +1009,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.add_imagery(imagery)
 
         # Block selection-change signals during refresh so the table rebuild doesn't
-        # cascade into redundant select_imagery/set_frame_number calls. The viewer
+        # cascade into redundant select_imagery/set_index calls. The viewer
         # state is updated explicitly below.
         sensors_table = self.data_manager.sensors_panel.sensors_table
         imagery_table = self.data_manager.imagery_panel.imagery_table
@@ -1039,13 +1040,7 @@ class VistaMainWindow(QMainWindow):
         else:
             self.viewer.select_imagery(imagery)
 
-        # Update playback controls with index range (block slider signals to avoid
-        # a redundant set_index_number call via on_frame_changed)
-        min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_index_range(min_frame, max_frame)
-        self.controls.index_slider.blockSignals(True)
-        self.controls.set_index(min_frame)
-        self.controls.index_slider.blockSignals(False)
+        self.viewer.update_timeline()
 
         # Disable algorithm actions while loading
         self._update_algorithm_actions_state()
@@ -1064,8 +1059,7 @@ class VistaMainWindow(QMainWindow):
 
         # If the currently displayed imagery just got more frames, update frame range and status bar
         if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
-            min_frame, max_frame = self.viewer.get_frame_range()
-            self.controls.set_index_range(min_frame, max_frame)
+            self.viewer.update_timeline()
             total = len(self.viewer.imagery.frames)
             self.statusBar().showMessage(
                 f"Loading imagery: {self.viewer.imagery.name} ({loaded_count}/{total} frames)...", 0
@@ -1114,8 +1108,7 @@ class VistaMainWindow(QMainWindow):
 
         # Update frame range
         if self.viewer.imagery is not None:
-            min_frame, max_frame = self.viewer.get_frame_range()
-            self.controls.set_index_range(min_frame, max_frame)
+            self.viewer.update_timeline()
 
         if imagery is not None and imagery in self.viewer.imageries:
             self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery.frames)} frames)", 3000)
@@ -1156,18 +1149,18 @@ class VistaMainWindow(QMainWindow):
         """Check if any imagery is currently loading"""
         return len(self._loading_imageries) > 0
 
-    def update_frame_range_from_imagery(self):
-        """Update frame range controls to match the viewer's current state.
+    def update_index_range_from_imagery(self):
+        """Update index range controls to match the viewer's current state.
 
         Syncs the slider range and position to the viewer without calling
         set_index_number again (the caller is expected to have already
         updated the viewer via select_imagery or set_index_number).
         """
-        min_frame, max_frame = self.viewer.get_frame_range()
-        self.controls.set_index_range(min_frame, max_frame)
-        # Sync the slider to the viewer's current frame without triggering on_frame_changed
+        min_index, max_index = self.viewer.timeline.get_range()
+        self.controls.set_index_range(min_index, max_index)
+        # Sync the slider to the viewer's current frame without triggering on_index_changed
         self.controls.index_slider.blockSignals(True)
-        self.controls.set_index(self.viewer.current_frame_number)
+        self.controls.set_index(self.viewer.timeline.current_index or 0)
         self.controls.index_slider.blockSignals(False)
 
     def load_detections_file(self, file_paths=None):
@@ -1337,10 +1330,7 @@ class VistaMainWindow(QMainWindow):
         for detector in detectors:
             self.viewer.add_detector(detector)
 
-        # Update playback controls with new frame range
-        min_frame, max_frame = self.viewer.get_frame_range()
-        if max_frame > 0:
-            self.controls.set_index_range(min_frame, max_frame)
+        self.viewer.update_timeline()
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -1597,9 +1587,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.add_tracks(tracks)
 
         # Update playback controls with new frame range
-        min_frame, max_frame = self.viewer.get_frame_range()
-        if max_frame > 0:
-            self.controls.set_index_range(min_frame, max_frame)
+        self.viewer.update_timeline()
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -2258,10 +2246,8 @@ class VistaMainWindow(QMainWindow):
 
     def clear_overlays(self):
         """Clear all overlays and update frame range"""
-        frame_range = self.viewer.clear_overlays()
-        min_frame, max_frame = frame_range
-        if max_frame > 0:
-            self.controls.set_index_range(min_frame, max_frame)
+        self.viewer.clear_overlays()
+        self.viewer.update_timeline()
         self.data_manager.refresh()
 
     def toggle_data_manager(self, checked):
@@ -2363,9 +2349,9 @@ class VistaMainWindow(QMainWindow):
         """Handle data changes from data manager"""
         self.viewer.update_overlays()
 
-    def on_frame_changed(self, frame_number):
+    def on_index_changed(self, index):
         """Handle frame change from playback controls"""
-        self.viewer.set_frame_number(frame_number)
+        self.viewer.set_index(index)
 
     def open_temporal_median_widget(self):
         """Open the Temporal Median configuration widget"""
@@ -2411,9 +2397,6 @@ class VistaMainWindow(QMainWindow):
         # Select the new imagery for viewing
         self.viewer.select_imagery(imagery)
 
-        # Update playback controls and retain current frame if possible
-        self.update_frame_range_from_imagery()
-
         # Refresh data manager
         self.data_manager.refresh()
 
@@ -2432,9 +2415,6 @@ class VistaMainWindow(QMainWindow):
 
         # Select the new imagery for viewing
         self.viewer.select_imagery(processed_imagery)
-
-        # Update playback controls and retain current frame if possible
-        self.update_frame_range_from_imagery()
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -3205,9 +3185,7 @@ class VistaMainWindow(QMainWindow):
             self.viewer.add_tracks(tracks_list)
 
         # Update playback controls with new frame range
-        min_frame, max_frame = self.viewer.get_frame_range()
-        if max_frame > 0:
-            self.controls.set_index_range(min_frame, max_frame)
+        self.viewer.update_timeline()
 
         # Refresh data manager to show loaded data
         self.data_manager.refresh()

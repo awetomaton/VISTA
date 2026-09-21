@@ -3006,8 +3006,8 @@ class TracksPanel(DataPanel):
         # Always create a new plot window (allows multiple windows)
         plot_window = TrackPlotWindow(self, self.viewer)
 
-        # Connect to frame_changed signal
-        self.viewer.frame_changed.connect(plot_window.on_frame_changed)
+        # Connect to index_changed signal
+        self.viewer.index_changed.connect(plot_window.on_index_changed)
 
         # Connect to destroyed signal to remove from list when closed
         plot_window.destroyed.connect(lambda: self._remove_plot_window(plot_window))
@@ -3042,7 +3042,7 @@ class TracksPanel(DataPanel):
         # Update all visible windows
         for window in self.track_plot_windows:
             window.set_tracks(selected_tracks, tracker_map)
-            window.on_frame_changed(self.viewer.current_frame_number)
+            window.on_index_changed(self.viewer.timeline.current_index)
 
     def _update_single_plot_window(self, window):
         """Update a single plot window with currently selected tracks"""
@@ -3051,7 +3051,7 @@ class TracksPanel(DataPanel):
 
         selected_tracks, tracker_map = self._get_selected_tracks_for_plot()
         window.set_tracks(selected_tracks, tracker_map)
-        window.on_frame_changed(self.viewer.current_frame_number)
+        window.on_index_changed(self.viewer.timeline.current_index)
 
     def _get_selected_tracks_for_plot(self):
         """Get currently selected tracks and tracker map for plotting"""
