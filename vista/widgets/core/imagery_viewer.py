@@ -377,11 +377,6 @@ class ImageryViewer(QWidget):
             self.histogram.vb.autoRange()
         self.ignore_changing_histogram_levels = False
 
-    def load_imagery(self, imagery: Imagery):
-        """Load imagery data into the viewer (legacy method, now adds and selects)"""
-        self.add_imagery(imagery)
-        self.select_imagery(imagery)
-
     def set_frame_number(self, frame_number: int):
         """Set the current frame to display by frame number"""
         perf_start = time.time() if ENABLE_PERF_MONITORING else None
@@ -1044,21 +1039,6 @@ class ImageryViewer(QWidget):
         for track in tracks:
             if tracker_name and not track.tracker:
                 track.tracker = tracker_name
-            if track not in self.tracks:
-                self.tracks.append(track)
-        self.update_overlays()
-        return self.get_frame_range()
-
-    def add_tracker(self, tracker):
-        """Add a tracker (with its tracks) to display - DEPRECATED
-
-        This method is deprecated. Use add_tracks() instead.
-        """
-        import warnings
-
-        warnings.warn("add_tracker() is deprecated. Use add_tracks() instead.", DeprecationWarning, stacklevel=2)
-        for track in tracker.tracks:
-            track.tracker = tracker.name
             if track not in self.tracks:
                 self.tracks.append(track)
         self.update_overlays()
