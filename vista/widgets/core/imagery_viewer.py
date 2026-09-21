@@ -692,7 +692,7 @@ class ImageryViewer(QWidget):
 
             if np.any(det_mask):
                 # Use cached geodetic coords in map view
-                _det_map_mode = self.map_view_mode and detector.sensor and detector.sensor.can_geolocate()
+                _det_map_mode = self.map_view_mode and detector.sensor.can_geolocate()
                 geodetic = detector.get_geodetic_coords() if _det_map_mode else None
                 if geodetic is not None:
                     plot_x, plot_y = geodetic[0][det_mask], geodetic[1][det_mask]
@@ -772,7 +772,7 @@ class ImageryViewer(QWidget):
             marker_size = track.marker_size + 5 if is_selected else track.marker_size
 
             # Use cached geodetic coords in map view (avoids re-projecting every frame)
-            _map_mode = self.map_view_mode and track.sensor and track.sensor.can_geolocate()
+            _map_mode = self.map_view_mode and track.sensor.can_geolocate()
             geodetic = track.get_geodetic_coords() if _map_mode else None
             _map_mode = geodetic is not None  # Fall back if projection fails
 
@@ -1216,7 +1216,7 @@ class ImageryViewer(QWidget):
                 continue
 
             # Check if ALL visible points are contained
-            if _map_mode and track.sensor and track.sensor.can_geolocate():
+            if _map_mode and track.sensor.can_geolocate():
                 geodetic = track.get_geodetic_coords()
                 if geodetic is not None:
                     check_x, check_y = geodetic[0][visible_indices], geodetic[1][visible_indices]
@@ -1285,7 +1285,7 @@ class ImageryViewer(QWidget):
                 except AttributeError:
                     pass  # Use unfiltered rows/cols/indices
 
-            if _map_mode and detector.sensor and detector.sensor.can_geolocate():
+            if _map_mode and detector.sensor.can_geolocate():
                 geodetic = detector.get_geodetic_coords()
                 if geodetic is not None:
                     check_x, check_y = geodetic[0][indices], geodetic[1][indices]
@@ -1367,7 +1367,7 @@ class ImageryViewer(QWidget):
                             all_lats.append(point[1])
                         shape_lengths.append(len(shape.points))
 
-                    if has_points and self.selected_sensor and self.selected_sensor.can_geolocate():
+                    if has_points and self.selected_sensor is not None and self.selected_sensor.can_geolocate():
                         px_x, px_y = self._shapefile_geo_to_pixel(np.array(all_lons), np.array(all_lats))
                         for x, y in zip(px_x, px_y):
                             if np.isnan(x) or np.isnan(y) or not lasso_polygon.contains(Point(x, y)):
@@ -2878,7 +2878,7 @@ class ImageryViewer(QWidget):
                         continue
 
                     # Calculate distances to all visible detections
-                    if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
+                    if self.map_view_mode and detector.sensor.can_geolocate():
                         geodetic = detector.get_geodetic_coords()
                         if geodetic is not None:
                             det_x, det_y = geodetic[0][indices], geodetic[1][indices]
@@ -3066,7 +3066,7 @@ class ImageryViewer(QWidget):
             row = detector.rows[index]
             col = detector.columns[index]
 
-            if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
+            if self.map_view_mode and detector.sensor.can_geolocate():
                 lon, lat = self._pixel_to_map(row, col)
                 if np.isnan(lon):
                     continue
@@ -3531,7 +3531,7 @@ class ImageryViewer(QWidget):
 
     def _update_projected_imagery(self, image=None) -> None:
         """Update the projected VISTA imagery display in map mode."""
-        if not self.map_view_mode or self.imagery is None or self.imagery.times is None or self.imagery_projector is None:
+        if not self.map_view_mode or self.imagery is None or not self.timeline.is_time or self.imagery_projector is None:
             return
 
         if self.projected_image_item is None:
@@ -3670,8 +3670,8 @@ class ImageryViewer(QWidget):
         tuple[float, float]
             (row, col) in pixel coordinates, or (NaN, NaN) if projection fails.
         """
-        sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
-        if sensor is None or not sensor.can_geolocate() or self.imagery is None or self.imagery.times is None:
+        sensor = self.selected_sensor
+        if sensor is None or not sensor.can_geolocate() or not self.timeline.is_time:
             return float("nan"), float("nan")
 
         earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
@@ -3697,8 +3697,8 @@ class ImageryViewer(QWidget):
         tuple[float, float]
             (lon, lat) in degrees, or (NaN, NaN) if projection fails.
         """
-        sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
-        if sensor is None or not sensor.can_geolocate() or self.imagery is None or self.imagery.times is None:
+        sensor = self.selected_sensor
+        if sensor is None or not sensor.can_geolocate() or not self.timeline.is_time:
             return float("nan"), float("nan")
 
         frame_index = self.imagery.get_frame_index(self.current_frame_number)
