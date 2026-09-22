@@ -486,6 +486,12 @@ class ImageryViewer(QWidget):
                 # changed, leaving the image item with stale levels.
                 if self.histogram.imageItem() is not None:
                     self.histogram.imageItem().setLevels(self.histogram.getLevels())
+            else:
+                self.image_item.clear()
+                self.histogram.plot.setData([], [])
+        else:
+            self.image_item.clear()
+            self.histogram.plot.setData([], [])
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
