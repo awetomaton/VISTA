@@ -358,82 +358,72 @@ class DetectionsPanel(DataPanel):
 
     def refresh_detections_table(self):
         """Refresh the detections table, filtering by selected sensor"""
-        try:
-            self.detections_table.blockSignals(True)
-            self.detections_table.setRowCount(0)
+        self.detections_table.blockSignals(True)
+        self.detections_table.setRowCount(0)
 
-            # Update header labels with filter icons
-            self._update_detections_header_icons()
+        # Update header labels with filter icons
+        self._update_detections_header_icons()
 
-            # Filter detectors by selected sensor
-            filtered_detectors = [det for det in self.viewer.detectors if det.sensor == self.viewer.selected_sensor]
+        # Filter detectors by selected sensor
+        filtered_detectors = [det for det in self.viewer.detectors if det.sensor == self.viewer.selected_sensor]
 
-            # Apply column filters
-            filtered_detectors = self._apply_detection_filters(filtered_detectors)
+        # Apply column filters
+        filtered_detectors = self._apply_detection_filters(filtered_detectors)
 
-            for row, detector in enumerate(filtered_detectors):
-                try:
-                    self.detections_table.insertRow(row)
+        for row, detector in enumerate(filtered_detectors):
+            self.detections_table.insertRow(row)
 
-                    # Visible checkbox
-                    visible_item = QTableWidgetItem()
-                    visible_item.setFlags(
-                        Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-                    )
-                    visible_item.setCheckState(Qt.CheckState.Checked if detector.visible else Qt.CheckState.Unchecked)
-                    self.detections_table.setItem(row, 0, visible_item)
+            # Visible checkbox
+            visible_item = QTableWidgetItem()
+            visible_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
+            visible_item.setCheckState(Qt.CheckState.Checked if detector.visible else Qt.CheckState.Unchecked)
+            self.detections_table.setItem(row, 0, visible_item)
 
-                    # Name
-                    name_item = QTableWidgetItem(str(detector.name))
-                    name_item.setData(Qt.ItemDataRole.UserRole, detector.uuid)  # Store detector UUID
-                    self.detections_table.setItem(row, 1, name_item)
+            # Name
+            name_item = QTableWidgetItem(str(detector.name))
+            name_item.setData(Qt.ItemDataRole.UserRole, detector.uuid)  # Store detector UUID
+            self.detections_table.setItem(row, 1, name_item)
 
-                    # Labels - show unique labels for this detector (across all detections)
-                    unique_labels = detector.get_unique_labels()
-                    labels_text = ", ".join(sorted(unique_labels))
-                    labels_item = QTableWidgetItem(labels_text)
-                    labels_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Read-only
-                    self.detections_table.setItem(row, 2, labels_item)
+            # Labels - show unique labels for this detector (across all detections)
+            unique_labels = detector.get_unique_labels()
+            labels_text = ", ".join(sorted(unique_labels))
+            labels_item = QTableWidgetItem(labels_text)
+            labels_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Read-only
+            self.detections_table.setItem(row, 2, labels_item)
 
-                    # Color
-                    color_item = QTableWidgetItem()
-                    color_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                    color = pg_color_to_qcolor(detector.color)
-                    if not color.isValid():
-                        print(f"Warning: Invalid color '{detector.color}' for detector '{detector.name}', using red")
-                        color = QColor("red")
-                    color_item.setBackground(QBrush(color))
-                    color_item.setData(Qt.ItemDataRole.UserRole, detector.color)  # Store original color string
-                    self.detections_table.setItem(row, 3, color_item)
+            # Color
+            color_item = QTableWidgetItem()
+            color_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            color = pg_color_to_qcolor(detector.color)
+            if not color.isValid():
+                print(f"Warning: Invalid color '{detector.color}' for detector '{detector.name}', using red")
+                color = QColor("red")
+            color_item.setBackground(QBrush(color))
+            color_item.setData(Qt.ItemDataRole.UserRole, detector.color)  # Store original color string
+            self.detections_table.setItem(row, 3, color_item)
 
-                    # Marker
-                    self.detections_table.setItem(row, 4, QTableWidgetItem(str(detector.marker)))
+            # Marker
+            self.detections_table.setItem(row, 4, QTableWidgetItem(str(detector.marker)))
 
-                    # Size
-                    size_item = QTableWidgetItem(str(detector.marker_size))
-                    self.detections_table.setItem(row, 5, size_item)
+            # Size
+            size_item = QTableWidgetItem(str(detector.marker_size))
+            self.detections_table.setItem(row, 5, size_item)
 
-                    # Line thickness
-                    line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
-                    self.detections_table.setItem(row, 6, line_thickness_item)
+            # Line thickness
+            line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
+            self.detections_table.setItem(row, 6, line_thickness_item)
 
-                    # Complete checkbox
-                    complete_item = QTableWidgetItem()
-                    complete_item.setFlags(
-                        Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-                    )
-                    complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
-                    self.detections_table.setItem(row, 7, complete_item)
+            # Complete checkbox
+            complete_item = QTableWidgetItem()
+            complete_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
+            complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
+            self.detections_table.setItem(row, 7, complete_item)
 
-                except Exception as e:
-                    print(f"Error adding detector '{detector.name}' to table at row {row}: {e}")
-                    traceback.print_exc()
-
-            self.detections_table.blockSignals(False)
-        except Exception as e:
-            print(f"Error in refresh_detections_table: {e}")
-            traceback.print_exc()
-            self.detections_table.blockSignals(False)
+        self.detections_table.blockSignals(False)
 
         self.on_detector_selection_changed()
 
