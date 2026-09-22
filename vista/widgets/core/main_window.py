@@ -1794,9 +1794,6 @@ class VistaMainWindow(QMainWindow):
                         if not self.viewer.imagery:
                             errors.append(f"{Path(file_path).name}: Geodetic coordinates require loaded imagery")
                             continue
-                        if not self.viewer.imagery.sensor:
-                            errors.append(f"{Path(file_path).name}: Imagery has no sensor for coordinate conversion")
-                            continue
                         if not self.viewer.imagery.sensor.can_geolocate():
                             errors.append(f"{Path(file_path).name}: Imagery sensor cannot perform geolocation")
                             continue
@@ -1814,8 +1811,9 @@ class VistaMainWindow(QMainWindow):
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
                                 if self.viewer.imagery is not None and self.viewer.imagery.sensor.can_geolocate() and self.viewer.imagery.times is not None:
-                                    frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
-                                    time = self.viewer.imagery.times[frame_index]
+                                    # get nearest index (the one for the image currently displayed)
+                                    image_index = self.viewer.imagery.get_index(self.viewer.timeline.current_value, self.viewer.timeline.is_time, nearest=True)
+                                    time = self.viewer.imagery.times[image_index]
                                     location = self.viewer.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
                                     lat = location.lat.deg[0]
                                     lon = location.lon.deg[0]
@@ -1837,8 +1835,9 @@ class VistaMainWindow(QMainWindow):
                                 location = EarthLocation(
                                     lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km
                                 )
-                                frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
-                                time = self.viewer.imagery.times[frame_index]
+                                # get nearest index (the one for the image currently displayed)
+                                image_index = self.viewer.imagery.get_index(self.viewer.timeline.current_value, self.viewer.timeline.is_time, nearest=True)
+                                time = self.viewer.imagery.times[image_index]
                                 row, col = self.viewer.imagery.sensor.geodetic_to_pixel(time, location)
 
                                 if np.isnan(row) or np.isnan(col):
