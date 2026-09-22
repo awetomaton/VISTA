@@ -365,15 +365,8 @@ class DetectionsPanel(DataPanel):
             # Update header labels with filter icons
             self._update_detections_header_icons()
 
-            # Get selected sensor from viewer
-            selected_sensor = self.viewer.selected_sensor
-
             # Filter detectors by selected sensor
-            filtered_detectors = []
-            if selected_sensor is not None:
-                filtered_detectors = [det for det in self.viewer.detectors if det.sensor == selected_sensor]
-            else:
-                filtered_detectors = self.viewer.detectors
+            filtered_detectors = [det for det in self.viewer.detectors if det.sensor == self.viewer.selected_sensor]
 
             # Apply column filters
             filtered_detectors = self._apply_detection_filters(filtered_detectors)

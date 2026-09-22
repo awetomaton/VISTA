@@ -743,14 +743,10 @@ class TracksPanel(DataPanel):
         selected_sensor = self.viewer.selected_sensor
 
         # Build list of all tracks, filtering by sensor
-        all_tracks = []
-        for track in self.viewer.tracks:
-            # Filter by selected sensor
-            if selected_sensor is None or track.sensor == selected_sensor:
-                all_tracks.append(track)
+        filtered_tracks = [track for track in self.viewer.tracks if track.sensor == self.viewer.selected_sensor]
 
         # Apply filters
-        filtered_tracks = self._apply_track_filters(all_tracks)
+        filtered_tracks = self._apply_track_filters(filtered_tracks)
 
         # Apply sorting (multi-column takes precedence over single-column)
         if self.track_multi_sort_order:
@@ -2348,13 +2344,13 @@ class TracksPanel(DataPanel):
         self.edit_track_btn.setEnabled(num_selected == 1)
         self.split_track_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
-        if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
+        if self.edit_track_btn.isChecked() and num_selected != 1:
             self.edit_track_btn.setChecked(False)
 
         # Enable View Extraction and Edit Extraction buttons only if exactly one track with extraction is selected
         has_extraction = False
         selected_track = None
-        if len(selected_rows) == 1:
+        if num_selected == 1:
             row = list(selected_rows)[0]
             # Check if extracted checkbox is checked
             extracted_item = self.tracks_table.item(row, 13)  # Extracted column
