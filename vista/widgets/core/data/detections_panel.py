@@ -397,7 +397,7 @@ class DetectionsPanel(DataPanel):
 
                     # Labels - show unique labels for this detector (across all detections)
                     unique_labels = detector.get_unique_labels()
-                    labels_text = ", ".join(sorted(unique_labels)) if unique_labels else ""
+                    labels_text = ", ".join(sorted(unique_labels))
                     labels_item = QTableWidgetItem(labels_text)
                     labels_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Read-only
                     self.detections_table.setItem(row, 2, labels_item)
