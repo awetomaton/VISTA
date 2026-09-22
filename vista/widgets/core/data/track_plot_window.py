@@ -845,7 +845,9 @@ class TrackPlotWindow(QWidget):
         if not x_axis or not y_axis:
             return
 
-        current_frame = self.viewer.current_frame_number if self.viewer else 0
+        timeline = self.viewer.timeline if self.viewer else None
+        if timeline is None:
+            return
         show_complete = self.show_complete_plot.isChecked()
 
         color_by = "track" if self.color_by_track.isChecked() else "tracker"
@@ -864,16 +866,13 @@ class TrackPlotWindow(QWidget):
             frames = track.frames
 
             # Filter data based on display mode
+            indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
             if show_complete:
                 # Show all data points
                 mask = np.ones(len(frames), dtype=bool)
-            elif self.up_to_frame_radio.isChecked():
-                # Show all data up to current frame
-                mask = frames <= current_frame
             else:
-                # Show only last N frames
-                tail_length = self.tail_length_spin.value()
-                mask = (frames <= current_frame) & (frames > current_frame - tail_length)
+                mask = np.zeros(len(frames), dtype=bool)
+                mask[indices] = True
 
             if not np.any(mask):
                 continue
@@ -903,9 +902,8 @@ class TrackPlotWindow(QWidget):
             self._plot_items.append((track, x_filtered, y_filtered))
 
             # Highlight current frame position with a larger marker
-            current_idx = np.where(frames == current_frame)[0]
-            if len(current_idx) > 0:
-                idx = current_idx[0]
+            idx = track.get_index(timeline.current_value, timeline.is_time)
+            if idx is not None:
                 y_current = self._symlog(np.array([y_data_original[idx]]))[0] if use_symlog else y_data_original[idx]
                 self.plot.plot(
                     [x_data[idx]],

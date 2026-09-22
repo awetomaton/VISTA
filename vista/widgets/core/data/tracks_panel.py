@@ -2073,25 +2073,43 @@ class TracksPanel(DataPanel):
             QMessageBox.warning(self, "Cannot Split", "Could not find the selected track.")
             return
 
-        # Get current frame from viewer
-        current_frame = self.viewer.current_frame_number
+        timeline = self.viewer.timeline
 
-        # Check if the current frame is within the track's range
-        if current_frame < track_to_split.frames[0] or current_frame >= track_to_split.frames[-1]:
+        # Check if the current timeline value is within the track's range
+        if timeline.is_time:
+            min_time = np.min(track_to_split.times)
+            max_time = np.max(track_to_split.times)
+            can_split = timeline.current_value >= min_time and timeline.current_value < max_time
+            msg = (f"Current time ({timeline.current_value}) is not within the track's time range "
+                   f"({min_time} - {max_time}). "  
+                   "Please navigate to a time within the track to split it.")
+        else:
+            min_frame = np.min(track_to_split.frames)
+            max_frame = np.max(track_to_split.frames)
+            can_split = timeline.current_value >= min_frame and timeline.current_value < max_frame
+            msg = (f"Current frame ({timeline.current_value}) is not within the track's frame range "
+                   f"({min_frame} - {max_frame}). "  
+                   "Please navigate to a frame within the track to split it.")
+
+        if not can_split:
             QMessageBox.warning(
                 self,
                 "Cannot Split",
-                f"Current frame ({current_frame}) is not within the track's frame range "
-                f"({track_to_split.frames[0]} - {track_to_split.frames[-1]}). "
-                "Please navigate to a frame within the track to split it.",
+                msg,
             )
             return
 
         # Split the track data
-        # First track: frames <= current_frame
-        mask_first = track_to_split.frames <= current_frame
-        # Second track: frames > current_frame
-        mask_second = track_to_split.frames > current_frame
+        if timeline.is_time:
+            # First track: times <= current time
+            mask_first = track_to_split.times <= timeline.current_value
+            # Second track: times > current time
+            mask_second = track_to_split.times > timeline.current_value
+        else:
+            # First track: frames <= current frame
+            mask_first = track_to_split.frames <= timeline.current_value
+            # Second track: frames > current frame
+            mask_second = track_to_split.frames > timeline.current_value
 
         # Check if split would create valid tracks
         if not np.any(mask_first) or not np.any(mask_second):
@@ -2142,12 +2160,19 @@ class TracksPanel(DataPanel):
         self.refresh_tracks_table()
         self.data_changed.emit()
 
+        if timeline.is_time:
+            msg = (f"Track '{track_to_split.name}' has been split at time {timeline.current_value} into:\n"
+                   f"  - '{first_name}' (times {np.min(first_track.times)} to {np.max(first_track.times)})\n"
+                   f"  - '{second_name}' (times {np.min(second_track.times)} to {np.max(second_track.times)})")
+        else:
+            msg = (f"Track '{track_to_split.name}' has been split at frame {timeline.current_value} into:\n"
+                   f"  - '{first_name}' (frames {np.min(first_track.frames)} to {np.max(first_track.frames)})\n"
+                   f"  - '{second_name}' (frames {np.min(second_track.frames)} to {np.max(second_track.frames)})")
+
         QMessageBox.information(
             self,
             "Split Complete",
-            f"Track '{track_to_split.name}' has been split at frame {current_frame} into:\n"
-            f"  - '{first_name}' (frames {first_track.frames[0]} to {first_track.frames[-1]})\n"
-            f"  - '{second_name}' (frames {second_track.frames[0]} to {second_track.frames[-1]})",
+            msg,
         )
 
     def delete_selected_tracks(self):

@@ -55,7 +55,7 @@ class DetectionsPanel(DataPanel):
     def __init__(self, viewer):
         super().__init__(viewer)
         self.settings = QSettings("VISTA", "DataManager")
-        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.selected_detections = []  # List of tuples: [(detector, index), ...]
         self.waiting_for_track_selection = False  # Flag when waiting for user to select track
         self.viewer.detection_editing_ended.connect(self.on_detection_editing_ended)
         self.init_ui()
@@ -1504,7 +1504,7 @@ class DetectionsPanel(DataPanel):
             # Set selected labels to each selected detection point (empty set clears labels)
             now = get_current_label_time()
             labeler = get_current_labeler()
-            for detector, _frame, index in self.selected_detections:
+            for detector, index in self.selected_detections:
                 # Ensure per-detection lists are initialized and have enough entries
                 while len(detector.labels) <= index:
                     detector.labels.append(set())
@@ -1570,7 +1570,7 @@ class DetectionsPanel(DataPanel):
 
         # Group indices by detector
         detector_indices = {}
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if detector.uuid not in detector_indices:
                 detector_indices[detector.uuid] = {"detector": detector, "indices": []}
             detector_indices[detector.uuid]["indices"].append(index)
@@ -1657,7 +1657,7 @@ class DetectionsPanel(DataPanel):
         times_list = []
         sensor = None
 
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if sensor is None:
                 sensor = detector.sensor
             elif sensor != detector.sensor:
@@ -1668,7 +1668,7 @@ class DetectionsPanel(DataPanel):
                 )
                 return
 
-            frames_list.append(frame)
+            frames_list.append(detector.frames[index])
             rows_list.append(detector.rows[index])
             columns_list.append(detector.columns[index])
             if detector.times is not None:
@@ -1762,7 +1762,7 @@ class DetectionsPanel(DataPanel):
 
         # Check if detections are from same sensor as track
         sensor = None
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if sensor is None:
                 sensor = detector.sensor
             elif sensor != detector.sensor:
@@ -1802,8 +1802,8 @@ class DetectionsPanel(DataPanel):
             columns_list = list(track.columns)
             times_list = list(track.times) if track.times is not None else []
 
-            for detector, frame, index in self.selected_detections:
-                frames_list.append(frame)
+            for detector, index in self.selected_detections:
+                frames_list.append(detector.frames[index])
                 rows_list.append(detector.rows[index])
                 columns_list.append(detector.columns[index])
                 if detector.times is not None:

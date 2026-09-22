@@ -138,14 +138,14 @@ class ImageryViewer(QWidget):
         # Track creation/editing mode
         self.track_creation_mode = False
         self.track_editing_mode = False
-        self.current_track_data = {}  # frame_number -> (row, col) for track being created/edited
+        self.current_track_data = {}  # time or frame -> (row, col) for track being created/edited
         self.editing_track = None  # Track object being edited
         self.temp_track_plot = None  # Temporary plot item for track being created/edited
 
         # Detection creation/editing mode
         self.detection_creation_mode = False
         self.detection_editing_mode = False
-        self.current_detection_data = {}  # frame_number -> [(row, col), ...] for detections being created/edited
+        self.current_detection_data = {}  # time or frame -> [(row, col), ...] for detections being created/edited
         self.editing_detector = None  # Detector object being edited
         self.temp_detection_plot = None  # Temporary plot item for detections being created/edited
 
@@ -154,7 +154,7 @@ class ImageryViewer(QWidget):
 
         # Detection selection mode
         self.detection_selection_mode = False
-        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.selected_detections = []  # List of tuples: [(detector, index), ...]
         self.selected_detections_plot = None  # ScatterPlotItem for highlighting selected detections
 
         # Extraction view mode
@@ -1301,9 +1301,8 @@ class ImageryViewer(QWidget):
 
             for i, (x, y) in enumerate(zip(check_x, check_y)):
                 if not np.isnan(x) and not np.isnan(y) and lasso_polygon.contains(Point(x, y)):
-                    # Store as (detector, frame, original_index)
-                    detection_frame = detector.frames[indices[i]]
-                    selected_items["detections"].append((detector, int(detection_frame), int(indices[i])))
+                    # Store as (detector, original_index)
+                    selected_items["detections"].append((detector, int(indices[i])))
 
         # Check AOIs (wholly contained = ALL 4 corners inside) — skip in map view (AOIs are pixel-space)
         if not _map_mode:
@@ -2079,8 +2078,12 @@ class ImageryViewer(QWidget):
         self.editing_track = track
         # Load existing track data
         self.current_track_data = {}
-        for i in range(len(track.frames)):
-            self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
+        if self.timeline.is_time:
+            for i in range(len(track.times)):
+                self.current_track_data[track.times[i]] = (track.rows[i], track.columns[i])
+        else:
+            for i in range(len(track.frames)):
+                self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
         self.temp_track_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -2101,7 +2104,7 @@ class ImageryViewer(QWidget):
 
         # Create Track object if we have data
         if len(self.current_track_data) > 0:
-            # Sort by frame number
+            # Sort by time or frame
             sorted_frames = sorted(self.current_track_data.keys())
             frames = np.array(sorted_frames, dtype=np.int_)
             rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
@@ -2144,7 +2147,7 @@ class ImageryViewer(QWidget):
 
         # Update Track object with new data
         if editing_track and len(self.current_track_data) > 0:
-            # Sort by frame number
+            # Sort by time or frame
             sorted_frames = sorted(self.current_track_data.keys())
             editing_track.frames = np.array(sorted_frames, dtype=np.int_)
             editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
@@ -2416,11 +2419,18 @@ class ImageryViewer(QWidget):
         self.editing_detector = detector
         # Load existing detection data
         self.current_detection_data = {}
-        for i in range(len(detector.frames)):
-            frame = detector.frames[i]
-            if frame not in self.current_detection_data:
-                self.current_detection_data[frame] = []
-            self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
+        if self.timeline.is_time:
+            for i in range(len(detector.times)):
+                time = detector.times[i]
+                if time not in self.current_detection_data:
+                    self.current_detection_data[time] = []
+                self.current_detection_data[time].append((detector.rows[i], detector.columns[i]))
+        else:
+            for i in range(len(detector.frames)):
+                frame = detector.frames[i]
+                if frame not in self.current_detection_data:
+                    self.current_detection_data[frame] = []
+                self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
         self.temp_detection_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -2675,8 +2685,8 @@ class ImageryViewer(QWidget):
                     pixel_row, pixel_col = row, col
 
                 # Check if there's already a track point at the current frame
-                if self.current_frame_number in self.current_track_data:
-                    existing_row, existing_col = self.current_track_data[self.current_frame_number]
+                if self.timeline.current_value in self.current_track_data:
+                    existing_row, existing_col = self.current_track_data[self.timeline.current_value]
 
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
@@ -2687,7 +2697,7 @@ class ImageryViewer(QWidget):
 
                     # If click is near the existing point, remove it
                     if distance < tolerance:
-                        del self.current_track_data[self.current_frame_number]
+                        del self.current_track_data[self.timeline.current_value]
                         # Update temporary track display
                         self._update_temp_track_display()
                         return
@@ -2696,7 +2706,7 @@ class ImageryViewer(QWidget):
                 refined_row, refined_col = self._refine_clicked_point(pixel_row, pixel_col)
 
                 # Store in pixel coordinates (tracks always store row/col)
-                self.current_track_data[self.current_frame_number] = (refined_row, refined_col)
+                self.current_track_data[self.timeline.current_value] = (refined_row, refined_col)
 
                 # Update temporary track display
                 self._update_temp_track_display()
@@ -2712,11 +2722,11 @@ class ImageryViewer(QWidget):
                     pixel_row, pixel_col = row, col
 
                 # Initialize list for this frame if needed
-                if self.current_frame_number not in self.current_detection_data:
-                    self.current_detection_data[self.current_frame_number] = []
+                if self.timeline.current_value not in self.current_detection_data:
+                    self.current_detection_data[self.timeline.current_value] = []
 
                 # Check if click is near an existing detection point on this frame
-                detection_list = self.current_detection_data[self.current_frame_number]
+                detection_list = self.current_detection_data[self.timeline.current_value]
                 for i, (existing_row, existing_col) in enumerate(detection_list):
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
@@ -2730,7 +2740,7 @@ class ImageryViewer(QWidget):
                         detection_list.pop(i)
                         # Clean up empty frame entries
                         if len(detection_list) == 0:
-                            del self.current_detection_data[self.current_frame_number]
+                            del self.current_detection_data[self.timeline.current_value]
                         # Update temporary detection display
                         self._update_temp_detection_display()
                         return
@@ -2739,7 +2749,7 @@ class ImageryViewer(QWidget):
                 refined_row, refined_col = self._refine_clicked_point(pixel_row, pixel_col)
 
                 # Store in pixel coordinates (detections always store row/col)
-                self.current_detection_data[self.current_frame_number].append((refined_row, refined_col))
+                self.current_detection_data[self.timeline.current_value].append((refined_row, refined_col))
 
                 # Update temporary detection display
                 self._update_temp_detection_display()
@@ -2945,8 +2955,8 @@ class ImageryViewer(QWidget):
         other_frame_x = []
         other_frame_y = []
 
-        for frame in sorted(self.current_track_data.keys()):
-            row, col = self.current_track_data[frame]
+        for val in sorted(self.current_track_data.keys()):
+            row, col = self.current_track_data[val]
             if self.map_view_mode:
                 # Project pixel coords to map (lon, lat) for display
                 lon, lat = self._pixel_to_map(row, col)
@@ -2956,7 +2966,7 @@ class ImageryViewer(QWidget):
             else:
                 x, y = col, row
 
-            if frame == self.current_frame_number:
+            if val == self.timeline.current_value:
                 current_frame_x.append(x)
                 current_frame_y.append(y)
             else:
@@ -3015,8 +3025,8 @@ class ImageryViewer(QWidget):
         current_frame_y = []
 
         # Get detections for current frame only
-        if self.current_frame_number in self.current_detection_data:
-            for row, col in self.current_detection_data[self.current_frame_number]:
+        if self.timeline.current_value in self.current_detection_data:
+            for row, col in self.current_detection_data[self.timeline.current_value]:
                 if self.map_view_mode:
                     lon, lat = self._pixel_to_map(row, col)
                     if np.isnan(lon):
@@ -3065,7 +3075,7 @@ class ImageryViewer(QWidget):
         other_frame_x = []
         other_frame_y = []
 
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
                 continue
 
@@ -3080,7 +3090,7 @@ class ImageryViewer(QWidget):
             else:
                 x, y = col, row
 
-            if frame == self.current_frame_number:
+            if detector.get_value(index, self.timeline.is_time) == self.timeline.current_value:
                 current_frame_x.append(x)
                 current_frame_y.append(y)
             else:
