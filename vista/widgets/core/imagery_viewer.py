@@ -346,25 +346,26 @@ class ImageryViewer(QWidget):
             self.ewma_frame_counter = 0
             self.ewma_last_frame_number = None
 
-        if self.map_view_mode:
-            # In map mode, update projected imagery and recompute footprint
-            if self.imagery_projector is not None and self.timeline.is_time:
-                time = self.timeline.current_value
-                _, nrows, ncols = imagery.images.shape
-                self._imagery_footprint = self.imagery_projector.compute_footprint(
-                    time,
-                    nrows,
-                    ncols,
-                    imagery.row_offset,
-                    imagery.column_offset,
-                )
-            # Apply opacity
-            if self.projected_image_item is not None:
-                opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
-                self.projected_image_item.setOpacity(opacity)
-        else:
-            # Apply imagery offsets for positioning
-            self.image_item.setPos(imagery.column_offset, imagery.row_offset)
+        if self.imagery is not None:
+            if self.map_view_mode:
+                # In map mode, update projected imagery and recompute footprint
+                if self.imagery_projector is not None and self.timeline.is_time:
+                    time = self.timeline.current_value
+                    _, nrows, ncols = imagery.images.shape
+                    self._imagery_footprint = self.imagery_projector.compute_footprint(
+                        time,
+                        nrows,
+                        ncols,
+                        imagery.row_offset,
+                        imagery.column_offset,
+                    )
+                # Apply opacity
+                if self.projected_image_item is not None:
+                    opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
+                    self.projected_image_item.setOpacity(opacity)
+            else:
+                # Apply imagery offsets for positioning
+                self.image_item.setPos(imagery.column_offset, imagery.row_offset)
 
         # Refresh the current display
         self.set_index(self.timeline.current_index)

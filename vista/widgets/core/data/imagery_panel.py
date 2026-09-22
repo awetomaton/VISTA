@@ -25,7 +25,7 @@ _HDF5_EXTENSIONS = (".h5", ".hdf5")
 class ImageryPanel(DataPanel):
     """Panel for managing imagery"""
 
-    imagery_selected = pyqtSignal()  # Signal when imagery selection changes
+    imagery_selected = pyqtSignal(object)  # Signal when imagery selection changes
     cancel_loading_requested = pyqtSignal(object)  # Emits imagery UUID to cancel loading
 
     def __init__(self, viewer):
@@ -85,15 +85,8 @@ class ImageryPanel(DataPanel):
         self.imagery_table.blockSignals(True)
         self.imagery_table.setRowCount(0)
 
-        # Get selected sensor from viewer
-        selected_sensor = self.viewer.selected_sensor
-
         # Filter imageries by selected sensor
-        filtered_imageries = []
-        if selected_sensor is not None:
-            filtered_imageries = [img for img in self.viewer.imageries if img.sensor == selected_sensor]
-        else:
-            filtered_imageries = self.viewer.imageries
+        filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
 
         for row, imagery in enumerate(filtered_imageries):
             self.imagery_table.insertRow(row)
@@ -135,20 +128,11 @@ class ImageryPanel(DataPanel):
             self.imagery_table.setItem(row, 4, imagery_fname_item)
             imagery_fname_item.setToolTip(fname)
 
-        self.imagery_table.blockSignals(False)
-
-        # Select the row for the currently active imagery
-        found = False
-        for row, imagery in enumerate(filtered_imageries):
+            # Select the row for the currently active imagery
             if imagery == self.viewer.imagery:
                 self.imagery_table.selectRow(row)
-                found = True
-                break
 
-        # If the active imagery is not in the filtered list, clear the viewer
-        if not found and self.viewer.imagery is not None:
-            self.viewer.imagery = None
-            self.viewer.image_item.clear()
+        self.imagery_table.blockSignals(False)
 
     def _set_loading_widget(self, row, imagery_uuid, loaded_count, total_frames):
         """Set a progress bar + cancel button widget in the Frames column for a loading row.
@@ -242,16 +226,10 @@ class ImageryPanel(DataPanel):
                 # Find the imagery by UUID
                 for imagery in self.viewer.imageries:
                     if imagery.uuid == imagery_uuid:
-                        # Skip if the viewer is already displaying this imagery
-                        if self.viewer.imagery is None or self.viewer.imagery.uuid != imagery_uuid:
-                            self.viewer.select_imagery(imagery)
-                        self.imagery_selected.emit()
+                        self.imagery_selected.emit(imagery)
                         break
         else:
-            # No imagery selected - clear the viewer display
-            self.viewer.imagery = None
-            self.viewer.image_item.clear()
-            self.imagery_selected.emit()
+            self.imagery_selected.emit(None)
 
     def on_imagery_cell_changed(self, row, column):
         """Handle imagery cell changes"""
@@ -387,19 +365,15 @@ class ImageryPanel(DataPanel):
         # Release GPU memory before removing the imagery
         imagery_to_delete.release_gpu()
 
-        # Check if this is the currently displayed imagery
-        if imagery_to_delete == self.viewer.imagery:
-            # Clear the current imagery
-            self.viewer.imagery = None
-            self.viewer.image_item.clear()
-
         # Remove from list
         self.viewer.imageries.remove(imagery_to_delete)
 
-        # If there are still imageries and none is selected, select the first one
-        if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
-            self.viewer.select_imagery(self.viewer.imageries[0])
-            self.imagery_selected.emit()
+        # If there are still imageries available for the selected sensor, select the first one
+        filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
+        if len(filtered_imageries) > 0:
+            self.imagery_selected.emit(filtered_imageries[0])
+        else:
+            self.imagery_selected.emit(None)
 
         # Refresh table
         self.refresh_imagery_table()
