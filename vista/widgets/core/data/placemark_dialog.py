@@ -29,8 +29,8 @@ class PlacemarkDialog(QDialog):
 
         # Check if geolocation is available
         self.can_geolocate = False
-        if self.viewer.imagery:
-            self.can_geolocate = self.viewer.imagery.sensor.can_geolocate()
+        if self.viewer.selected_sensor is not None:
+            self.can_geolocate = self.viewer.selected_sensor.can_geolocate()
 
         self.init_ui()
 
@@ -162,10 +162,9 @@ class PlacemarkDialog(QDialog):
 
             # Try to convert to geodetic if possible
             lat, lon, alt = None, None, None
-            if self.can_geolocate and self.viewer.imagery.times is not None:
-                frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
-                time = self.viewer.imagery.times[frame_index]
-                location = self.viewer.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
+            if self.can_geolocate and self.viewer.timeline.is_time:
+                time = self.viewer.timeline.current_value
+                location = self.viewer.selected_sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
                 lat = location.lat.deg[0]
                 lon = location.lon.deg[0]
                 alt = location.height.to(units.km).value[0]
@@ -180,25 +179,26 @@ class PlacemarkDialog(QDialog):
             lon = self.lon_spinbox.value()
             alt = self.alt_spinbox.value()
 
-            # Convert to pixel coordinates
-            try:
-                frame_index = self.viewer.imagery.get_frame_index(self.viewer.current_frame_number)
-                time = self.viewer.imagery.times[frame_index]
-                location = EarthLocation(lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km)
-                row, col = self.viewer.imagery.sensor.geodetic_to_pixel(time, location)
-
-                if np.isnan(row) or np.isnan(col):
-                    QMessageBox.warning(
-                        self,
-                        "Conversion Error",
-                        "Could not convert geodetic coordinates to pixel coordinates.\n"
-                        "The location may be outside the sensor's field of view.",
-                    )
-                    return None
-
-                return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
-            except Exception as e:
+            if not self.viewer.timeline.is_time:
                 QMessageBox.critical(
-                    self, "Conversion Error", f"Failed to convert geodetic to pixel coordinates:\n{str(e)}"
+                    self,
+                    "Conversion Error",
+                    "Could not convert geodetic coordinates to pixel coordinates.\n"
+                    "No time currently available.",
                 )
                 return None
+
+            time = self.viewer.timeline.current_value
+            location = EarthLocation(lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km)
+            row, col = self.viewer.selected_sensor.geodetic_to_pixel(time, location)
+
+            if np.isnan(row) or np.isnan(col):
+                QMessageBox.warning(
+                    self,
+                    "Conversion Error",
+                    "Could not convert geodetic coordinates to pixel coordinates.\n"
+                    "The location may be outside the sensor's field of view.",
+                )
+                return None
+
+            return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
