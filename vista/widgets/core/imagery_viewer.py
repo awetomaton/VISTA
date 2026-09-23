@@ -314,10 +314,18 @@ class ImageryViewer(QWidget):
 
     def update_timeline(self):
         """Update timeline object based on current imagery, detectors, and tracks"""
+        # filter by selected sensor
+        imageries = [img for img in self.imageries if img.sensor == self.selected_sensor]
+        detectors = [d for d in self.detectors if d.sensor == self.selected_sensor]
+        tracks = [t for t in self.tracks if t.sensor == self.selected_sensor]
+        
         # try to save current value to load back in
         curr_value = self.timeline.current_value
-        self.timeline = DisplayTimeline([self.imagery] if self.imagery is not None else [], self.detectors, self.tracks)
-        self.timeline.set_index_from_value(curr_value)
+        self.timeline = DisplayTimeline(imageries, detectors, tracks)
+        try:
+            self.timeline.set_index_from_value(curr_value)
+        except:
+            self.timeline.current_index = -1  # set to invalid if previous value could not be loaded in
 
         min_index, max_index = self.timeline.get_range()
         # if value loading failed, but there is a valid range of indices, use index 0
@@ -325,6 +333,7 @@ class ImageryViewer(QWidget):
             self.timeline.current_index = 0
 
         self.timeline_updated.emit()
+        self.set_index(self.timeline.current_index)
 
     def add_imagery(self, imagery: Imagery):
         """Add imagery to the list of available imageries"""
