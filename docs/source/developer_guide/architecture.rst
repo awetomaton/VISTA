@@ -182,7 +182,7 @@ Incremental Imagery Loading
 
 Large imagery files are loaded in blocks using an incremental protocol with three Qt signals:
 
-1. **``imagery_available(imagery, sensor, total_frames)``** — emitted after the first block of
+1. **``imagery_available(imagery, total_frames)``** — emitted after the first block of
    frames is loaded. The viewer adds the imagery and displays the available frames.
 2. **``imagery_block_loaded(imagery_uuid, loaded_count)``** — emitted after each subsequent block.
    The viewer updates the playback range and progress bar.

@@ -30,7 +30,7 @@ class DataLoaderThread(QThread):
     """
 
     # Incremental imagery loading signals
-    imagery_available = pyqtSignal(object, object, int)  # (Imagery, Sensor, total_frames)
+    imagery_available = pyqtSignal(object, int)  # (Imagery, total_frames)
     imagery_block_loaded = pyqtSignal(object, int)  # (imagery_uuid, loaded_count)
     imagery_load_complete = pyqtSignal(object)  # (imagery_uuid)
 
@@ -199,7 +199,7 @@ class DataLoaderThread(QThread):
         imagery.loaded_frame_count = 0
 
         # Load images incrementally, emitting signals as blocks become available
-        self._load_images_incrementally(imagery, images_dataset, sensor)
+        self._load_images_incrementally(imagery, images_dataset)
 
     def _load_imagery_v16(self, f: h5py.File):
         """Load imagery from 1.6+ hierarchical HDF5 format"""
@@ -348,7 +348,7 @@ class DataLoaderThread(QThread):
 
         return sensor
 
-    def _load_imagery_from_group(self, img_group: h5py.Group, sensor):
+    def _load_imagery_from_group(self, img_group: h5py.Group, sensor: Sensor):
         """Load an Imagery object from an HDF5 group with incremental image loading"""
         # Load attributes
         name = img_group.attrs.get("name", "Unknown")
@@ -402,10 +402,10 @@ class DataLoaderThread(QThread):
             imagery.uuid = uuid.UUID(imagery_uuid)
 
         # Load images incrementally, emitting signals as blocks become available
-        self._load_images_incrementally(imagery, images_dataset, sensor)
+        self._load_images_incrementally(imagery, images_dataset)
 
     def _load_images_incrementally(
-        self, imagery: Imagery, images_dataset: h5py.Dataset, sensor, image_dataset_slice=None
+        self, imagery: Imagery, images_dataset: h5py.Dataset, image_dataset_slice=None
     ):
         """Load images block-by-block, emitting signals so the UI can display frames as they arrive.
 
@@ -415,8 +415,6 @@ class DataLoaderThread(QThread):
             Imagery object with pre-allocated (zeroed) images array and loaded_frame_count = 0
         images_dataset : h5py.Dataset
             HDF5 dataset to read images from
-        sensor : Sensor
-            Associated sensor (passed to imagery_available signal)
         image_dataset_slice : slice, optional
             Slice into images_dataset selecting which images to load. When None (default),
             all images in the dataset are loaded. When provided, only the specified subset
@@ -452,7 +450,7 @@ class DataLoaderThread(QThread):
         imagery.loaded_frame_count = first_end
 
         # Emit imagery_available - the main thread can now add this imagery to the viewer
-        self.imagery_available.emit(imagery, sensor, num_images)
+        self.imagery_available.emit(imagery, num_images)
 
         # Load remaining blocks
         for start_idx in range(first_end, num_images, block_size):

@@ -983,8 +983,10 @@ class VistaMainWindow(QMainWindow):
 
             self.loader_thread.start()
 
-    def on_imagery_available(self, imagery, sensor, total_frames):
+    def on_imagery_available(self, imagery: Imagery, total_frames: int):
         """Handle imagery becoming available for viewing (first block loaded, loading continues in background)"""
+
+        sensor = imagery.sensor
 
         # Handle sensor - check if sensor with same UUID already exists
         existing_sensor = None

@@ -184,7 +184,7 @@ Open ``vista/widgets/core/data/data_loader.py`` and add a new ``data_type`` bran
        imagery.loaded_frame_count = 0
 
        # 5. Load incrementally (see below)
-       self._load_my_format_incrementally(imagery, images_on_disk, sensor)
+       self._load_my_format_incrementally(imagery, images_on_disk)
 
 Step 2: Implement Incremental Loading
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -197,7 +197,7 @@ VISTA's viewer can display imagery while frames are still loading. The protocol 
 
    * - Signal
      - When to emit
-   * - ``imagery_available(imagery, sensor, total_frames)``
+   * - ``imagery_available(imagery, total_frames)``
      - After the first block of frames is loaded. The viewer will add the imagery and display
        whatever frames are available.
    * - ``imagery_block_loaded(imagery_uuid, loaded_count)``
@@ -208,7 +208,7 @@ VISTA's viewer can display imagery while frames are still loading. The protocol 
 
 .. code-block:: python
 
-   def _load_my_format_incrementally(self, imagery, images_on_disk, sensor):
+   def _load_my_format_incrementally(self, imagery, images_on_disk):
        """Load frames in blocks, emitting signals so the UI stays responsive."""
        num_frames = images_on_disk.shape[0]
        block_size = max(10, num_frames // 100)
@@ -221,7 +221,7 @@ VISTA's viewer can display imagery while frames are still loading. The protocol 
 
        imagery.images[0:first_end] = images_on_disk[0:first_end]
        imagery.loaded_frame_count = first_end
-       self.imagery_available.emit(imagery, sensor, num_frames)
+       self.imagery_available.emit(imagery, num_frames)
 
        # Load remaining blocks
        for start in range(first_end, num_frames, block_size):
@@ -297,7 +297,7 @@ thread communicates with the main (GUI) thread:
    Set loaded_frame_count = 0
    Read first block into images[0:N]
    Set loaded_frame_count = N
-   ── imagery_available ──────────────────►   Add imagery + sensor to viewer
+   ── imagery_available ──────────────────►   Add imagery to viewer
                                               Show progress bar in imagery panel
                                               Display first N frames
 
@@ -346,7 +346,7 @@ you can skip the block-by-block approach:
        # loaded_frame_count defaults to None = fully loaded
 
        # Emit all three signals in sequence
-       self.imagery_available.emit(imagery, sensor, len(frames))
+       self.imagery_available.emit(imagery, len(frames))
        self.imagery_load_complete.emit(imagery.uuid)
 
 Complete Example: FITS Loader
@@ -400,7 +400,7 @@ data_loader.py additions
 
            images[0:first_end] = data[0:first_end].astype(np.float32)
            imagery.loaded_frame_count = first_end
-           self.imagery_available.emit(imagery, sensor, num_frames)
+           self.imagery_available.emit(imagery, num_frames)
 
            for start in range(first_end, num_frames, block_size):
                if self._cancelled:
