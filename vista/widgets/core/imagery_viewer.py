@@ -970,7 +970,7 @@ class ImageryViewer(QWidget):
             detector_uuid = detector.uuid
             if detector_uuid not in self.detector_plot_items:
                 scatter = pg.ScatterPlotItem()
-                self.plot_item.addItem(scatter)
+                self.plot_item.addItem(scatter, ignoreBounds=bool(self.selected_imageries))
                 self.detector_plot_items[detector_uuid] = scatter
 
             scatter = self.detector_plot_items[detector_uuid]
@@ -1046,8 +1046,8 @@ class ImageryViewer(QWidget):
             if track_id not in self.track_path_items:
                 path = pg.PlotCurveItem()
                 marker = pg.ScatterPlotItem()
-                self.plot_item.addItem(path)
-                self.plot_item.addItem(marker)
+                self.plot_item.addItem(path, ignoreBounds=bool(self.selected_imageries))
+                self.plot_item.addItem(marker, ignoreBounds=bool(self.selected_imageries))
                 self.track_path_items[track_id] = path
                 self.track_marker_items[track_id] = marker
 
@@ -1230,7 +1230,7 @@ class ImageryViewer(QWidget):
                         ellipse.setBrush(pg.mkBrush(None))
 
                         # Add to plot
-                        self.plot_item.addItem(ellipse)
+                        self.plot_item.addItem(ellipse, ignoreBounds=bool(self.selected_imageries))
                         self.track_uncertainty_items[track_id] = [ellipse]
                 else:
                     # No track data at current index, remove ellipse
@@ -1794,7 +1794,7 @@ class ImageryViewer(QWidget):
 
     def start_draw_roi(self):
         """Start drawing a new ROI"""
-        if self.imagery is None or self.map_view_mode:
+        if self.map_view_mode or not self.selected_imageries:
             return
 
         # Size and center the AOI relative to the user's current view.

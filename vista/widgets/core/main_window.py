@@ -161,7 +161,6 @@ class VistaMainWindow(QMainWindow):
         # Connect sensor selection to map view state updates
         self.data_manager.sensors_panel.sensor_selected.connect(lambda _sensor: self._update_map_view_action_state())
 
-
         # Connect image selection
         self.data_manager.imagery_panel.imagery_selected.connect(self.viewer.select_imagery)
         self.data_manager.imagery_panel.imagery_selected.connect(
