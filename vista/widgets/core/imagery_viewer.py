@@ -342,9 +342,14 @@ class ImageryViewer(QWidget):
             if self.selected_sensor is None:
                 self.select_sensor(sensor)
 
-    def select_sensor(self, sensor: Sensor):
+    def select_sensor(self, sensor: Optional[Sensor]):
         """Select a sensor"""
         self._reset_sensor_context_state()
+        # TODO: come up with a more robust way to preserve map status when swapping sensors
+        # than toggling set_map_view_mode twice
+        is_map_mode = self.map_view_mode  # preserve state to restore later
+        if is_map_mode:
+            self.set_map_view_mode(False)
         self.selected_sensor = sensor
         if self.imagery is None or self.imagery.sensor != self.selected_sensor:
             filtered_imagery = [img for img in self.imageries if img.sensor == self.selected_sensor]
@@ -352,13 +357,15 @@ class ImageryViewer(QWidget):
                 self.select_imagery(filtered_imagery[0])
             else:
                 self.select_imagery(None)
+        if is_map_mode:
+            self.set_map_view_mode(is_map_mode)
 
     def add_imagery(self, imagery: Imagery):
         """Add imagery to the list of available imageries"""
         if imagery not in self.imageries:
             self.imageries.append(imagery)
 
-    def select_imagery(self, imagery: Imagery, preserve_ewma: bool = False):
+    def select_imagery(self, imagery: Optional[Imagery], preserve_ewma: bool = False):
         """Select which imagery to display"""
         self.ignore_changing_histogram_levels = True
         self.imagery = imagery
