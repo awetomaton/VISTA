@@ -133,7 +133,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.wms_status_changed.connect(self._on_wms_status_changed)
         self.viewer.sensor_context_reset.connect(self.on_sensor_context_reset)
 
-        self.viewer.timeline_updated.connect(self.update_index_range_from_imagery)
+        self.viewer.timeline_updated.connect(self.update_index_range)
         self.data_manager.data_changed.connect(self.viewer.update_timeline)
 
         # Connect imagery panel cancel signal for incremental loading
@@ -1158,7 +1158,7 @@ class VistaMainWindow(QMainWindow):
         """Check if any imagery is currently loading"""
         return len(self._loading_imageries) > 0
 
-    def update_index_range_from_imagery(self):
+    def update_index_range(self):
         """Update index range controls to match the viewer's current state.
 
         Syncs the slider range and position to the viewer without calling
