@@ -18,6 +18,7 @@ from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.known_sources.known_sources import KnownSources
+from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.utils.time_mapping import map_frames_to_times
@@ -103,15 +104,15 @@ class ImageryViewer(QWidget):
     def __init__(self):
         super().__init__()
         self.timeline = DisplayTimeline()  # Timeline object holding times or frames for imagery, detectors, and tracks
-        self.sensors = []  # List of Sensor objects
-        self.selected_sensor = None  # Currently selected sensor for filtering display
-        self.imageries = []  # List of Imagery objects
-        self.imagery = None  # Currently selected imagery for display
-        self.detectors = []  # List of Detector objects
-        self.tracks = []  # List of Track objects
-        self.aois = []  # List of AOI objects
-        self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
-        self.known_sources = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
+        self.sensors: list[Sensor] = []  # List of Sensor objects
+        self.selected_sensor: Optional[Sensor] = None  # Currently selected sensor for filtering display
+        self.imageries: list[Imagery] = []  # List of Imagery objects
+        self.imagery: Optional[Imagery] = None  # Currently selected imagery for display
+        self.detectors: list[Detector] = []  # List of Detector objects
+        self.tracks: list[Track] = []  # List of Track objects
+        self.aois: list[AOI] = []  # List of AOI objects
+        self.features: list[Union[PlacemarkFeature, ShapefileFeature]] = []  # List of Feature objects (shapefiles, placemarks, etc.)
+        self.known_sources: list[KnownSources] = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
         # Use UUID as key for reliable object identification

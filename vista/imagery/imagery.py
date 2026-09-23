@@ -337,7 +337,7 @@ class Imagery(TemporalData):
         imagery_copy._gpu_device = self._gpu_device
         return imagery_copy
 
-    def get_histogram(self, frame_index, bins=256, max_rowcol=512):
+    def get_histogram(self, frame_index: int, bins: int = 256, max_rowcol: int = 512):
         """
         Get histogram for a specific frame using consistent bin edges.
 
