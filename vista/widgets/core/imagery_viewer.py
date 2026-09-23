@@ -362,6 +362,11 @@ class ImageryViewer(QWidget):
         """Select which imagery to display"""
         self.ignore_changing_histogram_levels = True
         self.imagery = imagery
+        # if None selected, try to fall back to another (first) image for the selected sensor
+        if self.imagery is None:
+            filtered_imagery = [img for img in self.imageries if img.sensor == self.selected_sensor]
+            if len(filtered_imagery) > 0:
+                self.imagery = filtered_imagery[0]
         self.update_timeline()
 
         # Reset EWMA state when switching imagery

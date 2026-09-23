@@ -1068,8 +1068,7 @@ class VistaMainWindow(QMainWindow):
                 else:
                     # No frames were loaded - remove the imagery entirely
                     if imagery == self.viewer.imagery:
-                        self.viewer.imagery = None
-                        self.viewer.image_item.clear()
+                        self.viewer.select_imagery(None)
                     self.viewer.imageries.remove(imagery)
 
             # Mark as fully loaded
@@ -1084,11 +1083,11 @@ class VistaMainWindow(QMainWindow):
         # Re-enable algorithm actions if no more imagery is loading
         self._update_algorithm_actions_state()
 
-        # Enable if the GPU button if suitable
+        # Enable if the GPU button is suitable
         self.data_manager.imagery_panel._update_gpu_button_state()
 
         # Update frame range
-        if self.viewer.imagery is not None:
+        if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
             self.viewer.update_timeline()
 
         if imagery is not None and imagery in self.viewer.imageries:
@@ -1900,8 +1899,7 @@ class VistaMainWindow(QMainWindow):
             for img in list(self.viewer.imageries):
                 if img.uuid == uid:
                     if img == self.viewer.imagery:
-                        self.viewer.imagery = None
-                        self.viewer.image_item.clear()
+                        self.viewer.select_imagery(None)
                     self.viewer.imageries.remove(img)
                     break
         if uuids_to_remove:
