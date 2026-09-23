@@ -116,20 +116,10 @@ class SensorsPanel(DataPanel):
             self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
             loaded_imagery_fname_item.setToolTip("\n".join(loaded_imagery_fnames))  # but full path for tooltip
 
-        self.sensors_table.blockSignals(False)
+            if sensor == self.viewer.selected_sensor:
+                self.sensors_table.selectRow(row)
 
-        # Select the row for the currently selected sensor
-        if hasattr(self, "selected_sensor") and self.selected_sensor is not None:
-            for row, sensor in enumerate(self.viewer.sensors):
-                if sensor == self.selected_sensor:
-                    self.sensors_table.selectRow(row)
-                    break
-        elif len(self.viewer.sensors) > 0:
-            # Default to first sensor if none selected
-            self.sensors_table.selectRow(0)
-            self.selected_sensor = self.viewer.sensors[0]
-            # Explicitly emit signal to ensure viewer is filtered
-            self.sensor_selected.emit(self.selected_sensor)
+        self.sensors_table.blockSignals(False)
 
     def on_sensor_selection_changed(self):
         """Handle sensor selection changes from table"""
@@ -137,11 +127,9 @@ class SensorsPanel(DataPanel):
 
         if selected_rows:
             row = selected_rows[0]
-            if row < len(self.viewer.sensors):
-                sensor = self.viewer.sensors[row]
-                self.selected_sensor = sensor
-                self.sensor_selected.emit(sensor)
-                # Note: Don't emit data_changed here - selection doesn't change data
+            sensor = self.viewer.sensors[row]
+            self.sensor_selected.emit(sensor)
+            # Note: Don't emit data_changed here - selection doesn't change data
 
     def delete_selected_sensor(self):
         """Delete selected sensor and all associated data"""
@@ -152,8 +140,6 @@ class SensorsPanel(DataPanel):
             return
 
         row = selected_rows[0]
-        if row >= len(self.viewer.sensors):
-            return
 
         sensor = self.viewer.sensors[row]
 
@@ -206,23 +192,10 @@ class SensorsPanel(DataPanel):
             # Delete sensor
             self.viewer.sensors.remove(sensor)
 
-            # Clear selected sensor
-            self.selected_sensor = None
-            self.sensor_selected.emit(None)
-
-            # Update viewer display if it was showing imagery from the deleted sensor
-            if self.viewer.imagery is not None and self.viewer.imagery.sensor == sensor:
-                # Clear current imagery reference
-                self.viewer.imagery = None
-                # Try to find imagery from another sensor
-                if len(self.viewer.imageries) > 0:
-                    # Select first available imagery from remaining sensors
-                    self.viewer.select_imagery(self.viewer.imageries[0])
-                else:
-                    # No imagery left, clear the display
-                    self.viewer.image_item.clear()
-                    # Clear the histogram plot
-                    self.viewer.histogram.plot.setData([], [])
+            if len(self.viewer.sensors) > 0:
+                self.sensor_selected.emit(self.viewer.sensors[0])
+            else:
+                self.sensor_selected.emit(None)
 
             # Refresh all panels
             self.data_changed.emit()

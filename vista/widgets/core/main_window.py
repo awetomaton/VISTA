@@ -152,8 +152,15 @@ class VistaMainWindow(QMainWindow):
         ):
             panel.status_message.connect(self.statusBar().showMessage)
 
+        self.data_manager.sensors_panel.sensor_selected.connect(self.viewer.select_sensor)
+        # refresh all tables AFTER viewer has updated its selected sensor from the connection above
+        self.data_manager.sensors_panel.sensor_selected.connect(self.data_manager.refresh)
         # Connect sensor selection to map view state updates
         self.data_manager.sensors_panel.sensor_selected.connect(lambda _sensor: self._update_map_view_action_state())
+
+
+        # Connect image selection
+        self.data_manager.imagery_panel.imagery_selected.connect(self.viewer.select_imagery)
 
         # Connect drag-and-drop file loading signals
         self.data_manager.sensors_panel.files_dropped.connect(self.load_imagery_file)
