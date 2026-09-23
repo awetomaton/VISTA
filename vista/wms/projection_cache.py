@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 class ProjectionCache:
     """LRU cache for projected VISTA imagery.
 
-    Caches projected image arrays keyed by (imagery_uuid, frame_number, zoom_level,
+    Caches projected image arrays keyed by (imagery_uuid, time, zoom_level,
     output_bbox) to enable rapid retrieval when the user changes frames or view extent
     at the same zoom level.
 
