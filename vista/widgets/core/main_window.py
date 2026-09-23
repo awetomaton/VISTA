@@ -998,6 +998,8 @@ class VistaMainWindow(QMainWindow):
         # Handle sensor - check if sensor with same UUID already exists
         existing_sensor = None
         for s in self.viewer.sensors:
+            # TODO: don't use UUID equality, use existing sensor via name,
+            # and append new information (geolocation, etc.) if need be
             if s == sensor:  # Use UUID-based equality
                 existing_sensor = s
                 break
@@ -1008,48 +1010,18 @@ class VistaMainWindow(QMainWindow):
             imagery.sensor = existing_sensor
         else:
             # Add new sensor to viewer
-            self.viewer.sensors.append(sensor)
-            imagery.sensor = sensor
+            self.viewer.add_sensor(sensor)
 
         # Track this imagery as loading
         self._loading_imageries[imagery.uuid] = self.loader_thread
 
-        # Add imagery to viewer (will be selected if it's the first one)
+        # Add imagery to viewer
         self.viewer.add_imagery(imagery)
-
-        # Block selection-change signals during refresh so the table rebuild doesn't
-        # cascade into redundant select_imagery/set_index calls. The viewer
-        # state is updated explicitly below.
-        sensors_table = self.data_manager.sensors_panel.sensors_table
-        imagery_table = self.data_manager.imagery_panel.imagery_table
-        sensors_table.blockSignals(True)
-        imagery_table.blockSignals(True)
-        self.data_manager.sensors_panel.blockSignals(True)
+        if self.viewer.imagery is None and imagery.sensor == self.viewer.selected_sensor:
+            self.viewer.select_imagery(imagery)
 
         # Refresh data manager to show the new imagery with progress bar
         self.data_manager.refresh()
-
-        # If this is a new sensor, automatically select it in the sensors table
-        if is_new_sensor:
-            for row, s in enumerate(self.viewer.sensors):
-                if s == sensor:
-                    self.data_manager.sensors_panel.sensors_table.selectRow(row)
-                    self.data_manager.sensors_panel.selected_sensor = sensor
-                    break
-
-        sensors_table.blockSignals(False)
-        imagery_table.blockSignals(False)
-        self.data_manager.sensors_panel.blockSignals(False)
-
-        # Now explicitly update viewer state (single source of truth)
-        if is_new_sensor:
-            self.data_manager.on_sensor_selected(sensor)
-        elif self.viewer.selected_sensor is not None:
-            self.viewer.filter_by_sensor(self.viewer.selected_sensor)
-        else:
-            self.viewer.select_imagery(imagery)
-
-        self.viewer.update_timeline()
 
         # Disable algorithm actions while loading
         self._update_algorithm_actions_state()
@@ -1236,7 +1208,7 @@ class VistaMainWindow(QMainWindow):
                 if not selected_sensor:
                     # Create an "Unknown" sensor if no sensor is selected
                     selected_sensor = Sensor()
-                    self.viewer.sensors.append(selected_sensor)
+                    self.viewer.add_sensor(selected_sensor)
                     self.data_manager.refresh()
                     mapping_info.insert(0, f"• Sensor association: {selected_sensor.name} (created automatically)")
                 else:
@@ -1440,7 +1412,7 @@ class VistaMainWindow(QMainWindow):
                 if not selected_sensor:
                     # Create an "Unknown" sensor if no sensor is selected
                     selected_sensor = Sensor()
-                    self.viewer.sensors.append(selected_sensor)
+                    self.viewer.add_sensor(selected_sensor)
                     self.data_manager.refresh()
                     mapping_info.insert(0, f"• Sensor association: {selected_sensor.name} (created automatically)")
                 else:
@@ -3158,13 +3130,13 @@ class VistaMainWindow(QMainWindow):
             objects_with_sensors += [tracks] if isinstance(tracks, Track) else tracks
         for obj in objects_with_sensors:
             if obj.sensor not in self.viewer.sensors:
-                self.viewer.sensors.append(obj.sensor)
+                self.viewer.add_sensor(obj.sensor)
 
         if not self.viewer.sensors:
             return  # nothing to load
 
         # Select the first sensor for viewing
-        self.viewer.selected_sensor = self.viewer.sensors[0]
+        self.viewer.select_sensor(self.viewer.sensors[0])
 
         # Load imagery
         if imagery is not None:
@@ -3173,9 +3145,7 @@ class VistaMainWindow(QMainWindow):
 
             for img in imagery_list:
                 self.viewer.add_imagery(img)
-
-                # Select the first imagery for viewing
-                if img == imagery_list[0]:
+                if self.viewer.imagery is None and img.sensor == self.viewer.selected_sensor:
                     self.viewer.select_imagery(img)
 
         # Load detections
