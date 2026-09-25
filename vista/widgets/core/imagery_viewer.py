@@ -574,8 +574,8 @@ class ImageryViewer(QWidget):
             else:
                 self.image_items[imagery.uuid].clear()
 
-            if self.histogram.imageItem() is None or self.histogram.imageItem().image is None:
-                self.histogram.plot.setData([], [])
+        if self.histogram.imageItem() is None or self.histogram.imageItem().image is None:
+            self.histogram.plot.setData([], [])
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
