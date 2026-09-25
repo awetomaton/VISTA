@@ -1789,7 +1789,8 @@ class VistaMainWindow(QMainWindow):
                                     lat = location.lat.deg[0]
                                     lon = location.lon.deg[0]
                                     alt = location.height.to(units.km).value[0]
-                                    if np.isnan(alt):  # altitude is only nan value if conversion fails
+                                    x, y, z = location.to_geocentric()
+                                    if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
                                         lat, lon, alt = None, None, None
                             else:
                                 # Use geodetic coordinates and convert to pixel

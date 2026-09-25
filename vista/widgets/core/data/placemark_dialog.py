@@ -168,8 +168,8 @@ class PlacemarkDialog(QDialog):
                 lat = location.lat.deg[0]
                 lon = location.lon.deg[0]
                 alt = location.height.to(units.km).value[0]
-                if np.isnan(alt):  # altitude is only nan value if conversion fails
-                    print(f"Warning: Could not convert pixel to geodetic: {e}")
+                x, y, z = location.to_geocentric()
+                if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
                     lat, lon, alt = None, None, None
 
             return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}

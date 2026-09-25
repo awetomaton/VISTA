@@ -742,8 +742,9 @@ class TrackPlotWindow(QWidget):
             lats = locations.lat.deg
             lons = locations.lon.deg
 
-            # height is only nan value if geodetic conversion failed
-            invalid = np.isnan(locations.height.value)
+            # one of x, y, or z will have nan value if conversion fails
+            x, y, z = locations.to_geocentric()
+            invalid = np.isnan(x * y * z)
             if np.any(invalid):
                 lats[invalid] = np.nan
                 lons[invalid] = np.nan

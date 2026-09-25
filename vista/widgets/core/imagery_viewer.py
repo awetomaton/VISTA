@@ -407,13 +407,13 @@ class ImageryViewer(QWidget):
         if self.imagery is not None:
             self.ignore_changing_histogram_levels = True
             self.histogram.setImageItem(self.image_items[self.imagery.uuid])
+            self.ignore_changing_histogram_levels = False
             # Block signals to prevent histogram recomputation
             try:
                 self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
             except TypeError:
                 # Signal not connected yet, ignore
                 pass
-            self.ignore_changing_histogram_levels = False
 
             # In map mode, update projected imagery and recompute footprint if imagery changed
             if self.map_view_mode and previous_imagery != self.imagery:
@@ -1561,9 +1561,9 @@ class ImageryViewer(QWidget):
 
                     lat = location.lat.deg[0]
                     lon = location.lon.deg[0]
-                    alt = location.height.to(units.km).value[0]
-                    if np.isnan(alt):  # altitude is only nan value if conversion fails
-                        lat, lon, alt = None, None, None
+
+                    x, y, z = location.to_geocentric()
+                    if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
                         self.geolocation_text.setVisible(False)
                     else:
                         # Update text content
@@ -3251,7 +3251,7 @@ class ImageryViewer(QWidget):
             self.plot_item.setLabel("left", "Latitude (deg)")
 
             # Hide the normal image display
-            self.image_item.setVisible(False)
+            self.image_items[self.imagery.uuid].setVisible(False)
 
             # Create WMS basemap ImageItem (behind everything)
             self.wms_image_item = pg.ImageItem()
@@ -3270,7 +3270,7 @@ class ImageryViewer(QWidget):
 
             # Block signals to prevent histogram recomputation
             try:
-                self.projected_image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+                self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
             except TypeError:
                 # Signal not connected yet, ignore
                 pass
@@ -3344,12 +3344,12 @@ class ImageryViewer(QWidget):
 
             # Restore histogram to original image item
             self.ignore_changing_histogram_levels = True
-            self.histogram.setImageItem(self.image_item)
+            self.histogram.setImageItem(self.image_items[self.imagery.uuid])
             self.ignore_changing_histogram_levels = False
 
             # Block signals to prevent histogram recomputation
             try:
-                self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+                self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
             except TypeError:
                 # Signal not connected yet, ignore
                 pass
@@ -3360,7 +3360,7 @@ class ImageryViewer(QWidget):
             self.plot_item.setLabel("left", "")
 
             # Restore the normal image display
-            self.image_item.setVisible(True)
+            self.image_items[self.imagery.uuid].setVisible(True)
 
             # Reset state
             self._wms_composite = None
@@ -3381,7 +3381,7 @@ class ImageryViewer(QWidget):
 
             # Re-select the current imagery to restore display
             if self.imagery is not None:
-                self.select_imagery(self.imagery, preserve_ewma=True)
+                self.select_imagery(self.imagery)
 
             # Reset view to fit imagery in pixel mode
             self.plot_item.vb.autoRange()
@@ -3757,7 +3757,8 @@ class ImageryViewer(QWidget):
         locations = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
-        alt = float(location.height.to(units.km).value[0])
-        if not np.isnan(alt):
+
+        x, y, z = locations.to_geocentric()
+        if not np.isnan((x * y * z)[0]):
             return lon, lat
         return float("nan"), float("nan")

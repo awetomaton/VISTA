@@ -81,19 +81,19 @@ class ImageryProjector:
         # Top edge
         for i in range(n_edge_samples + 1):
             rows.append(row_offset)
-            cols.append(column_offset + i * (n_cols - 1) / n_edge_samples)
+            cols.append(column_offset + i * n_cols / n_edge_samples)
         # Bottom edge
         for i in range(n_edge_samples + 1):
-            rows.append(row_offset + n_rows - 1)
-            cols.append(column_offset + i * (n_cols - 1) / n_edge_samples)
+            rows.append(row_offset + n_rows)
+            cols.append(column_offset + i * n_cols / n_edge_samples)
         # Left edge
         for i in range(1, n_edge_samples):
-            rows.append(row_offset + i * (n_rows - 1) / n_edge_samples)
+            rows.append(row_offset + i * n_rows / n_edge_samples)
             cols.append(column_offset)
         # Right edge
         for i in range(1, n_edge_samples):
-            rows.append(row_offset + i * (n_rows - 1) / n_edge_samples)
-            cols.append(column_offset + n_cols - 1)
+            rows.append(row_offset + i * n_rows / n_edge_samples)
+            cols.append(column_offset + n_cols)
 
         rows_arr = np.array(rows)
         cols_arr = np.array(cols)
@@ -103,7 +103,9 @@ class ImageryProjector:
         lons = locations.lon.deg
 
         # Filter out NaN values (pixels that don't intersect Earth)
-        valid = ~(np.isnan(lats) | np.isnan(lons))
+        # one of x, y, or z will have nan value if conversion fails
+        x, y, z = locations.to_geocentric()
+        valid = ~np.isnan(x * y * z)
         if not np.any(valid):
             return None
 
