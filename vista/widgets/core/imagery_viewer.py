@@ -302,8 +302,19 @@ class ImageryViewer(QWidget):
 
         self.setLayout(layout)
 
-    def update_timeline(self):
-        """Update timeline object based on current imagery, detectors, and tracks"""
+    def update_timeline(self, set_index: bool = True):
+        """
+        Update timeline object based on current imagery, detectors, and tracks
+
+        Parameters
+        ----------
+        set_index : bool, default True
+            Whether the ImageryViewer's set_index function should be called to
+            update the displayed imagery and overlays in addition to the timeline.
+            Typically left as True, unless set_index will be manually called after
+            updating the timeline and taking additional actions before wanting to
+            update the display
+        """
         # filter by selected sensor
         imageries = [img for img in self.selected_imageries if img.sensor == self.selected_sensor]
         detectors = [d for d in self.detectors if d.sensor == self.selected_sensor]
@@ -323,7 +334,8 @@ class ImageryViewer(QWidget):
             self.timeline.current_index = 0
 
         self.timeline_updated.emit()
-        self.set_index(self.timeline.current_index)
+        if set_index:
+            self.set_index(self.timeline.current_index)
 
     def add_sensor(self, sensor: Sensor):
         """Add sensor to the list of available sensors"""
@@ -425,7 +437,7 @@ class ImageryViewer(QWidget):
         if imagery not in self.selected_imageries:
             self.selected_imageries.append(imagery)
             self.image_items[imagery.uuid].show()
-        self.update_timeline()
+        self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
@@ -436,7 +448,7 @@ class ImageryViewer(QWidget):
         self.image_items[imagery.uuid].clear()  # clear to save memory
         self.image_items[imagery.uuid].hide()
         self.selected_imageries.remove(imagery)
-        self.update_timeline()
+        self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
