@@ -107,7 +107,8 @@ class ImageryViewer(QWidget):
         self.sensors: list[Sensor] = []  # List of Sensor objects
         self.selected_sensor: Optional[Sensor] = None  # Currently selected sensor for filtering display
         self.imageries: list[Imagery] = []  # List of Imagery objects
-        self.imagery: Optional[Imagery] = None  # Currently selected imagery for display
+        self.imagery: Optional[Imagery] = None  # Largest of the currently selected imageries
+        self.selected_imageries: list[Imagery] = []  # List of selected imageries to display
         self.detectors: list[Detector] = []  # List of Detector objects
         self.tracks: list[Track] = []  # List of Track objects
         self.aois: list[AOI] = []  # List of AOI objects
@@ -253,9 +254,8 @@ class ImageryViewer(QWidget):
         # self.plot_item.hideAxis('left')
         # self.plot_item.hideAxis('bottom')
 
-        # Create image item with OpenGL acceleration enabled
-        self.image_item = pg.ImageItem(useOpenGL=True)
-        self.plot_item.addItem(self.image_item)
+        # Dictionary to hold image items for selected imageries with OpenGL acceleration enabled
+        self.image_items = {}  # imagery uuid -> ImageItem
 
         # Create geolocation text overlay using TextItem positioned in scene coordinates
         self.geolocation_text = pg.TextItem(text="", color="yellow", anchor=(1, 1))
@@ -290,21 +290,11 @@ class ImageryViewer(QWidget):
         self.histogram = pg.HistogramLUTItem(orientation="horizontal")
         self.hist_widget.addItem(self.histogram)
 
-        # Link the histogram to the image item
-        self.histogram.setImageItem(self.image_item)
-
         # Connect to histogram level change signals to track user adjustments
         self.histogram.sigLevelChangeFinished.connect(self.on_histogram_levels_changed)
 
         # Connect to gradient change signals to track gradient adjustments
         self.histogram.sigLookupTableChanged.connect(self.on_histogram_gradient_changed)
-
-        # Block signals to prevent histogram recomputation
-        try:
-            self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
-        except TypeError:
-            # Signal not connected yet, ignore
-            pass
 
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
@@ -315,7 +305,7 @@ class ImageryViewer(QWidget):
     def update_timeline(self):
         """Update timeline object based on current imagery, detectors, and tracks"""
         # filter by selected sensor
-        imageries = [img for img in self.imageries if img.sensor == self.selected_sensor]
+        imageries = [img for img in self.selected_imageries if img.sensor == self.selected_sensor]
         detectors = [d for d in self.detectors if d.sensor == self.selected_sensor]
         tracks = [t for t in self.tracks if t.sensor == self.selected_sensor]
         
@@ -351,12 +341,15 @@ class ImageryViewer(QWidget):
         if is_map_mode:
             self.set_map_view_mode(False)
         self.selected_sensor = sensor
-        if self.imagery is None or self.imagery.sensor != self.selected_sensor:
-            filtered_imagery = [img for img in self.imageries if img.sensor == self.selected_sensor]
-            if len(filtered_imagery) > 0:
-                self.select_imagery(filtered_imagery[0])
-            else:
-                self.select_imagery(None)
+
+        while len(self.selected_imageries) > 0:
+            self.deselect_imagery(self.selected_imageries[0])
+
+        # try to select an imagery for the selected sensor
+        filtered_imagery = [img for img in self.imageries if img.sensor == self.selected_sensor]
+        if len(filtered_imagery) > 0:
+            self.select_imagery(filtered_imagery[0])
+
         if is_map_mode:
             self.set_map_view_mode(is_map_mode)
 
@@ -364,46 +357,87 @@ class ImageryViewer(QWidget):
         """Add imagery to the list of available imageries"""
         if imagery not in self.imageries:
             self.imageries.append(imagery)
+            self.image_items[imagery.uuid] = pg.ImageItem(useOpenGL=True)
+            self.plot_item.addItem(self.image_items[imagery.uuid])
+            self.image_items[imagery.uuid].setPos(imagery.column_offset, imagery.row_offset)
+            self.image_items[imagery.uuid].hide()
 
-    def select_imagery(self, imagery: Optional[Imagery], preserve_ewma: bool = False):
-        """Select which imagery to display"""
-        self.ignore_changing_histogram_levels = True
-        self.imagery = imagery
-        # if None selected, try to fall back to another (first) image for the selected sensor
-        if self.imagery is None:
-            filtered_imagery = [img for img in self.imageries if img.sensor == self.selected_sensor]
-            if len(filtered_imagery) > 0:
-                self.imagery = filtered_imagery[0]
-        self.update_timeline()
+    def remove_imagery(self, imagery: Imagery):
+        if imagery in self.selected_imageries:
+            self.deselect_imagery(imagery)
+        self.plot_item.removeItem(self.image_items[imagery.uuid])
+        self.image_items.pop(imagery.uuid)
+        self.imageries.remove(imagery)
+
+    def _update_largest_selected_imagery(self):
+        """
+        Update ImageryViewer.imagery to the largest selected imagery, sync the histogram,
+        update ewma state, and update projected imagery footprint for map mode
+        """
+        # save current imagery to compare later
+        previous_imagery = self.imagery
+
+        self.imagery = None
+        size = 0
+        for img in self.selected_imageries:
+            _, nrows, ncols = img.images.shape
+            if nrows * ncols > size:
+                size = nrows * ncols
+                self.imagery = img
 
         # Reset EWMA state when switching imagery
-        if not preserve_ewma:
+        if previous_imagery != self.imagery:
             self.ewma_background = None
             self.ewma_image = None
             self.ewma_frame_counter = 0
             self.ewma_last_frame_number = None
 
         if self.imagery is not None:
-            if self.map_view_mode:
-                # In map mode, update projected imagery and recompute footprint
+            self.ignore_changing_histogram_levels = True
+            self.histogram.setImageItem(self.image_items[self.imagery.uuid])
+            # Block signals to prevent histogram recomputation
+            try:
+                self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
+            except TypeError:
+                # Signal not connected yet, ignore
+                pass
+            self.ignore_changing_histogram_levels = False
+
+            # In map mode, update projected imagery and recompute footprint if imagery changed
+            if self.map_view_mode and previous_imagery != self.imagery:
                 if self.imagery_projector is not None and self.timeline.is_time:
                     time = self.timeline.current_value
-                    _, nrows, ncols = imagery.images.shape
+                    _, nrows, ncols = self.imagery.images.shape
                     self._imagery_footprint = self.imagery_projector.compute_footprint(
                         time,
                         nrows,
                         ncols,
-                        imagery.row_offset,
-                        imagery.column_offset,
+                        self.imagery.row_offset,
+                        self.imagery.column_offset,
                     )
                 # Apply opacity
                 if self.projected_image_item is not None:
-                    opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
+                    opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
                     self.projected_image_item.setOpacity(opacity)
-            else:
-                # Apply imagery offsets for positioning
-                self.image_item.setPos(imagery.column_offset, imagery.row_offset)
 
+    def select_imagery(self, imagery: Optional[Imagery]):
+        """Select an imagery to display"""
+        if imagery not in self.selected_imageries:
+            self.selected_imageries.append(imagery)
+            self.image_items[imagery.uuid].show()
+        self.update_timeline()
+        self._update_largest_selected_imagery()
+        # Refresh the current display
+        self.set_index(self.timeline.current_index)
+        self.histogram.vb.autoRange()
+
+    def deselect_imagery(self, imagery: Imagery):
+        """Deselect an imagery to display"""
+        self.image_items[imagery.uuid].clear()  # clear to save memory
+        self.image_items[imagery.uuid].hide()
+        self.selected_imageries.remove(imagery)
+        self.update_timeline()
+        self._update_largest_selected_imagery()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -415,24 +449,23 @@ class ImageryViewer(QWidget):
 
         self.timeline.current_index = index
 
-        # Update imagery if available
-        if self.imagery is not None:
+        # Update displays for selected imagery
+        for imagery in self.selected_imageries:
             # Find nearest image index
-            image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
-
+            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
             if image_index is not None:
                 ewma_active = False  # Whether we're displaying a filtered image
-                current_image = self.imagery.images[image_index]
+                current_image = imagery.images[image_index]
 
                 # EWMA background filter logic
-                if self.ewma_filter_enabled:
+                if self.ewma_filter_enabled and imagery == self.imagery:
                     ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
                     ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
 
                     # Check if frame_number changed from last call
-                    if self.images.frames[image_index] != self.ewma_last_frame_number:
+                    if imagery.frames[image_index] != self.ewma_last_frame_number:
                         self.ewma_frame_counter += 1
-                        self.ewma_last_frame_number = self.images.frames[image_index]
+                        self.ewma_last_frame_number = imagery.frames[image_index]
 
                         # Update EWMA background model once past the offset
                         if self.ewma_background is None:
@@ -449,24 +482,24 @@ class ImageryViewer(QWidget):
 
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
-                    if ewma_active:
+                    if ewma_active and imagery == self.imagery:
                         self._update_projected_imagery(self.ewma_image)
                     else:
                         self._update_projected_imagery(current_image)
                 else:
-                    if ewma_active:
+                    if ewma_active and imagery == self.imagery:
                         # EWMA image
-                        self.image_item.setImage(self.ewma_image, autoLevels=False)
+                        self.image_items[imagery.uuid].setImage(self.ewma_image, autoLevels=False)
                     else:
                         # Normal display
-                        self.image_item.setImage(current_image, autoLevels=False)
+                        self.image_items[imagery.uuid].setImage(current_image, autoLevels=False)
 
                 # Get user histogram limits if set
                 user_histogram_bounds = None
-                if self.imagery.uuid in self.user_histogram_bounds:
-                    user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
+                if imagery.uuid in self.user_histogram_bounds:
+                    user_histogram_bounds = self.user_histogram_bounds[imagery.uuid]
 
-                if ewma_active:
+                if ewma_active and imagery == self.imagery:
                     min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
                     max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
                     settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
@@ -501,39 +534,39 @@ class ImageryViewer(QWidget):
                             # It takes some time for EWMA to settle, so auto range until it settles
                             self.histogram.vb.autoRange()
                     if user_histogram_bounds is not None:
-                        mn, mx = user_histogram_bounds
+                        levels = user_histogram_bounds
                     else:
-                        mn, mx = hist_min, hist_max
-                    self.histogram.setLevels(mn, mx)
+                        levels = (hist_min, hist_max)
                 else:
                     # Use or create pre-computed histogram data
-                    hist_y, hist_x = self.imagery.get_histogram(image_index)
-                    if self.histogram_visible:
+                    hist_y, hist_x = imagery.get_histogram(image_index)
+
+                    if user_histogram_bounds is not None:
+                        levels = user_histogram_bounds
+                    elif imagery.default_histogram_bounds is None and len(hist_x) > 0:
+                        levels = hist_x[[0, -1]]
+                    else:
+                        levels = imagery.default_histogram_bounds[image_index]
+
+                    if imagery == self.imagery and self.histogram_visible:
                         self.histogram.plot.setData(hist_x, hist_y)
 
-                    # Apply histogram bounds
-                    if user_histogram_bounds is not None:
-                        self.histogram.setLevels(*user_histogram_bounds)
-                    elif self.imagery.default_histogram_bounds is None and len(hist_x) > 0:
-                        self.histogram.setLevels(hist_x[0], hist_x[-1])
-                    else:
-                        self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
+                # Apply histogram bounds
+                if imagery == self.imagery:
+                    self.histogram.setLevels(*levels)
 
                 # Explicitly sync levels to the image item. histogram.setLevels() goes through
                 # LinearRegionItem.setRegion() which skips the signal if the region values haven't
                 # changed, leaving the image item with stale levels.
-                if self.histogram.imageItem() is not None:
-                    self.histogram.imageItem().setLevels(self.histogram.getLevels())
+                self.image_items[imagery.uuid].setLevels(levels)
             else:
-                self.image_item.clear()
+                self.image_items[imagery.uuid].clear()
+
+            if self.histogram.imageItem() is None or self.histogram.imageItem().image is None:
                 self.histogram.plot.setData([], [])
-        else:
-            self.image_item.clear()
-            self.histogram.plot.setData([], [])
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
-
         # Re-render shapefile features in pixel view (their pixel coords change per frame)
         if not self.map_view_mode:
             self._rerender_shapefile_features()

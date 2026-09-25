@@ -1017,7 +1017,7 @@ class VistaMainWindow(QMainWindow):
 
         # Add imagery to viewer
         self.viewer.add_imagery(imagery)
-        if self.viewer.imagery is None and imagery.sensor == self.viewer.selected_sensor:
+        if imagery.sensor == self.viewer.selected_sensor:
             self.viewer.select_imagery(imagery)
 
         # Refresh data manager to show the new imagery with progress bar

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -58,7 +58,7 @@ class ImageryPanel(DataPanel):
 
         # Enable row selection via vertical header (single selection only)
         self.imagery_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.imagery_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.imagery_table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
 
         # Set column resize modes
         header = self.imagery_table.horizontalHeader()
@@ -84,6 +84,9 @@ class ImageryPanel(DataPanel):
         """Refresh the imagery table, filtering by selected sensor"""
         self.imagery_table.blockSignals(True)
         self.imagery_table.setRowCount(0)
+
+        selection_model = self.imagery_table.selectionModel()
+        model = self.imagery_table.model()
 
         # Filter imageries by selected sensor
         filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
@@ -129,8 +132,11 @@ class ImageryPanel(DataPanel):
             imagery_fname_item.setToolTip(fname)
 
             # Select the row for the currently active imagery
-            if imagery == self.viewer.imagery:
-                self.imagery_table.selectRow(row)
+            if imagery in self.viewer.selected_imageries:
+                index = model.index(row, 0)
+                selection_model.select(
+                    index, QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows
+                )
 
         self.imagery_table.blockSignals(False)
 
@@ -217,8 +223,13 @@ class ImageryPanel(DataPanel):
         # Get selected rows (should only be one due to SingleSelection mode)
         selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
 
-        if selected_rows:
-            row = selected_rows[0]
+        # don't allow deselecting all images, if any exist
+        if len(selected_rows) == 0:
+            self.refresh_imagery_table()
+            return
+
+        selected_imageries = []
+        for row in selected_rows:
             # Get the imagery UUID from the name item
             name_item = self.imagery_table.item(row, 0)
             if name_item:
@@ -226,10 +237,16 @@ class ImageryPanel(DataPanel):
                 # Find the imagery by UUID
                 for imagery in self.viewer.imageries:
                     if imagery.uuid == imagery_uuid:
-                        self.imagery_selected.emit(imagery)
+                        selected_imageries.append(imagery)
                         break
-        else:
-            self.imagery_selected.emit(None)
+
+        imageries_to_deselect = [img for img in self.viewer.selected_imageries if img not in selected_imageries]
+        imageries_to_select = [img for img in selected_imageries if img not in self.viewer.selected_imageries]
+
+        for img in imageries_to_deselect:
+            self.viewer.deselect_imagery(img)
+        for img in imageries_to_select:
+            self.imagery_selected.emit(img)
 
     def on_imagery_cell_changed(self, row, column):
         """Handle imagery cell changes"""
@@ -366,14 +383,12 @@ class ImageryPanel(DataPanel):
         imagery_to_delete.release_gpu()
 
         # Remove from list
-        self.viewer.imageries.remove(imagery_to_delete)
+        self.viewer.remove_imagery(imagery_to_delete)
 
         # If there are still imageries available for the selected sensor, select the first one
         filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
         if len(filtered_imageries) > 0:
             self.imagery_selected.emit(filtered_imageries[0])
-        else:
-            self.imagery_selected.emit(None)
 
         # Refresh table
         self.refresh_imagery_table()
