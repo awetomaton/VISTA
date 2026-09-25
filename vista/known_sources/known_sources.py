@@ -125,10 +125,10 @@ class KnownSources:
             columns = np.squeeze(columns, axis=-1)
 
         # Only display objects within the image frame
-        # TODO: Handle when there's a cropped image
         _, max_rows, max_cols = imagery.images.shape
         # where is the valid region...
-        where = (rows >= 0) & (rows <= max_rows + 1) & (columns >= 0) & (columns <= max_cols + 1)
+        where = (rows - imagery.row_offset >= 0) & (rows - imagery.row_offset <= max_rows + 1)
+        where &= (columns - imagery.column_offset >= 0) & (columns - imagery.column_offset <= max_cols + 1)
         # ... so negate it to set invalid pixels to nan
         rows[~where] = np.nan
         columns[~where] = np.nan
