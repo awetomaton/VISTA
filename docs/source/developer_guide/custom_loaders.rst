@@ -200,9 +200,9 @@ VISTA's viewer can display imagery while frames are still loading. The protocol 
    * - ``imagery_available(imagery, total_frames)``
      - After the first block of frames is loaded. The viewer will add the imagery and display
        whatever frames are available.
-   * - ``imagery_block_loaded(imagery_uuid, loaded_count)``
+   * - ``imagery_block_loaded(imagery, loaded_count)``
      - After each subsequent block. The viewer updates its frame range and progress bar.
-   * - ``imagery_load_complete(imagery_uuid)``
+   * - ``imagery_load_complete(imagery)``
      - When all frames are loaded or loading was cancelled. The viewer removes the progress bar
        and enables algorithms.
 
@@ -216,7 +216,7 @@ VISTA's viewer can display imagery while frames are still loading. The protocol 
        # Load first block
        first_end = min(block_size, num_frames)
        if self._cancelled:
-           self.imagery_load_complete.emit(imagery.uuid)
+           self.imagery_load_complete.emit(imagery)
            return
 
        imagery.images[0:first_end] = images_on_disk[0:first_end]
@@ -226,16 +226,16 @@ VISTA's viewer can display imagery while frames are still loading. The protocol 
        # Load remaining blocks
        for start in range(first_end, num_frames, block_size):
            if self._cancelled:
-               self.imagery_load_complete.emit(imagery.uuid)
+               self.imagery_load_complete.emit(imagery)
                return
 
            end = min(start + block_size, num_frames)
            imagery.images[start:end] = images_on_disk[start:end]
            imagery.loaded_frame_count = end
-           self.imagery_block_loaded.emit(imagery.uuid, end)
+           self.imagery_block_loaded.emit(imagery, end)
 
        # Done
-       self.imagery_load_complete.emit(imagery.uuid)
+       self.imagery_load_complete.emit(imagery)
 
 .. important::
    Always emit ``imagery_load_complete`` even when cancelled. The main thread uses this signal to
@@ -347,7 +347,7 @@ you can skip the block-by-block approach:
 
        # Emit all three signals in sequence
        self.imagery_available.emit(imagery, len(frames))
-       self.imagery_load_complete.emit(imagery.uuid)
+       self.imagery_load_complete.emit(imagery)
 
 Complete Example: FITS Loader
 ------------------------------
@@ -395,7 +395,7 @@ data_loader.py additions
            first_end = min(block_size, num_frames)
 
            if self._cancelled:
-               self.imagery_load_complete.emit(imagery.uuid)
+               self.imagery_load_complete.emit(imagery)
                return
 
            images[0:first_end] = data[0:first_end].astype(np.float32)
@@ -404,14 +404,14 @@ data_loader.py additions
 
            for start in range(first_end, num_frames, block_size):
                if self._cancelled:
-                   self.imagery_load_complete.emit(imagery.uuid)
+                   self.imagery_load_complete.emit(imagery)
                    return
                end = min(start + block_size, num_frames)
                images[start:end] = data[start:end].astype(np.float32)
                imagery.loaded_frame_count = end
-               self.imagery_block_loaded.emit(imagery.uuid, end)
+               self.imagery_block_loaded.emit(imagery, end)
 
-           self.imagery_load_complete.emit(imagery.uuid)
+           self.imagery_load_complete.emit(imagery)
 
 main_window.py additions
 ~~~~~~~~~~~~~~~~~~~~~~~~~

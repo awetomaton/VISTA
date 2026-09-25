@@ -1033,52 +1033,43 @@ class VistaMainWindow(QMainWindow):
             f"Loading imagery: {imagery.name} ({imagery.loaded_frame_count}/{total_frames} frames)...", 0
         )
 
-    def on_imagery_block_loaded(self, imagery_uuid, loaded_count):
+    def on_imagery_block_loaded(self, imagery, loaded_count):
         """Handle more frames becoming available for a loading imagery"""
         # Update progress bar in imagery panel
-        self.data_manager.imagery_panel.update_loading_progress(imagery_uuid, loaded_count)
+        self.data_manager.imagery_panel.update_loading_progress(imagery.uuid, loaded_count)
 
-        # If the currently displayed imagery just got more frames, update frame range and status bar
-        if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
+        # If the imagery that just got more frames is selected, update timeline
+        if imagery in self.viewer.selected_imageries:
             self.viewer.update_timeline()
-            total = len(self.viewer.imagery.frames)
-            self.statusBar().showMessage(
-                f"Loading imagery: {self.viewer.imagery.name} ({loaded_count}/{total} frames)...", 0
-            )
+        # Update frame range and status bar
+        total = len(imagery.frames)
+        self.statusBar().showMessage(
+            f"Loading imagery: {imagery.name} ({loaded_count}/{total} frames)...", 0
+        )
 
-    def on_imagery_load_complete(self, imagery_uuid):
+    def on_imagery_load_complete(self, imagery):
         """Handle imagery loading completion (all frames loaded or cancelled)"""
-        # Find the imagery
-        imagery = None
-        for img in self.viewer.imageries:
-            if img.uuid == imagery_uuid:
-                imagery = img
-                break
+        if imagery.loaded_frame_count is not None and imagery.loaded_frame_count < len(imagery.frames):
+            # Loading was cancelled - truncate arrays to loaded portion
+            loaded = imagery.loaded_frame_count
+            if loaded > 0:
+                imagery.images = imagery.images[:loaded]
+                imagery.frames = imagery.frames[:loaded]
+                if imagery.times is not None:
+                    imagery.times = imagery.times[:loaded]
+                imagery.invalidate_caches()
+            else:
+                # No frames were loaded - remove the imagery entirely
+                self.viewer.remove_imagery(imagery)
 
-        if imagery is not None:
-            if imagery.loaded_frame_count is not None and imagery.loaded_frame_count < len(imagery.frames):
-                # Loading was cancelled - truncate arrays to loaded portion
-                loaded = imagery.loaded_frame_count
-                if loaded > 0:
-                    imagery.images = imagery.images[:loaded]
-                    imagery.frames = imagery.frames[:loaded]
-                    if imagery.times is not None:
-                        imagery.times = imagery.times[:loaded]
-                    imagery.invalidate_caches()
-                else:
-                    # No frames were loaded - remove the imagery entirely
-                    if imagery == self.viewer.imagery:
-                        self.viewer.select_imagery(None)
-                    self.viewer.imageries.remove(imagery)
-
-            # Mark as fully loaded
-            imagery.loaded_frame_count = None
+        # Mark as fully loaded
+        imagery.loaded_frame_count = None
 
         # Update imagery panel to show final frame count
-        self.data_manager.imagery_panel.on_loading_complete(imagery_uuid)
+        self.data_manager.imagery_panel.on_loading_complete(imagery.uuid)
 
         # Remove from loading tracking
-        self._loading_imageries.pop(imagery_uuid, None)
+        self._loading_imageries.pop(imagery.uuid, None)
 
         # Re-enable algorithm actions if no more imagery is loading
         self._update_algorithm_actions_state()
@@ -1087,7 +1078,7 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.imagery_panel._update_gpu_button_state()
 
         # Update frame range
-        if self.viewer.imagery is not None and self.viewer.imagery.uuid == imagery_uuid:
+        if imagery in self.viewer.selected_imageries:
             self.viewer.update_timeline()
 
         if imagery is not None and imagery in self.viewer.imageries:
@@ -1134,7 +1125,7 @@ class VistaMainWindow(QMainWindow):
 
         Syncs the slider range and position to the viewer without calling
         set_index_number again (the caller is expected to have already
-        updated the viewer via select_imagery or set_index_number).
+        updated the viewer via set_index_number).
         """
         min_index, max_index = self.viewer.timeline.get_range()
         self.controls.set_index_range(min_index, max_index)
@@ -1898,9 +1889,7 @@ class VistaMainWindow(QMainWindow):
             # Remove partially loaded imagery from viewer
             for img in list(self.viewer.imageries):
                 if img.uuid == uid:
-                    if img == self.viewer.imagery:
-                        self.viewer.select_imagery(None)
-                    self.viewer.imageries.remove(img)
+                    self.viewer.remove_imagery(img)
                     break
         if uuids_to_remove:
             self.data_manager.refresh()
@@ -3143,7 +3132,7 @@ class VistaMainWindow(QMainWindow):
 
             for img in imagery_list:
                 self.viewer.add_imagery(img)
-                if self.viewer.imagery is None and img.sensor == self.viewer.selected_sensor:
+                if img.sensor == self.viewer.selected_sensor:
                     self.viewer.select_imagery(img)
 
         # Load detections

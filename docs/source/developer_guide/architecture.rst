@@ -184,9 +184,9 @@ Large imagery files are loaded in blocks using an incremental protocol with thre
 
 1. **``imagery_available(imagery, total_frames)``** — emitted after the first block of
    frames is loaded. The viewer adds the imagery and displays the available frames.
-2. **``imagery_block_loaded(imagery_uuid, loaded_count)``** — emitted after each subsequent block.
+2. **``imagery_block_loaded(imagery, loaded_count)``** — emitted after each subsequent block.
    The viewer updates the playback range and progress bar.
-3. **``imagery_load_complete(imagery_uuid)``** — emitted when all frames are loaded (or loading is
+3. **``imagery_load_complete(imagery)``** — emitted when all frames are loaded (or loading is
    cancelled). The viewer removes the progress bar and re-enables algorithm actions.
 
 Thread safety is maintained by convention: the background thread writes into ``imagery.images`` and

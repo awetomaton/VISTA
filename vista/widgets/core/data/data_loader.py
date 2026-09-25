@@ -31,8 +31,8 @@ class DataLoaderThread(QThread):
 
     # Incremental imagery loading signals
     imagery_available = pyqtSignal(object, int)  # (Imagery, total_frames)
-    imagery_block_loaded = pyqtSignal(object, int)  # (imagery_uuid, loaded_count)
-    imagery_load_complete = pyqtSignal(object)  # (imagery_uuid)
+    imagery_block_loaded = pyqtSignal(object, int)  # (Imagery, loaded_count)
+    imagery_load_complete = pyqtSignal(object)  # (Imagery)
 
     # Signals for other data types
     detector_loaded = pyqtSignal(object)  # Emits Detector object
@@ -439,7 +439,7 @@ class DataLoaderThread(QThread):
         # Load first block
         first_end = min(block_size, num_images)
         if self._cancelled:
-            self.imagery_load_complete.emit(imagery.uuid)
+            self.imagery_load_complete.emit(imagery)
             return
 
         images_dataset.read_direct(
@@ -455,7 +455,7 @@ class DataLoaderThread(QThread):
         # Load remaining blocks
         for start_idx in range(first_end, num_images, block_size):
             if self._cancelled:
-                self.imagery_load_complete.emit(imagery.uuid)
+                self.imagery_load_complete.emit(imagery)
                 return
 
             end_idx = min(start_idx + block_size, num_images)
@@ -465,10 +465,10 @@ class DataLoaderThread(QThread):
                 dest_sel=np.s_[start_idx:end_idx],
             )
             imagery.loaded_frame_count = end_idx
-            self.imagery_block_loaded.emit(imagery.uuid, end_idx)
+            self.imagery_block_loaded.emit(imagery, end_idx)
 
         # All blocks loaded
-        self.imagery_load_complete.emit(imagery.uuid)
+        self.imagery_load_complete.emit(imagery)
 
     def _load_detections_csv(self):
         """Load detections from CSV file"""
