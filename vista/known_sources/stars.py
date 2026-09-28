@@ -1,7 +1,7 @@
 """Class for stars"""
 
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -30,7 +30,7 @@ class Stars(KnownSources):
         E.g., Hipparcos Hp, Gaia G
     """
 
-    def __init__(self, name: str, catalog: Union[str, None] = None, V_max: Union[int, None] = None, V_min: int = -10):
+    def __init__(self, name: str, catalog: Optional[str] = None, V_max: Optional[int] = None, V_min: int = -10):
         """
         Create a Stars object
 
@@ -282,13 +282,14 @@ class Stars(KnownSources):
         if len(self.stars) == 0:
             return EarthLocation([], [], [], unit=u.km)
 
-        astro_times = Time(times)
+        astro_times = Time(np.atleast_1d(times))
 
-        # stars is a (num_stars, 3) array
+        # stars is a (num_stars,) array
         # need to add a time axis to propagate motion to desired times
         ecef_coords = self.stars[:, None].apply_space_motion(astro_times).transform_to(ITRS(obstime=astro_times))
-        # but we can squeeze missing axes after
-        ecef_coords = ecef_coords.squeeze()
+        # but we can squeeze time axis after if necessary
+        if np.asarray(times).ndim == 0:
+            ecef_coords = ecef_coords.squeeze(axis=1)
 
         # unpack cartesian xyz coordinates into xyz arguments
         return EarthLocation(*ecef_coords.cartesian.xyz, unit=u.km)
