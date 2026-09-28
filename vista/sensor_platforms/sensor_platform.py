@@ -247,7 +247,7 @@ class SensorPlatform:
         times = np.asarray(times)
 
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+        query_times_ns = times.astype("datetime64[ns]").astype(np.int64)
         # interpolator needs array
         # also, this way, if single number is passed in, return shape is still (3,1)
         query_times_ns = np.atleast_1d(query_times_ns)
@@ -291,7 +291,7 @@ class SensorPlatform:
         times = np.asarray(times)
 
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+        query_times_ns = times.astype("datetime64[ns]").astype(np.int64)
         # interpolator needs array
         # also, this way, if single number is passed in, return shape is still (3,1)
         query_times_ns = np.atleast_1d(query_times_ns)  
