@@ -812,6 +812,16 @@ class VistaMainWindow(QMainWindow):
                 )
                 self.create_track_action.setChecked(False)
                 return
+            # Check if multiple imagery selected
+            if len(self.viewer.selected_imageries) > 1:
+                QMessageBox.warning(
+                    self,
+                    "Multiple Imagery",
+                    "Please select a single imagery before creating tracks.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                self.create_track_action.setChecked(False)
+                return
 
             # Start track creation mode
             self.viewer.start_track_creation()
@@ -845,6 +855,16 @@ class VistaMainWindow(QMainWindow):
                 # No selected imagery, show warning and uncheck
                 QMessageBox.warning(
                     self, "No Imagery", "Imagery is required to create detections.", QMessageBox.StandardButton.Ok
+                )
+                self.create_detection_action.setChecked(False)
+                return
+            # Check if multiple imagery selected
+            if len(self.viewer.selected_imageries) > 1:
+                QMessageBox.warning(
+                    self,
+                    "Multiple Imagery",
+                    "Please select a single imagery before creating detections.",
+                    QMessageBox.StandardButton.Ok,
                 )
                 self.create_detection_action.setChecked(False)
                 return
@@ -2335,6 +2355,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running image processing algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2403,6 +2432,15 @@ class VistaMainWindow(QMainWindow):
                 self, "No Imagery", "Please load imagery before running Robust PCA.", QMessageBox.StandardButton.Ok
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running Robust PCA.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2433,6 +2471,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running Sliding Subspace background removal.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2456,6 +2503,15 @@ class VistaMainWindow(QMainWindow):
                 self,
                 "No Imagery",
                 "Please load imagery before running Static Subspace background removal.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running Static Subspace background removal.",
                 QMessageBox.StandardButton.Ok,
             )
             return
@@ -2485,6 +2541,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running Static Median background removal.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2508,6 +2573,15 @@ class VistaMainWindow(QMainWindow):
                 self,
                 "No Imagery",
                 "Please load imagery before running GoDec background removal.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running GoDec background removal.",
                 QMessageBox.StandardButton.Ok,
             )
             return
@@ -2535,6 +2609,15 @@ class VistaMainWindow(QMainWindow):
                 self,
                 "No Imagery",
                 "Please load imagery before running treatment algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running treatment algorithms.",
                 QMessageBox.StandardButton.Ok,
             )
             return
@@ -2577,6 +2660,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running treatment algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2616,6 +2708,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running enhancement algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2647,6 +2748,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running the subset frames algorithm.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2675,6 +2785,15 @@ class VistaMainWindow(QMainWindow):
                 self,
                 "No Imagery",
                 "Please load imagery before running detector algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running detector algorithms.",
                 QMessageBox.StandardButton.Ok,
             )
             return
@@ -2720,6 +2839,15 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running detector algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
         if self._is_any_imagery_loading():
             QMessageBox.warning(
                 self,
@@ -2759,6 +2887,15 @@ class VistaMainWindow(QMainWindow):
                 self,
                 "No Imagery",
                 "Please load imagery before running detector algorithms.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        # Check if multiple imagery selected
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before running detector algorithms.",
                 QMessageBox.StandardButton.Ok,
             )
             return
