@@ -87,11 +87,11 @@ class ImageryProjector:
             rows.append(row_offset + n_rows)
             cols.append(column_offset + i * n_cols / n_edge_samples)
         # Left edge
-        for i in range(1, n_edge_samples):
+        for i in range(n_edge_samples + 1):
             rows.append(row_offset + i * n_rows / n_edge_samples)
             cols.append(column_offset)
         # Right edge
-        for i in range(1, n_edge_samples):
+        for i in range(n_edge_samples + 1):
             rows.append(row_offset + i * n_rows / n_edge_samples)
             cols.append(column_offset + n_cols)
 
