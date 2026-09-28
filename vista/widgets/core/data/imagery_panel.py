@@ -353,37 +353,34 @@ class ImageryPanel(DataPanel):
 
     def delete_selected_imagery(self):
         """Delete imagery that is selected in the table"""
-        # Get selected rows (should only be one due to SingleSelection mode)
+        # Get selected rows
         selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
 
-        if not selected_rows:
-            return
+        for row in selected_rows:
+            # Look up imagery by UUID stored in the name item (table may be filtered by sensor)
+            name_item = self.imagery_table.item(row, 0)
+            if name_item is None:
+                continue
+            imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
 
-        row = selected_rows[0]
-        # Look up imagery by UUID stored in the name item (table may be filtered by sensor)
-        name_item = self.imagery_table.item(row, 0)
-        if name_item is None:
-            return
-        imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+            imagery_to_delete = None
+            for img in self.viewer.imageries:
+                if img.uuid == imagery_uuid:
+                    imagery_to_delete = img
+                    break
 
-        imagery_to_delete = None
-        for img in self.viewer.imageries:
-            if img.uuid == imagery_uuid:
-                imagery_to_delete = img
-                break
+            if imagery_to_delete is None:
+                continue
 
-        if imagery_to_delete is None:
-            return
+            # If imagery is still loading, cancel the load first
+            if not imagery_to_delete.is_fully_loaded:
+                self.cancel_loading_requested.emit(imagery_to_delete.uuid)
 
-        # If imagery is still loading, cancel the load first
-        if not imagery_to_delete.is_fully_loaded:
-            self.cancel_loading_requested.emit(imagery_to_delete.uuid)
+            # Release GPU memory before removing the imagery
+            imagery_to_delete.release_gpu()
 
-        # Release GPU memory before removing the imagery
-        imagery_to_delete.release_gpu()
-
-        # Remove from list
-        self.viewer.remove_imagery(imagery_to_delete)
+            # Remove from list
+            self.viewer.remove_imagery(imagery_to_delete)
 
         # If there are still imageries available for the selected sensor, select the first one
         filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
