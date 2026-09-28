@@ -615,7 +615,12 @@ class ImageryViewer(QWidget):
         """Get the current time (if available)"""
         if self.timeline.is_time:
             return self.timeline.current_value
-        
+        return None
+
+    def get_current_frame(self):
+        """Get the current frame (if available)"""
+        if not self.timeline.is_time:
+            return self.timeline.current_value
         return None
 
     def on_histogram_levels_changed(self):

@@ -41,6 +41,7 @@ class PlaybackControls(QWidget):
 
         # Callback to get current time from imagery
         self.get_current_time = None  # Function that returns current datetime or None
+        self.get_current_frame = None  # Function that returns current frame or None
 
         self.init_ui()
 
@@ -69,12 +70,10 @@ class PlaybackControls(QWidget):
         info_layout = QHBoxLayout()
         info_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.index_label = QLabel("Index: 0 / 0")
-        self.time_label = QLabel("")  # Will show ISO time when available
+        self.display_label = QLabel("Index: 0 / 0")  # Will show time or frame
 
         info_layout.addStretch()
-        info_layout.addWidget(self.index_label)
-        info_layout.addWidget(self.time_label)
+        info_layout.addWidget(self.display_label)
         info_layout.addStretch()
 
         slider_section.addLayout(info_layout)
@@ -218,20 +217,24 @@ class PlaybackControls(QWidget):
         self.update_label()
 
     def update_label(self):
-        """Update frame label and time display"""
-        self.index_label.setText(f"Index: {self.current_index} / {self.max_index}")
-
+        """Update label display"""
         # Update time display if callback is available
         if self.get_current_time is not None:
             current_time = self.get_current_time()
             if current_time is not None:
                 # Convert numpy.datetime64 to ISO format string
                 time_str = str(current_time)
-                self.time_label.setText(f"Time: {time_str}")
-            else:
-                self.time_label.setText("")
-        else:
-            self.time_label.setText("")
+                self.display_label.setText(f"Time: {time_str}   ({self.current_index} / {self.max_index})")
+                return
+        # Fallback to frames if no time to display
+        if self.get_current_frame is not None:
+            current_frame = self.get_current_frame()
+            if current_frame is not None:
+                frame_str = str(current_frame)
+                self.display_label.setText(f"Frame: {frame_str}   ({self.current_index} / {self.max_index})")
+                return
+        # Fallback to index if no frame to display
+        self.display_label.setText(f"Index: {self.current_index} / {self.max_index}")
 
     def on_slider_changed(self, value):
         """Handle slider value change"""

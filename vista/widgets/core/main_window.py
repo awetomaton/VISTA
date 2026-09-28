@@ -192,6 +192,7 @@ class VistaMainWindow(QMainWindow):
         self.controls.index_changed = self.on_index_changed
         # Connect time display to imagery viewer
         self.controls.get_current_time = self.viewer.get_current_time
+        self.controls.get_current_frame = self.viewer.get_current_frame
         main_layout.addWidget(self.controls)
 
         main_widget.setLayout(main_layout)
