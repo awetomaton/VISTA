@@ -140,6 +140,9 @@ class VistaMainWindow(QMainWindow):
         self.data_manager.imagery_panel.cancel_loading_requested.connect(self.on_cancel_imagery_loading)
         self.data_manager.sensors_panel.cancel_sensor_loading_requested.connect(self.on_cancel_sensor_loading)
 
+        # connect index signal to update current frame column in imagery panel
+        self.viewer.index_changed.connect(self.data_manager.imagery_panel.on_index_changed)
+
         # Route panel status messages to the status bar
         for panel in (
             self.data_manager.sensors_panel,

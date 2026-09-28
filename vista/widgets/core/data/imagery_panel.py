@@ -53,8 +53,8 @@ class ImageryPanel(DataPanel):
 
         # Imagery table
         self.imagery_table = QTableWidget()
-        self.imagery_table.setColumnCount(5)
-        self.imagery_table.setHorizontalHeaderLabels(["Name", "Frames", "GPU", "Opacity", "File Location"])
+        self.imagery_table.setColumnCount(6)
+        self.imagery_table.setHorizontalHeaderLabels(["Name", "Frames", "Current Frame", "GPU", "Opacity", "File Location"])
 
         # Enable row selection via vertical header (single selection only)
         self.imagery_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -64,12 +64,13 @@ class ImageryPanel(DataPanel):
         header = self.imagery_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Opacity
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # File Location
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Current Frame (numeric)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Opacity
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # File Location
 
         # Opacity column is hidden by default (shown only in map view)
-        self.imagery_table.setColumnHidden(3, True)
+        self.imagery_table.setColumnHidden(4, True)
 
         self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
         self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
@@ -109,11 +110,24 @@ class ImageryPanel(DataPanel):
                 # Frames column: progress bar with cancel button for loading imagery
                 self._set_loading_widget(row, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery.frames))
 
+            if imagery in self.viewer.selected_imageries:
+                timeline = self.viewer.timeline
+                index = imagery.get_index(timeline.current_value, timeline.is_time, nearest=True)
+                if index is None:
+                    current_frame_item = QTableWidget("-")
+                else:
+                    current_frame_item = QTableWidgetItem(imagery.frames[index])
+            else:
+                current_frame_item = QTableWidget("-")
+            current_frame_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.imagery_table.setItem(row, 2, current_frame_item)
+
+
             # GPU column: show device name if imagery has a GPU tensor copy
             gpu_text = imagery.gpu_device_name or ""
             gpu_item = QTableWidgetItem(gpu_text)
             gpu_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.imagery_table.setItem(row, 2, gpu_item)
+            self.imagery_table.setItem(row, 3, gpu_item)
 
             # Opacity column: QSpinBox (0-100%) for map view
             opacity_pct = int(self.viewer.imagery_opacity.get(imagery.uuid, 1.0) * 100)
@@ -123,12 +137,12 @@ class ImageryPanel(DataPanel):
             opacity_spinbox.setValue(opacity_pct)
             opacity_spinbox.setToolTip("Imagery opacity in map view")
             opacity_spinbox.valueChanged.connect(lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val))
-            self.imagery_table.setCellWidget(row, 3, opacity_spinbox)
+            self.imagery_table.setCellWidget(row, 4, opacity_spinbox)
 
             fname = imagery.filename
             imagery_fname_item = QTableWidgetItem(Path(fname).stem)
             imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.imagery_table.setItem(row, 4, imagery_fname_item)
+            self.imagery_table.setItem(row, 5, imagery_fname_item)
             imagery_fname_item.setToolTip(fname)
 
             # Select the row for the currently active imagery
@@ -140,6 +154,29 @@ class ImageryPanel(DataPanel):
 
         self.imagery_table.blockSignals(False)
 
+    def on_index_changed(self, index):
+        for row in range(self.imagery_table.rowCount()):
+            name_item = self.imagery_table.item(row, 0)
+            uuid = name_item.data(Qt.ItemDataRole.UserRole)
+
+            imagery = None
+            for img in self.viewer.selected_imageries:
+                if img.uuid == uuid:
+                    imagery = img
+                    break
+
+            if imagery is None:
+                current_frame = "-"
+            else:
+                timeline = self.viewer.timeline
+                index = imagery.get_index(timeline.current_value, timeline.is_time, nearest=True)
+                current_frame = "-" if index is None else str(imagery.frames[index])
+
+            self.imagery_table.removeCellWidget(row, 2)
+            current_frame_item = QTableWidgetItem(current_frame)
+            current_frame_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self.imagery_table.setItem(row, 2, current_frame_item)
+    
     def _set_loading_widget(self, row, imagery_uuid, loaded_count, total_frames):
         """Set a progress bar + cancel button widget in the Frames column for a loading row.
 
@@ -399,7 +436,7 @@ class ImageryPanel(DataPanel):
         visible : bool
             True to show the opacity column, False to hide it.
         """
-        self.imagery_table.setColumnHidden(3, not visible)
+        self.imagery_table.setColumnHidden(4, not visible)
 
     def _on_opacity_changed(self, imagery_uuid: str, value: int) -> None:
         """Handle opacity spinbox change for an imagery.
