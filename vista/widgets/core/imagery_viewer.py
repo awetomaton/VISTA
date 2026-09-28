@@ -415,22 +415,10 @@ class ImageryViewer(QWidget):
                 # Signal not connected yet, ignore
                 pass
 
-            # In map mode, update projected imagery and recompute footprint if imagery changed
-            if self.map_view_mode and previous_imagery != self.imagery:
-                if self.imagery_projector is not None and self.timeline.is_time:
-                    time = self.timeline.current_value
-                    _, nrows, ncols = self.imagery.images.shape
-                    self._imagery_footprint = self.imagery_projector.compute_footprint(
-                        time,
-                        nrows,
-                        ncols,
-                        self.imagery.row_offset,
-                        self.imagery.column_offset,
-                    )
-                # Apply opacity
-                if self.projected_image_item is not None:
-                    opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
-                    self.projected_image_item.setOpacity(opacity)
+            # In map mode, update projected imagery opacity
+            if self.map_view_mode and previous_imagery != self.imagery and self.projected_image_item is not None:
+                opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
+                self.projected_image_item.setOpacity(opacity)
 
     def select_imagery(self, imagery: Optional[Imagery]):
         """Select an imagery to display"""
@@ -460,6 +448,18 @@ class ImageryViewer(QWidget):
         self.ignore_changing_histogram_levels = True
 
         self.timeline.current_index = index
+
+        # In map mode, recompute footprint
+        if self.imagery is not None and self.map_view_mode and self.imagery_projector is not None and self.timeline.is_time:
+            time = self.timeline.current_value
+            _, nrows, ncols = self.imagery.images.shape
+            self._imagery_footprint = self.imagery_projector.compute_footprint(
+                time,
+                nrows,
+                ncols,
+                self.imagery.row_offset,
+                self.imagery.column_offset,
+            )
 
         # Update displays for selected imagery
         for imagery in self.selected_imageries:
