@@ -171,7 +171,6 @@ class DataLoaderThread(QThread):
         # since no position or pointing information is available
         sensor = SampledSensor(
             times=times if times is not None else np.array([np.datetime64("2000-01-01T00:00:00")]),
-            frames=frames,
             radiometric_gain=radiometric_gain,
             # assumes radiometric gain array is same size as frames array in this file format
             radiometric_gain_frames=frames,
@@ -285,7 +284,6 @@ class DataLoaderThread(QThread):
             poly_pixel_to_arf_elevation = None
             poly_arf_to_row = None
             poly_arf_to_col = None
-            frames = None
 
             if "geolocation" in sensor_group:
                 geo_group = sensor_group["geolocation"]
@@ -296,10 +294,6 @@ class DataLoaderThread(QThread):
                     poly_arf_to_row = geo_group["poly_arf_to_row"][:]
                     poly_arf_to_col = geo_group["poly_arf_to_col"][:]
                     pointing = geo_group["pointing"][:]
-                    frames = geo_group["frames"][:]
-            if frames is None and radiometric_gain_frames is not None:
-                # Use radiometric gain frames if geolocation frames not available
-                frames = radiometric_gain_frames
 
             # If any of no positions, pointings, or times, set all to None
             if positions is None or times is None or pointing is None:
@@ -307,16 +301,11 @@ class DataLoaderThread(QThread):
                 times = None
                 pointing = None
 
-            # If no frames, create dummy frames
-            if frames is None:
-                frames = np.array([0], dtype=np.int64)
-
             platform = SensorPlatform(positions=positions, times_positions=times, pointings=pointing, times_pointings=times)
             sensor = SampledSensor(
                 name=sensor_name,
                 platform=platform,
                 times=times,
-                frames=frames,
                 poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
                 poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
                 poly_arf_to_row=poly_arf_to_row,

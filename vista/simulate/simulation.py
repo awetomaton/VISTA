@@ -461,7 +461,6 @@ class Simulation:
         sensor = SampledSensor(
             platform=platform,
             times=sensor_times,
-            frames=frames_array,
             poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
             poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
             poly_arf_to_row=poly_arf_to_row,

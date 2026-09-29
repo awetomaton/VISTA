@@ -307,7 +307,6 @@ Using the VISTA API
        name="MySensor",
        positions=positions,
        times=times,
-       frames=frames
    )
 
    # Create imagery

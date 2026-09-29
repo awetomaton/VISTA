@@ -39,9 +39,6 @@ class SampledSensor(Sensor):
     times : NDArray[np.datetime64]
         Times corresponding to each ARF polynomial. Must have length N.
         Required - will raise ValueError in __post_init__ if not provided.
-    frames : NDArray[np.int64]
-        Sensor frames numbers corresponding to each time sample. Must have length N.
-        Required - will raise ValueError in __post_init__ if not provided.
     radiometric_gain : NDArray, optional
         1D array of multiplicative factors to convert from counts to irradiance
         in units of kW/km²/sr.
@@ -72,7 +69,6 @@ class SampledSensor(Sensor):
     """
 
     times: Optional[NDArray[np.datetime64]] = None
-    frames: Optional[NDArray[np.int64]] = None
     radiometric_gain: Optional[NDArray] = None
     radiometric_gain_frames: Optional[NDArray] = None
     poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]] = None
@@ -96,8 +92,6 @@ class SampledSensor(Sensor):
         super().__post_init__()
         if self.times is None:
             raise ValueError("times is required for SampledSensor")
-        if self.frames is None:
-            raise ValueError("frame numbers are required for SampledSensor")
 
         # Remove duplicate times and corresponding positions
         unique_times, unique_indices = np.unique(self.times, return_index=True)
@@ -429,7 +423,6 @@ class SampledSensor(Sensor):
             geolocation_group.create_dataset("poly_arf_to_row", data=self.poly_arf_to_row)
             geolocation_group.create_dataset("poly_arf_to_col", data=self.poly_arf_to_col)
             geolocation_group.create_dataset("pointing", data=self.pointing)
-            geolocation_group.create_dataset("frames", data=self.frames)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
         if self.radiometric_gain is not None:
