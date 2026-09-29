@@ -1,21 +1,37 @@
 """Sensors panel for data manager"""
 
 from pathlib import Path
+from typing import Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QItemSelectionModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
     QMessageBox,
     QPushButton,
     QTableWidget,
-    QTableWidgetItem,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
 )
 
+from vista.sensors.sensor import Sensor
 from vista.widgets.core.data.data_panel import DataPanel
 
 _HDF5_EXTENSIONS = (".h5", ".hdf5")
+
+
+class SensorsTreeWidget(QTreeWidget):
+    """Tree widget that keeps sensor selection when platform nodes are clicked."""
+
+    def selectionCommand(self, index: QModelIndex, event: Optional[QEvent] = None) -> QItemSelectionModel.SelectionFlag:
+        """Prevent non-selectable platform nodes from changing sensor selection."""
+        item = self.itemFromIndex(index)
+        if item is not None and not item.flags() & Qt.ItemFlag.ItemIsSelectable:
+            return QItemSelectionModel.SelectionFlag.NoUpdate
+
+        return super().selectionCommand(index, event)
 
 
 class SensorsPanel(DataPanel):
@@ -41,18 +57,18 @@ class SensorsPanel(DataPanel):
         layout.addLayout(button_layout)
 
         # Sensors table
-        self.sensors_table = QTableWidget()
+        self.sensors_table = SensorsTreeWidget()
         self.sensors_table.setColumnCount(6)
-        self.sensors_table.setHorizontalHeaderLabels(
-            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "Imagery Files(s)"]
+        self.sensors_table.setHeaderLabels(
+            ["Name", "Geolocation", "Bias Images", "Uniformity Gain", "Bad Pixel Mask", "Imagery File(s)"]
         )
 
         # Enable row selection (single selection only)
-        self.sensors_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.sensors_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.sensors_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.sensors_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
         # Set column resize modes
-        header = self.sensors_table.horizontalHeader()
+        header = self.sensors_table.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Geolocation
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Bias Images
@@ -71,77 +87,74 @@ class SensorsPanel(DataPanel):
     def refresh_sensors_table(self):
         """Refresh the sensors table"""
         self.sensors_table.blockSignals(True)
-        self.sensors_table.setRowCount(0)
+        self.sensors_table.clear()
+        platform_items = {}
 
-        for row, sensor in enumerate(self.viewer.sensors):
-            self.sensors_table.insertRow(row)
-
-            # Name (not editable)
-            name_item = QTableWidgetItem(sensor.name)
-            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            name_item.setData(Qt.ItemDataRole.UserRole, sensor.uuid)  # Store sensor UUID
-            self.sensors_table.setItem(row, 0, name_item)
-
-            # Geolocation capability (checkmark or empty)
-            geolocation_item = QTableWidgetItem("✓" if sensor.can_geolocate() else "")
-            geolocation_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            geolocation_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 1, geolocation_item)
-
-            # Bias correction capability (checkmark or empty)
-            bias_item = QTableWidgetItem("✓" if sensor.can_correct_bias() else "")
-            bias_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            bias_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 2, bias_item)
-
-            # Non-uniformity correction capability (checkmark or empty)
-            non_unif_item = QTableWidgetItem("✓" if sensor.can_correct_non_uniformity() else "")
-            non_unif_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            non_unif_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 3, non_unif_item)
-
-            # Bad pixel correction capability (checkmark or empty)
-            bad_pixel_item = QTableWidgetItem("✓" if sensor.can_correct_bad_pixel() else "")
-            bad_pixel_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            bad_pixel_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.sensors_table.setItem(row, 4, bad_pixel_item)
+        for sensor in self.viewer.sensors:
+            platform = sensor.platform
+            platform_item = platform_items.get(platform.uuid)
+            if platform_item is None:
+                platform_item = QTreeWidgetItem(self.sensors_table, [platform.name])
+                platform_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                platform_item.setToolTip(0, "Sensor Platform")
+                platform_items[platform.uuid] = platform_item
 
             # Loaded imagery filename(s) (not editable)
             loaded_imagery_fnames = [imagery.filename for imagery in self.viewer.imageries if imagery.sensor == sensor]
-            loaded_imagery_fnames = list(set(loaded_imagery_fnames))  # list of unique fnames
+            loaded_imagery_fnames = list(dict.fromkeys(loaded_imagery_fnames))  # list of unique fnames
             # just use stem for display, but only if not blank
             short_names = [Path(fname).stem for fname in loaded_imagery_fnames if fname != ""]
-            loaded_imagery_fname_item = QTableWidgetItem(", ".join(short_names))
-            loaded_imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.sensors_table.setItem(row, 5, loaded_imagery_fname_item)
-            loaded_imagery_fname_item.setToolTip("\n".join(loaded_imagery_fnames))  # but full path for tooltip
+
+            sensor_item = QTreeWidgetItem(
+                platform_item,
+                [
+                    sensor.name,
+                    "✓" if sensor.can_geolocate() else "",
+                    "✓" if sensor.can_correct_bias() else "",
+                    "✓" if sensor.can_correct_non_uniformity() else "",
+                    "✓" if sensor.can_correct_bad_pixel() else "",
+                    ", ".join(short_names),
+                ]
+            )
+            sensor_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            sensor_item.setData(0, Qt.ItemDataRole.UserRole, sensor.uuid)
+            sensor_item.setToolTip(5, "\n".join(loaded_imagery_fnames))
+            # center all columns except name and filenames
+            for column in range(1, 5):
+                sensor_item.setTextAlignment(column, Qt.AlignmentFlag.AlignCenter)
+
+            platform_item.setExpanded(True)
 
             if sensor == self.viewer.selected_sensor:
-                self.sensors_table.selectRow(row)
+                self.sensors_table.setCurrentItem(sensor_item)
 
         self.sensors_table.blockSignals(False)
 
-    def on_sensor_selection_changed(self):
-        """Handle sensor selection changes from table"""
-        selected_rows = [index.row() for index in self.sensors_table.selectedIndexes()]
+    def _get_selected_sensor(self) -> Optional[Sensor]:
+        """Return the sensor represented by the selected tree item."""
+        selected_items = self.sensors_table.selectedItems()
+        if not selected_items:
+            return None
 
-        if selected_rows:
-            row = selected_rows[0]
-            sensor = self.viewer.sensors[row]
+        sensor_uuid = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
+        for sensor in self.viewer.sensors:
+            if sensor.uuid == sensor_uuid:
+                return sensor
+        return None
+
+    def on_sensor_selection_changed(self):
+        """Handle sensor selection changes from tree"""
+        sensor = self._get_selected_sensor()
+        if sensor is not None:
             self.sensor_selected.emit(sensor)
             # Note: Don't emit data_changed here - selection doesn't change data
 
     def delete_selected_sensor(self):
         """Delete selected sensor and all associated data"""
-        selected_rows = [index.row() for index in self.sensors_table.selectedIndexes()]
-
-        if not selected_rows:
+        sensor = self._get_selected_sensor()
+        if sensor is None:
             QMessageBox.warning(self, "No Selection", "Please select a sensor to delete.")
             return
-
-        row = selected_rows[0]
-
-        sensor = self.viewer.sensors[row]
 
         # Confirm deletion
         reply = QMessageBox.question(

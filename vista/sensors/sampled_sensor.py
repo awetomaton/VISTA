@@ -406,7 +406,8 @@ class SampledSensor(Sensor):
         group.attrs["sensor_type"] = "SampledSensor"
 
         # Save ARF geolocation polynomials
-        if (self.poly_pixel_to_arf_azimuth is not None
+        if (self.times is not None
+            and self.poly_pixel_to_arf_azimuth is not None
             and self.poly_pixel_to_arf_elevation is not None
             and self.poly_arf_to_row is not None
             and self.poly_arf_to_col is not None
