@@ -120,8 +120,8 @@ class Imagery(TemporalData):
     images: NDArray[np.float32]
     frames: NDArray[np.int_] = field()  # make frames a requirement for Imagery
     sensor: Optional[Sensor] = None
-    row_offset: int = None
-    column_offset: int = None
+    row_offset: int = 0
+    column_offset: int = 0
     description: str = ""
     filename: str = ""  # filename where this imagery came from
     # Cached histograms for performance (computed lazily)
@@ -151,10 +151,6 @@ class Imagery(TemporalData):
         Imagery._instance_count += 1
         if self.name is None or self.name == "":
             self.name = f"Unknown Imagery {Imagery._instance_count}"
-        if self.row_offset is None:
-            self.row_offset = 0
-        if self.column_offset is None:
-            self.column_offset = 0
         if self.sensor is None:
             self.sensor = Sensor()
         self.uuid = uuid.uuid4()
