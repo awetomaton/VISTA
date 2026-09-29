@@ -123,6 +123,7 @@ class Imagery(TemporalData):
     row_offset: int = 0
     column_offset: int = 0
     description: str = ""
+    datastream: Optional[str] = ""
     filename: str = ""  # filename where this imagery came from
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
@@ -153,6 +154,8 @@ class Imagery(TemporalData):
             self.name = f"Unknown Imagery {Imagery._instance_count}"
         if self.sensor is None:
             self.sensor = Sensor()
+        if self.datastream is None or self.datastream == "":
+            self.datastream = "Unknown Datastream"
         self.uuid = uuid.uuid4()
 
     def __getitem__(self, s):
@@ -469,6 +472,7 @@ class Imagery(TemporalData):
         # Set imagery attributes
         group.attrs["name"] = self.name
         group.attrs["description"] = self.description
+        group.attrs["datastream"] = self.datastream
         group.attrs["uuid"] = str(self.uuid)
         group.attrs["row_offset"] = self.row_offset
         group.attrs["column_offset"] = self.column_offset

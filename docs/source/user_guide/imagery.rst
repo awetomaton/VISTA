@@ -197,6 +197,7 @@ The HDF5 file has the following hierarchical structure:
                            │   ├── name: "Imagery Name"
                            │   ├── uuid: "uuid-string"
                            │   ├── description: "Optional description"
+                           │   ├── datastream: "Datastream"
                            │   ├── row_offset: 0
                            │   └── column_offset: 0
                            ├── images             [N × H × W array, float32, chunked]

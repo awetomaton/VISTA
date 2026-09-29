@@ -545,6 +545,7 @@ class DataLoaderThread(QThread):
         # Load attributes
         name = img_group.attrs.get("name")
         description = img_group.attrs.get("description", "")
+        datastream = img_group.attrs.get("datastream")
         imagery_uuid = img_group.attrs.get("uuid")
         row_offset = img_group.attrs.get("row_offset", 0)
         column_offset = img_group.attrs.get("column_offset", 0)
@@ -571,6 +572,7 @@ class DataLoaderThread(QThread):
             column_offset=column_offset,
             times=times,
             description=description,
+            datastream=datastream,
             filename=self.file_path,
         )
         imagery.loaded_frame_count = 0
