@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import uuid
 
+import h5py
 import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RegularGridInterpolator
@@ -308,3 +309,37 @@ class SensorPlatform:
         interpolated_pointings /= norm  # Normalize pointings to unit vectors
 
         return interpolated_pointings
+
+    def to_hdf5(self, group: h5py.Group):
+        """
+        Save sensor platform position and pointing data to an HDF5 group.
+
+        Parameters
+        ----------
+        group : h5py.Group
+            HDF5 group to write sensor platform data to (typically sensor_platforms/<sensor_platform_uuid>/)
+
+        Notes
+        -----
+        This method writes position and pointing data to the HDF5 group:
+        - positions and times_positions
+        - pointings and times_pointings
+
+        Subclasses should call super().to_hdf5(group) and then add their own data.
+        """
+        # Set sensor platform identification attributes
+        group.attrs["name"] = self.name
+        group.attrs["uuid"] = str(self.uuid)
+
+        if self.positions.shape[1] > 0:
+            position_group = group.create_group("position")
+            position_group.create_dataset("positions", data=self.positions)
+            # Convert times to unix nanoseconds
+            unix_nanoseconds = self.times_positions.astype("datetime64[ns]").astype(np.int64)
+            position_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
+
+        if self.pointings.shape[1] > 0:
+            pointing_group = group.create_group("pointing")
+            pointing_group.create_dataset("pointings", data=self.pointings)
+            unix_nanoseconds = self.times_pointings.astype("datetime64[ns]").astype(np.int64)
+            pointing_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)

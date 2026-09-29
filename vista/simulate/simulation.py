@@ -394,7 +394,7 @@ class Simulation:
 
         # Save imagery using new HDF5 v2.0 format
         if self.imagery is not None and self.imagery.sensor is not None:
-            save_imagery_hdf5(dir / "imagery.h5", {self.imagery.sensor.name: [self.imagery]})
+            save_imagery_hdf5(dir / "imagery.h5", [self.imagery])
 
     def simulate(self):
         # Create sensor first (before tracks/detectors) so we can pass it to them

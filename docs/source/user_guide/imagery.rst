@@ -140,15 +140,15 @@ sensor calibration, and coordinate transformation data.
 Format Overview
 ~~~~~~~~~~~~~~~
 
-**Current Version:** 1.7 (simplified timestamps with nanosecond precision)
+**Current Version:** 2.0 (updated hierarchy for sensor platforms, sensors, and imageries)
 
-**Legacy Support:** version 1.6 (hierarchical with split timestamps), version 1.5 (flat structure, deprecated)
+**Legacy Support:** version 1.7 (simplified timestamps with nanosecond precision, deprecated), version 1.6 (hierarchical with split timestamps, deprecated), version 1.5 (flat structure, deprecated)
 
 The version 1.7 format uses a hierarchical sensor-based structure allowing multiple sensors
 and multiple imagery datasets per sensor in a single file, with simplified timestamp
 storage using a single nanosecond field.
 
-File Structure (version 1.7)
+File Structure (version 2.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The HDF5 file has the following hierarchical structure:
@@ -157,44 +157,51 @@ The HDF5 file has the following hierarchical structure:
 
    root/
    ├── [attributes]
-   │   ├── format_version: "1.7"
-   │   └── created: "2024-01-01T12:00:00"
-   └── sensors/
-       └── <sensor_uuid>/
+   │   ├── format_version: "2.0"
+   │   └── created: "2026-01-01T12:00:00"
+   └── sensor_platforms/
+       └── <sensor_platform_name>/
            ├── [attributes]
-           │   ├── name: "Sensor Name"
-           │   ├── uuid: "uuid-string"
-           │   └── sensor_type: "Sensor" or "SampledSensor"
-           ├── position/              (SampledSensor only)
+           │   ├── name: "Sensor Platform Name"
+           │   └── uuid: "uuid-string"
+           ├── position/
            │   ├── positions          [3 × N array: x, y, z in ECEF kilometers]
            │   └── unix_nanoseconds   [N array: nanoseconds since epoch]
-           ├── geolocation/           (optional, for coordinate transforms)
-           │   ├── frames             [M array: frame numbers for polynomials]
-           │   ├── pointing           [M × 2 array: azimuth, elevation]
-           │   ├── poly_pixel_to_arf_azimuth    [M × P array]
-           │   ├── poly_pixel_to_arf_elevation  [M × Q array]
-           │   ├── poly_arf_to_row    [M × R array]
-           │   └── poly_arf_to_col    [M × S array]
-           ├── radiometric/           (optional, for calibration)
-           │   ├── bias_images                     [K × H × W array]
-           │   ├── bias_image_frames               [K array]
-           │   ├── uniformity_gain_images          [L × H × W array]
-           │   ├── uniformity_gain_image_frames    [L array]
-           │   ├── bad_pixel_masks                 [J × H × W array]
-           │   ├── bad_pixel_mask_frames           [J array]
-           │   ├── radiometric_gain                [M array]
-           │   └── radiometric_gain_frames         [M array]
-           └── imagery/
-               └── <imagery_uuid>/
+           ├── pointing/
+           │   ├── pointings          [3 × M array: x, y, z in ECEF kilometers]
+           │   └── unix_nanoseconds   [M array: nanoseconds since epoch]
+           └── sensors/
+               └── <sensor_name>/
                    ├── [attributes]
-                   │   ├── name: "Imagery Name"
+                   │   ├── name: "Sensor Name"
                    │   ├── uuid: "uuid-string"
-                   │   ├── description: "Optional description"
-                   │   ├── row_offset: 0
-                   │   └── column_offset: 0
-                   ├── images           [N × H × W array, float32, chunked]
-                   ├── frames           [N array: frame numbers]
-                   └── unix_nanoseconds [N array: nanoseconds since epoch]
+                   │   └── sensor_type: "Sensor" or "SampledSensor"
+                   ├── geolocation/           (optional, for coordinate transforms)
+                   │   ├── unix_nanoseconds              [N array: nanoseconds since epoch]
+                   │   ├── poly_pixel_to_arf_azimuth     [N × P array]
+                   │   ├── poly_pixel_to_arf_elevation   [M × Q array]
+                   │   ├── poly_arf_to_row               [N × R array]
+                   │   └── poly_arf_to_col               [N × S array]
+                   ├── radiometric/           (optional, for calibration)
+                   │   ├── bias_images                    [K × H × W array]
+                   │   ├── bias_image_frames              [K array]
+                   │   ├── uniformity_gain_images         [L × H × W array]
+                   │   ├── uniformity_gain_image_frames   [L array]
+                   │   ├── bad_pixel_masks                [J × H × W array]
+                   │   ├── bad_pixel_mask_frames          [J array]
+                   │   ├── radiometric_gain               [M array]
+                   │   └── radiometric_gain_frames        [M array]
+                   └── imagery/
+                       └── <imagery_name>/
+                           ├── [attributes]
+                           │   ├── name: "Imagery Name"
+                           │   ├── uuid: "uuid-string"
+                           │   ├── description: "Optional description"
+                           │   ├── row_offset: 0
+                           │   └── column_offset: 0
+                           ├── images             [N × H × W array, float32, chunked]
+                           ├── frames             [N array: frame numbers]
+                           └── unix_nanoseconds   [N array: nanoseconds since epoch]
 
 Detailed Dataset Descriptions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -327,7 +334,7 @@ Using the VISTA API
    )
 
    # Save to HDF5
-   save_imagery_hdf5("output.h5", {"MySensor": [imagery]})
+   save_imagery_hdf5("output.h5", [imagery])
 
 Using h5py Directly
 ^^^^^^^^^^^^^^^^^^^
@@ -870,7 +877,7 @@ Programmatic Export
 
    # Save to HDF5
    from vista.imagery import save_imagery_hdf5
-   save_imagery_hdf5("output.h5", {sensor.name: [imagery]})
+   save_imagery_hdf5("output.h5", [imagery])
 
    # Export frames as numpy array
    frames_subset = imagery[10:50].images  # Get frames 10-49

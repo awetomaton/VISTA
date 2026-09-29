@@ -391,12 +391,11 @@ class SampledSensor(Sensor):
         Parameters
         ----------
         group : h5py.Group
-            HDF5 group to write sensor data to (typically sensors/<sensor_name>/)
+            HDF5 group to write sensor data to (typically sensors/<sensor_uuid>/)
 
         Notes
         -----
         This method extends the base Sensor.to_hdf5() by adding:
-        - Position data (positions, times) in position/ subgroup
         - Geolocation polynomials in geolocation/ subgroup
         - Radiometric gain values in radiometric/ subgroup
         """
@@ -406,23 +405,19 @@ class SampledSensor(Sensor):
         # Override sensor type
         group.attrs["sensor_type"] = "SampledSensor"
 
-        # Save position data
-        if self.positions is not None and self.times is not None:
-            position_group = group.create_group("position")
-            position_group.create_dataset("positions", data=self.positions)
-
-            # Convert times to unix nanoseconds
-            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
-            position_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
-
         # Save ARF geolocation polynomials
-        if self.can_geolocate():
+        if (self.poly_pixel_to_arf_azimuth is not None
+            and self.poly_pixel_to_arf_elevation is not None
+            and self.poly_arf_to_row is not None
+            and self.poly_arf_to_col is not None
+        ):
             geolocation_group = group.create_group("geolocation")
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            geolocation_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
             geolocation_group.create_dataset("poly_pixel_to_arf_azimuth", data=self.poly_pixel_to_arf_azimuth)
             geolocation_group.create_dataset("poly_pixel_to_arf_elevation", data=self.poly_pixel_to_arf_elevation)
             geolocation_group.create_dataset("poly_arf_to_row", data=self.poly_arf_to_row)
             geolocation_group.create_dataset("poly_arf_to_col", data=self.poly_arf_to_col)
-            geolocation_group.create_dataset("pointing", data=self.pointing)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
         if self.radiometric_gain is not None:

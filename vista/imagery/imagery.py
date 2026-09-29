@@ -457,7 +457,7 @@ class Imagery(TemporalData):
         Parameters
         ----------
         group : h5py.Group
-            HDF5 group to write imagery data to (typically sensors/<sensor_uuid>/imagery/<imagery_uuid>/)
+            HDF5 group to write imagery data to (typically imagery/<imagery_uuid>/)
 
         Notes
         -----
@@ -468,7 +468,7 @@ class Imagery(TemporalData):
         - Row/column offsets
         - Metadata attributes (name, description, uuid)
 
-        Sensor data should be written separately using sensor.to_hdf5()
+        Sensor platform and sensor data should be written separately using platform.to_hdf5() and sensor.to_hdf5()
         """
         # Set imagery attributes
         group.attrs["name"] = self.name
@@ -492,17 +492,17 @@ class Imagery(TemporalData):
 
 def save_imagery_hdf5(
     file_path: Union[str, pathlib.Path],
-    sensor_imagery_map: dict[str, list[Imagery]],
+    imageries: list[Imagery],
 ):
     """
-    Save imagery data to HDF5 file with hierarchical sensor/imagery structure.
+    Save imagery data to HDF5 file with hierarchical sensor_platform/sensor/imagery structure.
 
     Parameters
     ----------
     file_path : Union[str, pathlib.Path]
         Path to the HDF5 file to create
-    sensor_imagery_map : dict[str, list[Imagery]]
-        Dictionary mapping Sensor object names to lists of Imagery objects from that sensor
+    imageries : list[Imagery]
+        List of Imagery objects to save
 
     Notes
     -----
@@ -510,58 +510,76 @@ def save_imagery_hdf5(
     ```
     root/
     ├── [attrs] format_version, created
-    └── sensors/
-        ├── <sensor_uuid>/
-        │   ├── [attrs] name, uuid, sensor_type
-        │   ├── position/ (SampledSensor only)
-        │   ├── geolocation/ (if can_geolocate)
-        │   ├── radiometric/ (if calibration data exists)
-        │   └── imagery/
-        │       ├── <imagery_uuid_1>/
-        │       │   ├── [attrs] name, uuid, description, ...
-        │       └── <imagery_uuid_2>/
-        └── <sensor_uuid_2>/
-            └── ...
+    └── sensor_platforms/
+        └── <sensor_platform_uuid_1>/
+        │   ├── [attrs] name, uuid
+        │   ├── position/ (if positions exist)
+        │   ├── pointing/ (if pointings exist)
+        │   └── sensors/
+        │       ├── <sensor_uuid_1>/
+        │       │   ├── [attrs] name, uuid, sensor_type
+        │       │   ├── geolocation/ (if polynomials exist)
+        │       │   ├── radiometric/ (if calibration data exists)
+        │       │   └── imagery/
+        │       │       ├── <imagery_uuid_1>/
+        │       │       │   ├── [attrs] name, uuid, description,
+        │       │       │   ├── images
+        │       │       │   ├── frames
+        │       │       │   └── unix_nanoseconds (if times exist)
+        │       │       └── <imagery_uuid_2>/
+        │       │       └── ...
+        │       └── <sensor_uuid_2>/
+        │       └── ...
+        └── <sensor_platform_uuid_2>/
+        └── ...
     ```
 
     Examples
     --------
-    >>> sensor = SampledSensor(name="MySensor", ...)
+    >>> platform = SensorPlatform(name="MyPlatform",...)
+    >>> sensor = SampledSensor(name="MySensor", platform=platform, ...)
     >>> imagery1 = Imagery(name="img1", sensor=sensor, ...)
     >>> imagery2 = Imagery(name="img2", sensor=sensor, ...)
-    >>> save_imagery_hdf5("data.h5", {"MySensor": [imagery1, imagery2]})
+    >>> save_imagery_hdf5("data.h5", [imagery1, imagery2])
     """
     file_path = pathlib.Path(file_path)
 
     with h5py.File(file_path, "w") as f:
         # Set root attributes
-        f.attrs["format_version"] = "1.7"
+        f.attrs["format_version"] = "2.0"
         f.attrs["created"] = str(np.datetime64("now").astype(str))
 
-        # Create sensors group
-        sensors_group = f.create_group("sensors")
+        # create sensor platforms group
+        platforms_group = f.create_group("sensor_platforms")
 
-        # Iterate through sensor names and their imagery
-        for sensor_name, imagery_list in sensor_imagery_map.items():
-            if not imagery_list:
-                continue  # Skip if no imagery for this sensor
+        for imagery in imageries:
+            sensor = imagery.sensor
+            platform = sensor.platform
 
-            # Get sensor from first imagery (all imagery in list should have same sensor)
-            sensor = imagery_list[0].sensor
+            if str(platform.uuid) in platforms_group:
+                platform_group = platforms_group[str(platform.uuid)]
+            else:
+                platform_group = platforms_group.create_group(str(platform.uuid))
+                platform.to_hdf5(platform_group)
 
-            # Create sensor group using UUID (guaranteed unique, no sanitization needed)
-            sensor_group = sensors_group.create_group(str(sensor.uuid))
+            if "sensors" in platform_group:
+                sensors_group = platform_group["sensors"]
+            else:
+                sensors_group = platform_group.create_group("sensors")
 
-            # Save sensor data
-            sensor.to_hdf5(sensor_group)
+            if str(sensor.uuid) in sensors_group:
+                sensor_group = sensors_group[str(sensor.uuid)]
+            else:
+                sensor_group = sensors_group.create_group(str(sensor.uuid))
+                sensor.to_hdf5(sensor_group)
 
-            # Create imagery subgroup
-            imagery_group = sensor_group.create_group("imagery")
+            if "imagery" in sensor_group:
+                imagery_group = sensor_group["imagery"]
+            else:
+                imagery_group = sensor_group.create_group("imagery")
 
-            # Save each imagery dataset
-            for imagery in imagery_list:
-                # Create imagery group using UUID (guaranteed unique, no sanitization needed)
-                img_group = imagery_group.create_group(str(imagery.uuid))
-
-                # Save imagery data
-                imagery.to_hdf5(img_group)
+            if str(imagery.uuid) in imagery_group:
+                raise RuntimeError(f"Imagery {imagery.name} already exists in file {file_path}")
+            else:
+                unique_imagery_group = imagery_group.create_group(str(imagery.uuid))
+                imagery.to_hdf5(unique_imagery_group)

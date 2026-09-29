@@ -2233,7 +2233,7 @@ class VistaMainWindow(QMainWindow):
             return
 
         # Open save imagery dialog
-        dialog = SaveImageryDialog(sensors=self.viewer.sensors, imageries=self.viewer.imageries, parent=self)
+        dialog = SaveImageryDialog(imageries=self.viewer.imageries, parent=self)
         dialog.exec()
 
     def clear_overlays(self):
