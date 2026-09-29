@@ -22,8 +22,8 @@ from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
 from vista.utils.time_mapping import map_frames_to_times
-from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.display_timeline import DisplayTimeline
+from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
 from vista.wms.imagery_projector import ImageryProjector
 from vista.wms.projection_cache import ProjectionCache
@@ -319,13 +319,13 @@ class ImageryViewer(QWidget):
         imageries = [img for img in self.selected_imageries if img.sensor == self.selected_sensor]
         detectors = [d for d in self.detectors if d.sensor == self.selected_sensor]
         tracks = [t for t in self.tracks if t.sensor == self.selected_sensor]
-        
+
         # try to save current value to load back in
         curr_value = self.timeline.current_value
         self.timeline = DisplayTimeline(imageries, detectors, tracks)
         try:
             self.timeline.set_index_from_value(curr_value)
-        except:
+        except Exception:
             self.timeline.current_index = -1  # set to invalid if previous value could not be loaded in
 
         min_index, max_index = self.timeline.get_range()
@@ -427,6 +427,7 @@ class ImageryViewer(QWidget):
             self.image_items[imagery.uuid].show()
         self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
+        self._sync_imagery_stack_order()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -438,9 +439,38 @@ class ImageryViewer(QWidget):
         self.selected_imageries.remove(imagery)
         self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
+        self._sync_imagery_stack_order()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
+
+    def _get_imagery_stack(self) -> list[Imagery]:
+        """Return selected imagery ordered from bottom to top for display.
+
+        Larger imagery is placed below smaller imagery so subframes remain visible.
+        Equal-sized imagery retains selection order, with the later-selected imagery
+        appearing on top.
+
+        Returns
+        -------
+        list[Imagery]
+            Selected imagery ordered from bottom to top.
+        """
+        return sorted(
+            self.selected_imageries,
+            key=lambda imagery: imagery.images.shape[1] * imagery.images.shape[2],
+            reverse=True,
+        )
+
+    def _sync_imagery_stack_order(self) -> None:
+        """Apply the selected imagery stack order to image items."""
+        imagery_stack = self._get_imagery_stack()
+        for i, imagery in enumerate(imagery_stack):
+            # Keep imagery at z levels in [-1, 0),
+            # below overlays at z=0
+            z_fraction = i / len(imagery_stack)
+            z_value = -1 + z_fraction
+            self.image_items[imagery.uuid].setZValue(z_value)
 
     def set_index(self, index: int):
         """Set the current index to display"""
