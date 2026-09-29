@@ -116,7 +116,7 @@ class Imagery(TemporalData):
     - All optional metadata is preserved during slicing operations
     """
 
-    name: str
+    name: Optional[str] = None
     images: NDArray[np.float32]
     frames: NDArray[np.int_] = field()  # make frames a requirement for Imagery
     sensor: Optional[Sensor] = None
@@ -142,8 +142,15 @@ class Imagery(TemporalData):
     # Performance optimization: cached data structures
     _histogram_bins: Optional[NDArray] = field(default=None, init=False, repr=False)  # Pre-computed histogram bin edges
 
+    # Class variable to track total number of imagery instances created
+    _instance_count: int = 0
+
     def __post_init__(self):
         super().__post_init__()
+        # Increment the class-level counter
+        Imagery._instance_count += 1
+        if self.name is None or self.name == "":
+            self.name = f"Unknown Imagery {Imagery._instance_count}"
         if self.row_offset is None:
             self.row_offset = 0
         if self.column_offset is None:
