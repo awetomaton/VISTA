@@ -3331,6 +3331,8 @@ class ImageryViewer(QWidget):
 
             projected_item.setOpacity(self.imagery_opacity.get(imagery.uuid, 1.0))
 
+        self._sync_imagery_stack_order()
+
     def _clear_map_imagery_items(self) -> None:
         """Remove all projected imagery items and their transient map state."""
         for projected_item in self.projected_image_items.values():
