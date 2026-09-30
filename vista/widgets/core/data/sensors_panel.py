@@ -10,12 +10,12 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QMessageBox,
     QPushButton,
-    QTableWidget,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
 )
 
+from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sensor import Sensor
 from vista.widgets.core.data.data_panel import DataPanel
 
@@ -24,6 +24,17 @@ _HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 class SensorsTreeWidget(QTreeWidget):
     """Tree widget that keeps sensor selection when platform nodes are clicked."""
+
+    def edit(
+        self,
+        index: QModelIndex,
+        trigger: QAbstractItemView.EditTrigger,
+        event: Optional[QEvent] = None,
+    ) -> bool:
+        """Allow editing only in the name column."""
+        if index.column() != 0:
+            return False
+        return super().edit(index, trigger, event)
 
     def selectionCommand(self, index: QModelIndex, event: Optional[QEvent] = None) -> QItemSelectionModel.SelectionFlag:
         """Prevent non-selectable platform nodes from changing sensor selection."""
@@ -77,6 +88,7 @@ class SensorsPanel(DataPanel):
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Imagery File(s)
 
         self.sensors_table.itemSelectionChanged.connect(self.on_sensor_selection_changed)
+        self.sensors_table.itemChanged.connect(self.on_item_changed)
 
         layout.addWidget(self.sensors_table)
         self.setLayout(layout)
@@ -95,8 +107,9 @@ class SensorsPanel(DataPanel):
             platform_item = platform_items.get(platform.uuid)
             if platform_item is None:
                 platform_item = QTreeWidgetItem(self.sensors_table, [platform.name])
-                platform_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+                platform_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable)
                 platform_item.setToolTip(0, "Sensor Platform")
+                platform_item.setData(0, Qt.ItemDataRole.UserRole, platform.uuid)
                 platform_items[platform.uuid] = platform_item
 
             # Loaded imagery filename(s) (not editable)
@@ -114,7 +127,7 @@ class SensorsPanel(DataPanel):
                     "✓" if sensor.can_correct_non_uniformity() else "",
                     "✓" if sensor.can_correct_bad_pixel() else "",
                     ", ".join(short_names),
-                ]
+                ],
             )
             sensor_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             sensor_item.setData(0, Qt.ItemDataRole.UserRole, sensor.uuid)
@@ -129,6 +142,14 @@ class SensorsPanel(DataPanel):
                 self.sensors_table.setCurrentItem(sensor_item)
 
         self.sensors_table.blockSignals(False)
+
+    def _get_platform_for_item(self, item: QTreeWidgetItem) -> Optional[SensorPlatform]:
+        """Return the sensor platform represented by a tree item."""
+        platform_uuid = item.data(0, Qt.ItemDataRole.UserRole)
+        for sensor in self.viewer.sensors:
+            if sensor.platform.uuid == platform_uuid:
+                return sensor.platform
+        return None
 
     def _get_selected_sensor(self) -> Optional[Sensor]:
         """Return the sensor represented by the selected tree item."""
@@ -148,6 +169,18 @@ class SensorsPanel(DataPanel):
         if sensor is not None:
             self.sensor_selected.emit(sensor)
             # Note: Don't emit data_changed here - selection doesn't change data
+
+    def on_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
+        """Update a sensor platform after its name is edited."""
+        if column != 0 or item.parent() is not None:
+            return
+
+        # TODO: we only allow editing the platform name for now
+        # but could allow editing sensor name in the future as well
+        platform = self._get_platform_for_item(item)
+        if platform is not None:
+            platform.name = item.text(0)
+            self.data_changed.emit()
 
     def delete_selected_sensor(self):
         """Delete selected sensor and all associated data"""
