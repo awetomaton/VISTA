@@ -2350,8 +2350,8 @@ class ImageryViewer(QWidget):
 
         # Calculate chip top-left corner
         radius = chip_size // 2
-        chip_top = int(np.round(track_row)) - radius
-        chip_left = int(np.round(track_col)) - radius
+        chip_top = int(np.floor(track_row)) - radius
+        chip_left = int(np.floor(track_col)) - radius
 
         # Update overlay image
         self.extraction_overlay.setImage(overlay, autoLevels=False)

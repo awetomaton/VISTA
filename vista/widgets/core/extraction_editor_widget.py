@@ -418,7 +418,7 @@ class ExtractionEditorWidget(QDialog):
         track_row = self.track.rows[self.current_track_idx]
         track_col = self.track.columns[self.current_track_idx]
 
-        chip_top = int(np.round(track_row)) - radius
-        chip_left = int(np.round(track_col)) - radius
+        chip_top = int(np.floor(track_row)) - radius
+        chip_left = int(np.floor(track_col)) - radius
 
         return chip_top, chip_left

@@ -89,8 +89,8 @@ def refine_peak(row, col, imagery, frame_index, radius=5, detection_mode="bright
     frame_data = imagery.images[frame_index]
 
     # Convert to integer pixel coordinates for indexing
-    center_row = int(round(row)) - imagery.row_offset
-    center_col = int(round(col)) - imagery.column_offset
+    center_row = int(np.floor(row)) - imagery.row_offset
+    center_col = int(np.floor(col)) - imagery.column_offset
 
     # Define search region bounds (clipped to image boundaries)
     row_min = max(0, center_row - radius)
@@ -183,8 +183,8 @@ def refine_cfar(
     frame_data = imagery.images[frame_index]
 
     # Convert to integer pixel coordinates for indexing
-    center_row = int(round(row)) - imagery.row_offset
-    center_col = int(round(col)) - imagery.column_offset
+    center_row = int(np.floor(row)) - imagery.row_offset
+    center_col = int(np.floor(col)) - imagery.column_offset
 
     # Define local region size based on search radius
     # Must be large enough for CFAR neighborhood plus search area
