@@ -1028,7 +1028,6 @@ class VistaMainWindow(QMainWindow):
                 existing_sensor = s
                 break
 
-        is_new_sensor = existing_sensor is None
         if existing_sensor is not None:
             # Reuse existing sensor
             imagery.sensor = existing_sensor
