@@ -11,7 +11,16 @@ from astropy import units
 from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QGraphicsEllipseItem,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 from shapely.geometry import Point, Polygon
 
 from vista.aoi.aoi import AOI
@@ -291,9 +300,27 @@ class ImageryViewer(QWidget):
         # Keep default context menu enabled
         # We'll add to it in getContextMenus()
 
-        # Create a horizontal HistogramLUTItem
+        # Create histogram with selection box
+        self.histogram_container = QWidget()
+        self.histogram_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        histogram_layout = QVBoxLayout(self.histogram_container)
+        histogram_layout.setContentsMargins(0, 0, 0, 0)
+        histogram_layout.setSpacing(2)
+
+        histogram_selector_layout = QHBoxLayout()
+        histogram_selector_layout.setContentsMargins(0, 0, 0, 0)
+        histogram_selector_layout.addWidget(QLabel("Histogram:"))
+        self.histogram_imagery_combo = QComboBox()
+        self.histogram_imagery_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.histogram_imagery_combo.setToolTip("Select the imagery represented by the histogram")
+        self.histogram_imagery_combo.currentIndexChanged.connect(self._on_histogram_imagery_changed)
+        histogram_selector_layout.addWidget(self.histogram_imagery_combo)
+        histogram_selector_layout.addStretch()
+        histogram_layout.addLayout(histogram_selector_layout)
+
         self.hist_widget = pg.GraphicsLayoutWidget()
-        self.hist_widget.setMaximumHeight(150)
+        self.hist_widget.setMaximumHeight(175)
+        histogram_layout.addWidget(self.hist_widget)
 
         # Create HistogramLUTItem and set it to horizontal orientation
         self.histogram = pg.HistogramLUTItem(orientation="horizontal")
@@ -307,7 +334,7 @@ class ImageryViewer(QWidget):
 
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
-        layout.addWidget(self.hist_widget)
+        layout.addWidget(self.histogram_container)
 
         self.setLayout(layout)
 
@@ -381,6 +408,7 @@ class ImageryViewer(QWidget):
         if imagery not in self.imageries:
             self.imageries.append(imagery)
             self.image_items[imagery.uuid] = pg.ImageItem(useOpenGL=True)
+            self.image_items[imagery.uuid].setLookupTable(self.histogram.getLookupTable(n=512))
             self.plot_item.addItem(self.image_items[imagery.uuid])
             self.image_items[imagery.uuid].setPos(imagery.column_offset, imagery.row_offset)
             self.image_items[imagery.uuid].hide()
@@ -395,7 +423,7 @@ class ImageryViewer(QWidget):
 
     def _update_largest_selected_imagery(self):
         """
-        Update ImageryViewer.imagery to the largest selected imagery and sync the histogram
+        Update ImageryViewer.imagery to the largest selected imagery
         """
         self.imagery = None
         size = 0
@@ -405,16 +433,61 @@ class ImageryViewer(QWidget):
                 size = nrows * ncols
                 self.imagery = img
 
-        if self.imagery is not None:
-            self.ignore_changing_histogram_levels = True
-            self.histogram.setImageItem(self.image_items[self.imagery.uuid])
-            self.ignore_changing_histogram_levels = False
-            # Block signals to prevent histogram recomputation
-            try:
-                self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
-            except TypeError:
-                # Signal not connected yet, ignore
-                pass
+    def _sync_histogram_imagery_selector(self) -> None:
+        """Synchronize the selector with the selected imagery."""
+        # save current selection to try and use after rebuild
+        selected_imagery_uuid = self.histogram_imagery_combo.currentData()
+
+        selected_imageries = self.selected_imageries
+        selected_imagery_uuids = {imagery.uuid for imagery in selected_imageries}
+        if selected_imagery_uuid not in selected_imagery_uuids:
+            selected_imagery_uuid = selected_imageries[0].uuid if selected_imageries else None
+
+        self.histogram_imagery_combo.blockSignals(True)
+        self.histogram_imagery_combo.clear()
+        for imagery in selected_imageries:
+            self.histogram_imagery_combo.addItem(f"{imagery.datastream} - {imagery.name}", imagery.uuid)
+
+        if selected_imagery_uuid is not None:
+            selected_index = self.histogram_imagery_combo.findData(selected_imagery_uuid)
+            self.histogram_imagery_combo.setCurrentIndex(selected_index)
+        self.histogram_imagery_combo.setEnabled(len(selected_imageries) > 1)
+        self.histogram_imagery_combo.blockSignals(False)
+        self._sync_histogram_image_item()
+
+    def _get_histogram_imagery_uuid(self) -> Optional[Imagery]:
+        """Return the uuid of the selected imagery represented by the histogram."""
+        return self.histogram_imagery_combo.currentData()
+
+    def _sync_histogram_image_item(self) -> None:
+        """Link the histogram to its selected imagery item in the current view mode."""
+        image_item = None
+        histogram_imagery_uuid = self._get_histogram_imagery_uuid()
+        if histogram_imagery_uuid is not None:
+            if self.map_view_mode:
+                image_item = self.projected_image_items.get(histogram_imagery_uuid)
+            else:
+                image_item = self.image_items.get(histogram_imagery_uuid)
+
+        if image_item is None:
+            self.histogram.plot.setData([], [])
+            return
+
+        self.ignore_changing_histogram_levels = True
+        self.histogram.setImageItem(image_item)
+        self.ignore_changing_histogram_levels = False
+
+        # Histogram data is supplied explicitly in set_index.
+        try:
+            image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+        except (AttributeError, TypeError):
+            pass
+
+    def _on_histogram_imagery_changed(self, _index: int) -> None:
+        """Update the histogram when the user chooses another selected imagery."""
+        self._sync_histogram_image_item()
+        self.set_index(self.timeline.current_index)
+        self.histogram.vb.autoRange()
 
     def select_imagery(self, imagery: Optional[Imagery]):
         """Select an imagery to display"""
@@ -427,6 +500,7 @@ class ImageryViewer(QWidget):
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
+        self._sync_histogram_imagery_selector()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -441,6 +515,7 @@ class ImageryViewer(QWidget):
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
+        self._sync_histogram_imagery_selector()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -598,6 +673,8 @@ class ImageryViewer(QWidget):
             ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", ewma_alpha, type=float)
             ewma_offset = self.settings.value("toolbar/ewma_frame_offset", ewma_offset, type=int)
 
+        histogram_imagery_uuid = self._get_histogram_imagery_uuid()
+
         # Update displays for selected imagery
         for imagery in self.selected_imageries:
             # Find nearest image index
@@ -651,7 +728,7 @@ class ImageryViewer(QWidget):
                     # Compute histogram directly from the filtered image
                     # and apply levels explicitly, bypassing pyqtgraph's
                     # signal chain which can silently skip updates.
-                    if imagery == self.imagery and self.histogram_visible:
+                    if imagery.uuid == histogram_imagery_uuid and self.histogram_visible:
                         settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
                         hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
                         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
@@ -675,11 +752,11 @@ class ImageryViewer(QWidget):
                     else:
                         levels = imagery.default_histogram_bounds[image_index]
 
-                    if imagery == self.imagery and self.histogram_visible:
+                    if imagery.uuid == histogram_imagery_uuid and self.histogram_visible:
                         self.histogram.plot.setData(hist_x, hist_y)
 
                 # Apply histogram bounds
-                if imagery == self.imagery:
+                if imagery.uuid == histogram_imagery_uuid:
                     self.histogram.setLevels(*levels)
 
                 # Explicitly sync levels to the image item. histogram.setLevels() goes through
@@ -747,11 +824,13 @@ class ImageryViewer(QWidget):
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
         # Store the user's selected bounds
-        if self.ignore_changing_histogram_levels or self.setting_imagery or (self.imagery is None):
+        histogram_imagery_uuid = self._get_histogram_imagery_uuid()
+        if self.ignore_changing_histogram_levels or self.setting_imagery or histogram_imagery_uuid is None:
             return
         levels = self.histogram.getLevels()
-        self.user_histogram_bounds[self.imagery.uuid] = levels
-        projected_item = self.projected_image_items.get(self.imagery.uuid)
+        self.user_histogram_bounds[histogram_imagery_uuid] = levels
+        self.image_items[histogram_imagery_uuid].setLevels(levels)
+        projected_item = self.projected_image_items.get(histogram_imagery_uuid)
         if projected_item is not None:
             projected_item.setLevels(levels)
 
@@ -761,6 +840,11 @@ class ImageryViewer(QWidget):
         if self.setting_imagery:
             return
         self.user_histogram_state = self.histogram.saveState()
+        lookup_table = self.histogram.getLookupTable(n=512)
+        for image_item in self.image_items.values():
+            image_item.setLookupTable(lookup_table)
+        for projected_item in self.projected_image_items.values():
+            projected_item.setLookupTable(lookup_table)
 
     def set_histogram_visible(self, visible: bool):
         """
@@ -776,10 +860,10 @@ class ImageryViewer(QWidget):
             True to show the histogram, False to hide it
         """
         self.histogram_visible = visible
-        self.hist_widget.setVisible(visible)
+        self.histogram_container.setVisible(visible)
 
         # Refresh histogram for the current index when becoming visible
-        if visible and self.imagery is not None:
+        if visible and self._get_histogram_imagery_uuid() is not None:
             self.set_index(self.timeline.current_index)
 
     def set_ewma_filter_enabled(self, enabled: bool):
@@ -3321,6 +3405,7 @@ class ImageryViewer(QWidget):
                 self.plot_item.removeItem(self.projected_image_items.pop(imagery_uuid))
                 self._imagery_footprints.pop(imagery_uuid, None)
 
+        lookup_table = self.histogram.getLookupTable(n=512)
         for imagery in imagery_stack:
             projected_item = self.projected_image_items.get(imagery.uuid)
             if projected_item is None:
@@ -3330,8 +3415,10 @@ class ImageryViewer(QWidget):
                 self.plot_item.addItem(projected_item)
 
             projected_item.setOpacity(self.imagery_opacity.get(imagery.uuid, 1.0))
+            projected_item.setLookupTable(lookup_table)
 
         self._sync_imagery_stack_order()
+        self._sync_histogram_image_item()
 
     def _clear_map_imagery_items(self) -> None:
         """Remove all projected imagery items and their transient map state."""
@@ -3549,6 +3636,7 @@ class ImageryViewer(QWidget):
             # Restore all selected imagery in pixel coordinates
             for imagery in self.selected_imageries:
                 self.image_items[imagery.uuid].setVisible(True)
+            self._sync_histogram_image_item()
 
             # Reset state
             self._wms_composite = None
