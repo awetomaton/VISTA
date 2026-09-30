@@ -473,6 +473,9 @@ class ImageryViewer(QWidget):
             self.histogram.plot.setData([], [])
             return
 
+        if self.histogram.imageItem() is image_item:
+            return
+
         self.ignore_changing_histogram_levels = True
         self.histogram.setImageItem(image_item)
         self.ignore_changing_histogram_levels = False
