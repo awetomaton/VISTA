@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 from PyQt6.QtCore import QItemSelectionModel, Qt
-from PyQt6.QtWidgets import QMessageBox, QTableWidget, QTableWidgetItem, QTreeWidget
+from PyQt6.QtWidgets import QMessageBox, QTreeWidget
 
 from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sensor import Sensor
@@ -36,6 +36,7 @@ def test_sensors_panel_groups_sensors_by_platform(qtbot) -> None:
     platform_a_item = panel.sensors_table.topLevelItem(0)
     assert platform_a_item.text(0) == "Platform A"
     assert not platform_a_item.flags() & Qt.ItemFlag.ItemIsSelectable
+    assert platform_a_item.flags() & Qt.ItemFlag.ItemIsEditable
     assert platform_a_item.childCount() == 2
     assert platform_a_item.isExpanded()
 
@@ -54,6 +55,29 @@ def test_sensors_panel_groups_sensors_by_platform(qtbot) -> None:
     platform_b_item = panel.sensors_table.topLevelItem(1)
     assert platform_b_item.text(0) == "Platform B"
     assert platform_b_item.childCount() == 1
+
+
+def test_sensors_panel_updates_platform_name(qtbot) -> None:
+    platform = SensorPlatform(name="Original Platform")
+    sensor_a = Sensor(name="Sensor A", platform=platform)
+    sensor_b = Sensor(name="Sensor B", platform=platform)
+    viewer = SimpleNamespace(
+        imageries=[],
+        platforms=[platform],
+        selected_sensor=sensor_a,
+        sensors=[sensor_a, sensor_b],
+    )
+    panel = SensorsPanel(viewer)
+    qtbot.addWidget(panel)
+    panel.refresh_sensors_table()
+
+    platform_item = panel.sensors_table.topLevelItem(0)
+    with qtbot.waitSignal(panel.data_changed):
+        platform_item.setText(0, "Renamed Platform")
+
+    assert platform.name == "Renamed Platform"
+    assert sensor_a.platform.name == "Renamed Platform"
+    assert sensor_b.platform.name == "Renamed Platform"
 
 
 def test_sensors_panel_emits_sensor_for_selected_tree_item(qtbot) -> None:

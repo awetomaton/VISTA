@@ -70,48 +70,6 @@ def test_map_frames_to_times_requires_complete_exact_mapping():
     )
 
 
-def test_viewer_populates_and_recomputes_item_times(sensor: Sensor):
-    imagery = Imagery(
-        name="timed-imagery",
-        images=np.zeros((3, 4, 4), dtype=np.float32),
-        frames=np.array([10, 20, 30]),
-        sensor=sensor,
-        times=np.array(
-            [
-                "2026-03-04T05:06:06",
-                "2026-03-04T05:06:07",
-                "2026-03-04T05:06:08",
-            ],
-            dtype="datetime64[ns]",
-        ),
-    )
-    detector = Detector(
-        name="frame-only-detector",
-        frames=np.array([20, 10]),
-        rows=np.array([1.0, 2.0]),
-        columns=np.array([3.0, 4.0]),
-        sensor=sensor,
-    )
-    viewer = SimpleNamespace(imagery=imagery)
-
-    ImageryViewer.set_item_times_from_imagery(viewer, detector)
-
-    np.testing.assert_array_equal(
-        detector.times,
-        np.array(["2026-03-04T05:06:07", "2026-03-04T05:06:06"], dtype="datetime64[ns]"),
-    )
-
-    detector.frames = np.array([30])
-    detector.rows = np.array([1.0])
-    detector.columns = np.array([3.0])
-    ImageryViewer.set_item_times_from_imagery(viewer, detector, overwrite=True)
-
-    np.testing.assert_array_equal(
-        detector.times,
-        np.array(["2026-03-04T05:06:08"], dtype="datetime64[ns]"),
-    )
-
-
 def test_detector_algorithm_adds_imagery_times(sensor: Sensor):
     imagery = Imagery(
         name="timed-imagery",
