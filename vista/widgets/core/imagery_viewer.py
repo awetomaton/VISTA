@@ -463,6 +463,46 @@ class ImageryViewer(QWidget):
             reverse=True,
         )
 
+    def _get_pixel_mode_pixel_value(
+        self,
+        row: float,
+        column: float,
+    ) -> Optional[tuple[Imagery, int, int, int, float]]:
+        """Return the pixel value from the uppermost imagery beneath a pixel position.
+
+        Parameters
+        ----------
+        row : float
+            Row in full-sensor pixel coordinates.
+        column : float
+            Column in full-sensor pixel coordinates.
+
+        Returns
+        -------
+        tuple[Imagery, int, int, int, float] or None
+            Imagery, frame index, relative row, relative column, and pixel value
+            for the uppermost displayed layer containing the position, or None.
+        """
+        for imagery in reversed(self._get_imagery_stack()):
+            image_item = self.image_items.get(imagery.uuid)
+            if image_item is None or not image_item.isVisible():
+                continue
+
+            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            if image_index is None:
+                continue
+
+            relative_row = row - imagery.row_offset
+            relative_column = column - imagery.column_offset
+            image_shape = imagery.images[image_index].shape
+            if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
+                row_index = int(np.floor(relative_row))
+                column_index = int(np.floor(relative_column))
+                value = float(imagery.images[image_index, row_index, column_index])
+                return imagery, int(image_index), row_index, column_index, value
+
+        return None
+
     def _sync_imagery_stack_order(self) -> None:
         """Apply the selected imagery stack order to pixel and map image items."""
         imagery_stack = self._get_imagery_stack()
@@ -751,16 +791,11 @@ class ImageryViewer(QWidget):
             # If pixel value is also visible, offset geolocation above it
             if self.pixel_value_enabled and self.pixel_value_text.isVisible():
                 # Calculate offset in data coordinates
-                # Get approximate height of one line of text in data coordinates
-                view_height = view_rect.height()
-                # Offset by ~20 pixels worth in view space
-                # Approximate: 20 pixels / viewport_height_pixels * view_height_data
-                viewport_height = self.plot_item.vb.height()
-                if viewport_height > 0:
-                    text_offset = (20 / viewport_height) * view_height
-                else:
-                    text_offset = view_height * 0.05  # Fallback to 5% of view height
+                view_height = view_rect.height()  # view height in data units
+                view_height_pixels = self.plot_item.vb.height()  # view height in pixel units
 
+                # Convert text height from pixels to data units
+                text_offset = (self.pixel_value_text.boundingRect().height() / view_height_pixels) * view_height
                 self.geolocation_text.setPos(view_rect.right(), bottom_y + offset_sign * text_offset)
             else:
                 # No pixel value, position at bottom-right
@@ -1533,7 +1568,13 @@ class ImageryViewer(QWidget):
 
     def _update_tooltips_at_position(self, pos):
         """Update geolocation and pixel value tooltips at a given scene position"""
-        if not (self.geolocation_enabled or self.pixel_value_enabled) or self.imagery is None:
+        if not (self.geolocation_enabled or self.pixel_value_enabled):
+            return
+        if not self.selected_imageries:
+            if self.geolocation_enabled:
+                self.geolocation_text.setVisible(False)
+            if self.pixel_value_enabled:
+                self.pixel_value_text.setVisible(False)
             return
 
         # Map mouse position to view coordinates
@@ -1549,34 +1590,15 @@ class ImageryViewer(QWidget):
                 self.geolocation_text.setText(text)
                 self.geolocation_text.setVisible(True)
 
-            if self.pixel_value_enabled and self.imagery.sensor.can_geolocate():
-                # Reverse-project (lon, lat) to pixel coordinates to read pixel value
-                earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
-                if self.timeline.is_time:
-                    time = self.timeline.current_value
-                    src_rows, src_cols = self.imagery.sensor.geodetic_to_pixel(time, earth_loc)
-                    row_int = int(np.round(src_rows)) - self.imagery.row_offset
-                    col_int = int(np.round(src_cols)) - self.imagery.column_offset
-                    img_shape = self.imagery.images[0].shape
-                    if (
-                        0 <= row_int < img_shape[0]
-                        and 0 <= col_int < img_shape[1]
-                        and not np.isnan(src_rows)
-                        and not np.isnan(src_cols)
-                    ):
-                        image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
-                        if image_index is None:
-                            # this case should only occur if viewing detectors or tracks with a timestamp before the imagery
-                            self.pixel_value_text.setVisible(False)
-                        else:
-                            pixel_value = self.imagery.images[image_index, row_int, col_int]
-                            text = f"({col_int}, {row_int}: {pixel_value:.2f})"
-                            self.pixel_value_text.setText(text)
-                            self.pixel_value_text.setVisible(True)
-                    else:
-                        self.pixel_value_text.setVisible(False)
-                else:
+            if self.pixel_value_enabled:
+                pixel_data = self._get_map_pixel_value(lon, lat)
+                if pixel_data is None:
                     self.pixel_value_text.setVisible(False)
+                else:
+                    imagery, row_int, col_int, pixel_value = pixel_data
+                    text = f"{imagery.name}\n({col_int}, {row_int}, {pixel_value:.2f})"
+                    self.pixel_value_text.setText(text)
+                    self.pixel_value_text.setVisible(True)
 
             # Update positions of text items
             self.update_text_positions()
@@ -1586,50 +1608,39 @@ class ImageryViewer(QWidget):
         col = mouse_point.x()
         row = mouse_point.y()
 
-        # Convert scene coordinates to imagery-relative coordinates
-        imagery_relative_row = row - self.imagery.row_offset
-        imagery_relative_col = col - self.imagery.column_offset
+        pixel_data = self._get_pixel_mode_pixel_value(row, col)
+        if pixel_data is None:
+            if self.geolocation_enabled:
+                self.geolocation_text.setVisible(False)
+            if self.pixel_value_enabled:
+                self.pixel_value_text.setVisible(False)
+            return
 
-        # Check if position is within image bounds (using imagery-relative coordinates)
-        if self.imagery.images is not None and len(self.imagery.images) > 0:
-            img_shape = self.imagery.images[0].shape
-            if 0 <= imagery_relative_row < img_shape[0] and 0 <= imagery_relative_col < img_shape[1]:
-                image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
-                if self.geolocation_enabled and self.imagery.sensor.can_geolocate() and self.timeline.is_time:
-                    time = self.timeline.current_value
-                    # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
-                    location = self.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
+        imagery, image_index, row_index, column_index, pixel_value = pixel_data
+        if self.geolocation_enabled:
+            if imagery.sensor.can_geolocate() and self.timeline.is_time:
+                frame_time = imagery.times[image_index]
+                location = imagery.sensor.pixel_to_geodetic(frame_time, np.array([row]), np.array([col]))
 
-                    lat = location.lat.deg[0]
-                    lon = location.lon.deg[0]
+                lat = location.lat.deg[0]
+                lon = location.lon.deg[0]
 
-                    x, y, z = location.to_geocentric()
-                    if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
-                        self.geolocation_text.setVisible(False)
-                    else:
-                        # Update text content
-                        text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
-                        self.geolocation_text.setText(text)
-                        self.geolocation_text.setVisible(True)
-
-                if self.pixel_value_enabled:
-                    # Extract pixel value from floored imagery-relative coordinates
-                    row_floor = int(np.floor(imagery_relative_row))
-                    col_floor = int(np.floor(imagery_relative_col))
-                    pixel_value = self.imagery.images[image_index, row_floor, col_floor]
-
-                    # Update text content
-                    text = f"({col_floor}, {row_floor} {pixel_value:.2f})"
-                    self.pixel_value_text.setText(text)
-                    self.pixel_value_text.setVisible(True)
-
-                # Update positions of text items
-                self.update_text_positions()
-            else:
-                if self.geolocation_enabled:
+                x, y, z = location.to_geocentric()
+                if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
                     self.geolocation_text.setVisible(False)
-                if self.pixel_value_enabled:
-                    self.pixel_value_text.setVisible(False)
+                else:
+                    text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
+                    self.geolocation_text.setText(text)
+                    self.geolocation_text.setVisible(True)
+            else:
+                self.geolocation_text.setVisible(False)
+
+        if self.pixel_value_enabled:
+            text = f"{imagery.name}\n({column_index}, {row_index}, {pixel_value:.2f})"
+            self.pixel_value_text.setText(text)
+            self.pixel_value_text.setVisible(True)
+
+        self.update_text_positions()
 
     def clear_overlays(self):
         """Clear all tracks and detections"""
@@ -3282,6 +3293,56 @@ class ImageryViewer(QWidget):
         self.projected_image_items.clear()
         self._imagery_footprints.clear()
 
+    def _get_map_pixel_value(
+        self,
+        lon: float,
+        lat: float,
+    ) -> Optional[tuple[Imagery, int, int, float]]:
+        """Return the pixel value from the uppermost imagery beneath a map position.
+
+        Parameters
+        ----------
+        lon : float
+            Longitude in degrees.
+        lat : float
+            Latitude in degrees.
+
+        Returns
+        -------
+        tuple[Imagery, int, int, float] or None
+            Imagery, relative row, relative column, and value for the uppermost
+            visible layer containing the position, or None.
+        """
+        earth_location = EarthLocation.from_geodetic(
+            lon=lon * units.deg,
+            lat=lat * units.deg,
+            height=0 * units.km,
+        )
+
+        for imagery in reversed(self._get_imagery_stack()):
+            projected_item = self.projected_image_items.get(imagery.uuid)
+            if (
+                projected_item is None
+                or not projected_item.isVisible()
+                or self.imagery_opacity.get(imagery.uuid, 1.0) <= 0.0
+            ):
+                continue
+            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            if image_index is None:
+                continue
+            frame_time = imagery.times[image_index]
+            row, col = imagery.sensor.geodetic_to_pixel(frame_time, earth_location)
+            if not np.isfinite(row) or not np.isfinite(col):
+                continue
+
+            relative_row = int(np.floor(row)) - imagery.row_offset
+            relative_column = int(np.floor(col)) - imagery.column_offset
+            image_shape = imagery.images[image_index].shape
+            if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
+                value = float(imagery.images[image_index, relative_row, relative_column])
+                return imagery, relative_row, relative_column, value
+
+        return None
 
     def set_map_view_mode(self, enabled: bool) -> bool:
         """Toggle between pixel coordinate mode and WMS map view mode.
