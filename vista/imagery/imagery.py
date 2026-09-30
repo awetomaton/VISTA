@@ -347,6 +347,7 @@ class Imagery(TemporalData):
             column_offset=self.column_offset,
             times=self.times,
             description=self.description,
+            datastream=self.datastream,
         )
         imagery_copy._gpu_images = self._gpu_images
         imagery_copy._gpu_device = self._gpu_device
