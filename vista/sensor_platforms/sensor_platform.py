@@ -123,6 +123,10 @@ class SensorPlatform:
         self._sort_unique()
         self.uuid = uuid.uuid4()
 
+    def __eq__(self, other):
+        """Compare SensorPlatforms based on UUID"""
+        return hasattr(other, "uuid") and (self.uuid == other.uuid)
+
     def _validate_arrays(
         self,
         positions: NDArray[np.float64], 
