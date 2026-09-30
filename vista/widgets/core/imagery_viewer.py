@@ -2,6 +2,7 @@
 
 import os
 import time
+from dataclasses import dataclass
 from typing import Optional, Union
 
 import numpy as np
@@ -33,6 +34,15 @@ from vista.wms.wms_tile_fetcher import WMSTileFetcherThread
 
 # Performance monitoring (enabled via environment variable)
 ENABLE_PERF_MONITORING = os.environ.get("VISTA_PERF_MONITOR", "0") == "1"
+
+
+@dataclass
+class _EWMAState:
+    """Transient EWMA filter state for one imagery layer."""
+
+    background: Optional[np.ndarray] = None
+    frame_counter: int = 0
+    last_image_index: Optional[int] = None
 
 
 class CustomViewBox(pg.ViewBox):
@@ -225,10 +235,7 @@ class ImageryViewer(QWidget):
 
         # EWMA background filter state
         self.ewma_filter_enabled = False
-        self.ewma_background = None  # Running EWMA background estimate (float64 array)
-        self.ewma_image = None
-        self.ewma_frame_counter = 0  # Number of unique frames viewed since filter enabled
-        self.ewma_last_frame_number = None  # Last frame_number changed in set_index
+        self.ewma_states: dict[object, _EWMAState] = {}
 
         # Performance monitoring
         self.perf_frame_times = []  # List of frame update times
@@ -381,18 +388,15 @@ class ImageryViewer(QWidget):
     def remove_imagery(self, imagery: Imagery):
         if imagery in self.selected_imageries:
             self.deselect_imagery(imagery)
+        self.ewma_states.pop(imagery.uuid, None)
         self.plot_item.removeItem(self.image_items[imagery.uuid])
         self.image_items.pop(imagery.uuid)
         self.imageries.remove(imagery)
 
     def _update_largest_selected_imagery(self):
         """
-        Update ImageryViewer.imagery to the largest selected imagery, sync the histogram,
-        update ewma state, and update projected imagery footprint for map mode
+        Update ImageryViewer.imagery to the largest selected imagery and sync the histogram
         """
-        # save current imagery to compare later
-        previous_imagery = self.imagery
-
         self.imagery = None
         size = 0
         for img in self.selected_imageries:
@@ -400,13 +404,6 @@ class ImageryViewer(QWidget):
             if nrows * ncols > size:
                 size = nrows * ncols
                 self.imagery = img
-
-        # Reset EWMA state when switching imagery
-        if previous_imagery != self.imagery:
-            self.ewma_background = None
-            self.ewma_image = None
-            self.ewma_frame_counter = 0
-            self.ewma_last_frame_number = None
 
         if self.imagery is not None:
             self.ignore_changing_histogram_levels = True
@@ -424,6 +421,8 @@ class ImageryViewer(QWidget):
         if imagery not in self.selected_imageries:
             self.selected_imageries.append(imagery)
             self.image_items[imagery.uuid].show()
+            if self.ewma_filter_enabled:
+                self.user_histogram_bounds.pop(imagery.uuid, None)
         self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
@@ -437,6 +436,7 @@ class ImageryViewer(QWidget):
         self.image_items[imagery.uuid].clear()  # clear to save memory
         self.image_items[imagery.uuid].hide()
         self.selected_imageries.remove(imagery)
+        self.ewma_states.pop(imagery.uuid, None)
         self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
@@ -517,6 +517,74 @@ class ImageryViewer(QWidget):
             if projected_item is not None:
                 projected_item.setZValue(z_value)
 
+    def _update_ewma_state(
+        self,
+        imagery: Imagery,
+        image_index: int,
+        alpha: float,
+    ) -> None:
+        """Advance the EWMA background model for one imagery layer.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery containing the source frame.
+        image_index : int
+            Index of the source frame.
+        alpha : float
+            EWMA decay factor.
+        """
+        if not self.ewma_filter_enabled:
+            return
+
+        current_image = imagery.images[image_index]
+        state = self.ewma_states.get(imagery.uuid)
+        if state is None:
+            state = _EWMAState()
+            self.ewma_states[imagery.uuid] = state
+
+        if image_index == state.last_image_index:
+            return
+
+        state.frame_counter += 1
+        state.last_image_index = image_index
+        if state.background is None:
+            state.background = current_image.copy()
+        else:
+            state.background = alpha * current_image + (1.0 - alpha) * state.background
+
+    def _get_display_image(
+        self,
+        imagery: Imagery,
+        image_index: int,
+        frame_offset: int,
+    ) -> tuple[np.ndarray, bool]:
+        """Return the original or EWMA-filtered image for display.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery containing the source frame.
+        image_index : int
+            Index of the source frame.
+        frame_offset : int
+            Number of unique frames to observe before displaying residuals if EWMA is enabled.
+
+        Returns
+        -------
+        tuple[np.ndarray, bool]
+            Display image and whether EWMA subtraction is active.
+        """
+        current_image = imagery.images[image_index]
+        if not self.ewma_filter_enabled:
+            return current_image, False
+
+        state = self.ewma_states.get(imagery.uuid)
+        if state is None or state.background is None or state.frame_counter <= frame_offset:
+            return current_image, False
+
+        return current_image - state.background, True
+
     def set_index(self, index: int):
         """Set the current index to display"""
         perf_start = time.time() if ENABLE_PERF_MONITORING else None
@@ -524,68 +592,49 @@ class ImageryViewer(QWidget):
 
         self.timeline.current_index = index
 
+        ewma_alpha = 0.1
+        ewma_offset = 1
+        if self.ewma_filter_enabled:
+            ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", ewma_alpha, type=float)
+            ewma_offset = self.settings.value("toolbar/ewma_frame_offset", ewma_offset, type=int)
+
         # Update displays for selected imagery
         for imagery in self.selected_imageries:
             # Find nearest image index
             image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
             if image_index is not None:
-                ewma_active = False  # Whether we're displaying a filtered image
-                current_image = imagery.images[image_index]
-
-                # EWMA background filter logic
-                if self.ewma_filter_enabled and imagery == self.imagery:
-                    ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
-                    ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
-
-                    # Check if frame_number changed from last call
-                    if imagery.frames[image_index] != self.ewma_last_frame_number:
-                        self.ewma_frame_counter += 1
-                        self.ewma_last_frame_number = imagery.frames[image_index]
-
-                        # Update EWMA background model once past the offset
-                        if self.ewma_background is None:
-                            self.ewma_background = current_image.copy()
-                        else:
-                            self.ewma_background = (
-                                ewma_alpha * current_image + (1.0 - ewma_alpha) * self.ewma_background
-                            )
-
-                    # Display filtered image if background model exists
-                    if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
-                        self.ewma_image = current_image - self.ewma_background
-                        ewma_active = True
+                self._update_ewma_state(imagery, image_index, ewma_alpha)
+                display_image, ewma_active = self._get_display_image(
+                    imagery,
+                    image_index,
+                    ewma_offset,
+                )
 
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
                     frame_time = imagery.times[image_index]
-                    display_image = self.ewma_image if ewma_active else current_image
                     self._update_projected_imagery(
                         imagery,
                         display_image,
                         frame_time,
+                        use_cache=not ewma_active,
                     )
                 else:
-                    if ewma_active and imagery == self.imagery:
-                        # EWMA image
-                        self.image_items[imagery.uuid].setImage(self.ewma_image, autoLevels=False)
-                    else:
-                        # Normal display
-                        self.image_items[imagery.uuid].setImage(current_image, autoLevels=False)
+                    self.image_items[imagery.uuid].setImage(display_image, autoLevels=False)
 
                 # Get user histogram limits if set
                 user_histogram_bounds = None
                 if imagery.uuid in self.user_histogram_bounds:
                     user_histogram_bounds = self.user_histogram_bounds[imagery.uuid]
 
-                if ewma_active and imagery == self.imagery:
+                if ewma_active:
                     min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
                     max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
-                    settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
                     settings_max_rowcol = self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
 
-                    row_downsample = max(1, self.ewma_image.shape[0] // settings_max_rowcol)
-                    col_downsample = max(1, self.ewma_image.shape[1] // settings_max_rowcol)
-                    downsampled_display_image = self.ewma_image[::row_downsample, ::col_downsample]
+                    row_downsample = max(1, display_image.shape[0] // settings_max_rowcol)
+                    col_downsample = max(1, display_image.shape[1] // settings_max_rowcol)
+                    downsampled_display_image = display_image[::row_downsample, ::col_downsample]
 
                     # Remove zero values since there are often many of these values
                     nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
@@ -599,16 +648,16 @@ class ImageryViewer(QWidget):
                             hist_min = -1.0
                             hist_max = 1.0
 
-                    hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
-                    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-                    nonzero_hist = hist_y > 0
-
                     # Compute histogram directly from the filtered image
                     # and apply levels explicitly, bypassing pyqtgraph's
                     # signal chain which can silently skip updates.
-                    if self.histogram_visible:
+                    if imagery == self.imagery and self.histogram_visible:
+                        settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
+                        hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
+                        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+                        nonzero_hist = hist_y > 0
                         self.histogram.plot.setData(bin_centers[nonzero_hist], hist_y[nonzero_hist])
-                        if self.ewma_frame_counter < 10:
+                        if self.ewma_states[imagery.uuid].frame_counter < 10:
                             # It takes some time for EWMA to settle, so auto range until it settles
                             self.histogram.vb.autoRange()
                     if user_histogram_bounds is not None:
@@ -745,17 +794,13 @@ class ImageryViewer(QWidget):
         enabled : bool
             True to enable the EWMA filter, False to disable it
         """
-        if self.imagery.uuid in self.user_histogram_bounds:
-            del self.user_histogram_bounds[self.imagery.uuid]
-        self.ewma_filter_enabled = enabled
-        if self.projection_cache is not None:
-            self.projection_cache.invalidate_imagery(self.imagery.uuid)
+        for imagery in self.selected_imageries:
+            self.user_histogram_bounds.pop(imagery.uuid, None)
+            if self.projection_cache is not None:
+                self.projection_cache.invalidate_imagery(imagery.uuid)
 
-        # Reset EWMA state
-        self.ewma_background = None
-        self.ewma_image = None
-        self.ewma_frame_counter = 0
-        self.ewma_last_frame_number = None
+        self.ewma_filter_enabled = enabled
+        self.ewma_states.clear()
 
         if not enabled:
             # Refresh display to show original image
@@ -3599,6 +3644,9 @@ class ImageryViewer(QWidget):
 
         # Re-project every visible imagery layer for the new view extent.
         self._sync_map_imagery_items()
+        ewma_offset = 1
+        if self.ewma_filter_enabled:
+            ewma_offset = self.settings.value("toolbar/ewma_frame_offset", ewma_offset, type=int)
         for imagery in self._get_imagery_stack():
             image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
             if image_index is None:
@@ -3607,16 +3655,17 @@ class ImageryViewer(QWidget):
                     projected_item.setVisible(False)
                 continue
             frame_time = imagery.times[image_index]
-            image = (
-                self.ewma_image
-                if imagery == self.imagery and self.ewma_image is not None
-                else imagery.images[image_index]
+            display_image, ewma_active = self._get_display_image(
+                imagery,
+                image_index,
+                ewma_offset,
             )
 
             self._update_projected_imagery(
                 imagery,
-                image,
+                display_image,
                 frame_time,
+                use_cache=not ewma_active,
             )
 
     def _on_wms_tile_fetched(self, tile) -> None:
@@ -3744,6 +3793,7 @@ class ImageryViewer(QWidget):
         imagery: Imagery,
         image: np.ndarray,
         frame_time: np.datetime64,
+        use_cache: bool = True,
     ) -> None:
         """Update one projected VISTA imagery layer in map mode.
 
@@ -3755,6 +3805,8 @@ class ImageryViewer(QWidget):
             Image frame to project.
         frame_time : np.datetime64
             Timestamp of the image frame.
+        use_cache : bool, optional
+            Whether cached projections may be read or written.
         """
         if not self.map_view_mode or not self.timeline.is_time or self.imagery_projector is None:
             return
@@ -3816,7 +3868,7 @@ class ImageryViewer(QWidget):
 
         # Check projection cache
         cached = None
-        if self.projection_cache is not None:
+        if use_cache and self.projection_cache is not None:
             cached = self.projection_cache.get(imagery.uuid, frame_time, zoom_level, output_bbox)
         if cached is not None:
             projected = cached
@@ -3835,7 +3887,7 @@ class ImageryViewer(QWidget):
             )
 
             # Cache the result
-            if self.projection_cache is not None:
+            if use_cache and self.projection_cache is not None:
                 self.projection_cache.put(imagery.uuid, frame_time, zoom_level, output_bbox, projected)
 
         # Display the projected image

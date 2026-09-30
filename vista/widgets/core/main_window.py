@@ -590,7 +590,7 @@ class VistaMainWindow(QMainWindow):
             self.ewma_filter_action = QAction(self.icons.ewma_filter_dark, "EWMA Background Filter", self)
         self.ewma_filter_action.setCheckable(True)
         self.ewma_filter_action.setChecked(False)
-        self.ewma_filter_action.setToolTip("Toggle EWMA background subtraction filter")
+        self.ewma_filter_action.setToolTip("Toggle EWMA background subtraction filter for all selected imagery")
         self.ewma_filter_action.toggled.connect(self.on_ewma_filter_toggled)
         toolbar.addAction(self.ewma_filter_action)
 
