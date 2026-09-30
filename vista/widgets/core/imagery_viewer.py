@@ -202,7 +202,7 @@ class ImageryViewer(QWidget):
         # Map view mode state
         self.map_view_mode = False
         self.wms_image_item = None  # pg.ImageItem for WMS basemap tiles
-        self.projected_image_item = None  # pg.ImageItem for projected VISTA imagery
+        self.projected_image_items = {}  # imagery.uuid -> pg.ImageItem for projected VISTA imagery
         self.wms_client = None  # WMSClient instance
         self.wms_tile_cache = None  # WMSTileCache instance
         self.wms_fetcher_thread = None  # WMSTileFetcherThread (background)
@@ -215,7 +215,7 @@ class ImageryViewer(QWidget):
         self._current_zoom_level = None  # Current WMS zoom level
         self._pending_tiles = []  # Tiles received during a fetch cycle
         self._pending_tile_bbox = None  # View bbox for the pending tile fetch
-        self._imagery_footprint = None  # Cached imagery footprint bbox
+        self._imagery_footprints = {}  # imagery.uuid -> cached imagery footprint bbox
         self._wms_total_tiles = 0  # Total tiles expected in current fetch
 
         # Persistent settings (avoid constructing QSettings on every frame)
@@ -415,11 +415,6 @@ class ImageryViewer(QWidget):
                 # Signal not connected yet, ignore
                 pass
 
-            # In map mode, update projected imagery opacity
-            if self.map_view_mode and previous_imagery != self.imagery and self.projected_image_item is not None:
-                opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
-                self.projected_image_item.setOpacity(opacity)
-
     def select_imagery(self, imagery: Optional[Imagery]):
         """Select an imagery to display"""
         if imagery not in self.selected_imageries:
@@ -428,6 +423,7 @@ class ImageryViewer(QWidget):
         self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
+        self._sync_map_imagery_items()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -440,6 +436,7 @@ class ImageryViewer(QWidget):
         self.update_timeline(set_index=False)
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
+        self._sync_map_imagery_items()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -463,14 +460,18 @@ class ImageryViewer(QWidget):
         )
 
     def _sync_imagery_stack_order(self) -> None:
-        """Apply the selected imagery stack order to image items."""
+        """Apply the selected imagery stack order to pixel and map image items."""
         imagery_stack = self._get_imagery_stack()
         for i, imagery in enumerate(imagery_stack):
-            # Keep imagery at z levels in [-1, 0),
-            # below overlays at z=0
+            # Keep imagery at z levels in [-0.9, 0),
+            # below overlays at z=0 and above the map basemap at z=-1
             z_fraction = i / len(imagery_stack)
-            z_value = -1 + z_fraction
+            z_value = -0.9 + 0.9 * z_fraction
             self.image_items[imagery.uuid].setZValue(z_value)
+
+            projected_item = self.projected_image_items.get(imagery.uuid)
+            if projected_item is not None:
+                projected_item.setZValue(z_value)
 
     def set_index(self, index: int):
         """Set the current index to display"""
@@ -478,18 +479,6 @@ class ImageryViewer(QWidget):
         self.ignore_changing_histogram_levels = True
 
         self.timeline.current_index = index
-
-        # In map mode, recompute footprint
-        if self.imagery is not None and self.map_view_mode and self.imagery_projector is not None and self.timeline.is_time:
-            time = self.timeline.current_value
-            _, nrows, ncols = self.imagery.images.shape
-            self._imagery_footprint = self.imagery_projector.compute_footprint(
-                time,
-                nrows,
-                ncols,
-                self.imagery.row_offset,
-                self.imagery.column_offset,
-            )
 
         # Update displays for selected imagery
         for imagery in self.selected_imageries:
@@ -524,10 +513,13 @@ class ImageryViewer(QWidget):
 
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
-                    if ewma_active and imagery == self.imagery:
-                        self._update_projected_imagery(self.ewma_image)
-                    else:
-                        self._update_projected_imagery(current_image)
+                    frame_time = imagery.times[image_index]
+                    display_image = self.ewma_image if ewma_active else current_image
+                    self._update_projected_imagery(
+                        imagery,
+                        display_image,
+                        frame_time,
+                    )
                 else:
                     if ewma_active and imagery == self.imagery:
                         # EWMA image
@@ -601,8 +593,14 @@ class ImageryViewer(QWidget):
                 # LinearRegionItem.setRegion() which skips the signal if the region values haven't
                 # changed, leaving the image item with stale levels.
                 self.image_items[imagery.uuid].setLevels(levels)
+                if self.map_view_mode and imagery.uuid in self.projected_image_items:
+                    self.projected_image_items[imagery.uuid].setLevels(levels)
             else:
                 self.image_items[imagery.uuid].clear()
+                self._imagery_footprints.pop(imagery.uuid, None)
+                projected_item = self.projected_image_items.get(imagery.uuid)
+                if projected_item is not None and projected_item.isVisible():
+                    projected_item.setVisible(False)
 
         if self.histogram.imageItem() is None or self.histogram.imageItem().image is None:
             self.histogram.plot.setData([], [])
@@ -658,7 +656,11 @@ class ImageryViewer(QWidget):
         # Store the user's selected bounds
         if self.ignore_changing_histogram_levels or self.setting_imagery or (self.imagery is None):
             return
-        self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
+        levels = self.histogram.getLevels()
+        self.user_histogram_bounds[self.imagery.uuid] = levels
+        projected_item = self.projected_image_items.get(self.imagery.uuid)
+        if projected_item is not None:
+            projected_item.setLevels(levels)
 
     def on_histogram_gradient_changed(self):
         """Called when user manually adjusts histogram gradient (color mapping)"""
@@ -3215,6 +3217,68 @@ class ImageryViewer(QWidget):
 
     # ==================== Map View Methods ====================
 
+    def _compute_map_footprint(
+        self,
+        imagery: Imagery,
+        frame_time: np.datetime64,
+    ) -> Optional[tuple[float, float, float, float]]:
+        """Compute an imagery footprint for its displayed frame.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery whose footprint should be computed.
+        frame_time : np.datetime64
+            Timestamp of the displayed imagery frame.
+
+        Returns
+        -------
+        tuple[float, float, float, float] or None
+            Bounding box as ``(lon_min, lat_min, lon_max, lat_max)``, or None.
+        """
+        if self.imagery_projector is None:
+            return None
+
+        _, nrows, ncols = imagery.images.shape
+        return self.imagery_projector.compute_footprint(
+            frame_time,
+            nrows,
+            ncols,
+            imagery.row_offset,
+            imagery.column_offset,
+        )
+
+    def _sync_map_imagery_items(self) -> None:
+        """Synchronize projected map items with the selected imagery."""
+        if not self.map_view_mode:
+            return
+
+        imagery_stack = self._get_imagery_stack()
+        selected_uuids = {imagery.uuid for imagery in imagery_stack}
+
+        for imagery_uuid in list(self.projected_image_items):
+            if imagery_uuid not in selected_uuids:
+                self.plot_item.removeItem(self.projected_image_items.pop(imagery_uuid))
+                self._imagery_footprints.pop(imagery_uuid, None)
+
+        for imagery in imagery_stack:
+            projected_item = self.projected_image_items.get(imagery.uuid)
+            if projected_item is None:
+                projected_item = pg.ImageItem()
+                projected_item.setVisible(False)
+                self.projected_image_items[imagery.uuid] = projected_item
+                self.plot_item.addItem(projected_item)
+
+            projected_item.setOpacity(self.imagery_opacity.get(imagery.uuid, 1.0))
+
+    def _clear_map_imagery_items(self) -> None:
+        """Remove all projected imagery items and their transient map state."""
+        for projected_item in self.projected_image_items.values():
+            self.plot_item.removeItem(projected_item)
+        self.projected_image_items.clear()
+        self._imagery_footprints.clear()
+
+
     def set_map_view_mode(self, enabled: bool) -> bool:
         """Toggle between pixel coordinate mode and WMS map view mode.
 
@@ -3236,10 +3300,9 @@ class ImageryViewer(QWidget):
             if self.selected_sensor is None or not self.selected_sensor.can_geolocate():
                 return False
 
-            if self.imagery is None:
+            imagery_stack = self._get_imagery_stack()
+            if not imagery_stack or not self.timeline.is_time:
                 return False
-
-            self.map_view_mode = True
 
             # Initialize WMS infrastructure (re-create each time to pick up server changes)
             settings = QSettings("Vista", "VistaApp")
@@ -3264,51 +3327,39 @@ class ImageryViewer(QWidget):
             coarse_size = settings.value("wms/coarse_grid_size", 64, type=int) if coarse_enabled else 0
             self.imagery_projector = ImageryProjector(self.selected_sensor, coarse_grid_size=coarse_size)
 
-            # Compute imagery footprint
-            self._imagery_footprint = None
-            if self.imagery.times is not None:
-                time = self.imagery.times[0]
-                img_shape = self.imagery.images[0].shape
-                self._imagery_footprint = self.imagery_projector.compute_footprint(
-                    time,
-                    img_shape[0],
-                    img_shape[1],
-                    self.imagery.row_offset,
-                    self.imagery.column_offset,
-                )
-            if self._imagery_footprint is None:
-                self.map_view_mode = False
+            # Compute the current footprint for each displayed imagery.
+            initial_footprints = {}
+            for imagery in imagery_stack:
+                image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+                if image_index is None:
+                    continue
+                frame_time = imagery.times[image_index]
+                footprint = self._compute_map_footprint(imagery, frame_time)
+                if footprint is not None:
+                    initial_footprints[imagery.uuid] = footprint
+
+            if not initial_footprints:
                 return False
+
+            self.map_view_mode = True
+            self._imagery_footprints = initial_footprints
 
             # Switch axes to lon/lat
             self.plot_item.invertY(False)
             self.plot_item.setLabel("bottom", "Longitude (deg)")
             self.plot_item.setLabel("left", "Latitude (deg)")
 
-            # Hide the normal image display
-            self.image_items[self.imagery.uuid].setVisible(False)
+            # Hide all selected imagery
+            for imagery in self.selected_imageries:
+                self.image_items[imagery.uuid].setVisible(False)
 
             # Create WMS basemap ImageItem (behind everything)
             self.wms_image_item = pg.ImageItem()
             self.wms_image_item.setZValue(-1)
             self.plot_item.addItem(self.wms_image_item)
 
-            # Create projected imagery ImageItem (above basemap, below overlays)
-            self.projected_image_item = pg.ImageItem()
-            self.projected_image_item.setZValue(-0.5)
-            opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
-            self.projected_image_item.setOpacity(opacity)
-            self.plot_item.addItem(self.projected_image_item)
-
-            # Link histogram to projected imagery item
-            self.histogram.setImageItem(self.projected_image_item)
-
-            # Block signals to prevent histogram recomputation
-            try:
-                self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
-            except TypeError:
-                # Signal not connected yet, ignore
-                pass
+            # Create one projected image item per selected imagery.
+            self._sync_map_imagery_items()
 
             # Disable extraction view if active
             if self.extraction_view_mode:
@@ -3326,8 +3377,11 @@ class ImageryViewer(QWidget):
             # Re-render features with geographic coordinates
             self._rerender_all_features()
 
-            # Set view range to imagery footprint
-            lon_min, lat_min, lon_max, lat_max = self._imagery_footprint
+            # Set view range to the union of all current imagery footprints.
+            lon_min = min(footprint[0] for footprint in initial_footprints.values())
+            lat_min = min(footprint[1] for footprint in initial_footprints.values())
+            lon_max = max(footprint[2] for footprint in initial_footprints.values())
+            lat_max = max(footprint[3] for footprint in initial_footprints.values())
             # Add 10% padding
             lon_pad = (lon_max - lon_min) * 0.1
             lat_pad = (lat_max - lat_min) * 0.1
@@ -3373,36 +3427,22 @@ class ImageryViewer(QWidget):
             if self.wms_image_item is not None:
                 self.plot_item.removeItem(self.wms_image_item)
                 self.wms_image_item = None
-            if self.projected_image_item is not None:
-                self.plot_item.removeItem(self.projected_image_item)
-                self.projected_image_item = None
-
-            # Restore histogram to original image item
-            self.ignore_changing_histogram_levels = True
-            self.histogram.setImageItem(self.image_items[self.imagery.uuid])
-            self.ignore_changing_histogram_levels = False
-
-            # Block signals to prevent histogram recomputation
-            try:
-                self.histogram.imageItem().sigImageChanged.disconnect(self.histogram.imageChanged)
-            except TypeError:
-                # Signal not connected yet, ignore
-                pass
+            self._clear_map_imagery_items()
 
             # Restore pixel coordinate axes
             self.plot_item.invertY(True)
             self.plot_item.setLabel("bottom", "")
             self.plot_item.setLabel("left", "")
 
-            # Restore the normal image display
-            self.image_items[self.imagery.uuid].setVisible(True)
+            # Restore all selected imagery in pixel coordinates
+            for imagery in self.selected_imageries:
+                self.image_items[imagery.uuid].setVisible(True)
 
             # Reset state
             self._wms_composite = None
             self._wms_composite_bbox = None
             self._current_zoom_level = None
             self._pending_tiles = []
-            self._imagery_footprint = None
 
             # Restore AOI visibility
             for aoi in self.aois:
@@ -3413,10 +3453,6 @@ class ImageryViewer(QWidget):
 
             # Re-render features with pixel coordinates
             self._rerender_all_features()
-
-            # Re-select the current imagery to restore display
-            if self.imagery is not None:
-                self.select_imagery(self.imagery)
 
             # Reset view to fit imagery in pixel mode
             self.plot_item.vb.autoRange()
@@ -3496,15 +3532,27 @@ class ImageryViewer(QWidget):
         self.wms_fetcher_thread.error_occurred.connect(self._on_wms_error)
         self.wms_fetcher_thread.start()
 
-        # Display filtered image if background model exists
-        if self.ewma_image is not None:
-            self._update_projected_imagery(image=self.ewma_image)
-        else:
-            # Get current frame
-            image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+        # Re-project every visible imagery layer for the new view extent.
+        self._sync_map_imagery_items()
+        for imagery in self._get_imagery_stack():
+            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
             if image_index is None:
-                return
-            self._update_projected_imagery(self.imagery.images[image_index])
+                projected_item = self.projected_image_items.get(imagery.uuid)
+                if projected_item is not None and projected_item.isVisible():
+                    projected_item.setVisible(False)
+                continue
+            frame_time = imagery.times[image_index]
+            image = (
+                self.ewma_image
+                if imagery == self.imagery and self.ewma_image is not None
+                else imagery.images[image_index]
+            )
+
+            self._update_projected_imagery(
+                imagery,
+                image,
+                frame_time,
+            )
 
     def _on_wms_tile_fetched(self, tile) -> None:
         """Handle a single WMS tile being fetched.
@@ -3626,13 +3674,36 @@ class ImageryViewer(QWidget):
         # Log but don't interrupt the user
         print(f"[WMS] {message}")
 
-    def _update_projected_imagery(self, image=None) -> None:
-        """Update the projected VISTA imagery display in map mode."""
-        if not self.map_view_mode or self.imagery is None or not self.timeline.is_time or self.imagery_projector is None:
+    def _update_projected_imagery(
+        self,
+        imagery: Imagery,
+        image: np.ndarray,
+        frame_time: np.datetime64,
+    ) -> None:
+        """Update one projected VISTA imagery layer in map mode.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery represented by the projected layer.
+        image : np.ndarray
+            Image frame to project.
+        frame_time : np.datetime64
+            Timestamp of the image frame.
+        """
+        if not self.map_view_mode or not self.timeline.is_time or self.imagery_projector is None:
             return
 
-        if self.projected_image_item is None:
+        projected_item = self.projected_image_items.get(imagery.uuid)
+        if projected_item is None:
             return
+
+        footprint = self._compute_map_footprint(imagery, frame_time)
+        if footprint is None:
+            self._imagery_footprints.pop(imagery.uuid, None)
+            projected_item.setVisible(False)
+            return
+        self._imagery_footprints[imagery.uuid] = footprint
 
         # Determine output parameters from current view
         view_rect = self.plot_item.viewRect()
@@ -3644,22 +3715,18 @@ class ImageryViewer(QWidget):
         )
 
         # Clip output to imagery footprint to avoid projecting empty space
-        if self._imagery_footprint is not None:
-            fp = self._imagery_footprint
-            output_bbox = (
-                max(view_bbox[0], fp[0]),
-                max(view_bbox[1], fp[1]),
-                min(view_bbox[2], fp[2]),
-                min(view_bbox[3], fp[3]),
-            )
-            if output_bbox[0] >= output_bbox[2] or output_bbox[1] >= output_bbox[3]:
-                # Footprint not visible in current view
-                self.projected_image_item.setVisible(False)
-                return
-        else:
-            output_bbox = view_bbox
+        output_bbox = (
+            max(view_bbox[0], footprint[0]),
+            max(view_bbox[1], footprint[1]),
+            min(view_bbox[2], footprint[2]),
+            min(view_bbox[3], footprint[3]),
+        )
+        if output_bbox[0] >= output_bbox[2] or output_bbox[1] >= output_bbox[3]:
+            # Footprint not visible in current view
+            projected_item.setVisible(False)
+            return
 
-        self.projected_image_item.setVisible(True)
+        projected_item.setVisible(True)
 
         # Compute output dimensions based on view pixel density
         view_width_px = max(1, int(self.graphics_layout.width()))
@@ -3680,49 +3747,44 @@ class ImageryViewer(QWidget):
             output_width = max(1, int(output_width * scale))
             output_height = max(1, int(output_height * scale))
 
-        time = self.timeline.current_value
         zoom_level = self._current_zoom_level if self._current_zoom_level is not None else 0
 
         # Check projection cache
-        cached = self.projection_cache.get(self.imagery.uuid, time, zoom_level, output_bbox)
+        cached = None
+        if self.projection_cache is not None:
+            cached = self.projection_cache.get(imagery.uuid, frame_time, zoom_level, output_bbox)
         if cached is not None:
             projected = cached
         else:
             # Project imagery
-            if image is None:
-                image_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
-                if image_index is None:
-                    # should only occur if attempting to project for a timestamp that exists
-                    # for a detector or track, but not the imagery
-                    return
-                image = self.imagery.images[image_index]
             # Always use CPU projection — the bottleneck is sensor.geodetic_to_pixel()
             # which runs on CPU regardless, so the GPU path only adds transfer overhead.
             projected = self.imagery_projector.project_frame_cpu(
                 image,
-                time,
+                frame_time,
                 output_bbox,
                 output_width,
                 output_height,
-                self.imagery.row_offset,
-                self.imagery.column_offset,
+                imagery.row_offset,
+                imagery.column_offset,
             )
 
             # Cache the result
-            self.projection_cache.put(self.imagery.uuid, time, zoom_level, output_bbox, projected)
+            if self.projection_cache is not None:
+                self.projection_cache.put(imagery.uuid, frame_time, zoom_level, output_bbox, projected)
 
         # Display the projected image
-        self.projected_image_item.setImage(projected, autoLevels=False)
+        projected_item.setImage(projected, autoLevels=False)
 
         # Position and scale the projected image to cover output_bbox
         scale_x = (output_bbox[2] - output_bbox[0]) / max(1, projected.shape[1])
         scale_y = (output_bbox[3] - output_bbox[1]) / max(1, projected.shape[0])
-        self.projected_image_item.setTransform(pg.QtGui.QTransform().scale(scale_x, scale_y))
-        self.projected_image_item.setPos(output_bbox[0], output_bbox[1])
+        projected_item.setTransform(pg.QtGui.QTransform().scale(scale_x, scale_y))
+        projected_item.setPos(output_bbox[0], output_bbox[1])
 
         # Apply opacity
-        opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
-        self.projected_image_item.setOpacity(opacity)
+        opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
+        projected_item.setOpacity(opacity)
 
     def set_imagery_opacity(self, imagery_uuid: str, opacity: float) -> None:
         """Set the opacity for imagery display in map view.
@@ -3735,13 +3797,9 @@ class ImageryViewer(QWidget):
             Opacity value from 0.0 (transparent) to 1.0 (opaque).
         """
         self.imagery_opacity[imagery_uuid] = opacity
-        if (
-            self.map_view_mode
-            and self.projected_image_item is not None
-            and self.imagery is not None
-            and self.imagery.uuid == imagery_uuid
-        ):
-            self.projected_image_item.setOpacity(opacity)
+        projected_item = self.projected_image_items.get(imagery_uuid)
+        if self.map_view_mode and projected_item is not None:
+            projected_item.setOpacity(opacity)
 
     def _map_click_to_pixel(self, lon: float, lat: float) -> tuple[float, float]:
         """Convert a map view click position (lon, lat) to pixel (row, col).
