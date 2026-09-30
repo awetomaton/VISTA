@@ -18,6 +18,7 @@ from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.known_sources.known_sources import KnownSources
+from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
@@ -104,6 +105,7 @@ class ImageryViewer(QWidget):
     def __init__(self):
         super().__init__()
         self.timeline = DisplayTimeline()  # Timeline object holding times or frames for imagery, detectors, and tracks
+        self.platforms: list[SensorPlatform] = []  # List of SensorPlatform objects
         self.sensors: list[Sensor] = []  # List of Sensor objects
         self.selected_sensor: Optional[Sensor] = None  # Currently selected sensor for filtering display
         self.imageries: list[Imagery] = []  # List of Imagery objects
@@ -340,6 +342,8 @@ class ImageryViewer(QWidget):
     def add_sensor(self, sensor: Sensor):
         """Add sensor to the list of available sensors"""
         if sensor not in self.sensors:
+            if sensor.platform not in self.platforms:
+                self.platforms.append(sensor.platform)
             self.sensors.append(sensor)
             if self.selected_sensor is None:
                 self.select_sensor(sensor)

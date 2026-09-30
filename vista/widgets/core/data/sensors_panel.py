@@ -146,9 +146,9 @@ class SensorsPanel(DataPanel):
     def _get_platform_for_item(self, item: QTreeWidgetItem) -> Optional[SensorPlatform]:
         """Return the sensor platform represented by a tree item."""
         platform_uuid = item.data(0, Qt.ItemDataRole.UserRole)
-        for sensor in self.viewer.sensors:
-            if sensor.platform.uuid == platform_uuid:
-                return sensor.platform
+        for platform in self.viewer.platforms:
+            if platform.uuid == platform_uuid:
+                return platform
         return None
 
     def _get_selected_sensor(self) -> Optional[Sensor]:
