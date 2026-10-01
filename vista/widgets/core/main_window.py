@@ -164,7 +164,11 @@ class VistaMainWindow(QMainWindow):
 
         # Connect image selection
         self.data_manager.imagery_panel.imagery_selected.connect(self.viewer.select_imagery)
+        self.data_manager.imagery_panel.imagery_selected.connect(
+            lambda _imagery: self._update_map_view_action_state()
+        )
         self.data_manager.imagery_panel.data_changed.connect(self.viewer.refresh_histogram_imagery_selector)
+        self.data_manager.imagery_panel.data_changed.connect(self._update_map_view_action_state)
 
         # Connect drag-and-drop file loading signals
         self.data_manager.sensors_panel.files_dropped.connect(self.load_imagery_file)
@@ -757,15 +761,19 @@ class VistaMainWindow(QMainWindow):
         self.toggle_map_view_menu_action.blockSignals(False)
 
     def _update_map_view_action_state(self):
-        """Enable/disable map view action based on current sensor's geolocation capability."""
-        sensor = self.viewer.selected_sensor
-        can_map = sensor is not None and sensor.can_geolocate()
-        self.map_view_action.setEnabled(can_map)
-        self.toggle_map_view_menu_action.setEnabled(can_map)
+        """Synchronize map view and its actions with the current imagery selection."""
+        can_map = self.viewer.can_enable_map_view()
+        action_checked = self.map_view_action.isChecked() or self.toggle_map_view_menu_action.isChecked()
 
-        # If map view is active but sensor changed to one that can't geolocate, disable map view
-        if not can_map and self.map_view_action.isChecked():
-            self.map_view_action.setChecked(False)
+        if (self.viewer.map_view_mode and not can_map) or (not self.viewer.map_view_mode and action_checked):
+            self.on_map_view_toggled(False)
+
+        map_view_active = self.viewer.map_view_mode and can_map
+        for action in (self.map_view_action, self.toggle_map_view_menu_action):
+            action.blockSignals(True)
+            action.setChecked(map_view_active)
+            action.setEnabled(can_map)
+            action.blockSignals(False)
 
     def _on_wms_status_changed(self, message: str) -> None:
         """Handle WMS tile loading status updates.
@@ -1104,6 +1112,7 @@ class VistaMainWindow(QMainWindow):
         # Update frame range
         if imagery in self.viewer.selected_imageries:
             self.viewer.update_timeline()
+        self._update_map_view_action_state()
 
         if imagery is not None and imagery in self.viewer.imageries:
             self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery.frames)} frames)", 3000)
@@ -1919,6 +1928,7 @@ class VistaMainWindow(QMainWindow):
         if uuids_to_remove:
             self.data_manager.refresh()
             self._update_algorithm_actions_state()
+            self._update_map_view_action_state()
 
         QMessageBox.critical(
             self, "Error Loading Data", f"Failed to load data:\n\n{error_message}", QMessageBox.StandardButton.Ok

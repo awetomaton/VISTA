@@ -416,6 +416,7 @@ class ImageryViewer(QWidget):
     def remove_imagery(self, imagery: Imagery):
         if imagery in self.selected_imageries:
             self.deselect_imagery(imagery)
+        self._disable_map_view_if_unsupported()
         self.ewma_states.pop(imagery.uuid, None)
         self.plot_item.removeItem(self.image_items[imagery.uuid])
         self.image_items.pop(imagery.uuid)
@@ -500,6 +501,7 @@ class ImageryViewer(QWidget):
             if self.ewma_filter_enabled:
                 self.user_histogram_bounds.pop(imagery.uuid, None)
         self.update_timeline(set_index=False)
+        self._disable_map_view_if_unsupported()
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
@@ -3481,6 +3483,28 @@ class ImageryViewer(QWidget):
 
         return None
 
+    def can_enable_map_view(self) -> bool:
+        """Return whether the current viewer state supports map view.
+
+        Returns
+        -------
+        bool
+            True when imagery is selected for a geolocatable sensor and the
+            display timeline is time-based.
+        """
+        sensor = self.selected_sensor
+        return (
+            sensor is not None
+            and sensor.can_geolocate()
+            and bool(self.selected_imageries)
+            and self.timeline.is_time
+        )
+
+    def _disable_map_view_if_unsupported(self) -> None:
+        """Disable an active map view when its prerequisites are no longer present."""
+        if self.map_view_mode and not self.can_enable_map_view():
+            self.set_map_view_mode(False)
+
     def set_map_view_mode(self, enabled: bool) -> bool:
         """Toggle between pixel coordinate mode and WMS map view mode.
 
@@ -3498,13 +3522,10 @@ class ImageryViewer(QWidget):
             True if the mode was successfully changed, False otherwise.
         """
         if enabled:
-            # Validate sensor
-            if self.selected_sensor is None or not self.selected_sensor.can_geolocate():
+            if not self.can_enable_map_view():
                 return False
 
             imagery_stack = self._get_imagery_stack()
-            if not imagery_stack or not self.timeline.is_time:
-                return False
 
             # Initialize WMS infrastructure (re-create each time to pick up server changes)
             settings = QSettings("Vista", "VistaApp")
