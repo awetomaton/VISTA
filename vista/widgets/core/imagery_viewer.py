@@ -106,8 +106,8 @@ class ImageryViewer(QWidget):
     # Signal emitted when detector editing mode ends
     detection_editing_ended = pyqtSignal()
 
-    # Signal emitted after sensor-specific interactive state is reset
-    sensor_context_reset = pyqtSignal()
+    # Signal emitted after sensor and imagery specific interactive state is reset
+    context_reset = pyqtSignal()
 
     # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
     lasso_selection_completed = pyqtSignal(dict)
@@ -364,6 +364,10 @@ class ImageryViewer(QWidget):
         except Exception:
             self.timeline.current_index = -1  # set to invalid if previous value could not be loaded in
 
+        if self.timeline.current_value != curr_value:
+            # timeline value changed on load in attempt, so we need to finish all editing/creation
+            self._reset_context_state()
+
         min_index, max_index = self.timeline.get_range()
         # if value loading failed, but there is a valid range of indices, use index 0
         if self.timeline.current_index is None and max_index >= min_index:
@@ -384,7 +388,7 @@ class ImageryViewer(QWidget):
 
     def select_sensor(self, sensor: Optional[Sensor]):
         """Select a sensor"""
-        self._reset_sensor_context_state()
+        self._reset_context_state()
         # TODO: come up with a more robust way to preserve map status when swapping sensors
         # than toggling set_map_view_mode twice
         is_map_mode = self.map_view_mode  # preserve state to restore later
@@ -2433,8 +2437,8 @@ class ImageryViewer(QWidget):
         self._update_extraction_overlay()
         return True
 
-    def _reset_sensor_context_state(self):
-        """Clear overlays, selections, and edit modes tied to the selected sensor."""
+    def _reset_context_state(self):
+        """Clear overlays, selections, and edit modes tied to the selected sensor and imageries."""
         if self.track_creation_mode:
             self.cancel_track_creation()
         if self.track_editing_mode:
@@ -2448,7 +2452,7 @@ class ImageryViewer(QWidget):
         if self.extraction_view_mode:
             self.finish_extraction_viewing()
         self.clear_selected_detections()
-        self.sensor_context_reset.emit()
+        self.context_reset.emit()
 
     def finish_extraction_viewing(self):
         """Finish extraction viewing mode"""

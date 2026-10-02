@@ -131,7 +131,7 @@ class VistaMainWindow(QMainWindow):
         self.viewer.detections_selected.connect(self.data_manager.on_detections_selected_in_viewer)
         self.viewer.lasso_selection_completed.connect(self.on_lasso_selection_completed)
         self.viewer.wms_status_changed.connect(self._on_wms_status_changed)
-        self.viewer.sensor_context_reset.connect(self.on_sensor_context_reset)
+        self.viewer.context_reset.connect(self.on_context_reset)
 
         self.viewer.timeline_updated.connect(self.update_index_range)
         self.data_manager.data_changed.connect(self.viewer.update_timeline)
@@ -686,7 +686,7 @@ class VistaMainWindow(QMainWindow):
                 self.data_manager.detections_panel.edit_detector_btn.setChecked(False)
                 self.data_manager.detections_panel.edit_detector_btn.blockSignals(False)
 
-    def on_sensor_context_reset(self):
+    def on_context_reset(self):
         """Synchronize creation actions after sensor-specific state is cleared."""
         for action_name in ("create_track_action", "create_detection_action"):
             action = getattr(self, action_name, None)
