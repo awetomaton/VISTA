@@ -32,7 +32,6 @@ from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
-from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.core.display_timeline import DisplayTimeline
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
@@ -547,6 +546,24 @@ class ImageryViewer(QWidget):
             reverse=True,
         )
 
+    def _get_uppermost_imagery(self, row: float, column: float) -> Optional[Imagery]:
+        """Return the uppermost visible imagery beneath a pixel position"""
+        for imagery in reversed(self._get_imagery_stack()):
+            image_item = self.image_items.get(imagery.uuid)
+            if image_item is None or not image_item.isVisible():
+                continue
+
+            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            if image_index is None:
+                continue
+
+            relative_row = row - imagery.row_offset
+            relative_column = column - imagery.column_offset
+            image_shape = imagery.images[image_index].shape
+            if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
+                return imagery
+        return None
+    
     def _get_pixel_mode_pixel_value(
         self,
         row: float,
@@ -567,25 +584,18 @@ class ImageryViewer(QWidget):
             Imagery, frame index, relative row, relative column, and pixel value
             for the uppermost displayed layer containing the position, or None.
         """
-        for imagery in reversed(self._get_imagery_stack()):
-            image_item = self.image_items.get(imagery.uuid)
-            if image_item is None or not image_item.isVisible():
-                continue
+        imagery = self._get_uppermost_imagery(row, column)
+        if imagery is None:
+            return None
 
-            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
-            if image_index is None:
-                continue
-
-            relative_row = row - imagery.row_offset
-            relative_column = column - imagery.column_offset
-            image_shape = imagery.images[image_index].shape
-            if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
-                row_index = int(np.floor(relative_row))
-                column_index = int(np.floor(relative_column))
-                value = float(imagery.images[image_index, row_index, column_index])
-                return imagery, int(image_index), row_index, column_index, value
-
-        return None
+        # if getting uppermost imagery succeeded, we know the following is valid behavior that doesn't require any None checks
+        image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+        relative_row = row - imagery.row_offset
+        relative_column = column - imagery.column_offset
+        row_index = int(np.floor(relative_row))
+        column_index = int(np.floor(relative_column))
+        value = float(imagery.images[image_index, row_index, column_index])
+        return imagery, int(image_index), row_index, column_index, value
 
     def _sync_imagery_stack_order(self) -> None:
         """Apply the selected imagery stack order to pixel and map image items."""
@@ -1273,35 +1283,6 @@ class ImageryViewer(QWidget):
             if track not in self.tracks:
                 self.tracks.append(track)
         self.update_overlays()
-
-    def set_item_times_from_imagery(
-        self,
-        item: Union[Track, Detector],
-        imagery: Optional[Imagery] = None,
-        overwrite: bool = False,
-    ) -> None:
-        """
-        Populate a track or detector's times from imagery frame timestamps.
-
-        Parameters
-        ----------
-        item : Track or Detector
-            Item whose times should be populated.
-        imagery : Imagery, optional
-            Imagery to use, by default the currently selected imagery.
-        overwrite : bool, optional
-            Recompute existing times, by default False.
-        """
-        if item.times is not None and not overwrite:
-            return
-
-        source_imagery = imagery if imagery is not None else self.imagery
-        if source_imagery is None or source_imagery.sensor != item.sensor:
-            if overwrite:
-                item.times = None
-            return
-
-        item.times = map_frames_to_times(item.frames, source_imagery.frames, source_imagery.times)
 
     def get_tracks_by_tracker(self, tracker_name: str):
         """Get all tracks belonging to a specific tracker"""
@@ -2345,19 +2326,39 @@ class ImageryViewer(QWidget):
         # Create Track object if we have data
         if len(self.current_track_data) > 0:
             # Sort by time or frame
-            sorted_frames = sorted(self.current_track_data.keys())
-            frames = np.array(sorted_frames, dtype=np.int_)
-            rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
-            columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
+            sorted_keys = sorted(self.current_track_data.keys())
+
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(sorted_keys, dtype="datetime64[ns]")
+            else:
+                frames = np.array(sorted_keys, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
+            rows = np.array([self.current_track_data[f][0] for f in sorted_keys])
+            columns = np.array([self.current_track_data[f][1] for f in sorted_keys])
 
             track = Track(
                 name=f"Track {len(self.tracks) + 1}",
+                times=times,
                 frames=frames,
                 rows=rows,
                 columns=columns,
                 sensor=self.selected_sensor,
             )
-            self.set_item_times_from_imagery(track)
 
             self.current_track_data = {}
             return track
@@ -2388,11 +2389,32 @@ class ImageryViewer(QWidget):
         # Update Track object with new data
         if editing_track and len(self.current_track_data) > 0:
             # Sort by time or frame
-            sorted_frames = sorted(self.current_track_data.keys())
-            editing_track.frames = np.array(sorted_frames, dtype=np.int_)
-            editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
-            editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
-            self.set_item_times_from_imagery(editing_track, overwrite=True)
+            sorted_keys = sorted(self.current_track_data.keys())
+
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(sorted_keys, dtype="datetime64[ns]")
+            else:
+                frames = np.array(sorted_keys, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
+            editing_track.times = times
+            editing_track.frames = frames
+            editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_keys])
+            editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_keys])
 
             # Invalidate caches since track data was modified
             editing_track.invalidate_caches()
@@ -2692,24 +2714,44 @@ class ImageryViewer(QWidget):
         # Create Detector object if we have data
         if len(self.current_detection_data) > 0:
             # Flatten the detection data into arrays
-            frames_list = []
+            keys_list = []
             rows_list = []
             columns_list = []
 
-            for frame, detections in sorted(self.current_detection_data.items()):
+            for key, detections in sorted(self.current_detection_data.items()):
                 for row, col in detections:
-                    frames_list.append(frame)
+                    keys_list.append(key)
                     rows_list.append(row)
                     columns_list.append(col)
 
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(keys_list, dtype="datetime64[ns]")
+            else:
+                frames = np.array(keys_list, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
             detector = Detector(
                 name=f"Detector {len(self.detectors) + 1}",
-                frames=np.array(frames_list, dtype=np.int_),
+                times=times,
+                frames=frames,
                 rows=np.array(rows_list),
                 columns=np.array(columns_list),
                 sensor=self.selected_sensor,
             )
-            self.set_item_times_from_imagery(detector)
 
             self.current_detection_data = {}
             return detector
@@ -2741,20 +2783,40 @@ class ImageryViewer(QWidget):
         # Update Detector object with new data
         if editing_detector and len(self.current_detection_data) > 0:
             # Flatten the detection data into arrays
-            frames_list = []
+            keys_list = []
             rows_list = []
             columns_list = []
 
-            for frame, detections in sorted(self.current_detection_data.items()):
+            for key, detections in sorted(self.current_detection_data.items()):
                 for row, col in detections:
-                    frames_list.append(frame)
+                    keys_list.append(key)
                     rows_list.append(row)
                     columns_list.append(col)
 
-            editing_detector.frames = np.array(frames_list, dtype=np.int_)
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(keys_list, dtype="datetime64[ns]")
+            else:
+                frames = np.array(keys_list, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
+            editing_detector.times = times
+            editing_detector.frames = frames
             editing_detector.rows = np.array(rows_list)
             editing_detector.columns = np.array(columns_list)
-            self.set_item_times_from_imagery(editing_detector, overwrite=True)
 
             # Invalidate caches since detector data was modified
             editing_detector.invalidate_caches()
@@ -2837,14 +2899,9 @@ class ImageryViewer(QWidget):
         tuple
             (refined_row, refined_col) - refined coordinates
         """
-        if self.point_selection_dialog is None or self.imagery is None:
+        imagery = self._get_uppermost_imagery(row, col)
+        if self.point_selection_dialog is None or imagery is None:
             # No dialog or no imagery, return verbatim
-            return row, col
-
-        # Get the current frame index
-        frame_index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time)
-        if frame_index is None:
-            # Current frame not in imagery, return verbatim
             return row, col
 
         # Get parameters from dialog
@@ -2853,7 +2910,8 @@ class ImageryViewer(QWidget):
 
         # Call refine_point with appropriate parameters
         try:
-            refined_row, refined_col = refine_point(row, col, self.imagery, frame_index, mode=mode, **params)
+            index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            refined_row, refined_col = refine_point(row, col, imagery, index, mode=mode, **params)
             return refined_row, refined_col
         except Exception as e:
             # If refinement fails, return original coordinates

@@ -815,20 +815,10 @@ class VistaMainWindow(QMainWindow):
             self.deactivate_all_interactive_modes(except_action=self.create_track_action)
 
             # Check if imagery is selected
-            if self.viewer.imagery is None:
+            if not self.viewer.selected_imageries:
                 # No selected imagery, show warning and uncheck
                 QMessageBox.warning(
                     self, "No Imagery", "Imagery is required to create tracks.", QMessageBox.StandardButton.Ok
-                )
-                self.create_track_action.setChecked(False)
-                return
-            # Check if multiple imagery selected
-            if len(self.viewer.selected_imageries) > 1:
-                QMessageBox.warning(
-                    self,
-                    "Multiple Imagery",
-                    "Please select a single imagery before creating tracks.",
-                    QMessageBox.StandardButton.Ok,
                 )
                 self.create_track_action.setChecked(False)
                 return
@@ -850,7 +840,7 @@ class VistaMainWindow(QMainWindow):
                 # refresh() clears the Tracks table selection with its signals
                 # blocked. Propagate that empty selection to open detail plots.
                 self.data_manager.tracks_panel.on_track_selection_changed()
-                self.statusBar().showMessage(f"Track created: {track.name} with {len(track.frames)} points", 3000)
+                self.statusBar().showMessage(f"Track created: {track.name} with {len(track.rows)} points", 3000)
             else:
                 self.statusBar().showMessage("Track creation cancelled (no points added)", 3000)
 
@@ -861,20 +851,10 @@ class VistaMainWindow(QMainWindow):
             self.deactivate_all_interactive_modes(except_action=self.create_detection_action)
 
             # Check if imagery is selected
-            if self.viewer.imagery is None:
+            if not self.viewer.selected_imageries:
                 # No selected imagery, show warning and uncheck
                 QMessageBox.warning(
                     self, "No Imagery", "Imagery is required to create detections.", QMessageBox.StandardButton.Ok
-                )
-                self.create_detection_action.setChecked(False)
-                return
-            # Check if multiple imagery selected
-            if len(self.viewer.selected_imageries) > 1:
-                QMessageBox.warning(
-                    self,
-                    "Multiple Imagery",
-                    "Please select a single imagery before creating detections.",
-                    QMessageBox.StandardButton.Ok,
                 )
                 self.create_detection_action.setChecked(False)
                 return
@@ -892,12 +872,19 @@ class VistaMainWindow(QMainWindow):
                 # Add detector to viewer
                 self.viewer.add_detector(detector)
                 self.data_manager.refresh()
-                total_detections = len(detector.frames)
-                unique_frames = len(np.unique(detector.frames))
-                self.statusBar().showMessage(
-                    f"Detector created: {detector.name} with {total_detections} detections across {unique_frames} frames",
-                    3000,
-                )
+                total_detections = len(detector.rows)
+                if self.viewer.timeline.is_time:
+                    unique_times = len(np.unique(detector.times))
+                    self.statusBar().showMessage(
+                        f"Detector created: {detector.name} with {total_detections} detections across {unique_times} times",
+                        3000,
+                    )
+                else:
+                    unique_frames = len(np.unique(detector.frames))
+                    self.statusBar().showMessage(
+                        f"Detector created: {detector.name} with {total_detections} detections across {unique_frames} frames",
+                        3000,
+                    )
             else:
                 self.statusBar().showMessage("Detection creation cancelled (no points added)", 3000)
 
