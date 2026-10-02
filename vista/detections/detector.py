@@ -183,6 +183,22 @@ class Detector(TemporalData):
         s += str(self.to_dataframe())
         return s
 
+    def _build_time_index(self):
+        """
+        Build index mapping times to detection indices for O(1) lookup.
+
+        Since multiple detections can share a time, this index needs to override
+        the parent class method to return a list of indices.
+        """
+        if self._time_index is None:
+            self._time_index = {}
+            if self.times is None:
+                return
+            for i, time in enumerate(self.times):
+                if time not in self._time_index:
+                    self._time_index[time] = []
+                self._time_index[time].append(i)
+
     def _build_frame_index(self):
         """
         Build index mapping frame numbers to detection indices for O(1) lookup.
