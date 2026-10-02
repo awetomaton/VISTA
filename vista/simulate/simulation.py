@@ -544,11 +544,11 @@ class Simulation:
             self.detectors.append(
                 Detector(
                     name=f"Detector {d}",
+                    times=times[frames] if times is not None else None,
                     frames=frames,
                     rows=rows,
                     columns=columns,
                     sensor=sensor,
-                    times=times[frames] if times is not None else None,
                 )
             )
 

@@ -184,11 +184,11 @@ class PSTNNProcessingThread(QThread):
 
             detector = Detector(
                 name=detector_name,
+                times=map_frames_to_times(all_frames, temp_imagery.frames, temp_imagery.times),
                 frames=all_frames,
                 rows=all_rows,
                 columns=all_columns,
                 sensor=self.imagery.sensor,
-                times=map_frames_to_times(all_frames, temp_imagery.frames, temp_imagery.times),
                 color=self.default_color,
                 marker=self.default_marker,
                 marker_size=self.default_marker_size,
