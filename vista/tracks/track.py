@@ -7,6 +7,7 @@ time-based), visualization styling, and data persistence.
 """
 
 import datetime
+import pathlib
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional, Union
@@ -711,6 +712,9 @@ class Track(TemporalData):
         if self._cached_lats is not None:
             track_copy._cached_lats = self._cached_lats.copy()
         return track_copy
+
+    def to_csv(self, file: Union[str, pathlib.Path]):
+            self.to_dataframe().to_csv(file, index=None)
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert track to DataFrame
