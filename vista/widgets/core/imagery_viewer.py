@@ -1098,8 +1098,8 @@ class ImageryViewer(QWidget):
                 else:
                     path.setData(x=[], y=[])  # Hide line
 
-                # Update current position marker (show marker at current index if it exists)
-                idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
+                # Update latest position marker
+                idx = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
                 if idx is not None:
                     if _map_mode:
                         mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
@@ -1136,8 +1136,8 @@ class ImageryViewer(QWidget):
                     else:
                         path.setData(x=[], y=[])  # Hide line
 
-                    # Update current position marker
-                    idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
+                    # Update latest position marker
+                    idx = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
                     if idx is not None:
                         if _map_mode:
                             mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
