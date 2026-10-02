@@ -22,7 +22,6 @@ from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.temporal_data.temporal_data import TemporalData
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
-from vista.utils.time_mapping import map_times_to_frames
 
 
 @dataclass(kw_only=True)
@@ -39,8 +38,6 @@ class Track(TemporalData):
     ----------
     name : str
         Unique identifier for this track
-    frames : NDArray[np.int_]
-        Frame numbers where track positions are defined
     rows : NDArray[np.float64]
         Row (vertical) pixel coordinates for each frame
     columns : NDArray[np.float64]
@@ -104,7 +101,6 @@ class Track(TemporalData):
     """
 
     name: str
-    frames: NDArray[np.int_] = field()  # make frames a requirement for Tracks
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
@@ -154,11 +150,12 @@ class Track(TemporalData):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects
             track_slice = self.copy()
-            track_slice.frames = track_slice.frames[s]
-            track_slice.rows = track_slice.rows[s]
-            track_slice.columns = track_slice.columns[s]
             if track_slice.times is not None:
                 track_slice.times = track_slice.times[s]
+            if track_slice.frames is not None:
+                track_slice.frames = track_slice.frames[s]
+            track_slice.rows = track_slice.rows[s]
+            track_slice.columns = track_slice.columns[s]
 
             # Slice extraction metadata if present
             if track_slice.extraction_metadata is not None:
@@ -188,7 +185,7 @@ class Track(TemporalData):
             raise TypeError("Invalid index or slice type.")
 
     def __len__(self):
-        return len(self.frames)
+        return len(self.rows)
 
     def __str__(self):
         return self.__repr__()
@@ -426,13 +423,11 @@ class Track(TemporalData):
         name: str = None,
     ):
         """
-        Create Track from DataFrame with automatic coordinate conversion.
+        Create Track from pandas DataFrame with automatic coordinate conversion.
 
         Supports multiple input coordinate systems with automatic conversion:
-        - Frames or Times (conversion requires imagery if both are not provided)
-        - Rows/Columns or Lat/Lon/Alt → Rows/Columns (Geodetic requires sensor)
-
-        Priority system: Frames > Times, Rows/Columns > Lat/Lon/Alt
+        - Times or Frames (conversion requires Imagery with times)
+        - Rows/Columns or Lat/Lon/Alt → Rows/Columns (Geodetic requires sensor and times)
 
         Parameters
         ----------
@@ -442,8 +437,7 @@ class Track(TemporalData):
         sensor : Sensor
             Sensor object for coordinate conversions
         imagery : Imagery, optional
-            Imagery used to convert times and frames when the DataFrame does not
-            contain both.
+            Imagery used to convert times and frames.
         name : str, optional
             Track name, by default taken from df["Track"]
 
@@ -462,8 +456,8 @@ class Track(TemporalData):
         Required columns (one set from each group):
 
         Temporal coordinates (choose one):
-            - "Frames" : Frame numbers (preferred)
-            - "Times" : Timestamps
+            - "Times" : Timestamps (preferred)
+            - "Frames" : Frame numbers
 
         Spatial coordinates (choose one):
             - "Rows" and "Columns" : Pixel coordinates (preferred)
@@ -524,38 +518,27 @@ class Track(TemporalData):
             if pd.notna(labeler_val) and labeler_val != "":
                 kwargs["labeler"] = str(labeler_val)
 
-        # Handle times (optional)
         times = None
         if "Times" in df.columns:
-            # Parse times as datetime64
             times = pd.to_datetime(df["Times"], format="mixed").to_numpy().astype("datetime64[ns]")
 
-        # Determine frames - priority: Frames column > time-to-frame mapping
+        frames = None
         if "Frames" in df.columns:
-            # Frames take precedence
             frames = df["Frames"].to_numpy()
-            # get time mapping just in case we need it below
-            if times is None and imagery is not None and imagery.times is not None:
-                indices = [imagery.get_index(f, False) for f in frames]
-                if np.all([f is not None for f in indices]):
+
+        # attempt any conversions if able and necessary
+        if imagery is not None and imagery.times is not None:
+            if times is not None and frames is None:
+                indices = [imagery.get_index(time, True) for time in times]
+                if np.all([index is not None for index in indices]):
+                    frames = imagery.frames[indices]
+            elif times is None and frames is not None:
+                indices = [imagery.get_index(frame, False) for frame in frames]
+                if np.all([index is not None for index in indices]):
                     times = imagery.times[indices]
-        elif times is not None:
-            if imagery is None or imagery.times is None or len(imagery.times) == 0:
-                raise ValueError(
-                    f"Track '{name}' has times but no frames. "
-                    "Imagery with timestamps is required for time-to-frame mapping."
-                )
 
-            # Eliminate track points before and after the time bounds of the selected imagery
-            df = df[(times >= np.min(imagery.times)) & (times <= np.max(imagery.times))]
-            if len(df) == 0:
-                raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
-            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
-
-            # Map times to frames using the selected imagery
-            frames = map_times_to_frames(times, imagery.times, imagery.frames)
-        else:
-            raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
+        if times is None and frames is None:
+            raise ValueError(f"Track '{name}' must have either 'Times' or 'Frames' column")
 
         # Handle uncertainty data (optional) - covariance matrix elements
         # Only populate if all three columns exist and all values are valid (not NaN)
@@ -626,11 +609,11 @@ class Track(TemporalData):
 
         track = cls(
             name=name,
+            times=times,
             frames=frames,
             rows=rows,
             columns=columns,
             sensor=sensor,
-            times=times,
             **kwargs,
         )
 
@@ -682,11 +665,11 @@ class Track(TemporalData):
 
         track_copy = self.__class__(
             name=self.name,
-            frames=self.frames.copy(),
+            times=self.times.copy() if self.times is not None else None,
+            frames=self.frames.copy() if self.frames is not None else None,
             rows=self.rows.copy(),
             columns=self.columns.copy(),
             sensor=self.sensor,
-            times=self.times.copy() if self.times is not None else None,
             color=self.color,
             marker=self.marker,
             line_width=self.line_width,
@@ -725,7 +708,6 @@ class Track(TemporalData):
         data = {
             "Tracker": len(self) * [self.tracker or ""],
             "Track": len(self) * [self.name],
-            "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
             "Color": self.color,
@@ -741,11 +723,15 @@ class Track(TemporalData):
             "Label Time": self.label_time.isoformat() if self.label_time is not None else "",
             "Labeler": self.labeler or "",
         }
+        if self.times is not None:
+            data["Times"] = self.times.astype(str)
+        if self.frames is not None:
+            data["Frames"] = self.frames
 
         # Include geolocation if possible
         geodetic = self.get_geodetic_coords()
 
-        if geodetic is not None and self.times is not None:
+        if geodetic is not None:
             data["Longitude (deg)"] = geodetic[0]
             data["Latitude (deg)"] = geodetic[1]
 
@@ -757,10 +743,6 @@ class Track(TemporalData):
             data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
             data["Longitude (deg)"] = np.full(len(self.frames), np.nan)
             data["Altitude (km)"] = np.full(len(self.frames), np.nan)
-
-        # Include times if possible
-        if self.times is not None:
-            data["Times"] = self.times.astype(str)
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:

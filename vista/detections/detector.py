@@ -12,7 +12,6 @@ from numpy.typing import NDArray
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.temporal_data.temporal_data import TemporalData
-from vista.utils.time_mapping import map_times_to_frames
 
 
 @dataclass(kw_only=True)
@@ -28,8 +27,6 @@ class Detector(TemporalData):
     ----------
     name : str
         Unique identifier for this detector
-    frames : NDArray[np.int_]
-        Frame numbers where detections occur
     rows : NDArray[np.float64]
         Row (vertical) pixel coordinates for each detection
     columns : NDArray[np.float64]
@@ -80,7 +77,6 @@ class Detector(TemporalData):
     """
 
     name: str
-    frames: NDArray[np.int_] = field()  # make frames a requirement for Detectors
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
@@ -119,11 +115,12 @@ class Detector(TemporalData):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects
             detector_slice = self.copy()
-            detector_slice.frames = detector_slice.frames[s]
-            detector_slice.rows = detector_slice.rows[s]
-            detector_slice.columns = detector_slice.columns[s]
             if detector_slice.times is not None:
                 detector_slice.times = detector_slice.times[s]
+            if detector_slice.frames is not None:
+                detector_slice.frames = detector_slice.frames[s]
+            detector_slice.rows = detector_slice.rows[s]
+            detector_slice.columns = detector_slice.columns[s]
             # Subset labels if they exist
             if len(detector_slice.labels) > 0:
                 if isinstance(s, slice):
@@ -175,7 +172,7 @@ class Detector(TemporalData):
             raise TypeError("Invalid index or slice type.")
 
     def __len__(self):
-        return len(self.frames)
+        return len(self.rows)
 
     def __str__(self):
         return self.__repr__()
@@ -276,12 +273,11 @@ class Detector(TemporalData):
         ----------
         df : pd.DataFrame
             DataFrame containing detection data. "Detector", "Rows", and "Columns"
-            are required columns, along with either "Frames" or "Times".
+            are required columns, along with either "Times" or "Frames".
         sensor : Sensor
             Sensor object for these detections.
         imagery : Imagery, optional
-            Imagery used to convert times and frames when the DataFrame does not
-            contain both.
+            Imagery used to convert times and frames.
         name : str, optional
             Detector name, by default taken from df["Detector"]
 
@@ -323,24 +319,23 @@ class Detector(TemporalData):
         if "Times" in df.columns:
             times = pd.to_datetime(df["Times"], format="mixed").to_numpy().astype("datetime64[ns]")
 
+        frames = None
         if "Frames" in df.columns:
             frames = df["Frames"].to_numpy()
-        elif times is not None:
-            if imagery is None or imagery.times is None or len(imagery.times) == 0:
-                raise ValueError(
-                    f"Detector '{name}' has times but no frames. "
-                    "Imagery with timestamps is required for time-to-frame mapping."
-                )
 
-            df = df.loc[(times >= np.min(imagery.times)) & (times <= np.max(imagery.times))]
-            if len(df) == 0:
-                raise ValueError(f"Detector '{name}' times are not within the bounds of the selected imagery.")
-            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
+        # attempt any conversions if able and necessary
+        if imagery is not None and imagery.times is not None:
+            if times is not None and frames is None:
+                indices = [imagery.get_index(time, True) for time in times]
+                if np.all([index is not None for index in indices]):
+                    frames = imagery.frames[indices]
+            elif times is None and frames is not None:
+                indices = [imagery.get_index(frame, False) for frame in frames]
+                if np.all([index is not None for index in indices]):
+                    times = imagery.times[indices]
 
-            # Map times to frames using the selected imagery
-            frames = map_times_to_frames(times, imagery.times, imagery.frames)
-        else:
-            raise ValueError(f"Detector '{name}' must have either 'Frames' or 'Times' column")
+        if times is None and frames is None:
+            raise ValueError(f"Detector '{name}' must have either 'Times' or 'Frames' column")
 
         if "Labels" in df.columns:
             # Parse labels from comma-separated string for each detection
@@ -373,11 +368,11 @@ class Detector(TemporalData):
 
         detector = cls(
             name=name,
+            times=times,
             frames=frames,
             rows=df["Rows"].to_numpy(),
             columns=df["Columns"].to_numpy(),
             sensor=sensor,
-            times=times,
             **kwargs,
         )
 
@@ -399,11 +394,11 @@ class Detector(TemporalData):
         """
         detector_copy = self.__class__(
             name=self.name,
-            frames=self.frames.copy(),
+            times=self.times.copy() if self.times is not None else None,
+            frames=self.frames.copy() if self.frames is not None else None,
             rows=self.rows.copy(),
             columns=self.columns.copy(),
             sensor=self.sensor,
-            times=self.times.copy() if self.times is not None else None,
             color=self.color,
             marker=self.marker,
             marker_size=self.marker_size,
@@ -444,7 +439,6 @@ class Detector(TemporalData):
 
         data = {
             "Detector": len(self) * [self.name],
-            "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
             "Color": self.color,
@@ -458,7 +452,9 @@ class Detector(TemporalData):
             "Labeler": labelers_column,
         }
         if self.times is not None:
-            data["Times"] = self.times
+            data["Times"] = self.times.astype(str)
+        if self.frames is not None:
+            data["Frames"] = self.frames
 
         return pd.DataFrame(data)
 
