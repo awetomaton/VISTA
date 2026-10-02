@@ -1185,34 +1185,33 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_detections_dir", str(Path(file_paths[0]).parent))
 
-            # Get currently selected sensor and imagery from viewer
+            # Get currently selected sensor from viewer
             selected_sensor = self.viewer.selected_sensor
-            selected_imagery = self.viewer.imagery
-
-            # Check if any detections need imagery for conversion
-            overall_needs_time_mapping = False
+            # If only one imagery selected, use it for time-frame mapping
+            selected_imagery = self.viewer.selected_imageries[0] if len(self.viewer.selected_imageries) == 1 else None
 
             try:
-                # Check all files to see if any need imagery
+                # List to hold any file paths that are missing both times and frames
+                needs_temporal_data = []
+
+                # Check all files
                 for file_path in file_paths:
                     df_peek = pd.read_csv(file_path, nrows=1)
                     has_times = "Times" in df_peek.columns
                     has_frames = "Frames" in df_peek.columns
 
-                    needs_time_mapping = has_times and not has_frames
-                    overall_needs_time_mapping = overall_needs_time_mapping or needs_time_mapping
+                    if not (has_times or has_frames):
+                        needs_temporal_data.append(file_path)
 
                 # Build message explaining what will be used for mapping
                 preamble = []
                 mapping_info = []
                 missing_requirements = []
 
-                if overall_needs_time_mapping:
-                    preamble.append("Detection data is missing frames, but has times. Times must be mapped to frames.")
-                    if selected_imagery:
-                        mapping_info.append(f"• Time mapping: {selected_imagery.name}")
-                    else:
-                        missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
+                if needs_temporal_data:
+                    preamble.append("Selected detection file(s) missing temporal data ('Times' or 'Frames').")
+                    for file_path in needs_temporal_data:
+                        missing_requirements.append(f"• {file_path} missing 'Times' or 'Frames'")
 
                 # Show error if missing requirements
                 if missing_requirements:
@@ -1228,7 +1227,7 @@ class VistaMainWindow(QMainWindow):
                     return
 
                 # Check if sensor is selected (always required for detection association)
-                if not selected_sensor:
+                if selected_sensor is None:
                     # Create an "Unknown" sensor if no sensor is selected
                     selected_sensor = Sensor()
                     self.viewer.add_sensor(selected_sensor)
@@ -1237,16 +1236,18 @@ class VistaMainWindow(QMainWindow):
                 else:
                     mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
 
-                # Show info dialog if mapping is needed
-                if overall_needs_time_mapping:
-                    msg = QMessageBox(self)
-                    msg.setIcon(QMessageBox.Icon.Information)
-                    msg.setWindowTitle("Detection Loading Information")
-                    msg.setText("The following will be used for detection data mapping:")
-                    msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
-                    msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-                    if msg.exec() != QMessageBox.StandardButton.Ok:
-                        return
+                if selected_imagery is not None:
+                    mapping_info.insert(1, f"• Imagery for time-frame association: {selected_imagery.name}")
+
+                # Show info dialog
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("Detection Loading Information")
+                msg.setText("The following will be used for detection data mapping:")
+                msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                if msg.exec() != QMessageBox.StandardButton.Ok:
+                    return
             except Exception as e:
                 QMessageBox.warning(
                     self,
@@ -1359,16 +1360,17 @@ class VistaMainWindow(QMainWindow):
             # Save the directory for next time
             self.settings.setValue("last_tracks_dir", str(Path(file_paths[0]).parent))
 
-            # Get currently selected sensor and imagery from viewer
+            # Get currently selected sensor from viewer
             selected_sensor = self.viewer.selected_sensor
-            selected_imagery = self.viewer.imagery
-
-            # Check if any tracks need sensor or imagery for conversion
-            overall_needs_time_mapping = False
-            overall_needs_geodetic_mapping = False
+            # If only one imagery selected, use it for time-frame mapping
+            selected_imagery = self.viewer.selected_imageries[0] if len(self.viewer.selected_imageries) == 1 else None
 
             try:
-                # Check all files to see if any need sensor/imagery
+                # List to hold any file paths that are missing both times and frames
+                needs_temporal_data = []
+                needs_geodetic_mapping = False
+
+                # Check all files
                 for file_path in file_paths:
                     # Quick peek at CSV to check columns
                     df_peek = pd.read_csv(file_path, nrows=1)
@@ -1381,38 +1383,32 @@ class VistaMainWindow(QMainWindow):
                         and "Altitude" in df_peek.columns
                     )
 
-                    needs_time_mapping = has_times and not has_frames
-                    needs_geodetic_mapping = has_geodetic and not has_rows_cols
+                    if not (has_times or has_frames):
+                        needs_temporal_data.append(file_path)
 
-                    overall_needs_time_mapping = overall_needs_time_mapping or needs_time_mapping
-                    overall_needs_geodetic_mapping = overall_needs_geodetic_mapping or needs_geodetic_mapping
+                    needs_geodetic_mapping |= (has_geodetic and not has_rows_cols)
 
                 # Build message explaining what will be used for mapping
                 preamble = []
                 mapping_info = []
                 missing_requirements = []
 
-                if overall_needs_time_mapping:
-                    preamble.append("Track data is missing frames, but has times. Times must be mapped to frames.")
-                    if selected_imagery:
-                        mapping_info.append(f"• Time mapping: {selected_imagery.name}")
-                    else:
-                        missing_requirements.append("• Imagery must be loaded and selected for time-to-frame mapping")
+                if needs_temporal_data:
+                    preamble.append("Selected track file(s) missing temporal data ('Times' or 'Frames').")
+                    for file_path in needs_temporal_data:
+                        missing_requirements.append(f"• {file_path} missing 'Times' or 'Frames'")
 
-                if overall_needs_geodetic_mapping:
+                if needs_geodetic_mapping:
                     preamble.append(
                         "Track data is missing row / column, but has geospatial coordinates. Geospatial coordinates must be mapped to pixels."
                     )
-                    if (
-                        selected_sensor
-                        and selected_sensor.can_geolocate()
-                    ):
-                        mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
+                    if selected_sensor is None:
+                        missing_requirements.append(
+                            "• Sensor must be loaded and selected for geodetic-to-pixel mapping"
+                        )
                     else:
-                        if not selected_sensor:
-                            missing_requirements.append(
-                                "• Sensor must be loaded and selected for geodetic-to-pixel mapping"
-                            )
+                        if selected_sensor.can_geolocate():
+                            mapping_info.append(f"• Geodetic mapping: {selected_sensor.name}")
                         else:
                             missing_requirements.append(
                                 f"• Selected sensor '{selected_sensor.name}' cannot perform geolocation"
@@ -1441,16 +1437,18 @@ class VistaMainWindow(QMainWindow):
                 else:
                     mapping_info.insert(0, f"• Sensor association: {selected_sensor.name}")
 
-                # Show info dialog if mapping is needed
-                if overall_needs_time_mapping or overall_needs_geodetic_mapping:
-                    msg = QMessageBox(self)
-                    msg.setIcon(QMessageBox.Icon.Information)
-                    msg.setWindowTitle("Track Loading Information")
-                    msg.setText("The following will be used for track data mapping:")
-                    msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
-                    msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-                    if msg.exec() != QMessageBox.StandardButton.Ok:
-                        return
+                if selected_imagery is not None:
+                    mapping_info.insert(1, f"• Imagery for time-frame association: {selected_imagery.name}")
+
+                # Show info dialog
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("Track Loading Information")
+                msg.setText("The following will be used for track data mapping:")
+                msg.setInformativeText("\n".join(preamble) + "\n" + "\n".join(mapping_info))
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                if msg.exec() != QMessageBox.StandardButton.Ok:
+                    return
             except Exception as e:
                 QMessageBox.warning(
                     self, "Error Reading File", f"Could not read track file:\n{str(e)}", QMessageBox.StandardButton.Ok
