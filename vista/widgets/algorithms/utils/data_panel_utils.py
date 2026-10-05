@@ -256,10 +256,10 @@ def apply_label_filter_to_data(data_object, filter_dict):
     """
     if not filter_dict or not hasattr(data_object, "labels"):
         # No filters or no labels - all items pass
-        return np.ones(len(data_object.frames), dtype=bool)
+        return np.ones(len(data_object), dtype=bool)
 
     # Start with all items failing
-    mask = np.zeros(len(data_object.frames), dtype=bool)
+    mask = np.zeros(len(data_object), dtype=bool)
 
     # For each label that should be included
     for label_name, should_include in filter_dict.items():

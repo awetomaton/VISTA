@@ -128,8 +128,8 @@ class SavitzkyGolayDialog(QDialog):
             layout.addWidget(track_info)
 
             # Show summary of track points
-            min_points = min(len(track.frames) for track in self.tracks)
-            max_points = max(len(track.frames) for track in self.tracks)
+            min_points = min(len(track) for track in self.tracks)
+            max_points = max(len(track) for track in self.tracks)
             if min_points == max_points:
                 points_info = QLabel(f"<b>Track points:</b> {min_points}")
             else:
@@ -272,13 +272,13 @@ class SavitzkyGolayDialog(QDialog):
         polyorder = self.polyorder_spin.value()
 
         for track in self.tracks:
-            if len(track.frames) < 3:
+            if len(track) < 3:
                 return False, f"Track '{track.name}' has fewer than 3 points and cannot be filtered."
 
-            if window_length > len(track.frames):
+            if window_length > len(track):
                 return False, (
                     f"Window length ({window_length}) is greater than the number of points "
-                    f"in track '{track.name}' ({len(track.frames)}). Reduce the radius."
+                    f"in track '{track.name}' ({len(track)}). Reduce the radius."
                 )
 
         # Check polynomial order

@@ -91,13 +91,13 @@ class SavitzkyGolayFilter:
         window_length = 2 * self.radius + 1
 
         # Validate input
-        if len(self.track.frames) < 3:
+        if len(self.track) < 3:
             raise ValueError("Track must have at least 3 points to apply Savitzky-Golay filter")
 
-        if window_length > len(self.track.frames):
+        if window_length > len(self.track):
             raise ValueError(
                 f"Window length ({window_length}) cannot be greater than number of track points "
-                f"({len(self.track.frames)}). Reduce the radius."
+                f"({len(self.track)}). Reduce the radius."
             )
 
         if self.polyorder >= window_length:
@@ -134,11 +134,11 @@ class SavitzkyGolayFilter:
         # Create new smoothed track
         smoothed_track = Track(
             name=self.track.name,
-            frames=self.track.frames.copy(),
+            times=self.track.times.copy() if self.track.times is not None else None,
+            frames=self.track.frames.copy() if self.track.frames is not None else None,
             rows=smoothed_rows,
             columns=smoothed_columns,
             sensor=self.track.sensor,
-            times=self.track.times.copy() if self.track.times is not None else None,
             color=self.track.color,
             marker=self.track.marker,
             line_width=self.track.line_width,

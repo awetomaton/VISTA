@@ -214,7 +214,7 @@ class Track(TemporalData):
         """
         if self.complete:
             # Show entire track
-            return np.arange(len(self.frames))
+            return np.arange(len(self))
         
         if val is None:
             return None
@@ -638,7 +638,7 @@ class Track(TemporalData):
             Total track length in pixels, or 0.0 if track has fewer than 2 points
         """
         if self._length is None:
-            if len(self.rows) < 2:
+            if len(self) < 2:
                 self._length = 0.0
             else:
                 self._length = np.sum(np.sqrt(np.diff(self.rows) ** 2 + np.diff(self.columns) ** 2))
@@ -740,9 +740,9 @@ class Track(TemporalData):
             data["Altitude (km)"] = np.asarray(locations.height.to("km").value)
         else:
             # Sensor cannot geolocate - fill with NaN
-            data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
-            data["Longitude (deg)"] = np.full(len(self.frames), np.nan)
-            data["Altitude (km)"] = np.full(len(self.frames), np.nan)
+            data["Latitude (deg)"] = np.full(len(self), np.nan)
+            data["Longitude (deg)"] = np.full(len(self), np.nan)
+            data["Altitude (km)"] = np.full(len(self), np.nan)
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:

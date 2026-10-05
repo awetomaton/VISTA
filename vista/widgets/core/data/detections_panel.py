@@ -465,7 +465,7 @@ class DetectionsPanel(DataPanel):
 
                         # Check if ANY detection point in this detector matches the filter
                         matches_filter = False
-                        for i in range(len(detector.frames)):
+                        for i in range(len(detector)):
                             if i < len(detector.labels):
                                 detection_labels = detector.labels[i]
                                 has_no_labels = len(detection_labels) == 0
@@ -554,7 +554,7 @@ class DetectionsPanel(DataPanel):
         has_blank_labels = False
         for detector in self.viewer.detectors:
             # Check each detection point
-            for i in range(len(detector.frames)):
+            for i in range(len(detector)):
                 if i < len(detector.labels):
                     if len(detector.labels[i]) > 0:
                         unique_labels.update(detector.labels[i])
@@ -757,15 +757,15 @@ class DetectionsPanel(DataPanel):
         """
         if not self.detection_column_filters:
             # No filters active, all detections visible
-            return np.ones(len(detector.frames), dtype=bool)
+            return np.ones(len(detector), dtype=bool)
 
         filter_config = self.detection_column_filters.get(2)  # Labels column
         if not filter_config:
-            return np.ones(len(detector.frames), dtype=bool)
+            return np.ones(len(detector), dtype=bool)
 
         filter_values = filter_config.get("values")
         if not filter_values:
-            return np.ones(len(detector.frames), dtype=bool)
+            return np.ones(len(detector), dtype=bool)
 
         label_filter_values = filter_values - {"(No Labels)"}
         no_labels_selected = "(No Labels)" in filter_values
@@ -773,14 +773,14 @@ class DetectionsPanel(DataPanel):
         # Ensure detector.labels is properly initialized with the right length
         if not isinstance(detector.labels, list):
             # If labels is not a list, initialize it as empty sets
-            detector.labels = [set() for _ in range(len(detector.frames))]
-        elif len(detector.labels) < len(detector.frames):
+            detector.labels = [set() for _ in range(len(detector))]
+        elif len(detector.labels) < len(detector):
             # If labels list is too short, pad it with empty sets
-            detector.labels.extend([set() for _ in range(len(detector.frames) - len(detector.labels))])
+            detector.labels.extend([set() for _ in range(len(detector) - len(detector.labels))])
 
         # Vectorized approach using list comprehension (much faster than explicit loop)
         # For each detection, check if it matches the filter criteria
-        num_detections = len(detector.frames)
+        num_detections = len(detector)
 
         if no_labels_selected and not label_filter_values:
             # Only "(No Labels)" selected - return detections with no labels
@@ -1008,7 +1008,7 @@ class DetectionsPanel(DataPanel):
                 detector.invalidate_caches()
             elif property_name == "Labels":
                 # Set labels on all detection points in the detector
-                n_detections = len(detector.frames)
+                n_detections = len(detector)
                 detector.labels = [self.bulk_labels.copy() for _ in range(n_detections)]
                 now = get_current_label_time()
                 labeler = get_current_labeler()
@@ -1280,13 +1280,21 @@ class DetectionsPanel(DataPanel):
             edited_detector = self.viewer.finish_detection_editing()
             if edited_detector:
                 self.refresh_detections_table()
-                total_detections = len(edited_detector.frames)
-                unique_frames = len(np.unique(edited_detector.frames))
-                self.status_message.emit(
-                    f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
-                    f"{unique_frames} frames",
-                    3000,
-                )
+                total_detections = len(edited_detector)
+                if edited_detector.times is not None:
+                    unique_times = len(np.unique(edited_detector.times))
+                    self.status_message.emit(
+                        f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
+                        f"{unique_times} times",
+                        3000,
+                    )
+                else:
+                    unique_frames = len(np.unique(edited_detector.frames))
+                    self.status_message.emit(
+                        f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
+                        f"{unique_frames} frames",
+                        3000,
+                    )
             else:
                 self.status_message.emit("Detector editing cancelled", 3000)
 
@@ -1349,7 +1357,7 @@ class DetectionsPanel(DataPanel):
                 # Save to CSV
                 all_detections_df.to_csv(file_path, index=False)
 
-                num_detections = sum(len(d.frames) for d in selected_detectors)
+                num_detections = sum(len(d) for d in selected_detectors)
                 QMessageBox.information(
                     self,
                     "Success",
@@ -1458,7 +1466,7 @@ class DetectionsPanel(DataPanel):
 
                 # Add to viewer
                 self.viewer.add_detector(detector_copy)
-                total_detections_copied += len(detector_copy.rows)
+                total_detections_copied += len(detector_copy)
 
             # Refresh the table and emit data changed
             self.refresh_detections_table()
@@ -1577,7 +1585,7 @@ class DetectionsPanel(DataPanel):
             indices_to_delete = sorted(data["indices"], reverse=True)
 
             # Create mask for points to keep
-            keep_mask = np.ones(len(detector.frames), dtype=bool)
+            keep_mask = np.ones(len(detector), dtype=bool)
             for idx in indices_to_delete:
                 if 0 <= idx < len(keep_mask):
                     keep_mask[idx] = False
@@ -1603,7 +1611,7 @@ class DetectionsPanel(DataPanel):
             detector._frame_index = None
 
             # Check if detector is now empty
-            if len(detector.frames) == 0:
+            if len(detector) == 0:
                 detectors_to_remove.append(detector)
 
         # Remove empty detectors
@@ -1937,7 +1945,7 @@ class DetectionsPanel(DataPanel):
             all_rows.extend(detector.rows.tolist())
             all_columns.extend(detector.columns.tolist())
             # Extend labels, padding with empty sets if needed
-            for i in range(len(detector.frames)):
+            for i in range(len(detector)):
                 if i < len(detector.labels):
                     all_labels.append(detector.labels[i].copy())
                 else:

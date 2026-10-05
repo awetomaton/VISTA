@@ -82,7 +82,7 @@ class StaticBackgroundRemovalThread(QThread):
     def run(self):
         """Execute the configured static background removal."""
         try:
-            num_frames = len(self.imagery.frames)
+            num_frames = len(self.imagery)
 
             if self.target_range is None:
                 target_start, target_end = 0, num_frames
@@ -117,7 +117,7 @@ class StaticBackgroundRemovalThread(QThread):
                 return
 
             self.status_updated.emit("Running background removal...")
-            self.progress_updated.emit(0, len(target_subset.frames))
+            self.progress_updated.emit(0, len(target_subset))
 
             background_images, foreground_images = self.algorithm_fn(
                 background_stack,
@@ -152,17 +152,17 @@ class StaticBackgroundRemovalThread(QThread):
                 f"(background ranges: {ranges_str}; target {target_start}-{target_end}{params_suffix})"
             )
 
-            total_histograms = len(background_imagery.images) + len(foreground_imagery.images)
+            total_histograms = len(background_imagery) + len(foreground_imagery)
             self.status_updated.emit("Computing histograms...")
             self.progress_updated.emit(0, total_histograms)
             count = 0
-            for i in range(len(background_imagery.images)):
+            for i in range(len(background_imagery)):
                 if self._cancelled:
                     return
                 background_imagery.get_histogram(i)
                 count += 1
                 self.progress_updated.emit(count, total_histograms)
-            for i in range(len(foreground_imagery.images)):
+            for i in range(len(foreground_imagery)):
                 if self._cancelled:
                     return
                 foreground_imagery.get_histogram(i)
@@ -239,7 +239,7 @@ class StaticBackgroundRemovalDialog(QDialog):
 
     def _setup_ui(self):
         layout = QVBoxLayout()
-        max_frame = len(self.imagery.frames) if self.imagery is not None else 999999
+        max_frame = len(self.imagery) if self.imagery is not None else 999999
 
         if self.description:
             desc_label = QLabel(self.description)
@@ -395,7 +395,7 @@ class StaticBackgroundRemovalDialog(QDialog):
                     continue
         self.range_list.set_ranges(ranges)
         self.use_full_range_checkbox.setChecked(self.settings.value("use_full_range", True, type=bool))
-        max_frame = len(self.imagery.frames) if self.imagery is not None else 999999
+        max_frame = len(self.imagery) if self.imagery is not None else 999999
         self.target_start_spinbox.setValue(self.settings.value("target_start", 0, type=int))
         self.target_end_spinbox.setValue(self.settings.value("target_end", max_frame, type=int))
         self.add_background_checkbox.setChecked(self.settings.value("add_background", False, type=bool))
@@ -429,7 +429,7 @@ class StaticBackgroundRemovalDialog(QDialog):
             )
             return
 
-        num_frames = len(self.imagery.frames)
+        num_frames = len(self.imagery)
         clamped_ranges = []
         for start, end in background_ranges:
             start = max(0, min(start, num_frames))

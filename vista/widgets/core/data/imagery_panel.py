@@ -135,11 +135,11 @@ class ImageryPanel(DataPanel):
             imagery_item.setData(0, Qt.ItemDataRole.UserRole, imagery.uuid)
 
             if imagery.is_fully_loaded:
-                imagery_item.setText(1, str(len(imagery.frames)))
+                imagery_item.setText(1, str(len(imagery)))
             else:
                 # Frames column: progress bar with cancel button for loading imagery
                 self._set_loading_widget(
-                    imagery_item, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery.frames)
+                    imagery_item, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery)
                 )
 
             if imagery in self.viewer.selected_imageries:
@@ -260,7 +260,7 @@ class ImageryPanel(DataPanel):
         imagery = self._get_imagery_for_item(imagery_item)
         if imagery is not None:
             self.imagery_table.removeItemWidget(imagery_item, 1)
-            imagery_item.setText(1, str(len(imagery.frames)))
+            imagery_item.setText(1, str(len(imagery)))
 
     def on_imagery_selection_changed(self):
         """Handle imagery selection changes from tree."""

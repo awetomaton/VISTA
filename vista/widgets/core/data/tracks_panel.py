@@ -2537,7 +2537,7 @@ class TracksPanel(DataPanel):
             if edited_track:
                 self.refresh_tracks_table()
                 self.status_message.emit(
-                    f"Track '{edited_track.name}' updated with {len(edited_track.rows)} points", 3000
+                    f"Track '{edited_track.name}' updated with {len(edited_track)} points", 3000
                 )
             else:
                 self.status_message.emit("Track editing cancelled", 3000)

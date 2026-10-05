@@ -439,7 +439,7 @@ class Detector(TemporalData):
         labels_column = []
         label_times_column = []
         labelers_column = []
-        for i in range(len(self.frames)):
+        for i in range(len(self)):
             if i < len(self.labels) and self.labels[i]:
                 labels_column.append(", ".join(sorted(self.labels[i])))
             else:

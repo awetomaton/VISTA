@@ -987,7 +987,7 @@ class ImageryViewer(QWidget):
 
             # Build a boolean mask over the full detector arrays for filtering
             if detector.complete:
-                det_mask = np.ones(len(detector.frames), dtype=bool)
+                det_mask = np.ones(len(detector), dtype=bool)
             else:
                 if self.timeline.is_time:
                     det_mask = detector.times == self.timeline.current_value
@@ -1494,7 +1494,7 @@ class ImageryViewer(QWidget):
             if detector.complete:
                 # Check all detections when complete mode is enabled
                 rows, cols = detector.rows, detector.columns
-                indices = np.arange(len(detector.rows))
+                indices = np.arange(len(detector))
             else:
                 # Check only detections at current index
                 indices = detector.get_index(self.timeline.current_value, self.timeline.is_time)
@@ -2299,12 +2299,9 @@ class ImageryViewer(QWidget):
         self.editing_track = track
         # Load existing track data
         self.current_track_data = {}
-        if self.timeline.is_time:
-            for i in range(len(track.times)):
-                self.current_track_data[track.times[i]] = (track.rows[i], track.columns[i])
-        else:
-            for i in range(len(track.frames)):
-                self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
+        keys = track.times if self.timeline.is_time else track.frames
+        for i in range(len(track)):
+            self.current_track_data[keys[i]] = (track.rows[i], track.columns[i])
         self.temp_track_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -2681,18 +2678,12 @@ class ImageryViewer(QWidget):
         self.editing_detector = detector
         # Load existing detection data
         self.current_detection_data = {}
-        if self.timeline.is_time:
-            for i in range(len(detector.times)):
-                time = detector.times[i]
-                if time not in self.current_detection_data:
-                    self.current_detection_data[time] = []
-                self.current_detection_data[time].append((detector.rows[i], detector.columns[i]))
-        else:
-            for i in range(len(detector.frames)):
-                frame = detector.frames[i]
-                if frame not in self.current_detection_data:
-                    self.current_detection_data[frame] = []
-                self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
+        keys = detector.times if self.timeline.is_time else detector.frames
+        for i in range(len(detector)):
+            key = keys[i]
+            if key not in self.current_detection_data:
+                self.current_detection_data[key] = []
+            self.current_detection_data[key].append((detector.rows[i], detector.columns[i]))
         self.temp_detection_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -3091,9 +3082,9 @@ class ImageryViewer(QWidget):
 
                     if track.complete:
                         # Show all points regardless of current index
-                        mask = np.ones(len(track.rows), dtype=bool)
+                        mask = np.ones(len(track), dtype=bool)
                     else:
-                        mask = np.zeros(len(track.rows), dtype=bool)
+                        mask = np.zeros(len(track), dtype=bool)
                         mask[indices] = True
 
                     if self.map_view_mode:
@@ -3141,7 +3132,7 @@ class ImageryViewer(QWidget):
                         # All detections are visible
                         rows = detector.rows
                         cols = detector.columns
-                        indices = np.arange(len(detector.rows))
+                        indices = np.arange(len(detector))
                     else:
                         # Only detections at current timeline value
                         if self.timeline.is_time:

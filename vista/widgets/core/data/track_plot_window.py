@@ -950,7 +950,7 @@ class TrackPlotWindow(QWidget):
                 data = self._get_plottable_data(track)
                 tracker_name = self.tracker_map.get(track.uuid, "Unknown")
 
-                for i in range(len(track.rows)):
+                for i in range(len(track)):
                     row = {
                         "Tracker": tracker_name,
                         "Track": track.name,

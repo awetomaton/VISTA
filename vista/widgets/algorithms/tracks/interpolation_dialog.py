@@ -131,11 +131,11 @@ class TrackInterpolationDialog(QDialog):
             for track in self.tracks:
                 if track.frames is None:
                     continue
-                if len(track.frames) >= 2:
+                if len(track) >= 2:
                     min_frame = track.frames.min()
                     max_frame = track.frames.max()
                     expected_frames = max_frame - min_frame + 1
-                    actual_frames = len(track.frames)
+                    actual_frames = len(track)
                     total_missing += expected_frames - actual_frames
 
             if total_missing > 0:
@@ -234,7 +234,9 @@ class TrackInterpolationDialog(QDialog):
 
         # Check that tracks have enough points
         for track in self.tracks:
-            if len(track.frames) < 2:
+            if track.frames is None:
+                return False, f"Track '{track.name}' has no frames and cannot be interpolated."
+            if len(track) < 2:
                 return False, f"Track '{track.name}' has fewer than 2 points and cannot be interpolated."
 
         return True, ""

@@ -58,7 +58,7 @@ class RobustPCAProcessingThread(QThread):
         self.max_iter = max_iter
         self.aoi = aoi
         self.start_frame = start_frame
-        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
+        self.end_frame = end_frame if end_frame is not None else len(imagery)
         self._cancelled = False
 
     def cancel(self):
@@ -151,20 +151,20 @@ class RobustPCAProcessingThread(QThread):
             )
 
             # Switch to determinate progress for histogram computation
-            total_histograms = len(background_imagery.images) + len(foreground_imagery.images)
+            total_histograms = len(background_imagery) + len(foreground_imagery)
             self.status_updated.emit("Computing histograms...")
             self.progress_updated.emit(0, total_histograms)
 
             # Pre-compute histograms for performance
             histogram_count = 0
-            for i in range(len(background_imagery.images)):
+            for i in range(len(background_imagery)):
                 if self._cancelled:
                     return
                 background_imagery.get_histogram(i)
                 histogram_count += 1
                 self.progress_updated.emit(histogram_count, total_histograms)
 
-            for i in range(len(foreground_imagery.images)):
+            for i in range(len(foreground_imagery)):
                 if self._cancelled:
                     return
                 foreground_imagery.get_histogram(i)
@@ -424,7 +424,7 @@ class RobustPCADialog(QDialog):
         max_iter = self.max_iter.value()
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame.value()
-        end_frame = min(self.end_frame.value(), len(self.imagery.frames))
+        end_frame = min(self.end_frame.value(), len(self.imagery))
 
         # Save settings for next time
         self.save_settings()

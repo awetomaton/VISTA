@@ -840,7 +840,7 @@ class VistaMainWindow(QMainWindow):
                 # refresh() clears the Tracks table selection with its signals
                 # blocked. Propagate that empty selection to open detail plots.
                 self.data_manager.tracks_panel.on_track_selection_changed()
-                self.statusBar().showMessage(f"Track created: {track.name} with {len(track.rows)} points", 3000)
+                self.statusBar().showMessage(f"Track created: {track.name} with {len(track)} points", 3000)
             else:
                 self.statusBar().showMessage("Track creation cancelled (no points added)", 3000)
 
@@ -872,7 +872,7 @@ class VistaMainWindow(QMainWindow):
                 # Add detector to viewer
                 self.viewer.add_detector(detector)
                 self.data_manager.refresh()
-                total_detections = len(detector.rows)
+                total_detections = len(detector)
                 if self.viewer.timeline.is_time:
                     unique_times = len(np.unique(detector.times))
                     self.statusBar().showMessage(
@@ -1061,14 +1061,14 @@ class VistaMainWindow(QMainWindow):
         if imagery in self.viewer.selected_imageries:
             self.viewer.update_timeline()
         # Update frame range and status bar
-        total = len(imagery.frames)
+        total = len(imagery)
         self.statusBar().showMessage(
             f"Loading imagery: {imagery.name} ({loaded_count}/{total} frames)...", 0
         )
 
     def on_imagery_load_complete(self, imagery):
         """Handle imagery loading completion (all frames loaded or cancelled)"""
-        if imagery.loaded_frame_count is not None and imagery.loaded_frame_count < len(imagery.frames):
+        if imagery.loaded_frame_count is not None and imagery.loaded_frame_count < len(imagery):
             # Loading was cancelled - truncate arrays to loaded portion
             loaded = imagery.loaded_frame_count
             if loaded > 0:
@@ -1102,7 +1102,7 @@ class VistaMainWindow(QMainWindow):
         self._update_map_view_action_state()
 
         if imagery is not None and imagery in self.viewer.imageries:
-            self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery.frames)} frames)", 3000)
+            self.statusBar().showMessage(f"Loaded imagery: {imagery.name} ({len(imagery)} frames)", 3000)
         else:
             self.statusBar().showMessage("Imagery loading cancelled", 3000)
 
@@ -2822,7 +2822,7 @@ class VistaMainWindow(QMainWindow):
         # Deselect AOIs to allow panning
         self.data_manager.clear_aoi_selection()
 
-        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
+        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector)} detections)", 3000)
 
     def open_cfar_widget(self):
         """Open the CFAR detector configuration widget"""
@@ -2873,7 +2873,7 @@ class VistaMainWindow(QMainWindow):
         # Deselect AOIs to allow panning
         self.data_manager.clear_aoi_selection()
 
-        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
+        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector)} detections)", 3000)
 
     def open_pstnn_widget(self):
         """Open the PSTNN detector configuration widget"""
@@ -2924,7 +2924,7 @@ class VistaMainWindow(QMainWindow):
         # Deselect AOIs to allow panning
         self.data_manager.clear_aoi_selection()
 
-        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector.frames)} detections)", 3000)
+        self.statusBar().showMessage(f"Added detector: {detector.name} ({len(detector)} detections)", 3000)
 
     def open_simple_tracking_dialog(self):
         """Open the Simple tracker configuration dialog"""
