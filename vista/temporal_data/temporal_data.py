@@ -227,3 +227,32 @@ class TemporalData:
         self._times_sorted = None
         self._frame_index = None
         self._frames_sorted = None
+
+
+def all_have_times_frames(data: list[TemporalData]) -> tuple[bool, bool]:
+    """
+    Return a tuple of whether the objects in the list (all_have_times, all_have_frames)
+    
+    Parameters
+    ----------
+    data : list
+        List of TemporalData objects
+
+    Returns
+    -------
+    (bool, bool)
+        Tuple of whether the objects (all_have_times, all_have_frames)
+
+    Notes
+    -----
+    Will return (True, True) for empty list
+    """
+    all_have_times = True
+    all_have_frames = True
+    for what in data:
+        if what.times is None:
+            all_have_times = False
+        if what.frames is None:
+            all_have_frames = False
+
+    return all_have_times, all_have_frames
