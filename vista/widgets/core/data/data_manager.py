@@ -56,6 +56,9 @@ class DataManagerPanel(QWidget):
         self.features_panel.data_changed.connect(self.data_changed.emit)
         self.known_sources_panel.data_changed.connect(self.data_changed.emit)
 
+        # refresh sensors panel when imagery changes (in case of filename updates)
+        self.imagery_panel.data_changed.connect(self.sensors_panel.refresh_sensors_table)
+
         # refresh tracks panel when known_sources add tracks
         self.known_sources_panel.data_changed.connect(self.tracks_panel.refresh_tracks_table)
 
