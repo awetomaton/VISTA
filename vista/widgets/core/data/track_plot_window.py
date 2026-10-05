@@ -721,7 +721,6 @@ class TrackPlotWindow(QWidget):
             return self._cached_data[track.uuid]
 
         data = {
-            "Frame": track.frames.astype(float),
             "Row": track.rows,
             "Column": track.columns,
         }
@@ -730,6 +729,8 @@ class TrackPlotWindow(QWidget):
         if track.times is not None and not np.all(np.isnat(track.times)):
             # Convert datetime64 to float (seconds since epoch) for plotting
             data["Time"] = track.times.astype("datetime64[ns]").astype(np.int64) / 1e9
+        if track.frames is not None:
+            data["Frame"] = track.frames.astype(float)
 
         # Add geolocation if sensor supports it
         if track.sensor.can_geolocate() and isinstance(track.sensor, SampledSensor) and track.times is not None:
@@ -864,15 +865,14 @@ class TrackPlotWindow(QWidget):
 
             x_data = data[x_axis]
             y_data_original = data[y_axis]
-            frames = track.frames
 
             # Filter data based on display mode
             indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
             if show_complete:
                 # Show all data points
-                mask = np.ones(len(frames), dtype=bool)
+                mask = np.ones(len(x_data), dtype=bool)
             else:
-                mask = np.zeros(len(frames), dtype=bool)
+                mask = np.zeros(len(x_data), dtype=bool)
                 mask[indices] = True
 
             if not np.any(mask):
@@ -950,7 +950,7 @@ class TrackPlotWindow(QWidget):
                 data = self._get_plottable_data(track)
                 tracker_name = self.tracker_map.get(track.uuid, "Unknown")
 
-                for i in range(len(track.frames)):
+                for i in range(len(track.rows)):
                     row = {
                         "Tracker": tracker_name,
                         "Track": track.name,
