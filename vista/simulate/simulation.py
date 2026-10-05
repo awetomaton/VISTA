@@ -644,11 +644,11 @@ class Simulation:
 
                 track = Track(
                     name=f"Tracker {tracker_index} - Track {track_index}",
+                    times=times[frames] if times is not None else None,
                     frames=frames,
                     rows=rows,
                     columns=columns,
                     sensor=sensor,
-                    times=times[frames] if times is not None else None,
                     tracker=tracker_name,
                     covariance_00=covariance_00,
                     covariance_01=covariance_01,

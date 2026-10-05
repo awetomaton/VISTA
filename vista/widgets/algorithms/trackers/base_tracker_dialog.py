@@ -304,11 +304,11 @@ class BaseTrackingDialog(QDialog):
         for i, track_data in enumerate(track_data_list):
             vista_track = Track(
                 name=f"Track {i + 1}",
+                times=track_data["times"],
                 frames=track_data["frames"],
                 rows=track_data["rows"],
                 columns=track_data["columns"],
                 sensor=sensor,
-                times=track_data["times"],
                 tracker=tracker_name,
                 color=self.default_track_color,
                 marker=self.default_track_marker,

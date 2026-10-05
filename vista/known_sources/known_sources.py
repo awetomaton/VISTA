@@ -180,11 +180,11 @@ class KnownSources:
             for slice in slices:
                 track = Track(
                     name=source,
+                    times=imagery.times[slice],
                     frames=imagery.frames[slice],
                     rows=row[slice],
                     columns=column[slice],
                     sensor=imagery.sensor,
-                    times=imagery.times[slice],
                     color=self._color,
                     marker=self._marker,
                     marker_size=self._marker_size,
