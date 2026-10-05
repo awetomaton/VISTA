@@ -3122,8 +3122,8 @@ class VistaMainWindow(QMainWindow):
 
         # Restore track selection after refresh
         if selected_track_ids:
-            selection_model = self.data_manager.tracks_table.selectionModel()
-            model = self.data_manager.tracks_table.model()
+            selection_model = self.data_manager.tracks_panel.tracks_table.selectionModel()
+            model = self.data_manager.tracks_panel.tracks_table.model()
             self.data_manager.tracks_panel.tracks_table.blockSignals(True)
             for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
                 track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
@@ -3214,8 +3214,8 @@ class VistaMainWindow(QMainWindow):
 
         # Restore track selection after refresh
         if selected_track_ids:
-            selection_model = self.data_manager.tracks_table.selectionModel()
-            model = self.data_manager.tracks_table.model()
+            selection_model = self.data_manager.tracks_panel.tracks_table.selectionModel()
+            model = self.data_manager.tracks_panel.tracks_table.model()
             self.data_manager.tracks_panel.tracks_table.blockSignals(True)
             for row in range(self.data_manager.tracks_panel.tracks_table.rowCount()):
                 track_name_item = self.data_manager.tracks_panel.tracks_table.item(row, 2)
