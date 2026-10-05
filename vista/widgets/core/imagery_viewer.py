@@ -3214,8 +3214,7 @@ class ImageryViewer(QWidget):
                     if min_distance < tolerance and min_distance < closest_distance:
                         closest_distance = min_distance
                         original_index = indices[min_idx]
-                        detection_frame = int(detector.frames[original_index])
-                        closest_detection = (detector, detection_frame, int(original_index))
+                        closest_detection = (detector, int(original_index))
 
                 # If we found a detection, add/toggle in selection
                 if closest_detection:
