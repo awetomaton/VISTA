@@ -1494,9 +1494,9 @@ class ImageryViewer(QWidget):
             if detector.complete:
                 # Check all detections when complete mode is enabled
                 rows, cols = detector.rows, detector.columns
-                indices = np.arange(len(detector.frames))
+                indices = np.arange(len(detector.rows))
             else:
-                # Check only detections at current frame
+                # Check only detections at current index
                 indices = detector.get_index(self.timeline.current_value, self.timeline.is_time)
                 if indices is None:
                     continue
@@ -3090,10 +3090,10 @@ class ImageryViewer(QWidget):
                         continue
 
                     if track.complete:
-                        # Show all points regardless of current frame
-                        mask = np.ones(len(track.frames), dtype=bool)
+                        # Show all points regardless of current index
+                        mask = np.ones(len(track.rows), dtype=bool)
                     else:
-                        mask = np.zeros(len(track.frames), dtype=bool)
+                        mask = np.zeros(len(track.rows), dtype=bool)
                         mask[indices] = True
 
                     if self.map_view_mode:
@@ -3141,9 +3141,9 @@ class ImageryViewer(QWidget):
                         # All detections are visible
                         rows = detector.rows
                         cols = detector.columns
-                        indices = np.arange(len(detector.frames))
+                        indices = np.arange(len(detector.rows))
                     else:
-                        # Only detections at current frame
+                        # Only detections at current timeline value
                         if self.timeline.is_time:
                             mask = detector.times == self.timeline.current_value
                         else:
