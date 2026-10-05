@@ -129,6 +129,8 @@ class TrackInterpolationDialog(QDialog):
             # Show summary of missing frames
             total_missing = 0
             for track in self.tracks:
+                if track.frames is None:
+                    continue
                 if len(track.frames) >= 2:
                     min_frame = track.frames.min()
                     max_frame = track.frames.max()

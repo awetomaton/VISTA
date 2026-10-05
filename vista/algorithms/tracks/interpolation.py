@@ -78,7 +78,10 @@ class TrackInterpolation:
             If track has fewer than 2 points (cannot interpolate)
         """
         # Validate input
-        if len(self.track.frames) < 2:
+        if self.track.frames is None:
+            raise ValueError("Track has no frames to interpolate")
+        
+        if len(self.track) < 2:
             raise ValueError("Track must have at least 2 points to interpolate")
 
         # Get existing track data
@@ -143,11 +146,11 @@ class TrackInterpolation:
         # Create new interpolated track
         interpolated_track = Track(
             name=self.track.name,
+            times=all_times,
             frames=all_frames,
             rows=all_rows,
             columns=all_columns,
             sensor=self.track.sensor,
-            times=all_times,
             color=self.track.color,
             marker=self.track.marker,
             line_width=self.track.line_width,
