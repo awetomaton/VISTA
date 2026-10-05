@@ -5,6 +5,7 @@ from collections import defaultdict
 import numpy as np
 
 from vista.algorithms.trackers.utils import get_times_for_track_frames
+from vista.temporal_data.temporal_data import all_have_times_frames
 
 
 def run_network_flow_tracker(detectors, config):
@@ -52,6 +53,10 @@ def run_network_flow_tracker(detectors, config):
     entrance_cost = config.get("entrance_cost", 50.0)
     exit_cost = config.get("exit_cost", 50.0)
     min_track_length = config.get("min_track_length", 3)
+
+    all_have_times, all_have_frames = all_have_times_frames(detectors)
+    if not all_have_frames:
+        raise ValueError("Selected detections must all have frames.")
 
     # Collect all detections with unique IDs
     all_detections = []
