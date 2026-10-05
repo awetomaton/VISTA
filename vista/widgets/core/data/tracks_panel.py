@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.detections.detector import Detector
+from vista.temporal_data.temporal_data import all_have_times_frames
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
@@ -1953,6 +1954,17 @@ class TracksPanel(DataPanel):
             )
             return
 
+        # Check whether all tracks have times and frames
+        all_have_times, all_have_frames = all_have_times_frames(tracks_to_merge)
+
+        if not (all_have_times or all_have_frames):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected tracks must all have times or frames.",
+            )
+            return
+
         # Save state before merge
         self.save_undo_state(f"Merge {len(tracks_to_merge)} tracks")
 
@@ -1965,11 +1977,20 @@ class TracksPanel(DataPanel):
         # Combine all DataFrames
         combined_df = pd.concat(track_dfs, ignore_index=True)
 
-        # Sort by frame to handle overlapping times
-        combined_df = combined_df.sort_values("Frames").reset_index(drop=True)
-
-        # Remove duplicate frames (keep first occurrence)
-        combined_df = combined_df.drop_duplicates(subset=["Frames"], keep="first")
+        if all_have_times:
+            # Sort by time to handle overlapping times
+            combined_df.sort_values("Times", ignore_index=True, inplace=True)
+            # Remove duplicate times (keep first occurrence)
+            combined_df.drop_duplicates(subset=["Times"], keep="first", inplace=True)
+            if not all_have_frames:
+                combined_df.drop(columns="Frames", errors="ignore", inplace=True)
+        else:
+            # Sort by frame to handle overlapping frames
+            combined_df.sort_values("Frames", ignore_index=True, inplace=True)
+            # Remove duplicate frames (keep first occurrence)
+            combined_df.drop_duplicates(subset=["Frames"], keep="first", inplace=True)
+            # If we've reached this block, we know they don't all have times, so drop column
+            combined_df.drop(columns="Times", errors="ignore", inplace=True)
 
         # Use styling from the first track
         merged_name = f"Merged_{first_track.name}"
@@ -1988,19 +2009,15 @@ class TracksPanel(DataPanel):
         # Merge tracker names
         merged_tracker = " ".join(list(set([track.tracker for track in tracks_to_merge if track.tracker])))
 
-        merged_times = None
-        if "Times" in combined_df.columns and combined_df["Times"].notna().all():
-            merged_times = pd.to_datetime(combined_df["Times"]).to_numpy().astype("datetime64[ns]")
-
         # Create the merged track from the combined DataFrame
         merged_track = Track(
             name=merged_name,
             tracker=merged_tracker,
-            frames=combined_df["Frames"].to_numpy().astype(np.int_),
+            times=pd.to_datetime(combined_df["Times"]).to_numpy().astype("datetime64[ns]") if all_have_times else None,
+            frames=combined_df["Frames"].to_numpy().astype(np.int_) if all_have_frames else None,
             rows=combined_df["Rows"].to_numpy(),
             columns=combined_df["Columns"].to_numpy(),
             sensor=first_track.sensor,
-            times=merged_times,
             color=first_track.color,
             marker=first_track.marker,
             line_width=first_track.line_width,
@@ -2518,7 +2535,7 @@ class TracksPanel(DataPanel):
             if edited_track:
                 self.refresh_tracks_table()
                 self.status_message.emit(
-                    f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points", 3000
+                    f"Track '{edited_track.name}' updated with {len(edited_track.rows)} points", 3000
                 )
             else:
                 self.status_message.emit("Track editing cancelled", 3000)
@@ -2899,7 +2916,6 @@ class TracksPanel(DataPanel):
                 # Create a copy of the track with the new sensor
                 track_copy = track.copy()
                 track_copy.sensor = target_sensor
-                track_copy.times = None
                 track_copy.name = f"{track.name} (copy)"
 
                 # Add to the viewer tracks list
@@ -2947,11 +2963,11 @@ class TracksPanel(DataPanel):
         for track in selected_tracks:
             detector = Detector(
                 name=f"From Track: {track.name}",
-                frames=track.frames.copy(),
+                times=track.times.copy() if track.times is not None else None,
+                frames=track.frames.copy() if track.frames is not None else None,
                 rows=track.rows.copy(),
                 columns=track.columns.copy(),
                 sensor=track.sensor,
-                times=track.times.copy() if track.times is not None else None,
                 color=track.color,
                 marker=track.marker,
                 marker_size=track.marker_size,

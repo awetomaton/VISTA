@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.detections.detector import Detector
+from vista.temporal_data.temporal_data import all_have_times_frames
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
@@ -1443,12 +1444,11 @@ class DetectionsPanel(DataPanel):
                 # Create a copy of the detector with the new sensor
                 detector_copy = detector_to_copy.copy()
                 detector_copy.sensor = target_sensor
-                detector_copy.times = None
                 detector_copy.name = f"{detector.name} (copy)"
 
                 # Add to viewer
                 self.viewer.add_detector(detector_copy)
-                total_detections_copied += len(detector_copy.frames)
+                total_detections_copied += len(detector_copy.rows)
 
             # Refresh the table and emit data changed
             self.refresh_detections_table()
@@ -1574,10 +1574,10 @@ class DetectionsPanel(DataPanel):
                     total_deleted += 1
 
             # Update detector arrays
-            detector.frames = detector.frames[keep_mask]
+            detector.times = detector.times[keep_mask] if detector.times is not None else None
+            detector.frames = detector.frames[keep_mask] if detector.frames is not None else None
             detector.rows = detector.rows[keep_mask]
             detector.columns = detector.columns[keep_mask]
-            detector.times = detector.times[keep_mask] if detector.times is not None else None
             detector._cached_lats = detector._cached_lats[keep_mask] if detector._cached_lats is not None else None
             detector._cached_lons = detector._cached_lons[keep_mask] if detector._cached_lons is not None else None
 
@@ -1629,15 +1629,26 @@ class DetectionsPanel(DataPanel):
             QMessageBox.warning(self, "Insufficient Detections", "Select at least 2 detections to create a track.")
             return
 
+        # Check whether all detectors have times and frames
+        all_have_times, all_have_frames = all_have_times_frames([detector for detector, index in self.selected_detections])
+
+        if not (all_have_times or all_have_frames):
+            QMessageBox.warning(
+                self,
+                "Cannot Create Track",
+                "Selected detections must all have times or frames.",
+            )
+            return
+
         # Immediately clear the viewer's selected detections highlight
         self.viewer.selected_detections = []
         self.viewer._update_selected_detections_display()
 
-        # Extract frames, rows, columns from selected detections
+        # Extract times, frames, rows, columns from selected detections
+        times_list = []
         frames_list = []
         rows_list = []
         columns_list = []
-        times_list = []
         sensor = None
 
         for detector, index in self.selected_detections:
@@ -1651,28 +1662,32 @@ class DetectionsPanel(DataPanel):
                 )
                 return
 
-            frames_list.append(detector.frames[index])
-            rows_list.append(detector.rows[index])
-            columns_list.append(detector.columns[index])
             if detector.times is not None:
                 times_list.append(detector.times[index])
+            if detector.frames is not None:
+                frames_list.append(detector.frames[index])
+            rows_list.append(detector.rows[index])
+            columns_list.append(detector.columns[index])
 
-        # Sort by frame
-        sorted_indices = np.argsort(frames_list)
-        frames = np.array(frames_list)[sorted_indices].astype(np.int_)
+        if all_have_times:
+            sorted_indices = np.argsort(times_list)
+        else:
+            sorted_indices = np.argsort(frames_list)
+
+        times = np.array(times_list)[sorted_indices].astype("datetime64[ns]") if all_have_times else None
+        frames = np.array(frames_list)[sorted_indices].astype(np.int_) if all_have_frames else None
         rows = np.array(rows_list)[sorted_indices]
         columns = np.array(columns_list)[sorted_indices]
-        times = np.asarray(times_list, dtype="datetime64[ns]")[sorted_indices] if (len(times_list) == len(frames_list)) else None
 
         # Create track with tracker attribute set
         track_name = f"Track from Detections {len(self.viewer.tracks) + 1}"
         track = Track(
             name=track_name,
+            times=times,
             frames=frames,
             rows=rows,
             columns=columns,
             sensor=sensor,
-            times=times,
             tracker="Manual Tracks from Detections",
         )
 
@@ -1779,38 +1794,39 @@ class DetectionsPanel(DataPanel):
             # Store count before clearing
             num_detections_added = len(self.selected_detections)
 
+            all_have_times, all_have_frames = all_have_times_frames([detector for detector, index in self.selected_detections])
+            all_have_times &= track.times is not None
+            all_have_frames &= track.frames is not None
+
             # Extract frames, rows, columns from selected detections
-            frames_list = list(track.frames)
+            times_list = list(track.times) if track.times is not None else []
+            frames_list = list(track.frames) if track.frames is not None else []
             rows_list = list(track.rows)
             columns_list = list(track.columns)
-            times_list = list(track.times) if track.times is not None else []
 
             for detector, index in self.selected_detections:
-                frames_list.append(detector.frames[index])
-                rows_list.append(detector.rows[index])
-                columns_list.append(detector.columns[index])
                 if detector.times is not None:
                     times_list.append(detector.times[index])
+                if detector.frames is not None:
+                    frames_list.append(detector.frames[index])
+                rows_list.append(detector.rows[index])
+                columns_list.append(detector.columns[index])
 
-            # Sort by frame and remove duplicates
-            sorted_indices = np.argsort(frames_list)
-            frames = np.array(frames_list)[sorted_indices].astype(np.int_)
+            # Sort by time or frame and remove duplicates
+            if all_have_times:
+                _, sorted_indices = np.unique(times_list, return_index=True)
+            else:
+                _, sorted_indices = np.unique(frames_list, return_index=True)
+            times = np.asarray(times_list)[sorted_indices].astype("datetime64[ns]") if all_have_times else None
+            frames = np.array(frames_list)[sorted_indices].astype(np.int_) if all_have_frames else None
             rows = np.array(rows_list)[sorted_indices]
             columns = np.array(columns_list)[sorted_indices]
-            times = np.asarray(times_list, dtype="datetime64[ns]")[sorted_indices] if (len(times_list) == len(frames_list)) else None
-
-            # Remove duplicate frames (keep first occurrence)
-            unique_mask = np.concatenate(([True], frames[1:] != frames[:-1]))
-            frames = frames[unique_mask]
-            rows = rows[unique_mask]
-            columns = columns[unique_mask]
-            times = times[unique_mask] if times is not None else None
 
             # Update track
+            track.times = times
             track.frames = frames
             track.rows = rows
             track.columns = columns
-            track.times = times
 
             # Invalidate caches since track data was modified
             track.invalidate_caches()
@@ -1880,24 +1896,36 @@ class DetectionsPanel(DataPanel):
             )
             return
 
+        # Check whether all detectors have times and frames
+        all_have_times, all_have_frames = all_have_times_frames(detectors_to_merge)
+
+        if not (all_have_times or all_have_frames):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected detectors must all have times or frames.",
+            )
+            return
+
         # Save state before merge
         self.save_undo_state(f"Merge {len(detectors_to_merge)} detectors")
 
         # Combine all frames, rows, columns, and labels
+        all_times = []
         all_frames = []
         all_rows = []
         all_columns = []
-        all_times = []
         all_labels = []
         all_label_times = []
         all_labelers = []
 
         for detector in detectors_to_merge:
-            all_frames.extend(detector.frames.tolist())
+            if detector.times is not None:
+                all_times.extend(detector.times.tolist())
+            if detector.frames is not None:
+                all_frames.extend(detector.frames.tolist())
             all_rows.extend(detector.rows.tolist())
             all_columns.extend(detector.columns.tolist())
-            if detector.times is not None:
-                all_times.extend(detector.times)
             # Extend labels, padding with empty sets if needed
             for i in range(len(detector.frames)):
                 if i < len(detector.labels):
@@ -1926,11 +1954,11 @@ class DetectionsPanel(DataPanel):
 
         merged_detector = Detector(
             name=merged_name,
-            frames=np.array(all_frames, dtype=np.int_),
+            times=np.asarray(all_times, dtype="datetime64[ns]") if all_have_times else None,
+            frames=np.array(all_frames, dtype=np.int_) if all_have_frames else None,
             rows=np.array(all_rows),
             columns=np.array(all_columns),
             sensor=sensor,
-            times=np.asarray(all_times, dtype="datetime64[ns]") if (len(all_times) == len(all_frames)) else None,
             color=first_detector.color,
             marker=first_detector.marker,
             marker_size=first_detector.marker_size,
