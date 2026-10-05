@@ -2494,18 +2494,12 @@ class ImageryViewer(QWidget):
         if track.extraction_metadata is None:
             return
 
-        # Find track point index for current frame
-        if self.timeline.is_time:
-            frame_mask = track.times == self.timeline.current_value
-        else:
-            frame_mask = track.frames == self.timeline.current_value
-        if not np.any(frame_mask):
-            # No track point at current frame
+        # Find track point index for current time or frame
+        track_idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
+        if track_idx is None:
             if self.extraction_overlay is not None:
-                self.extraction_overlay.setImage(np.zeros((1, 1)))
+                self.extraction_overlay.clear()
             return
-
-        track_idx = np.where(frame_mask)[0][0]
 
         # Get signal mask for this track point
         signal_mask = track.extraction_metadata["signal_masks"][track_idx]
@@ -2537,6 +2531,11 @@ class ImageryViewer(QWidget):
         if track.extraction_metadata is None:
             return False
 
+        # get nearest index, as that is the one currently displayed
+        index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+        if index is None:
+            return False  # no imagery available
+
         self.extraction_editing_mode = True
         self.editing_extraction_track = track
         self.editing_extraction_imagery = imagery
@@ -2553,7 +2552,7 @@ class ImageryViewer(QWidget):
         self.extraction_editor.show()
 
         # Start editing
-        self.extraction_editor.start_editing(track, imagery, self.current_frame_number)
+        self.extraction_editor.start_editing(track, imagery, self.timeline)
 
         # Create or update extraction overlay
         if self.extraction_overlay is None:

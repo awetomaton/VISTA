@@ -2354,7 +2354,6 @@ class TracksPanel(DataPanel):
         self.merge_selected_tracks_btn.setEnabled(num_selected >= 2)
         self.delete_selected_tracks_btn.setEnabled(num_selected >= 1)
         self.label_selected_btn.setEnabled(num_selected >= 1)
-        self.extract_track_btn.setEnabled(num_selected == 1)
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
         self.break_into_detections_btn.setEnabled(num_selected >= 1)
         self.plot_details_btn.setEnabled(num_selected >= 1)
@@ -2389,6 +2388,7 @@ class TracksPanel(DataPanel):
 
         # Disable extraction buttons in map view mode (extraction is pixel-space only)
         in_map_view = getattr(self.viewer, "map_view_mode", False)
+        self.extract_track_btn.setEnabled(num_selected >= 1 and not in_map_view)
         self.view_extraction_btn.setEnabled(has_extraction and not in_map_view)
         self.edit_extraction_btn.setEnabled(has_extraction and not in_map_view)
 
@@ -2585,9 +2585,8 @@ class TracksPanel(DataPanel):
         # Check if imagery is available for the selected sensor
         # Get the sensor from the first selected track (all selected tracks should have the same sensor)
         sensor = selected_tracks[0].sensor
-        imagery = self.viewer.imagery
 
-        if imagery is None:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2596,6 +2595,17 @@ class TracksPanel(DataPanel):
                 QMessageBox.StandardButton.Ok,
             )
             return
+
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before extracting tracks.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        
+        imagery = self.viewer.selected_imageries[0]
 
         # Open extraction dialog
         dialog = TrackExtractionDialog(parent=self, tracks=selected_tracks, imagery=imagery)
@@ -2747,22 +2757,28 @@ class TracksPanel(DataPanel):
                 self.edit_extraction_btn.setChecked(False)
                 return
 
-            # Get imagery for this track
-            imagery = None
-            for img in self.viewer.imageries:
-                if img.sensor == track.sensor:
-                    imagery = img
-                    break
-
-            if imagery is None:
+            if not self.viewer.selected_imageries:
                 QMessageBox.warning(
                     self,
                     "No Imagery",
-                    f"No imagery available for sensor '{track.sensor.name}'.",
+                    f"No imagery available for sensor '{track.sensor.name}'.\n"
+                    "Please load imagery for this sensor before editing extractions.",
                     QMessageBox.StandardButton.Ok,
                 )
                 self.edit_extraction_btn.setChecked(False)
                 return
+
+            if len(self.viewer.selected_imageries) > 1:
+                QMessageBox.warning(
+                    self,
+                    "Multiple Imagery",
+                    "Please select a single imagery before editing extractions.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            imagery = self.viewer.selected_imageries[0]
 
             # Start extraction editing mode
             success = self.viewer.start_extraction_editing(track, imagery)

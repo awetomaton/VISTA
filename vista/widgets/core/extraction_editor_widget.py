@@ -151,7 +151,7 @@ class ExtractionEditorWidget(QDialog):
         layout.addStretch()
         self.setLayout(layout)
 
-    def start_editing(self, track, imagery, viewer_frame):
+    def start_editing(self, track, imagery, timeline):
         """
         Start editing extraction for a track.
 
@@ -161,8 +161,8 @@ class ExtractionEditorWidget(QDialog):
             Track to edit
         imagery : Imagery
             Imagery for this track
-        viewer_frame : int
-            Current frame in viewer
+        timeline : DisplayTimeline
+            Current timeline in viewer
         """
         self.track = track
         self.imagery = imagery
@@ -178,12 +178,10 @@ class ExtractionEditorWidget(QDialog):
             "noise_stds": track.extraction_metadata["noise_stds"].copy(),
         }
 
-        # Find track point index for current frame
-        frame_mask = track.frames == viewer_frame
-        if np.any(frame_mask):
-            self.current_track_idx = int(np.where(frame_mask)[0][0])
-        else:
-            self.current_track_idx = 0
+        # Find track point index for current time or frame
+        self.current_track_idx = track.get_index(timeline.current_value, timeline.is_time)
+        if self.current_track_idx is None:
+            raise ValueError("Attempt to edit track extraction at invalid timeline value")
 
         # Update UI
         self.update_ui()
