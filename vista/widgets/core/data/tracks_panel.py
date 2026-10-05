@@ -4,6 +4,8 @@ import pathlib
 
 import numpy as np
 import pandas as pd
+from astropy.coordinates import EarthLocation
+from astropy import units as u
 from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -2917,6 +2919,13 @@ class TracksPanel(DataPanel):
                 track_copy = track.copy()
                 track_copy.sensor = target_sensor
                 track_copy.name = f"{track.name} (copy)"
+
+                geodetics = track.get_geodetic_coords()
+                if geodetics is not None and track.times is not None and target_sensor.can_geolocate():
+                    location = EarthLocation(lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km)
+                    rows, cols = target_sensor.geodetic_to_pixel(track.times, location)
+                    track_copy.rows = rows
+                    track_copy.columns = cols
 
                 # Add to the viewer tracks list
                 self.viewer.add_track(track_copy)

@@ -5,6 +5,8 @@ import traceback
 
 import numpy as np
 import pandas as pd
+from astropy.coordinates import EarthLocation
+from astropy import units as u
 from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -1445,6 +1447,14 @@ class DetectionsPanel(DataPanel):
                 detector_copy = detector_to_copy.copy()
                 detector_copy.sensor = target_sensor
                 detector_copy.name = f"{detector.name} (copy)"
+
+                geodetics = detector_to_copy.get_geodetic_coords()
+                if geodetics is not None and detector_to_copy.times is not None and target_sensor.can_geolocate():
+                    # assumes 0 height since we don't have height info
+                    location = EarthLocation(lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km)
+                    rows, cols = target_sensor.geodetic_to_pixel(detector_to_copy.times, location)
+                    detector_copy.rows = rows
+                    detector_copy.columns = cols
 
                 # Add to viewer
                 self.viewer.add_detector(detector_copy)
