@@ -2,9 +2,10 @@ Custom Sensors
 ==============
 
 VISTA's sensor system is built around a base ``Sensor`` class that can be subclassed to support
-custom sensor platforms with their own position models, geolocation logic, point spread functions,
-and serialization formats. This guide walks through the base class interface, explains what each
-method does, and shows how to implement a fully functional custom sensor.
+custom sensors with their own geolocation logic, point spread functions, and serialization formats.
+Every ``Sensor`` contains a reference to a ``SensorPlatform`` that handles position and pointing queries.
+This guide walks through the base class interface, explains what each method does, and shows how
+to implement a fully functional custom sensor.
 
 Sensor Base Class Overview
 --------------------------
@@ -13,7 +14,7 @@ The ``Sensor`` class (``vista/sensors/sensor.py``) is a Python ``dataclass`` tha
 
 1. **Identity** — a ``name`` and auto-generated ``uuid``
 2. **Radiometric calibration data** — bias images, uniformity gain images, bad pixel masks
-3. **Overridable methods** for position queries, geolocation, PSF modeling, and HDF5 serialization
+3. **Overridable methods** for geolocation, PSF modeling, and HDF5 serialization
 
 .. code-block:: text
 
@@ -24,7 +25,6 @@ The ``Sensor`` class (``vista/sensors/sensor.py``) is a Python ``dataclass`` tha
    │   ├── uniformity_gain_images / uniformity_gain_image_frames
    │   └── bad_pixel_masks / bad_pixel_mask_frames
    └── Methods to override
-       ├── get_positions(times)        → NDArray or None
        ├── can_geolocate()             → bool
        ├── pixel_to_geodetic(...)      → EarthLocation
        ├── geodetic_to_pixel(...)      → (rows, columns)
@@ -44,9 +44,6 @@ your sensor needs.
    * - Method
      - Purpose
      - Default Return
-   * - ``get_positions(times)``
-     - Return ECEF positions (3, N) in km for given times
-     - ``None``
    * - ``can_geolocate()``
      - Whether pixel ↔ geodetic conversion is supported
      - ``False``
@@ -103,8 +100,6 @@ to extend the base class. It is the best reference for building your own sensor.
 
 ``SampledSensor`` adds:
 
-- **Position interpolation** — stores discrete ECEF position samples and interpolates (or
-  extrapolates) to arbitrary query times.
 - **ARF-based geolocation** — uses polynomial coefficients to convert between pixel coordinates
   and geodetic coordinates via the Attitude Reference Frame.
 - **Radiometric gain** — per-frame multiplicative calibration factors.
@@ -113,7 +108,7 @@ to extend the base class. It is the best reference for building your own sensor.
 Key implementation patterns to follow:
 
 1. **Call** ``super().__post_init__()`` in ``__post_init__`` to initialize the base class (UUID
-   generation, instance counting, imagery registry).
+   generation, instance counting).
 2. **Call** ``super().to_hdf5(group)`` at the start of ``to_hdf5`` to write base radiometric data,
    then add your own datasets.
 3. **Override** ``can_geolocate()`` to return ``True`` when the sensor has the data needed for
@@ -171,31 +166,7 @@ Step 1: Define the Dataclass
            if self.rotation_matrix is None:
                self.rotation_matrix = np.eye(3)
 
-Step 2: Implement get_positions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Return the sensor's ECEF position for any set of query times. For a fixed sensor this is trivial.
-
-.. code-block:: python
-
-       def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
-           """Return the fixed position for all query times.
-
-           Parameters
-           ----------
-           times : NDArray[np.datetime64]
-               Array of query times (ignored for a stationary sensor).
-
-           Returns
-           -------
-           NDArray[np.float64]
-               Positions as (3, N) array in ECEF km.
-           """
-           if self.position_ecef_km is None:
-               return None
-           return np.tile(self.position_ecef_km.reshape(3, 1), (1, len(times)))
-
-Step 3: Implement Geolocation
+Step 2: Implement Geolocation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
@@ -302,7 +273,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
            return rows, columns
 
-Step 4: Implement PSF Modeling (Optional)
+Step 3: Implement PSF Modeling (Optional)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Override ``model_psf`` if your sensor has a known point spread function.
@@ -329,7 +300,7 @@ Override ``model_psf`` if your sensor has a known point spread function.
            kernel = np.exp(-((x - center) ** 2 + (y - center) ** 2) / (2 * sigma ** 2))
            return kernel / kernel.sum()
 
-Step 5: Implement HDF5 Serialization
+Step 4: Implement HDF5 Serialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Override ``to_hdf5`` so your sensor can be saved with imagery. Call ``super().to_hdf5(group)``
@@ -436,9 +407,7 @@ Design Guidelines
   registry, and increments the instance counter.
 - **Always call** ``super().to_hdf5(group)`` — it writes the base identification attributes and
   radiometric calibration data that VISTA's treatments rely on.
-- **Return** ``None`` from ``get_positions`` if positions are not available rather than raising
-  an exception. VISTA checks for ``None`` to determine capability.
-- **Return** ``NaN``/zero arrays from geolocation methods when conversion is not possible for the
+- **Return** ``NaN`` arrays from geolocation methods when conversion is not possible for the
   given frame, rather than raising exceptions. This allows VISTA to gracefully handle partial data.
 - **Use ECEF kilometers** for all position data to remain consistent with the rest of VISTA.
 - **Set** ``sensor_type`` to a unique string in ``to_hdf5`` so that the HDF5 loader can dispatch
