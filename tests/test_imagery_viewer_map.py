@@ -196,6 +196,7 @@ def _make_pixel_viewer(imageries: list[Imagery]) -> SimpleNamespace:
         timeline=DisplayTimeline(imageries),
     )
     viewer._get_imagery_stack = MethodType(ImageryViewer._get_imagery_stack, viewer)
+    viewer._get_uppermost_imagery = MethodType(ImageryViewer._get_uppermost_imagery, viewer)
     return viewer
 
 
