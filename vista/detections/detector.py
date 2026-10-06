@@ -33,8 +33,6 @@ class Detector(TemporalData):
         Column (horizontal) pixel coordinates for each detection
     sensor : Sensor
         Sensor object associated with these detections
-    times : NDArray[np.datetime64], optional
-        Observation timestamps corresponding to each detection.
     description : str, optional
         Description of detection algorithm or method, by default ""
 

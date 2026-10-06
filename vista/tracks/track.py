@@ -44,8 +44,6 @@ class Track(TemporalData):
         Column (horizontal) pixel coordinates for each frame
     sensor : Sensor
         Sensor object providing coordinate conversion capabilities
-    times : NDArray[np.datetime64], optional
-        Observation timestamps corresponding to each track point.
 
     Attributes
     ----------
