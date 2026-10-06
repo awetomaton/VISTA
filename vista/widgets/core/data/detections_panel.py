@@ -1720,11 +1720,18 @@ class DetectionsPanel(DataPanel):
         # Exit detection selection mode
         self._exit_detection_selection_mode()
 
-        QMessageBox.information(
-            self,
-            "Track Created",
-            f"Track '{track_name}' created with {len(frames)} points across {len(np.unique(frames))} frames.",
-        )
+        if track.times is not None:
+            QMessageBox.information(
+                self,
+                "Track Created",
+                f"Track '{track.name}' created with {len(track)} points across {len(np.unique(track.times))} times.",
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Track Created",
+                f"Track '{track.name}' created with {len(track)} points across {len(np.unique(track.frames))} frames.",
+            )
 
     def start_add_to_existing_track(self):
         """Start the process of adding detections to an existing track"""
@@ -1816,6 +1823,15 @@ class DetectionsPanel(DataPanel):
             all_have_times &= track.times is not None
             all_have_frames &= track.frames is not None
 
+            if not (all_have_times or all_have_frames):
+                QMessageBox.warning(
+                    self,
+                    "Cannot Add Detections To Track",
+                    "Selected detections and track must all have times or frames.",
+                )
+                self.cancel_add_to_existing_track()
+                return
+
             # Extract frames, rows, columns from selected detections
             times_list = list(track.times) if track.times is not None else []
             frames_list = list(track.frames) if track.frames is not None else []
@@ -1859,12 +1875,20 @@ class DetectionsPanel(DataPanel):
             # Exit detection selection mode
             self._exit_detection_selection_mode()
 
-            QMessageBox.information(
-                self,
-                "Detections Added",
-                f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
-                f"Track now has {len(frames)} points across {len(np.unique(frames))} frames.",
-            )
+            if track.times is not None:
+                QMessageBox.information(
+                    self,
+                    "Detections Added",
+                    f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
+                    f"Track now has {len(track)} points across {len(np.unique(track.times))} times.",
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Detections Added",
+                    f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
+                    f"Track now has {len(track)} points across {len(np.unique(track.frames))} frames.",
+                )
         else:
             self.cancel_add_to_existing_track()
 
@@ -2009,7 +2033,7 @@ class DetectionsPanel(DataPanel):
             self,
             "Merge Complete",
             f"Successfully merged {len(detectors_to_merge)} detectors into '{merged_name}'.\n"
-            f"The merged detector has {len(all_frames)} detection points.",
+            f"The merged detector has {len(merged_detector)} detection points.",
         )
 
     # -------------------------------------------------------------------------
