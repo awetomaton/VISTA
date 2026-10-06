@@ -1756,6 +1756,8 @@ class VistaMainWindow(QMainWindow):
             total_loaded = 0
             errors = []
 
+            sensor = self.viewer.selected_sensor
+
             # Load each CSV file
             for file_path in file_paths:
                 try:
@@ -1779,11 +1781,11 @@ class VistaMainWindow(QMainWindow):
 
                     # Check if we need imagery for conversion
                     if has_geodetic and not has_pixel:
-                        if not self.viewer.imagery:
-                            errors.append(f"{Path(file_path).name}: Geodetic coordinates require loaded imagery")
+                        if sensor is None:
+                            errors.append(f"{Path(file_path).name}: Geodetic coordinates require loaded sensor")
                             continue
-                        if not self.viewer.imagery.sensor.can_geolocate():
-                            errors.append(f"{Path(file_path).name}: Imagery sensor cannot perform geolocation")
+                        if not sensor.can_geolocate():
+                            errors.append(f"{Path(file_path).name}: Selected sensor cannot perform geolocation")
                             continue
 
                     # Process each placemark
@@ -1798,11 +1800,9 @@ class VistaMainWindow(QMainWindow):
 
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
-                                if self.viewer.imagery is not None and self.viewer.imagery.sensor.can_geolocate() and self.viewer.imagery.times is not None:
-                                    # get nearest index (the one for the image currently displayed)
-                                    image_index = self.viewer.imagery.get_index(self.viewer.timeline.current_value, self.viewer.timeline.is_time, nearest=True)
-                                    time = self.viewer.imagery.times[image_index]
-                                    location = self.viewer.imagery.sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
+                                if sensor is not None and sensor.can_geolocate() and self.viewer.timeline.is_time and self.viewer.timeline.current_value is not None:
+                                    time = self.viewer.timeline.current_value
+                                    location = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
                                     lat = location.lat.deg[0]
                                     lon = location.lon.deg[0]
                                     alt = location.height.to(units.km).value[0]
@@ -1815,19 +1815,17 @@ class VistaMainWindow(QMainWindow):
                                 lon = float(row_data["Longitude"])
                                 alt = float(row_data.get("Altitude", 0.0))
 
-                                if self.viewer.imagery.times is None:
+                                if not self.viewer.timeline.is_time or self.viewer.timeline.current_value is None:
                                     errors.append(
-                                        f"{Path(file_path).name} row {idx}: Current imagery has no times to map geodetics to pixels"
+                                        f"{Path(file_path).name} row {idx}: No time to map geodetics to pixels"
                                     )
                                     continue
 
                                 location = EarthLocation(
                                     lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km
                                 )
-                                # get nearest index (the one for the image currently displayed)
-                                image_index = self.viewer.imagery.get_index(self.viewer.timeline.current_value, self.viewer.timeline.is_time, nearest=True)
-                                time = self.viewer.imagery.times[image_index]
-                                row, col = self.viewer.imagery.sensor.geodetic_to_pixel(time, location)
+                                time = self.viewer.timeline.current_value
+                                row, col = sensor.geodetic_to_pixel(time, location)
 
                                 if np.isnan(row) or np.isnan(col):
                                     errors.append(
