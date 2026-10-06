@@ -213,6 +213,18 @@ class Detector(TemporalData):
                     self._frame_index[frame] = []
                 self._frame_index[frame].append(i)
 
+    def _get_time_index(self, time: np.datetime64) -> Optional[int]:
+        """Override parent method to avoid binary search"""
+        # Use dictionary lookup for unsorted frames
+        self._build_time_index()
+        return self._time_index.get(time)
+
+    def _get_frame_index(self, frame_num: int) -> Optional[int]:
+        """Override parent method to avoid binary search"""
+        # Use dictionary lookup for unsorted frames
+        self._build_frame_index()
+        return self._frame_index.get(frame_num)
+
     def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
         """Get geodetic coordinates for all detection points, computing and caching if needed.
 
