@@ -2125,17 +2125,15 @@ class ImageryViewer(QWidget):
             Row (y) pixel coordinates.
             NaN if current frame has no time.
         """
+        if not self.timeline.is_time:
+            invalid = np.full_like(all_lons, np.nan, dtype=np.float64)
+            return invalid, invalid.copy()
         earth_locs = EarthLocation.from_geodetic(
             lon=all_lons * units.deg,
             lat=all_lats * units.deg,
             height=0 * units.km,
         )
-        if self.imagery.times is None:
-            invalid = np.full_like(all_lons, np.nan, dtype=np.float64)
-            return invalid, invalid.copy()
-        index = self.imagery.get_index(self.timeline.current_value, self.timeline.is_time)
-        time = self.imagery.times[index]
-        rows, cols = self.selected_sensor.geodetic_to_pixel(time, earth_locs)
+        rows, cols = self.selected_sensor.geodetic_to_pixel(self.timeline.current_value, earth_locs)
         return cols, rows
 
     def _render_shapefile(self, feature):
