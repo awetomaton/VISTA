@@ -1607,7 +1607,8 @@ class DetectionsPanel(DataPanel):
             if detector.labelers and len(detector.labelers) > 0:
                 detector.labelers = [name for i, name in enumerate(detector.labelers) if keep_mask[i]]
 
-            # Invalidate frame index cache
+            # Invalidate time and frame index cache
+            detector._time_index = None
             detector._frame_index = None
 
             # Check if detector is now empty
