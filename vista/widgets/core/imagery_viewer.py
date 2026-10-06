@@ -803,7 +803,7 @@ class ImageryViewer(QWidget):
         # Update extraction overlay if in extraction view or edit mode
         # Prioritize editing mode over viewing mode (editing shows working copy)
         if self.extraction_editing_mode:
-            # Update overlay (will automatically sync track index to current frame)
+            # Update overlay (will automatically sync track index to current time or frame)
             self._update_extraction_overlay_from_editor()
         elif self.extraction_view_mode:
             self._update_extraction_overlay()
@@ -2441,6 +2441,11 @@ class ImageryViewer(QWidget):
 
         if track.extraction_metadata is None:
             return False
+        
+        # prevent starting extraction viewing for non-visible track
+        # TODO: stop viewing if visible is set to False later on?
+        if not track.visible:
+            return False
 
         self.extraction_view_mode = True
         self.viewing_extraction_track = track
@@ -2495,10 +2500,9 @@ class ImageryViewer(QWidget):
             return
 
         # Find track point index for current time or frame
-        track_idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
+        track_idx = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
         if track_idx is None:
-            if self.extraction_overlay is not None:
-                self.extraction_overlay.clear()
+            self.extraction_overlay.clear()
             return
 
         # Get signal mask for this track point
@@ -2530,10 +2534,17 @@ class ImageryViewer(QWidget):
 
         if track.extraction_metadata is None:
             return False
+        
+        # prevent starting extraction editing for non-visible track
+        # TODO: stop editing if visible is set to False later on?
+        if not track.visible:
+            return False
+
+        if track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True) is None:
+            return False  # attempt to start extraction editing before track start
 
         # get nearest index, as that is the one currently displayed
-        index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
-        if index is None:
+        if imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True) is None:
             return False  # no imagery available
 
         self.extraction_editing_mode = True
@@ -2632,22 +2643,21 @@ class ImageryViewer(QWidget):
         # This is a safeguard to prevent desynchronization
         if self.editing_extraction_track is not None:
             track = self.editing_extraction_track
-            if self.timeline.is_time:
-                frame_mask = track.times == self.timeline.current_value
-            else:
-                frame_mask = track.frames == self.timeline.current_value
-            if np.any(frame_mask):
-                correct_idx = int(np.where(frame_mask)[0][0])
-                if self.extraction_editor.current_track_idx != correct_idx:
-                    self.extraction_editor.current_track_idx = correct_idx
-                    # Update UI elements (like centroid preview) for the new frame
-                    if self.extraction_editor.show_centroid_check.isChecked():
-                        self.extraction_editor.update_centroid_preview()
+            index = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            if index is None:
+                self.extraction_overlay.clear()
+                return
+            if self.extraction_editor.current_track_idx != index:
+                self.extraction_editor.current_track_idx = index
+                # Update UI elements (like centroid preview) for the new frame
+                if self.extraction_editor.show_centroid_check.isChecked():
+                    self.extraction_editor.update_centroid_preview()
 
         signal_mask = self.extraction_editor.get_current_signal_mask()
         chip_position = self.extraction_editor.get_current_chip_position()
 
         if signal_mask is None or chip_position is None:
+            self.extraction_overlay.clear()
             return
 
         chip_size = signal_mask.shape[0]
@@ -3046,6 +3056,9 @@ class ImageryViewer(QWidget):
             elif self.extraction_editing_mode:
                 if self.extraction_editor is None or self.editing_extraction_track is None:
                     return
+
+                if self.editing_extraction_track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True) is None:
+                    return  # clicking on pixels for a timeline value before track start
 
                 # Get chip position
                 chip_position = self.extraction_editor.get_current_chip_position()
