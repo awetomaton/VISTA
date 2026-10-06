@@ -204,7 +204,9 @@ class SensorsPanel(DataPanel):
             self.cancel_sensor_loading_requested.emit(sensor)
 
             # Delete all imagery for this sensor
-            self.viewer.imageries = [img for img in self.viewer.imageries if img.sensor != sensor]
+            for img in list(self.viewer.imageries):
+                if img.sensor == sensor:
+                    self.viewer.remove_imagery(img)
 
             # Stop extraction viewing before deleting its backing track. The viewer keeps a direct reference
             # to the viewed track, so removing the track from viewer.tracks alone would leave the overlay
@@ -236,7 +238,7 @@ class SensorsPanel(DataPanel):
             self.viewer.detectors = [detector for detector in self.viewer.detectors if detector.sensor != sensor]
 
             # Delete sensor
-            self.viewer.sensors.remove(sensor)
+            self.viewer.remove_sensor(sensor)
 
             if len(self.viewer.sensors) > 0:
                 self.sensor_selected.emit(self.viewer.sensors[0])

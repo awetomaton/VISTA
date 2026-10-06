@@ -385,6 +385,11 @@ class ImageryViewer(QWidget):
             if self.selected_sensor is None:
                 self.select_sensor(sensor)
 
+    def remove_sensor(self, sensor: Sensor):
+        self.sensors.remove(sensor)
+        if not any(s.platform == sensor.platform for s in self.sensors):
+            self.platforms.remove(sensor.platform)
+
     def select_sensor(self, sensor: Optional[Sensor]):
         """Select a sensor"""
         self._reset_context_state()
