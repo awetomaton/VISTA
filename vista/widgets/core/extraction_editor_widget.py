@@ -171,17 +171,17 @@ class ExtractionEditorWidget(QDialog):
         if track.extraction_metadata is None:
             raise ValueError("Track has no extraction metadata")
 
+        # Find track point index for current time or frame
+        self.current_track_idx = track.get_index(timeline.current_value, timeline.is_time, nearest=True)
+        if self.current_track_idx is None:
+            raise ValueError("Attempt to edit track extraction at invalid timeline value")
+
         self.working_extraction = {
             "chip_size": track.extraction_metadata["chip_size"],
             "chips": track.extraction_metadata["chips"].copy(),
             "signal_masks": track.extraction_metadata["signal_masks"].copy(),
             "noise_stds": track.extraction_metadata["noise_stds"].copy(),
         }
-
-        # Find track point index for current time or frame
-        self.current_track_idx = track.get_index(timeline.current_value, timeline.is_time)
-        if self.current_track_idx is None:
-            raise ValueError("Attempt to edit track extraction at invalid timeline value")
 
         # Update UI
         self.update_ui()
