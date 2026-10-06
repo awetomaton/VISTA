@@ -2398,16 +2398,26 @@ class TracksPanel(DataPanel):
                 # Update to view the new track's extraction
                 if self.viewer.viewing_extraction_track != selected_track:
                     self.viewer.finish_extraction_viewing()
-                    self.viewer.start_extraction_viewing(selected_track)
+                    success = self.viewer.start_extraction_viewing(selected_track)
+                    if success:
+                        self.view_extraction_btn.setChecked(True)
             else:
                 # No extraction, turn off view mode
                 self.viewer.finish_extraction_viewing()
-                self.view_extraction_btn.setChecked(False)
 
         if self.edit_extraction_btn.isChecked():
-            if not has_extraction:
+            if has_extraction and selected_track:
+                # Update extraction track
+                if self.viewer.editing_extraction_track != selected_track:
+                    self.viewer.finish_extraction_editing()
+                    if len(self.viewer.selected_imageries) == 1:
+                        imagery = self.viewer.selected_imageries[0]
+                        # Start extraction editing mode
+                        success = self.viewer.start_extraction_editing(selected_track, imagery)
+                        if success:
+                            self.edit_extraction_btn.setChecked(True)
+            else:
                 self.viewer.finish_extraction_editing()
-                self.edit_extraction_btn.setChecked(False)
 
         # Collect selected track IDs for highlighting in the viewer
         selected_track_ids = set()
