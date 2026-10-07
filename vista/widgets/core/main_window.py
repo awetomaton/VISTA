@@ -26,6 +26,7 @@ from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.icons import VistaIcons
 from vista.imagery.imagery import HAS_TORCH, Imagery
 from vista.sensors.sensor import Sensor
+from vista.sensors.sampled_sensor import SampledSensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
 from vista.widgets.algorithms.background_removal.godec_dialog import GoDecDialog
@@ -1013,19 +1014,42 @@ class VistaMainWindow(QMainWindow):
         """Handle imagery becoming available for viewing (first block loaded, loading continues in background)"""
 
         sensor = imagery.sensor
+        platform = sensor.platform
+
+        # Handle platform - check if platform with same UUID already exists
+        existing_platform = None
+        for p in self.viewer.platforms:
+            if p == platform:
+                existing_platform = p
+                break
+
+        if existing_platform is not None:
+            sensor.platform = existing_platform
+            existing_platform.append(
+                platform.positions,
+                platform.times_positions,
+                platform.pointings,
+                platform.times_pointings,
+            )
 
         # Handle sensor - check if sensor with same UUID already exists
         existing_sensor = None
         for s in self.viewer.sensors:
-            # TODO: don't use UUID equality, use existing sensor via name,
-            # and append new information (geolocation, etc.) if need be
-            if s == sensor:  # Use UUID-based equality
+            if s == sensor:
                 existing_sensor = s
                 break
 
         if existing_sensor is not None:
             # Reuse existing sensor
             imagery.sensor = existing_sensor
+            if isinstance(existing_sensor, SampledSensor):
+                existing_sensor.append(
+                    sensor.poly_pixel_to_arf_azimuth,
+                    sensor.poly_pixel_to_arf_elevation,
+                    sensor.poly_arf_to_row,
+                    sensor.poly_arf_to_col,
+                    sensor.times
+                )
         else:
             # Add new sensor to viewer
             self.viewer.add_sensor(sensor)
