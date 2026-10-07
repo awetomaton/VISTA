@@ -173,7 +173,6 @@ class DataLoaderThread(QThread):
         # SampledSensor instantiation will make its own SensorPlatform as none is passed in
         # since no position or pointing information is available
         sensor = SampledSensor(
-            times=times if times is not None else np.array([np.datetime64("2000-01-01T00:00:00")]),
             radiometric_gain=radiometric_gain,
             # assumes radiometric gain array is same size as frames array in this file format
             radiometric_gain_frames=frames,
@@ -340,6 +339,7 @@ class DataLoaderThread(QThread):
                     unix_fine_times = pos_group["unix_fine_times"][:]
                     total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
                     times = total_nanoseconds.astype("datetime64[ns]")
+            t_positions = times
 
             # Load ARF geolocation polynomials
             pointing = None
@@ -357,14 +357,36 @@ class DataLoaderThread(QThread):
                     poly_arf_to_row = geo_group["poly_arf_to_row"][:]
                     poly_arf_to_col = geo_group["poly_arf_to_col"][:]
                     pointing = geo_group["pointing"][:]
+            t_pointings = times
 
-            # If any of no positions, pointings, or times, set all to None
-            if positions is None or times is None or pointing is None:
+            # If any of no times, positions, or pointings, set all to None
+            if times is None or positions is None or pointing is None:
                 positions = None
-                times = None
+                t_positions = None
                 pointing = None
+                t_pointings = None
 
-            platform = SensorPlatform(positions=positions, times_positions=times, pointings=pointing, times_pointings=times)
+            platform = SensorPlatform(
+                positions=positions,
+                times_positions=t_positions,
+                pointings=pointing,
+                times_pointings=t_pointings
+            )
+
+            # If any of no times or polynomials, set all to None
+            if (
+                times is None
+                or poly_pixel_to_arf_azimuth is None
+                or poly_pixel_to_arf_elevation is None
+                or poly_arf_to_row is None
+                or poly_arf_to_col is None
+            ):
+                times = None
+                poly_pixel_to_arf_azimuth = None
+                poly_pixel_to_arf_elevation = None
+                poly_arf_to_row = None
+                poly_arf_to_col = None
+
             sensor = SampledSensor(
                 name=sensor_name,
                 platform=platform,
