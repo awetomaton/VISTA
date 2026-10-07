@@ -36,9 +36,6 @@ class SampledSensor(Sensor):
 
     Attributes
     ----------
-    times : NDArray[np.datetime64]
-        Times corresponding to each ARF polynomial. Must have length N.
-        Required - will raise ValueError in __post_init__ if not provided.
     radiometric_gain : NDArray, optional
         1D array of multiplicative factors to convert from counts to irradiance
         in units of kW/km²/sr.
@@ -56,49 +53,177 @@ class SampledSensor(Sensor):
     poly_arf_to_col : NDArray[np.float64], optional
         Polynomial coefficients for converting (azimuth, elevation) to column.
         Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
+    times : NDArray[np.datetime64]
+        Times corresponding to each ARF polynomial. Must have length N.
 
     Notes
     -----
     - Duplicate times in the input are automatically removed during initialization
     - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside
     - For 1 sample: returns the same position for all query times (stationary sensor)
-    - Positions must be (3, N) arrays with x, y, z in each column
     - All coordinates are in ECEF Cartesian frame with units of kilometers
     - ARF (Attitude Reference Frame) is a local coordinate system where the X-axis
       points along the sensor pointing direction
     """
 
-    times: Optional[NDArray[np.datetime64]] = None
     radiometric_gain: Optional[NDArray] = None
     radiometric_gain_frames: Optional[NDArray] = None
     poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]] = None
     poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]] = None
     poly_arf_to_row: Optional[NDArray[np.float64]] = None
     poly_arf_to_col: Optional[NDArray[np.float64]] = None
+    times: Optional[NDArray[np.datetime64]] = None
 
     def __post_init__(self):
         """
         Validate inputs and remove duplicate times.
 
-        Ensures positions and times have compatible shapes and removes any
-        duplicate time entries along with their corresponding positions.
+        Ensures times and polynomials have compatible shapes and removes any
+        duplicate time entries along with their corresponding polynomial coefficients.
 
         Raises
         ------
         ValueError
-            If positions or times are not provided, or if they have incompatible shapes.
+            If polynomial coefficients have incompatible shapes with their times.
         """
         # Call parent's __post_init__ to increment instance counter
         super().__post_init__()
-        if self.times is None:
-            raise ValueError("times is required for SampledSensor")
 
-        # Remove duplicate times and corresponding positions
+        self._validate_arrays(
+            self.poly_pixel_to_arf_azimuth,
+            self.poly_pixel_to_arf_elevation,
+            self.poly_arf_to_row,
+            self.poly_arf_to_col,
+            self.times,
+        )
+        self._sort_unique()
+
+    def _validate_arrays(
+        self,
+        poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]],
+        poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]],
+        poly_arf_to_row: Optional[NDArray[np.float64]],
+        poly_arf_to_col: Optional[NDArray[np.float64]],
+        times: Optional[NDArray[np.datetime64]],
+    ):
+        """
+        Validate that the input arrays are compatible with existing data.
+
+        Ensures that the new times and polynomials have compatible shapes and match
+        the expected dimensions. Raises ValueError if any incompatibility is found.
+
+        Parameters
+        ----------
+        poly_pixel_to_arf_azimuth : NDArray[np.float64]
+            Polynomial samples to validate.
+        poly_pixel_to_arf_elevation : NDArray[np.float64]
+            Polynomial samples to validate.
+        poly_arf_to_row : NDArray[np.float64]
+            Polynomial samples to validate.
+        poly_arf_to_col : NDArray[np.float64]
+            Polynomial samples to validate.
+        times : NDArray[np.datetime64]
+            Time samples to validate.
+
+        Raises
+        ------
+        ValueError
+            If any of the input arrays have incompatible shapes or dimensions.
+        """
+        if times is None:
+            return
+
+        if (
+            poly_pixel_to_arf_azimuth is None
+            or poly_pixel_to_arf_elevation is None
+            or poly_arf_to_row is None
+            or poly_arf_to_col is None
+        ):
+            raise ValueError("times is not None, but at least one polynomial is")
+    
+        if times.ndim != 1:
+            raise ValueError(f"times must be a one dimensional array")
+
+        # Validate that polynomials have same number of samples as their times
+        if poly_pixel_to_arf_azimuth.shape[0] != times.shape[0]:
+            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+        if poly_pixel_to_arf_elevation.shape[0] != times.shape[0]:
+            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+        if poly_arf_to_row.shape[0] != times.shape[0]:
+            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+        if poly_arf_to_col.shape[0] != times.shape[0]:
+            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+
+        # Validate that polynomials have same order of existing polynomials
+        if self.times is not None:  # gate check to only occur if sensor has valid samples already
+            if poly_pixel_to_arf_azimuth.shape[1:] != self.poly_pixel_to_arf_azimuth.shape[1:]:
+                raise ValueError(f"Polynomial order must match existing polynomial order")
+            if poly_pixel_to_arf_elevation.shape[1:] != self.poly_pixel_to_arf_elevation.shape[1:]:
+                raise ValueError(f"Polynomial order must match existing polynomial order")
+            if poly_arf_to_row.shape[1:] != self.poly_arf_to_row.shape[1:]:
+                raise ValueError(f"Polynomial order must match existing polynomial order")
+            if poly_arf_to_col.shape[1:] != self.poly_arf_to_col.shape[1:]:
+                raise ValueError(f"Polynomial order must match existing polynomial order")
+
+    def _sort_unique(self):
+        if self.times is None:
+            return
+
+        # Sort times, removing duplicates
         unique_times, unique_indices = np.unique(self.times, return_index=True)
 
-        if len(unique_times) < len(self.times):
-            # Duplicates were found, keep only unique entries
-            self.times = unique_times
+        self.times = unique_times
+        self.poly_pixel_to_arf_azimuth = self.poly_pixel_to_arf_azimuth[unique_indices]
+        self.poly_pixel_to_arf_elevation = self.poly_pixel_to_arf_elevation[unique_indices]
+        self.poly_arf_to_row = self.poly_arf_to_row[unique_indices]
+        self.poly_arf_to_col = self.poly_arf_to_col[unique_indices]
+
+    def append(
+        self,
+        poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]],
+        poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]],
+        poly_arf_to_row: Optional[NDArray[np.float64]],
+        poly_arf_to_col: Optional[NDArray[np.float64]],
+        times: Optional[NDArray[np.datetime64]],            
+    ):
+        """
+        Append new times and polynomials to the sensor.
+        Must be compatible with existing data. After appending, duplicate times
+        are removed and arrays are sorted in order of increasing time.
+        
+        Parameters
+        ----------
+        poly_pixel_to_arf_azimuth : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        poly_pixel_to_arf_elevation : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        poly_arf_to_row : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        poly_arf_to_col : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        times : NDArray[np.datetime64]
+            New time sample(s) to append.
+        """
+        self._validate_arrays(
+            poly_pixel_to_arf_azimuth,
+            poly_pixel_to_arf_elevation,
+            poly_arf_to_row,
+            poly_arf_to_col,
+            times
+        )
+        if self.times is None:
+            self.times = times
+            self.poly_pixel_to_arf_azimuth = poly_pixel_to_arf_azimuth
+            self.poly_pixel_to_arf_elevation = poly_pixel_to_arf_elevation
+            self.poly_arf_to_row = poly_arf_to_row
+            self.poly_arf_to_col = poly_arf_to_col
+        elif times is not None:
+            self.times = np.concatenate((self.times, times.astype("datetime64[ns]")))
+            self.poly_pixel_to_arf_azimuth = np.concatenate((self.poly_pixel_to_arf_azimuth, poly_pixel_to_arf_azimuth))
+            self.poly_pixel_to_arf_elevation = np.concatenate((self.poly_pixel_to_arf_elevation, poly_pixel_to_arf_elevation))
+            self.poly_arf_to_row = np.concatenate((self.poly_arf_to_row, poly_arf_to_row))
+            self.poly_arf_to_col = np.concatenate((self.poly_arf_to_col, poly_arf_to_col))
+        self._sort_unique()
 
     def can_geolocate(self) -> bool:
         """
@@ -113,6 +238,7 @@ class SampledSensor(Sensor):
         return (
             self.platform.positions.shape[1] > 0
             and self.platform.pointings.shape[1] > 0
+            and self.times is not None
             and self.poly_pixel_to_arf_azimuth is not None
             and self.poly_pixel_to_arf_elevation is not None
             and self.poly_arf_to_row is not None
@@ -142,6 +268,10 @@ class SampledSensor(Sensor):
           range and linear extrapolation outside the range
         """
         times = np.asarray(times)
+
+        if self.times is None:
+            invalid_shape = times.shape + coeffs.shape[1:]
+            return np.full(invalid_shape, np.nan, dtype=np.float64)
 
         # Convert query times to numeric values (nanoseconds since epoch)
         query_times_ns = times.astype("datetime64[ns]").astype(np.int64)
