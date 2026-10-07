@@ -867,13 +867,27 @@ class TrackPlotWindow(QWidget):
             y_data_original = data[y_axis]
 
             # Filter data based on display mode
-            indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
             if show_complete:
                 # Show all data points
                 mask = np.ones(len(x_data), dtype=bool)
-            else:
+            elif self.up_to_frame_radio.isChecked():
+                indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
                 mask = np.zeros(len(x_data), dtype=bool)
-                mask[indices] = True
+                if indices is not None:
+                    mask[indices] = True
+            else:
+                # Show only last N values
+                tail_length = self.tail_length_spin.value()
+                # save old tail length
+                old_tail_length = track.tail_length
+                # temporarily set tail length to get proper indices
+                track.tail_length = tail_length
+                indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
+                mask = np.zeros(len(x_data), dtype=bool)
+                if indices is not None:
+                    mask[indices] = True
+                # restore old tail length
+                track.tail_length = old_tail_length
 
             if not np.any(mask):
                 continue
