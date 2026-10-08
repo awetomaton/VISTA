@@ -433,8 +433,8 @@ class ImageryViewer(QWidget):
                 size = nrows * ncols
                 self.imagery = img
 
-    def _sync_histogram_imagery_selector(self) -> None:
-        """Synchronize the selector with the selected imagery."""
+    def refresh_histogram_imagery_selector(self) -> None:
+        """Refresh the selector labels and synchronize it with the selected imagery."""
         # save current selection to try and use after rebuild
         selected_imagery_uuid = self.histogram_imagery_combo.currentData()
 
@@ -500,7 +500,7 @@ class ImageryViewer(QWidget):
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
-        self._sync_histogram_imagery_selector()
+        self.refresh_histogram_imagery_selector()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()
@@ -515,7 +515,7 @@ class ImageryViewer(QWidget):
         self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
-        self._sync_histogram_imagery_selector()
+        self.refresh_histogram_imagery_selector()
         # Refresh the current display
         self.set_index(self.timeline.current_index)
         self.histogram.vb.autoRange()

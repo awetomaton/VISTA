@@ -164,6 +164,7 @@ class VistaMainWindow(QMainWindow):
 
         # Connect image selection
         self.data_manager.imagery_panel.imagery_selected.connect(self.viewer.select_imagery)
+        self.data_manager.imagery_panel.data_changed.connect(self.viewer.refresh_histogram_imagery_selector)
 
         # Connect drag-and-drop file loading signals
         self.data_manager.sensors_panel.files_dropped.connect(self.load_imagery_file)
