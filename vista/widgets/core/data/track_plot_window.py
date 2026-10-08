@@ -727,10 +727,9 @@ class TrackPlotWindow(QWidget):
         }
 
         # Add times if available
-        times = track.get_times()
-        if times is not None and not np.all(np.isnat(times)):
+        if track.times is not None and not np.all(np.isnat(track.times)):
             # Convert datetime64 to float (seconds since epoch) for plotting
-            data["Time"] = times.astype("datetime64[ns]").astype(np.float64) / 1e9
+            data["Time"] = track.times.astype("datetime64[ns]").astype(np.float64) / 1e9
 
         # Add geolocation if sensor supports it
         if track.sensor.can_geolocate() and isinstance(track.sensor, SampledSensor) and track.times is not None:

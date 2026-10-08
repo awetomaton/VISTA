@@ -82,8 +82,6 @@ class Track:
     -------
     __getitem__(slice)
         Slice track by frame range
-    get_times()
-        Get timestamps for each track point
     from_dataframe(df, sensor, name)
         Create Track from pandas DataFrame with coordinate conversion
     length
@@ -428,18 +426,6 @@ class Track:
         det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
         return np.sqrt(np.sqrt(np.maximum(det, 0)))
 
-    def get_times(self) -> Optional[NDArray[np.datetime64]]:
-        """
-        Get timestamps for each track point.
-
-        Returns
-        -------
-        NDArray[np.datetime64] or None
-            Explicitly stored timestamps with the same length as the track, or
-            None if timestamps are not available.
-        """
-        return self.times
-
     @classmethod
     def from_dataframe(
         cls,
@@ -779,9 +765,8 @@ class Track:
             data["Altitude (km)"] = np.full(len(self.frames), np.nan)
 
         # Include times if possible
-        track_times = self.get_times()
-        if track_times is not None:
-            data["Times"] = track_times.astype(str)
+        if self.times is not None:
+            data["Times"] = self.times.astype(str)
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:

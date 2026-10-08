@@ -152,17 +152,6 @@ class Detector:
             return self.rows[indices], self.columns[indices]
         return np.array([]), np.array([])
 
-    def get_times(self) -> Optional[NDArray[np.datetime64]]:
-        """
-        Get observation timestamps for each detection.
-
-        Returns
-        -------
-        NDArray[np.datetime64] or None
-            Detection timestamps, or None if timestamps are not available.
-        """
-        return self.times
-
     def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
         """Get geodetic coordinates for all detection points, computing and caching if needed.
 
