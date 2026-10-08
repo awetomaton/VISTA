@@ -791,7 +791,7 @@ class VistaMainWindow(QMainWindow):
         """Handle Draw AOI toggle"""
         if checked:
             # Check if imagery is loaded
-            if self.viewer.imagery is None:
+            if not self.viewer.selected_imageries:
                 # No imagery, show warning and uncheck
                 QMessageBox.warning(
                     self, "No Imagery", "Please load imagery before drawing ROIs.", QMessageBox.StandardButton.Ok
@@ -2340,7 +2340,7 @@ class VistaMainWindow(QMainWindow):
     def open_temporal_median_widget(self):
         """Open the Temporal Median configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2366,14 +2366,11 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        # Get the currently selected imagery
-        current_imagery = self.viewer.imagery
-
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = TemporalMedianWidget(self, current_imagery, aois)
+        widget = TemporalMedianWidget(self, self.viewer.selected_imageries[0], aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
@@ -2420,7 +2417,7 @@ class VistaMainWindow(QMainWindow):
     def open_robust_pca_dialog(self):
         """Open the Robust PCA background removal dialog"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self, "No Imagery", "Please load imagery before running Robust PCA.", QMessageBox.StandardButton.Ok
             )
@@ -2443,20 +2440,17 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        # Get the currently selected imagery
-        current_imagery = self.viewer.imagery
-
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the dialog
-        dialog = RobustPCADialog(self, current_imagery, aois)
+        dialog = RobustPCADialog(self, self.viewer.selected_imageries[0], aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 
     def open_subspace_background_removal_dialog(self):
         """Open the sliding subspace background removal dialog"""
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2482,16 +2476,15 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        current_imagery = self.viewer.imagery
         aois = self.viewer.aois
 
-        dialog = SubspaceBackgroundRemovalDialog(self, current_imagery, aois)
+        dialog = SubspaceBackgroundRemovalDialog(self, self.viewer.selected_imageries[0], aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 
     def open_static_subspace_background_removal_dialog(self):
         """Open the static (non-sliding) subspace background removal dialog"""
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2517,16 +2510,15 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        current_imagery = self.viewer.imagery
         aois = self.viewer.aois
 
-        dialog = StaticSubspaceBackgroundRemovalDialog(self, current_imagery, aois)
+        dialog = StaticSubspaceBackgroundRemovalDialog(self, self.viewer.selected_imageries[0], aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 
     def open_static_median_background_removal_dialog(self):
         """Open the static (non-sliding) median background removal dialog"""
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2552,16 +2544,15 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        current_imagery = self.viewer.imagery
         aois = self.viewer.aois
 
-        dialog = StaticMedianBackgroundRemovalDialog(self, current_imagery, aois)
+        dialog = StaticMedianBackgroundRemovalDialog(self, self.viewer.selected_imageries[0], aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 
     def open_godec_dialog(self):
         """Open the GoDec background removal dialog"""
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2587,17 +2578,16 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        current_imagery = self.viewer.imagery
         aois = self.viewer.aois
 
-        dialog = GoDecDialog(self, current_imagery, aois)
+        dialog = GoDecDialog(self, self.viewer.selected_imageries[0], aois)
         dialog.imagery_processed.connect(self.on_multiple_imagery_created)
         dialog.exec()
 
     def open_bias_removal_widget(self):
         """Open the bias removal configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2622,30 +2612,27 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
-        if self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.bias_images is None:
+        if self.viewer.selected_sensor.bias_images is None:
             QMessageBox.warning(
                 self,
-                "No Imagery with bias images",
-                "Please load imagery with bias images before bias removal.",
+                "No Sensor With Bias Images",
+                "Please load sensor with bias images before bias removal.",
                 QMessageBox.StandardButton.Ok,
             )
             return
-
-        # Get the currently selected imagery
-        current_imagery = self.viewer.imagery
 
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = BiasRemovalWidget(self, current_imagery, aois)
+        widget = BiasRemovalWidget(self, self.viewer.selected_imageries[0], aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
     def open_non_uniformity_correction_widget(self):
         """Open the bias removal configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2670,30 +2657,27 @@ class VistaMainWindow(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
             return
-        if self.viewer.imagery.sensor is None or self.viewer.imagery.sensor.uniformity_gain_images is None:
+        if self.viewer.selected_sensor.uniformity_gain_images is None:
             QMessageBox.warning(
                 self,
-                "No Imagery with uniformity gain images",
-                "Please load imagery with uniformity gain images before non-uniformity correction.",
+                "No Sensor With Uniformity Gain Images",
+                "Please load sensor with uniformity gain images before non-uniformity correction.",
                 QMessageBox.StandardButton.Ok,
             )
             return
-
-        # Get the currently selected imagery
-        current_imagery = self.viewer.imagery
 
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = NonUniformityCorrectionWidget(self, current_imagery, aois)
+        widget = NonUniformityCorrectionWidget(self, self.viewer.selected_imageries[0], aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
     def open_coaddition_widget(self):
         """Open the Coaddition enhancement configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2719,21 +2703,18 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        # Get the currently selected imagery
-        current_imagery = self.viewer.imagery
-
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = CoadditionWidget(self, current_imagery, aois)
+        widget = CoadditionWidget(self, self.viewer.selected_imageries[0], aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
     def open_subset_frames_widget(self):
         """Open the Subset Frames configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2759,21 +2740,18 @@ class VistaMainWindow(QMainWindow):
             )
             return
 
-        # Get the currently selected imagery
-        current_imagery = self.viewer.imagery
-
         # Get the list of AOIs from the viewer
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = SubsetFramesWidget(self, current_imagery, aois)
+        widget = SubsetFramesWidget(self, self.viewer.selected_imageries[0], aois)
         widget.imagery_processed.connect(self.on_single_imagery_created)
         widget.exec()
 
     def open_simple_threshold_widget(self):
         """Open the Simple Threshold detector configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2803,7 +2781,7 @@ class VistaMainWindow(QMainWindow):
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = SimpleThresholdWidget(self, imagery=self.viewer.imagery, aois=aois)
+        widget = SimpleThresholdWidget(self, imagery=self.viewer.selected_imageries[0], aois=aois)
         widget.detector_processed.connect(self.on_simple_threshold_complete)
         widget.exec()
 
@@ -2824,7 +2802,7 @@ class VistaMainWindow(QMainWindow):
     def open_cfar_widget(self):
         """Open the CFAR detector configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2854,7 +2832,7 @@ class VistaMainWindow(QMainWindow):
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = CFARWidget(self, imagery=self.viewer.imagery, aois=aois)
+        widget = CFARWidget(self, imagery=self.viewer.selected_imageries[0], aois=aois)
         widget.detector_processed.connect(self.on_cfar_complete)
         widget.exec()
 
@@ -2875,7 +2853,7 @@ class VistaMainWindow(QMainWindow):
     def open_pstnn_widget(self):
         """Open the PSTNN detector configuration widget"""
         # Check if imagery is loaded
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2905,7 +2883,7 @@ class VistaMainWindow(QMainWindow):
         aois = self.viewer.aois
 
         # Create and show the widget
-        widget = PSTNNWidget(self, imagery=self.viewer.imagery, aois=aois)
+        widget = PSTNNWidget(self, imagery=self.viewer.selected_imageries[0], aois=aois)
         widget.detector_processed.connect(self.on_pstnn_complete)
         widget.exec()
 

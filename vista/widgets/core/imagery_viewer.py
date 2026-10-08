@@ -127,7 +127,6 @@ class ImageryViewer(QWidget):
         self.sensors: list[Sensor] = []  # List of Sensor objects
         self.selected_sensor: Optional[Sensor] = None  # Currently selected sensor for filtering display
         self.imageries: list[Imagery] = []  # List of Imagery objects
-        self.imagery: Optional[Imagery] = None  # Largest of the currently selected imageries
         self.selected_imageries: list[Imagery] = []  # List of selected imageries to display
         self.detectors: list[Detector] = []  # List of Detector objects
         self.tracks: list[Track] = []  # List of Track objects
@@ -430,18 +429,6 @@ class ImageryViewer(QWidget):
         self.image_items.pop(imagery.uuid)
         self.imageries.remove(imagery)
 
-    def _update_largest_selected_imagery(self):
-        """
-        Update ImageryViewer.imagery to the largest selected imagery
-        """
-        self.imagery = None
-        size = 0
-        for img in self.selected_imageries:
-            _, nrows, ncols = img.images.shape
-            if nrows * ncols > size:
-                size = nrows * ncols
-                self.imagery = img
-
     def refresh_histogram_imagery_selector(self) -> None:
         """Refresh the selector labels and synchronize it with the selected imagery."""
         # save current selection to try and use after rebuild
@@ -510,7 +497,6 @@ class ImageryViewer(QWidget):
                 self.user_histogram_bounds.pop(imagery.uuid, None)
         self.update_timeline(set_index=False)
         self._disable_map_view_if_unsupported()
-        self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
         self.refresh_histogram_imagery_selector()
@@ -525,7 +511,6 @@ class ImageryViewer(QWidget):
         self.selected_imageries.remove(imagery)
         self.ewma_states.pop(imagery.uuid, None)
         self.update_timeline(set_index=False)
-        self._update_largest_selected_imagery()
         self._sync_imagery_stack_order()
         self._sync_map_imagery_items()
         self.refresh_histogram_imagery_selector()
@@ -912,12 +897,12 @@ class ImageryViewer(QWidget):
 
         if not enabled:
             # Refresh display to show original image
-            if self.imagery is not None:
+            if self.selected_imageries:
                 self.set_index(self.timeline.current_index)
                 self.histogram.vb.autoRange()
         else:
             # Refresh to apply filter logic from the start
-            if self.imagery is not None:
+            if self.selected_imageries:
                 self.set_index(self.timeline.current_index)
 
     def update_text_positions(self):

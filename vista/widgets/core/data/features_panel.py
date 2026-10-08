@@ -198,7 +198,7 @@ class FeaturesPanel(DataPanel):
         """Open dialog to create a new placemark"""
 
         # Check if we have imagery
-        if not self.viewer.imagery:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(self, "No Imagery", "Please load imagery before creating placemarks.")
             return
 
