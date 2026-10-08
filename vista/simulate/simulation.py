@@ -408,12 +408,6 @@ class Simulation:
         # Create sensor with calibration data
         sensor_kwargs = {"name": f"{self.name} Sensor"}
 
-        # Default sensor position at origin (will be overwritten if geodetic enabled)
-        sensor_positions = np.array([[0.0], [0.0], [0.0]])
-        sensor_times = np.array(
-            [times[0] if times is not None else np.datetime64("2000-01-01T00:00:00")], dtype="datetime64[ns]"
-        )
-
         # Add bias images if enabled
         if self.enable_bias_images:
             bias_images, bias_image_frames = self._generate_bias_images()
@@ -432,21 +426,28 @@ class Simulation:
             sensor_kwargs["bad_pixel_masks"] = bad_pixel_masks
             sensor_kwargs["bad_pixel_mask_frames"] = bad_pixel_mask_frames
 
-        # Add ARF geolocation polynomials to sensor if enabled
-        pointing = np.array([[0.0], [0.0], [1.0]])
+        # Get sensor platform information and ARF geolocation polynomials if geolocation enabled
+        sensor_positions = None
+        t_positions = None
+        sensor_pointings = None
+        t_pointings = None
         poly_pixel_to_arf_azimuth = None
         poly_pixel_to_arf_elevation = None
         poly_arf_to_row = None
         poly_arf_to_col = None
+        t_polynomials = None
         if self.enable_geodetic:
             (
                 sensor_positions,
-                pointing,
+                sensor_pointings,
                 poly_pixel_to_arf_azimuth,
                 poly_pixel_to_arf_elevation,
                 poly_arf_to_row,
                 poly_arf_to_col,
             ) = self._generate_arf_polynomials()
+            t_pointings = times if times is not None else self._generate_times()
+            t_positions = t_pointings[:1]
+            t_polynomials = t_pointings
 
         # Add radiometric gain if enabled
         radiometric_gain = None
@@ -456,11 +457,11 @@ class Simulation:
             radiometric_gain_frames = frames_array
 
         # Create SensorPlatform
-        platform = SensorPlatform(positions=sensor_positions, times_positions=sensor_times, pointings=pointing, times_pointings=sensor_times)
+        platform = SensorPlatform(positions=sensor_positions, times_positions=t_positions, pointings=sensor_pointings, times_pointings=t_pointings)
         # Create SampledSensor
         sensor = SampledSensor(
             platform=platform,
-            times=sensor_times,
+            times=t_polynomials,
             poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
             poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
             poly_arf_to_row=poly_arf_to_row,
