@@ -366,6 +366,8 @@ class ImageryPanel(DataPanel):
 
         selected_imageries = self._get_selected_imagery()
         if len(selected_imageries) != 1:
+            self.gpu_btn.setEnabled(False)
+            self.gpu_btn.setText("Upload to GPU")
             return
 
         imagery = selected_imageries[0]
