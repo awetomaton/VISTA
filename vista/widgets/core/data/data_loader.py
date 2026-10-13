@@ -17,7 +17,9 @@ from vista.known_sources.stars import Stars
 from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 from vista.tracks.track import Track
+from vista.utils.time_mapping import map_frames_to_times
 
 
 class DataLoaderThread(QThread):
@@ -235,6 +237,9 @@ class DataLoaderThread(QThread):
 
                     if self._cancelled:
                         return
+            # remove _geo_data if present
+            if hasattr(sensor, '_geo_data'):
+                del sensor._geo_data
 
     def _load_imagery_v20(self, f: h5py.File):
         """Load imagery from 2.0 hierarchical HDF5 format"""
@@ -323,7 +328,7 @@ class DataLoaderThread(QThread):
         if sensor_type == "SampledSensor":
             # Load position data
             positions = None
-            times = None
+            t_positions = None
             if "position" in sensor_group:
                 pos_group = sensor_group["position"]
                 positions = pos_group["positions"][:]
@@ -332,69 +337,35 @@ class DataLoaderThread(QThread):
                 if "unix_nanoseconds" in pos_group:
                     # version 1.7+ format with combined nanoseconds
                     unix_nanoseconds = pos_group["unix_nanoseconds"][:]
-                    times = unix_nanoseconds.astype("datetime64[ns]")
+                    t_positions = unix_nanoseconds.astype("datetime64[ns]")
                 elif "unix_times" in pos_group and "unix_fine_times" in pos_group:
                     # version 1.6 format with split fields (backward compatibility)
                     unix_times = pos_group["unix_times"][:]
                     unix_fine_times = pos_group["unix_fine_times"][:]
                     total_nanoseconds = unix_times.astype(np.int64) * 1_000_000_000 + unix_fine_times.astype(np.int64)
-                    times = total_nanoseconds.astype("datetime64[ns]")
-            t_positions = times
-
-            # Load ARF geolocation polynomials
-            pointing = None
-            poly_pixel_to_arf_azimuth = None
-            poly_pixel_to_arf_elevation = None
-            poly_arf_to_row = None
-            poly_arf_to_col = None
-
-            if "geolocation" in sensor_group:
-                geo_group = sensor_group["geolocation"]
-                # Load ARF polynomials if present
-                if "poly_pixel_to_arf_azimuth" in geo_group:
-                    poly_pixel_to_arf_azimuth = geo_group["poly_pixel_to_arf_azimuth"][:]
-                    poly_pixel_to_arf_elevation = geo_group["poly_pixel_to_arf_elevation"][:]
-                    poly_arf_to_row = geo_group["poly_arf_to_row"][:]
-                    poly_arf_to_col = geo_group["poly_arf_to_col"][:]
-                    pointing = geo_group["pointing"][:]
-            t_pointings = times
-
-            # If any of no times, positions, or pointings, set all to None
-            if times is None or positions is None or pointing is None:
-                positions = None
-                t_positions = None
-                pointing = None
-                t_pointings = None
+                    t_positions = total_nanoseconds.astype("datetime64[ns]")
 
             platform = SensorPlatform(
                 positions=positions,
                 times_positions=t_positions,
-                pointings=pointing,
-                times_pointings=t_pointings
             )
 
-            # If any of no times or polynomials, set all to None
-            if (
-                times is None
-                or poly_pixel_to_arf_azimuth is None
-                or poly_pixel_to_arf_elevation is None
-                or poly_arf_to_row is None
-                or poly_arf_to_col is None
-            ):
-                times = None
-                poly_pixel_to_arf_azimuth = None
-                poly_pixel_to_arf_elevation = None
-                poly_arf_to_row = None
-                poly_arf_to_col = None
+            # Load ARF geolocation polynomials
+            geo_data = {}
+            if "geolocation" in sensor_group:
+                geo_group = sensor_group["geolocation"]
+                # Load ARF polynomials if present
+                if "poly_pixel_to_arf_azimuth" in geo_group:
+                    geo_data["poly_pixel_to_arf_azimuth"] = geo_group["poly_pixel_to_arf_azimuth"][:]
+                    geo_data["poly_pixel_to_arf_elevation"] = geo_group["poly_pixel_to_arf_elevation"][:]
+                    geo_data["poly_arf_to_row"] = geo_group["poly_arf_to_row"][:]
+                    geo_data["poly_arf_to_col"] = geo_group["poly_arf_to_col"][:]
+                    geo_data["pointings"] = geo_group["pointing"][:]
+                    geo_data["frames"] = geo_group["frames"][:]
 
             sensor = SampledSensor(
                 name=sensor_name,
                 platform=platform,
-                times=times,
-                poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
-                poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
-                poly_arf_to_row=poly_arf_to_row,
-                poly_arf_to_col=poly_arf_to_col,
                 radiometric_gain=radiometric_gain,
                 radiometric_gain_frames=radiometric_gain_frames,
                 bias_images=bias_images,
@@ -404,6 +375,8 @@ class DataLoaderThread(QThread):
                 bad_pixel_masks=bad_pixel_masks,
                 bad_pixel_mask_frames=bad_pixel_mask_frames,
             )
+            # Temporarily store geolocation data, as we need frame -> time conversion from imagery
+            sensor._geo_data = geo_data 
         else:
             # Base Sensor class
             sensor = Sensor(
@@ -558,6 +531,29 @@ class DataLoaderThread(QThread):
         # Restore UUID if present in file, otherwise keep auto-generated UUID
         if imagery_uuid is not None:
             imagery.uuid = uuid.UUID(imagery_uuid)
+
+        if times is not None and isinstance(sensor, SampledSensor) and sensor._geo_data:
+            geo_data = sensor._geo_data
+            # construct temporary temporal data object for indexing, as imagery clamps to loaded frames
+            temporal_data = TemporalData(times=times, frames=frames)
+            indices = [temporal_data.get_index(f, False) for f in geo_data["frames"]]
+            valid = [i is not None for i in indices]
+            indices = [i for i in indices if i is not None]
+            if indices:
+                geo_times = temporal_data.times[indices]
+                sensor.platform.append(
+                    positions=np.empty((3, 0), dtype=np.float64),
+                    t_positions=np.empty((0,), dtype='datetime64[ns]'),
+                    pointings=geo_data["pointings"][:, valid],
+                    t_pointings=geo_times,
+                )
+                sensor.append(
+                    poly_pixel_to_arf_azimuth=geo_data["poly_pixel_to_arf_azimuth"][valid],
+                    poly_pixel_to_arf_elevation=geo_data["poly_pixel_to_arf_elevation"][valid],
+                    poly_arf_to_row=geo_data["poly_arf_to_row"][valid],
+                    poly_arf_to_col=geo_data["poly_arf_to_col"][valid],
+                    times=geo_times,
+                )
 
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset)
