@@ -122,7 +122,6 @@ def simulate_scenario(
     frames_array = np.arange(frames, dtype=np.int64)
     sensor = SampledSensor(
         name=f"{name} Sensor",
-        times=np.array([np.datetime64('2026-01-01T00:00:00')], dtype='datetime64[ns]'),
     )
 
     imagery = Imagery(
