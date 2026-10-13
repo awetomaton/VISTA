@@ -1388,9 +1388,9 @@ class VistaMainWindow(QMainWindow):
                     has_frames = "Frames" in df_peek.columns
                     has_rows_cols = "Rows" in df_peek.columns and "Columns" in df_peek.columns
                     has_geodetic = (
-                        "Latitude" in df_peek.columns
-                        and "Longitude" in df_peek.columns
-                        and "Altitude" in df_peek.columns
+                        "Latitude (deg)" in df_peek.columns
+                        and "Longitude (deg)" in df_peek.columns
+                        and "Altitude (km)" in df_peek.columns
                     )
 
                     if not (has_times or has_frames):
