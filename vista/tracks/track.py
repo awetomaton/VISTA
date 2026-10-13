@@ -225,8 +225,11 @@ class Track(TemporalData):
 
         if self.tail_length > 0 and np.any(mask):
             if is_time:
-                index = np.where(mask)[0][-1]  # last true index
+                # need to sort since times can, technically, be unordered
+                sorter = np.argsort(self.times)
+                index = np.where(mask[sorter])[0][-1]  # last true index in sorted times
                 index = max(index - self.tail_length, 0)  # start of tail
+                index = sorter[index]  # convert back to index in initial array
 
                 time_diff = val - self.times
 
