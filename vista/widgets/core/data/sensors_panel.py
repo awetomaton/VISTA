@@ -225,6 +225,10 @@ class SensorsPanel(DataPanel):
                 if track_id in self.viewer.track_marker_items:
                     self.viewer.plot_item.removeItem(self.viewer.track_marker_items[track_id])
                     del self.viewer.track_marker_items[track_id]
+                if track_id in self.viewer.track_uncertainty_items:
+                    for ellipse in self.viewer.track_uncertainty_items[track_id]:
+                        self.viewer.plot_item.removeItem(ellipse)
+                    del self.viewer.track_uncertainty_items[track_id]
             # Remove tracks from viewer
             self.viewer.tracks = [track for track in self.viewer.tracks if track.sensor != sensor]
 
