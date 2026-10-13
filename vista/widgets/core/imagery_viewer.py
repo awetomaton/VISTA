@@ -3075,6 +3075,10 @@ class ImageryViewer(QWidget):
                     if not track.visible:
                         continue
 
+                    # Filter by sensor if one is selected
+                    if self.selected_sensor is not None and track.sensor != self.selected_sensor:
+                        continue
+
                     # Determine which points to check based on track settings
                     indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
                     if indices is None:
