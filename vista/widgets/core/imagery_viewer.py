@@ -1248,13 +1248,13 @@ class ImageryViewer(QWidget):
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
         self.detectors.append(detector)
-        self.update_overlays()
+        self.update_timeline()
 
     def add_track(self, track: Track):
         """Add a single track to display"""
         if track not in self.tracks:
             self.tracks.append(track)
-        self.update_overlays()
+        self.update_timeline()
 
     def add_tracks(self, tracks, tracker_name: str = None):
         """
@@ -1272,7 +1272,7 @@ class ImageryViewer(QWidget):
                 track.tracker = tracker_name
             if track not in self.tracks:
                 self.tracks.append(track)
-        self.update_overlays()
+        self.update_timeline()
 
     def get_tracks_by_tracker(self, tracker_name: str):
         """Get all tracks belonging to a specific tracker"""
