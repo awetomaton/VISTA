@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 
 import numpy as np
 from PyQt6.QtCore import QItemSelectionModel, Qt
@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMessageBox, QTreeWidget
 from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sensor import Sensor
 from vista.widgets.core.data.sensors_panel import SensorsPanel
+from vista.widgets.core.imagery_viewer import ImageryViewer
 
 
 def test_sensors_panel_groups_sensors_by_platform(qtbot) -> None:
@@ -125,12 +126,14 @@ def test_sensors_panel_deletes_selected_sensor_by_uuid(qtbot, monkeypatch) -> No
         extraction_view_mode=False,
         imageries=[],
         selected_sensor=sensor_a,
+        platforms=[platform_a, platform_b],
         sensors=[sensor_a, sensor_b, sensor_c],
         track_marker_items={},
         track_path_items={},
         tracks=[],
         viewing_extraction_track=None,
     )
+    viewer.remove_sensor = MethodType(ImageryViewer.remove_sensor, viewer)
     panel = SensorsPanel(viewer)
     qtbot.addWidget(panel)
     panel.refresh_sensors_table()
