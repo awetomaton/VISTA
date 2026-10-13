@@ -338,68 +338,54 @@ class SampledSensor(Sensor):
             return EarthLocation(x=invalid, y=invalid, z=invalid, unit=units.km)
 
         # we want to use numpy arrays, so convert if not an array
-        times = np.asarray(times)
+        times_array = np.atleast_1d(times)
 
         # we don't want to consider the multidimensional case where times is more than 1d
-        if times.ndim > 1:
+        if times_array.ndim > 1:
             raise ValueError("times should be a number or 1d array")
 
         # if passing in a number for the times, assume time axis is missing for rows and columns and add it
-        if times.ndim == 0:
+        if np.asarray(times).ndim == 0:
             rows = rows[..., None]
             columns = columns[..., None]
-        elif (times.shape[-1] != rows.shape[-1]) or (times.shape[-1] != columns.shape[-1]):
+        elif (times_array.shape[-1] != rows.shape[-1]) or (times_array.shape[-1] != columns.shape[-1]):
             raise ValueError("Length of times must be the same as the last axis of rows and columns")
 
-        # utimes = unique times. is an array even if times is a number
-        # also get indices to reconstruct either list
-        # such that times = utimes[times_from_utimes]
-        # and utimes = times[utimes_from_times] (only if times is an array)
-        # indices are number if times is a number, allowing us to extract values without squeezing later
-        utimes, utimes_from_times, times_from_utimes = np.unique(times, return_index=True, return_inverse=True)
+        # arrays are of shape times.shape + (num_coeffs,)
+        az_coeffs = self.get_coefficients(self.poly_pixel_to_arf_azimuth, times_array)
+        el_coeffs = self.get_coefficients(self.poly_pixel_to_arf_elevation, times_array)
 
-        # arrays are of shape utimes.shape + (num_coeffs,)
-        az_coeffs = self.get_coefficients(self.poly_pixel_to_arf_azimuth, utimes)
-        el_coeffs = self.get_coefficients(self.poly_pixel_to_arf_elevation, utimes)
-
-        # arrays are of shape rows.shape[:-1] + utimes.shape
-        azimuth = evaluate_2d_polynomial(
-            az_coeffs,
-            columns[..., utimes_from_times],
-            rows[..., utimes_from_times],
-        )
-        elevation = evaluate_2d_polynomial(
-            el_coeffs,
-            columns[..., utimes_from_times],
-            rows[..., utimes_from_times],
-        )
+        # arrays are of shape rows.shape
+        azimuth = evaluate_2d_polynomial(az_coeffs, columns, rows)
+        elevation = evaluate_2d_polynomial(el_coeffs, columns, rows)
 
         # Convert ARF spherical → ARF Cartesian unit vectors
-        # output array has shape (3,) + rows.shape[:-1] + utimes.shape
+        # output array has shape (3,) + rows.shape
         arf_vectors = spherical_to_cartesian(azimuth, elevation)
 
-        # get sensor position and pointing at the utimes
-        # transpose so that each array has shape utimes.shape + (3,)
-        sensor_pos = self.platform.get_positions(utimes).T
-        sensor_pointing = self.platform.get_pointings(utimes).T
+        # get sensor position and pointing at the times
+        # transpose so that each array has shape times.shape + (3,)
+        sensor_pos = self.platform.get_positions(times_array).T
+        sensor_pointing = self.platform.get_pointings(times_array).T
 
         # Get ARF transform and invert (transpose for orthonormal matrix) for each time
-        # array has shape utimes.shape + (3,3)
+        # array has shape times.shape + (3,3)
         # so it is only the last two axes which need swapped
         arf_to_ecef = np.moveaxis(get_arf_transform(sensor_pos, sensor_pointing), -1, -2)
 
         # Transform ARF → ECEF line-of-sight vectors
-        # resulting array is of shape rows.shape[:-1] + utimes.shape + (3,)
+        # resulting array is of shape rows.shape + (3,)
         ecef_vectors = np.einsum("tij, j...t -> ...ti", arf_to_ecef, arf_vectors)
 
         # Ray-cast to Earth (returns NaN for non-intersecting rays)
-        # intersections has shape rows.shape[:-1] + utimes.shape + (3,)
+        # intersections has shape rows.shape + (3,)
         _, intersections = los_to_earth(sensor_pos, ecef_vectors)
 
-        # create array matching original time input from array with unique time inputs
-        result = intersections[..., times_from_utimes, :]
+        if np.asarray(times).ndim == 0:
+            intersections = np.squeeze(intersections, axis=-2)
+
         # move xyz axis from -1 to 0 so shape is (3,) + rows.shape
-        result = np.moveaxis(result, -1, 0)
+        result = np.moveaxis(intersections, -1, 0)
 
         # unpack into xyz arguments
         return EarthLocation.from_geocentric(*result, unit=units.km)
@@ -447,72 +433,59 @@ class SampledSensor(Sensor):
             return invalid, invalid.copy()
 
         # we want to use numpy arrays, so convert if not an array
-        times = np.asarray(times)
+        times_array = np.atleast_1d(times)
 
         # we don't want to consider the multidimensional case where times is more than 1d
-        if times.ndim > 1:
+        if times_array.ndim > 1:
             raise ValueError("times should be a number or 1d array")
 
         # if passing in a number for the times, assume time axis is missing for rows and columns and add it
-        if times.ndim == 0:
+        if np.asarray(times).ndim == 0:
             loc = loc[..., None]
-        elif times.shape[-1] != loc.shape[-1]:
+        elif times_array.shape[-1] != loc.shape[-1]:
             raise ValueError("Length of times must be the same as the last axis of location")
 
-        # utimes = unique times. is an array even if times is a number
-        # also get indices to reconstruct either list
-        # such that times = utimes[times_from_utimes]
-        # and utimes = times[utimes_from_times] (only if times is an array)
-        # indices are number if times is a number, allowing us to extract values without squeezing later
-        utimes, utimes_from_times, times_from_utimes = np.unique(times, return_index=True, return_inverse=True)
+        # get sensor position and pointing at the times
+        # transpose so that each array has shape times.shape + (3,)
+        sensor_pos = self.platform.get_positions(times_array).T
+        sensor_pointing = self.platform.get_pointings(times_array).T
 
-        # get sensor position and pointing at the utimes
-        # transpose so that each array has shape utimes.shape + (3,)
-        sensor_pos = self.platform.get_positions(utimes).T
-        sensor_pointing = self.platform.get_pointings(utimes).T
-
-        # shape utimes.shape + (3, 3)
+        # shape times.shape + (3, 3)
         ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
 
-        # Convert geodetic → ECEF Cartesian (km) once for all points at the utimes
+        # Convert geodetic → ECEF Cartesian (km) once for all points
         x, y, z = loc.to(units.km).to_geocentric()
-        target_ecef = np.stack(
-            [
-                x.value[..., utimes_from_times],
-                y.value[..., utimes_from_times],
-                z.value[..., utimes_from_times],
-            ],
-            axis=-1,
-        )
-        # target_ecef now has shape loc.shape[:-1] + utimes.shape + (3,)
+        target_ecef = np.stack([x.value, y.value, z.value], axis=-1)
+        # target_ecef now has shape loc.shape + (3,)
 
         # Compute line-of-sight vectors from sensor to targets
-        # los_vectors has shape loc.shape[:-1] + utimes.shape + (3,)
+        # los_vectors has shape loc.shape + (3,)
         los_vectors = target_ecef - sensor_pos
 
         # Transform ECEF LOS → ARF Cartesian
-        # resulting array is of shape (3,) + loc.shape[:-1] + utimes.shape
+        # resulting array is of shape (3,) + loc.shape
         arf_vectors = np.einsum("tij, ...tj -> i...t", ecef_to_arf, los_vectors)
 
         # Convert ARF Cartesian → spherical (azimuth, elevation in radians)
-        # each resulting array is of shape loc.shape[:-1] + utimes.shape
+        # each resulting array is of shape loc.shape
         azimuth, elevation = cartesian_to_spherical(arf_vectors)
 
-        # Get polynomial coefficients for unique times
-        # arrays are of shape utimes.shape + (num_coeffs,)
-        row_coeffs = self.get_coefficients(self.poly_arf_to_row, utimes)
-        col_coeffs = self.get_coefficients(self.poly_arf_to_col, utimes)
+        # Get polynomial coefficients for times
+        # arrays are of shape times.shape + (num_coeffs,)
+        row_coeffs = self.get_coefficients(self.poly_arf_to_row, times_array)
+        col_coeffs = self.get_coefficients(self.poly_arf_to_col, times_array)
 
         # Evaluate polynomials: ARF angles → pixel coordinates
-        # output is of shape loc.shape[:-1] + utimes.shape
+        # output is of shape loc.shape
         rows = evaluate_2d_polynomial(row_coeffs, azimuth, elevation)
         columns = evaluate_2d_polynomial(col_coeffs, azimuth, elevation)
 
-        # convert to size of original times
-        final_rows = rows[..., times_from_utimes]
-        final_cols = columns[..., times_from_utimes]
+        # squeeze time (last) axis if time was just a number
+        if np.asarray(times).ndim == 0:
+            rows = np.squeeze(rows, axis=-1)
+            columns = np.squeeze(columns, axis=-1)
 
-        return final_rows, final_cols
+        return rows, columns
 
     def to_hdf5(self, group: h5py.Group):
         """
