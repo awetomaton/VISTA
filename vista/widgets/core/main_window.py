@@ -121,7 +121,6 @@ class VistaMainWindow(QMainWindow):
 
         # Create data manager panel as a dock widget
         self.data_manager = DataManagerPanel(self.viewer)
-        self.data_manager.data_changed.connect(self.on_data_changed)
         self.data_manager.setMinimumWidth(400)
 
         # Set data_manager reference on viewer for label filtering
