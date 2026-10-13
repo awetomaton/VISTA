@@ -170,7 +170,10 @@ class KnownSources:
             list of Track objects
         """
         if imagery.times is None:
-            raise ValueError("imagery.times is None, cannot create tracks without frame <-> time mapping")
+            raise ValueError("imagery.times is None, cannot create tracks without time values")
+
+        if len(self.source_names) == 0:
+            return []
 
         tracks = []
         rows, columns = self.get_pixels(imagery, imagery.times)
