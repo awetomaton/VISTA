@@ -372,7 +372,7 @@ class ImageryViewer(QWidget):
             self.timeline.current_index = 0
 
         self.timeline_updated.emit()
-        if set_index:
+        if set_index and self.timeline.current_index is not None:
             self.set_index(self.timeline.current_index)
 
     def add_sensor(self, sensor: Sensor):
