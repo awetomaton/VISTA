@@ -2976,7 +2976,7 @@ class ImageryViewer(QWidget):
 
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
-                        ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
+                        ex_lon, ex_lat = self._pixel_to_map(self.timeline.current_value, existing_row, existing_col)
                         distance = np.sqrt((col - ex_lon) ** 2 + (row - ex_lat) ** 2)
                     else:
                         distance = np.sqrt((col - existing_col) ** 2 + (row - existing_row) ** 2)
@@ -3016,7 +3016,7 @@ class ImageryViewer(QWidget):
                 for i, (existing_row, existing_col) in enumerate(detection_list):
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
-                        ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
+                        ex_lon, ex_lat = self._pixel_to_map(self.timeline.current_value, existing_row, existing_col)
                         distance = np.sqrt((col - ex_lon) ** 2 + (row - ex_lat) ** 2)
                     else:
                         distance = np.sqrt((col - existing_col) ** 2 + (row - existing_row) ** 2)
@@ -3246,8 +3246,10 @@ class ImageryViewer(QWidget):
         for val in sorted(self.current_track_data.keys()):
             row, col = self.current_track_data[val]
             if self.map_view_mode:
+                if not self.timeline.is_time:
+                    continue
                 # Project pixel coords to map (lon, lat) for display
-                lon, lat = self._pixel_to_map(row, col)
+                lon, lat = self._pixel_to_map(val, row, col)
                 if np.isnan(lon):
                     continue
                 x, y = lon, lat
@@ -3316,7 +3318,7 @@ class ImageryViewer(QWidget):
         if self.timeline.current_value in self.current_detection_data:
             for row, col in self.current_detection_data[self.timeline.current_value]:
                 if self.map_view_mode:
-                    lon, lat = self._pixel_to_map(row, col)
+                    lon, lat = self._pixel_to_map(self.timeline.current_value, row, col)
                     if np.isnan(lon):
                         continue
                     current_frame_x.append(lon)
@@ -3371,7 +3373,9 @@ class ImageryViewer(QWidget):
             col = detector.columns[index]
 
             if self.map_view_mode and detector.sensor.can_geolocate():
-                lon, lat = self._pixel_to_map(row, col)
+                if detector.times is None:
+                    continue
+                lon, lat = self._pixel_to_map(detector.times[index], row, col)
                 if np.isnan(lon):
                     continue
                 x, y = lon, lat
@@ -4110,11 +4114,13 @@ class ImageryViewer(QWidget):
             return float(row), float(col)
         return float("nan"), float("nan")
 
-    def _pixel_to_map(self, row: float, col: float) -> tuple[float, float]:
+    def _pixel_to_map(self, time: np.datetime64, row: float, col: float) -> tuple[float, float]:
         """Convert pixel (row, col) to map view coordinates (lon, lat).
 
         Parameters
         ----------
+        time : np.datetime64
+            Time at which to project coordinate.
         row : float
             Row pixel coordinate.
         col : float
@@ -4129,7 +4135,6 @@ class ImageryViewer(QWidget):
         if sensor is None or not sensor.can_geolocate() or not self.timeline.is_time:
             return float("nan"), float("nan")
 
-        time = self.timeline.current_value
         locations = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
