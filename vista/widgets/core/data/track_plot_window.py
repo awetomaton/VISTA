@@ -638,7 +638,7 @@ class TrackPlotWindow(QWidget):
     def _refresh_axis_options(self):
         """Refresh axis combo boxes based on available data"""
         # Build list of available axes for X (includes Frame/Time)
-        x_axis_options = ["Frame", "Row", "Column"]
+        x_axis_options = ["Time", "Frame", "Row", "Column"]
         # Y-axis excludes Frame and Time (they don't make sense as dependent variables)
         y_axis_options = ["Row", "Column"]
 
