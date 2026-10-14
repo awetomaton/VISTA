@@ -321,7 +321,7 @@ class Detector(TemporalData):
 
         times = None
         if "Times" in df.columns:
-            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
+            times = pd.to_datetime(df["Times"], format="mixed").to_numpy().astype("datetime64[ns]")
 
         if "Frames" in df.columns:
             frames = df["Frames"].to_numpy()

@@ -532,7 +532,7 @@ class Simulation:
         # Initialize all the detectors with spurious detections
         self.detectors = []
         for d in range(self.num_detectors):
-            frames = np.empty((0,))
+            frames = np.empty((0,), dtype=np.int_)
             rows = np.empty((0,))
             columns = np.empty((0,))
             for f in range(self.frames):
@@ -548,6 +548,7 @@ class Simulation:
                     rows=rows,
                     columns=columns,
                     sensor=sensor,
+                    times=times[frames] if times is not None else None,
                 )
             )
 
@@ -647,6 +648,7 @@ class Simulation:
                     rows=rows,
                     columns=columns,
                     sensor=sensor,
+                    times=times[frames] if times is not None else None,
                     tracker=tracker_name,
                     covariance_00=covariance_00,
                     covariance_01=covariance_01,
@@ -660,6 +662,8 @@ class Simulation:
                     detector.frames = np.concatenate((detector.frames, frames[detected_frames]))
                     detector.rows = np.concatenate((detector.rows, rows[detected_frames]))
                     detector.columns = np.concatenate((detector.columns, columns[detected_frames]))
+                    if detector.times is not None:
+                        detector.times = np.concatenate((detector.times, times[frames[detected_frames]]))
 
         # Create imagery with sensor reference (sensor was created at the beginning)
         self.imagery = Imagery(

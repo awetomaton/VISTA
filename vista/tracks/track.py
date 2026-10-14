@@ -527,7 +527,7 @@ class Track(TemporalData):
         times = None
         if "Times" in df.columns:
             # Parse times as datetime64
-            times = pd.to_datetime(df["Times"]).to_numpy().astype("datetime64[ns]")
+            times = pd.to_datetime(df["Times"], format="mixed").to_numpy().astype("datetime64[ns]")
 
         # Determine frames - priority: Frames column > time-to-frame mapping
         if "Frames" in df.columns:

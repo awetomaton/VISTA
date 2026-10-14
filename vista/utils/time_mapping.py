@@ -46,13 +46,15 @@ def map_times_to_frames(
     invalid_time = times_ns < np.min(imagery_times_ns)
     if np.any(invalid_time):
         # use first invalid time as example for error
-        raise ValueError(f"Track time {times[np.argmax(invalid_time)]} is before all imagery times. First imagery time: {np.min(imagery_times)}")
+        raise ValueError(
+            f"Track time {times[np.argmax(invalid_time)]} is before all imagery times. First imagery time: {np.min(imagery_times)}"
+        )
 
     sorter = np.argsort(imagery_times_ns)
     # side=right so that desired time gets an index *after* imagery time in case of exact match
     # Since all desired times are guaranted to be >= minimum time, indices will be at least 1,
     # and at most len(imagery_times). Subtracting 1 then gives the *preceeding* frame index as desired
-    indices = np.searchsorted(imagery_times_ns, times_ns, side='right', sorter=sorter) - 1
+    indices = np.searchsorted(imagery_times_ns, times_ns, side="right", sorter=sorter) - 1
     return imagery_frames[sorter][indices]
 
 
@@ -94,7 +96,7 @@ def map_frames_to_times(
 
     if imagery_frames.shape != imagery_times.shape:
         raise ValueError("source frames and times must have same shape")
-    
+
     if len(imagery_frames) == 0:
         return None
 
