@@ -1251,7 +1251,15 @@ class ImageryViewer(QWidget):
 
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
-        self.detectors.append(detector)
+        if detector not in self.detectors:
+            self.detectors.append(detector)
+        self.update_timeline()
+
+    def add_detectors(self, detectors: list[Detector]):
+        """Add multiple detectors' detections to display"""
+        for detector in detectors:
+            if detector not in self.detectors:
+                self.detectors.append(detector)
         self.update_timeline()
 
     def add_track(self, track: Track):

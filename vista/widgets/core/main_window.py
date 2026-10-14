@@ -1336,11 +1336,8 @@ class VistaMainWindow(QMainWindow):
 
     def on_detectors_loaded(self, detectors):
         """Handle detectors loaded in background thread"""
-        # Add each detector to the viewer
-        for detector in detectors:
-            self.viewer.add_detector(detector)
-
-        self.viewer.update_timeline()
+        # Add detectors to the viewer
+        self.viewer.add_detectors(detectors)
 
         # Refresh data manager
         self.data_manager.refresh()
@@ -1592,9 +1589,6 @@ class VistaMainWindow(QMainWindow):
         """Handle tracks loaded in background thread"""
         # Add tracks to the viewer
         self.viewer.add_tracks(tracks)
-
-        # Update playback controls with new frame range
-        self.viewer.update_timeline()
 
         # Refresh data manager
         self.data_manager.refresh()
