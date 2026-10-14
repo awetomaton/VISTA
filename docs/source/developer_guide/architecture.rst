@@ -23,9 +23,18 @@ VISTA is organized into the following packages:
    │   └── detector.py        # Detector dataclass (collection of detection points)
    ├── tracks/                # Track data model
    │   └── track.py           # Track dataclass (temporal object trajectory)
+   ├── known_sources/         # Known sources data model
+   │   ├── known_sources.py        # Base class for known sources
+   │   ├── satellites.py           # Class for loading in TLEs
+   │   ├── solar_system_bodies.py  # Class for loading in planets
+   │   └── stars.py                # Class for loading in stars
    ├── sensors/               # Sensor data model
    │   ├── sensor.py          # Sensor base class (radiometric calibration)
-   │   └── sampled_sensor.py  # SampledSensor (positions, geolocation polynomials)
+   │   └── sampled_sensor.py  # SampledSensor (time-sampled geolocation polynomials)
+   ├── sensor_platforms/      # Platform position and pointing data
+   │   └── sensor_platform.py # SensorPlatform interpolation and HDF5 serialization
+   ├── temporal_data/         # Shared time/frame behavior
+   │   └── temporal_data.py   # TemporalData base class and compatibility helpers
    ├── aoi/                   # Area of Interest
    │   └── aoi.py             # AOI dataclass
    ├── features/              # Feature overlays
@@ -52,19 +61,21 @@ VISTA is organized into the following packages:
    │   ├── core/              # Main application widgets
    │   │   ├── main_window.py       # VistaMainWindow (menu bar, toolbar, layout)
    │   │   ├── imagery_viewer.py    # ImageryViewer (image display with overlays)
-   │   │   ├── playback_controls.py # Frame navigation and playback
+   │   │   ├── display_timeline.py  # Time/frame alignment for displayed data
+   │   │   ├── playback_controls.py # Timeline navigation and playback
    │   │   ├── settings_dialog.py   # Application settings
    │   │   └── data/                # Data management panels
-   │   │       ├── data_manager.py      # Data Manager dock widget
-   │   │       ├── data_loader.py       # DataLoaderThread (background file loading)
-   │   │       ├── imagery_panel.py     # Imagery panel
-   │   │       ├── sensors_panel.py     # Sensors panel
-   │   │       ├── detections_panel.py  # Detections panel
-   │   │       ├── tracks_panel.py      # Tracks panel
-   │   │       ├── aois_panel.py        # AOIs panel
-   │   │       ├── features_panel.py    # Features panel
-   │   │       ├── labels_manager.py    # Label management
-   │   │       └── undo_manager.py      # Undo/redo support
+   │   │       ├── data_manager.py        # Data Manager dock widget
+   │   │       ├── data_loader.py         # DataLoaderThread (background file loading)
+   │   │       ├── imagery_panel.py       # Imagery panel
+   │   │       ├── sensors_panel.py       # Sensors panel
+   │   │       ├── detections_panel.py    # Detections panel
+   │   │       ├── tracks_panel.py        # Tracks panel
+   │   │       ├── aois_panel.py          # AOIs panel
+   │   │       ├── features_panel.py      # Features panel
+   │   │       ├── known_sources_panel.py # Known Sources panel
+   │   │       ├── labels_manager.py      # Label management
+   │   │       └── undo_manager.py        # Undo/redo support
    │   └── algorithms/        # Algorithm configuration dialogs
    │       ├── background_removal/  # Background removal dialogs
    │       ├── detectors/           # Detector configuration dialogs
@@ -78,7 +89,14 @@ VISTA is organized into the following packages:
 Core Data Model
 ---------------
 
-VISTA's data model is built on Python ``dataclasses``. The five primary data types are:
+VISTA's data model is built on Python ``dataclasses``. Imagery, detections, and tracks share temporal lookup
+behavior through :class:`~vista.temporal_data.temporal_data.TemporalData`.
+
+TemporalData
+~~~~~~~~~~~~
+
+``TemporalData`` requires timestamps, frame numbers, or both. When both arrays exist they must have equal length.
+It provides exact and nearest-preceding lookup used by the display timeline.
 
 Imagery
 ~~~~~~~
@@ -98,8 +116,7 @@ Detector
 ~~~~~~~~
 
 :class:`~vista.detections.detector.Detector` represents a collection of unassociated detection
-points across frames. Each detection has a frame number, row, and column coordinate, and can carry
-per-point labels.
+points. Each detection has a timestamp and/or frame number, row and column coordinates, and can carry per-point labels.
 
 - Detections are **not** temporally linked — use a tracking algorithm to associate them into tracks.
 - Use ``copy()`` and ``__getitem__`` to subset detections.
@@ -107,7 +124,7 @@ per-point labels.
 Track
 ~~~~~
 
-:class:`~vista.tracks.track.Track` represents a single object trajectory with per-frame row/column
+:class:`~vista.tracks.track.Track` represents a single object trajectory with temporal row/column
 positions. Tracks support pixel coordinates, geodetic coordinates, uncertainty ellipses, and
 visualization styling.
 
@@ -121,13 +138,15 @@ Sensor
 radiometric calibration data (bias images, gain images, bad pixel masks) and defines overridable
 methods for geolocation (``pixel_to_geodetic``, ``geodetic_to_pixel``) and PSF modeling (``model_psf``).
 
-:class:`~vista.sensors.sampled_sensor.SampledSensor` extends ``Sensor`` with ARF-based geolocation
-polynomials, and HDF5 serialization. This is the sensor type used by VISTA's native HDF5 format.
+:class:`~vista.sensors.sampled_sensor.SampledSensor` extends ``Sensor`` with time-sampled ARF geolocation
+polynomials, optional radiometric gain, and HDF5 serialization. This is the sensor type used by VISTA's native HDF5 format.
 
 SensorPlatform
 ~~~~~~~~~~~~~~
 :class:`~vista.sensor_platforms.sensor_platform.SensorPlatform` is the base class for sensor platform
-metadata. It defines methods for position (``get_positions``) and pointing (``get_pointings``) queries.
+metadata. It stores independent time samples for ECEF positions and pointing unit vectors and interpolates or
+extrapolates them for requested times. Multiple sensors can reference the same platform. It defines methods
+for position (``get_positions``) and pointing (``get_pointings``) queries.
 
 Design Principles
 -----------------
@@ -212,26 +231,34 @@ Imagery Viewer
 ~~~~~~~~~~~~~~
 
 ``ImageryViewer`` (``vista/widgets/core/imagery_viewer.py``) is a ``pyqtgraph``-based widget that
-displays the current frame with overlays for tracks, detections, AOIs, and features. It handles
+displays one or more selected imagery with overlays for tracks, detections, AOIs, and features. It handles
 contrast/brightness adjustment via a histogram widget and supports WMS map view backgrounds.
+
+Display Timeline
+~~~~~~~~~~~~~~~~
+
+``DisplayTimeline`` builds a sorted union of temporal values from selected imagery and visible tracks and detections.
+It prefers timestamps when every displayed item has them, otherwise uses frames when every item has frame numbers.
+Imagery lookup uses the nearest preceding sample so sparse and multi-rate layers remain displayed.
 
 Data Manager
 ~~~~~~~~~~~~
 
-The ``DataManager`` (``vista/widgets/core/data/data_manager.py``) is a dock widget containing
-tabbed ``QTableWidget``-based panels for each data type: Sensors, Imagery, Detections, Tracks, AOIs,
-and Features. Each panel rebuilds its entire table on refresh and supports drag-and-drop file
-loading.
+The ``DataManager`` (``vista/widgets/core/data/data_manager.py``) is a dock widget containing tabs for Sensors,
+Imagery, Tracks, Detections, AOIs, Features, and Known Sources. Sensor and imagery panels use trees for their
+platform/sensor and datastream/imagery hierarchies; other panels use tables as appropriate. Each panel rebuilds
+its entire tree or table on refresh and supports drag-and-drop file loading.
 
 Coordinate Transforms
 ---------------------
 
 VISTA uses an Attitude Reference Frame (ARF) system for pixel-to-geodetic coordinate conversion:
 
-1. **Pixel → ARF**: Polynomial coefficients map pixel (row, column) to ARF (x, y, z) coordinates.
-2. **ARF → Geodetic**: ARF coordinates define a line-of-sight vector from the sensor position.
+1. **Pixel → ARF**: Polynomial coefficients map pixel (row, column) to ARF azimuth and elevation.
+2. **ARF → Geodetic**: ARF angles define a line-of-sight vector using platform position and pointing.
    The intersection of this vector with an Earth ellipsoid model gives geodetic (lat, lon, alt).
-3. **Geodetic → Pixel**: The reverse path uses geodetic-to-ARF polynomials and then ARF-to-pixel.
+3. **Geodetic → Pixel**: The reverse path converts the target direction into ARF angles and applies ARF-to-pixel
+   polynomials.
 
 These transforms are implemented in ``vista/transforms/`` and used by ``SampledSensor`` for
 geolocation.
@@ -245,20 +272,23 @@ VISTA's native file format is HDF5 with a hierarchical structure:
 
    root/
    ├── [attrs] format_version, created
-   └── sensors/
-       └── <sensor_uuid>/
-           ├── [attrs] name, uuid, sensor_type
-           ├── position/          # SampledSensor: ECEF positions and times
-           ├── geolocation/       # Polynomial coefficients for coordinate conversion
-           ├── radiometric/       # Bias, gain, bad pixel mask arrays
-           └── imagery/
-               └── <imagery_uuid>/
-                   ├── [attrs] name, uuid, description, row_offset, column_offset
-                   ├── images              # (num_frames, height, width) float32
-                   ├── frames              # 1D int array
-                   └── unix_nanoseconds    # Optional timestamps
+   └── sensor_platforms/
+       └── <platform_uuid>/
+           ├── position/. # ECEF kilometers and timestamps
+           ├── pointing/  # ECEF unit vectors and timestamps
+           └── sensors/
+               └── <sensor_uuid>/
+                   ├── [attrs] name, uuid, sensor_type
+                   ├── geolocation/       # Time-sampled ARF polynomial coefficients
+                   ├── radiometric/       # Bias, gain, bad-pixel-mask arrays
+                   └── imagery/
+                       └── <imagery_uuid>/
+                           ├── [attrs] name, uuid, description, datastream, row_offset, column_offset
+                           ├── images              # (num_frames, height, width)
+                           ├── frames              # 1D int array
+                           └── unix_nanoseconds    # Optional timestamps
 
-The current format version is **1.7**. VISTA can read versions 1.5, 1.6, and 1.7.
+The current format version is **2.0**. VISTA can also read legacy versions 1.5, 1.6, and 1.7.
 
 See Also
 --------
@@ -267,4 +297,6 @@ See Also
 - :doc:`custom_loaders` — Creating loaders for custom imagery formats
 - :doc:`../api/imagery` — Imagery API reference
 - :doc:`../api/sensors` — Sensors API reference
+- :doc:`../api/sensor_platforms` — Sensor platforms API reference
+- :doc:`../api/temporal_data` — Shared temporal data API reference
 - :doc:`../api/algorithms` — Algorithms API reference

@@ -1,7 +1,7 @@
 Custom Imagery Loaders
 ======================
 
-VISTA natively loads imagery from its own HDF5 format (versions 1.5, 1.6, and 1.7). If your data
+VISTA natively loads imagery from its own HDF5 format (versions 1.5, 1.6, 1.7, and 2.0). If your data
 lives in a different format — FITS, TIFF stacks, NetCDF, a proprietary binary, etc. — you can
 integrate it into VISTA in two ways:
 
@@ -26,8 +26,10 @@ Before writing a loader you need to understand how VISTA represents data interna
 - **Imagery** (``vista.imagery.Imagery``) — a ``dataclass`` holding a 3D ``float32`` image array
   ``(num_frames, height, width)``, frame numbers, optional timestamps, and a reference to a
   ``Sensor``.
-- **Sensor** (``vista.sensors.Sensor`` or a subclass) — holds radiometric calibration data and
-  provides geolocation methods. Every ``Imagery`` must reference a ``Sensor``.
+- **Sensor** (``vista.sensors.Sensor`` or a subclass) — a ``dataclass` holding radiometric calibration data,
+  geolocation methods, and a reference to a ``SensorPlatform``. Every imagery references a sensor, and imagery can share one.
+- **SensorPlatform** (``vista.sensor_platforms.SensorPlatform``) — a ``dataclass`` holding time-sampled ECEF position
+  and pointing data. Every sensor references a platform, and sensors can share one.
 - **loaded_frame_count** — an ``Imagery`` attribute that enables incremental loading. When set to
   an integer, only ``images[0:loaded_frame_count]`` are treated as valid by the viewer.
 
@@ -39,9 +41,10 @@ Approach 1: Programmatic Loading
 The fastest way to load a custom format is to write a standalone script or function that:
 
 1. Reads your file format into NumPy arrays.
-2. Creates a ``Sensor`` (or subclass).
-3. Creates an ``Imagery`` object.
-4. Passes them to ``VistaApp``.
+2. Creates a ``SensorPlatform`` when position or pointing data is available.
+3. Creates a ``Sensor`` (or subclass).
+4. Creates an ``Imagery`` object.
+5. Passes it to ``VistaApp``.
 
 Minimal Example
 ~~~~~~~~~~~~~~~
@@ -107,8 +110,9 @@ Key Points
 - ``images`` **must be** ``float32`` with shape ``(num_frames, height, width)``.
 - ``frames`` is a 1D ``int`` array. Frame numbers do not need to start at zero or be contiguous.
 - ``times`` is optional. When provided, VISTA displays timestamps in the playback controls and
-  enables time-based track loading.
+  enables time-based navigation and track loading.
 - ``sensor`` is required. Use the base ``Sensor`` if you have no calibration or geolocation data.
+- A sensor creates an empty platform automatically when one is not supplied.
 - You can pass multiple imagery objects as a list: ``VistaApp(imagery=[img1, img2])``.
 - You can pass detections, tracks, and imagery — see ``VistaApp`` documentation
   in ``vista/app.py``.
@@ -129,8 +133,8 @@ Loading Multiple Sensors or Imagery
    app = VistaApp(imagery=[imagery_vis, imagery_ir])
    app.exec()
 
-Each sensor appears as a separate entry in the Sensors panel, and imagery is grouped under its
-associated sensor.
+Each platform appears as a parent in the Sensors panel, with its sensors shown as children. The Imagery panel groups
+the selected sensor's imagery by datastream.
 
 Approach 2: GUI Integration
 ----------------------------
@@ -466,6 +470,7 @@ See Also
 --------
 
 - :doc:`custom_sensors` — Implementing custom sensors with geolocation
-- :doc:`../user_guide/imagery` — HDF5 format specification and imagery user guide
+- :doc:`../user_guide/imagery` — HDF5 2.0 format specification and imagery user guide
+- :doc:`../api/sensor_platforms` — SensorPlatform API
 - :doc:`../api/imagery` — Imagery API reference
 - ``vista/widgets/core/data/data_loader.py`` — Reference implementation for HDF5 loading

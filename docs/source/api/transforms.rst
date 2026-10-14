@@ -13,7 +13,7 @@ VISTA supports various coordinate transformations needed for geospatial imagery 
 * Pixel to geodetic coordinates (lat/lon)
 * Geodetic to pixel coordinates
 * Sensor to ground plane transformations
-* Altitude/Range/Frame (ARF) transformations
+* Attitude Reference Frame (ARF) transformations
 * Polynomial-based transformations
 
 These transformations are essential for working with imagery from calibrated sensors and for integrating VISTA with geospatial tools.

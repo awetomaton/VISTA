@@ -14,7 +14,8 @@ Core Classes
 
    track.Track
 
-The :class:`~track.Track` class represents a temporal sequence of detections.
+A :class:`~track.Track` represents a temporal sequence of detections and contains one row/column position for each timestamp or frame. It also stores visualization,
+labeling, tracker, extraction, and optional covariance metadata.
 
 Tracking Algorithms
 -------------------
@@ -36,21 +37,30 @@ Creating and Using Tracks
 
 .. code-block:: python
 
-   from vista.tracks import Track
+   import numpy as np
 
-   # Create a track
-   track = Track(track_id=1)
+   from vista.sensors.sensor import Sensor
+   from vista.tracks.track import Track
 
-   # Add detections to track
-   track.add_detection(frame=0, x=100, y=150)
-   track.add_detection(frame=1, x=102, y=151)
+   sensor = Sensor(name="My Sensor")
+   track = Track(
+       name="Object 1",
+       frames=np.array([10, 11, 12]),
+       rows=np.array([100.0, 102.5, 105.0]),
+       columns=np.array([150.0, 151.0, 153.5]),
+       sensor=sensor,
+       tracker="Manual",
+   )
 
    # Access track properties
    print(f"Track length: {len(track)}")
-   print(f"Track duration: {track.duration} frames")
+   print(f"Track duration: {len(track.frames)} frames")
 
-Slicing and Subsetting
-~~~~~~~~~~~~~~~~~~~~~~~
+Slicing and Copying
+~~~~~~~~~~~~~~~~~~~
+
+Use the object's methods when deriving tracks so behavior and metadata are preserved:
+
 
 .. code-block:: python
 
@@ -65,17 +75,14 @@ Running Tracking
 
 .. code-block:: python
 
-   from vista.algorithms.trackers.simple_tracker import SimpleTracker
-
-   # Create tracker
-   tracker = SimpleTracker(max_distance=5.0)
+   from vista.algorithms.trackers.simple_tracker import run_simple_tracker
 
    # Track detections
-   tracks = tracker.track(detections)
+   tracks = run_simple_tracker(detections)
 
    # Process results
    for track in tracks:
-       print(f"Track {track.id}: {len(track)} detections")
+       print(f"Track {track.name}: {len(track)} detections")
 
 Track Analysis
 --------------
@@ -84,14 +91,14 @@ VISTA provides tools for track analysis and refinement:
 
 .. code-block:: python
 
-   from vista.algorithms.tracks.interpolation import interpolate_tracks
-   from vista.algorithms.tracks.savitzky_golay import smooth_tracks
+   from vista.algorithms.tracks.interpolation import TrackInterpolation
+   from vista.algorithms.tracks.savitzky_golay import SavitzkyGolayFilter
 
-   # Interpolate missing detections
-   interpolated_tracks = interpolate_tracks(tracks)
+   interpolated = TrackInterpolation(track, method="linear")()["interpolated_track"]
+   smoothed = SavitzkyGolayFilter(interpolated, radius=2, polyorder=2)()["smoothed_track"]
 
-   # Smooth track trajectories
-   smoothed_tracks = smooth_tracks(tracks, window_size=5, poly_order=2)
+Interpolation requires frame numbers because it fills missing integer frames. See :doc:`../user_guide/tracks` for
+tracking algorithms, GUI workflows, and CSV fields.
 
 Module Reference
 ----------------

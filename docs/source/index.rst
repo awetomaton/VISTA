@@ -3,9 +3,9 @@ VISTA Documentation
 
 **Viewing, Imagery, Spatial Tracking and Analysis**
 
-VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with 
-associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image 
-sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric 
+VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets with
+associated detection and track overlays. It is designed for scientific and analytical workflows involving temporal
+image sequences, time- and frame-based data, geodetic coordinate systems, sensor calibration data, and radiometric
 processing.
 
 .. image:: https://img.shields.io/badge/python-3.13+-blue.svg
@@ -19,20 +19,21 @@ processing.
 Key Features
 ------------
 
-* **Multi-frame imagery viewing** with playback controls and histogram adjustment
+* **Multi-layer imagery viewing** with shared time/frame navigation, playback controls, and histogram adjustment
 * **View frame imagery in image or geodetic space** with tile servers to show imagery in geospatial context
-* **Background removal**: Temporal median, Running sub-space tracker, Robust PCA, GoDec
-* **Signal Enhancement**: Decimating or running Coaddition
-* **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
+* **Background removal**: Temporal median, static median, sliding and static subspace methods, Robust PCA, and GoDec
+* **Signal enhancement**: Decimating or running coaddition
+* **Detection algorithms**: Simple threshold, CFAR, and PSTNN
 * **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
-* **Known Sources**: Load known sources such as stars and satellites and create tracks for them in the imagery
+* **Known sources**: Load known sources such as stars and satellites and project them into imagery
+* **Sensor platforms**: Share time-sampled position and pointing data across one or more sensors
 * **Sensor calibration**: Bias removal, non-uniformity correction
 * **Geodetic support**: Pixel-to-geodetic coordinate conversion
 * **Manual annotation**: Create/edit/label tracks and detections interactively
 * **Feature overlays**: AOIs, placemarks, and shapefile import
 
 .. note::
-   The algorithms and objects included in VISTA are basic and are provided for an initial capability and to illustrates 
+   The algorithms and objects included in VISTA are basic and are provided for an initial capability and to illustrate 
    how different types of algorithms and objects are implemented in VISTA. It is anticipated that for real-applications,
    the user will need to add their own Sensor class and algorithms.
 
@@ -66,6 +67,7 @@ Documentation Contents
 
    getting_started/installation
    getting_started/quickstart
+   user_guide/temporal_navigation
    user_guide/imagery
    user_guide/features
    user_guide/detections
@@ -78,11 +80,13 @@ Documentation Contents
    :caption: API Reference
 
    api/imagery
+   api/temporal_data
    api/detections
    api/tracks
    api/known_sources
    api/algorithms
    api/transforms
+   api/sensor_platforms
    api/sensors
    api/widgets
 

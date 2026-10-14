@@ -12,8 +12,8 @@ Overview
 
 Detections in VISTA are:
 
-**Frame-Specific**
-   Each detection belongs to a specific frame and has pixel coordinates (row, column)
+**Time- or Frame-Specific**
+   Each detection has pixel coordinates (row, column) and is associated with a timestamp, frame number, or both
 
 **Unassociated**
    Unlike tracks, detections are independent observations without temporal relationships
@@ -30,18 +30,18 @@ Detections in VISTA are:
 Loading Detections
 ------------------
 
-1. Click **File → Load Detections**
-2. Select an CSV file (``.csv``)
+1. Click **File → Load Detections (CSV)**
+2. Select a CSV file (``.csv``)
 
 .. note::
-   Alternatively users can drag and drop a detections file onto the **Detectors** panel in the **Data Manager**.
+   Alternatively users can drag and drop a detections file onto the **Detections** panel in the **Data Manager**.
 
 CSV Format
 ~~~~~~~~~~
 
 .. code-block:: text
 
-   Detector,Frame,Row,Column,Labels
+   Detector,Frames,Rows,Columns,Labels
    Threshold Detections,0,512.5,1024.3,"bright, moving"
    Threshold Detections,0,450.2,890.7,dim
    Threshold Detections,1,600.0,800.0,bright
@@ -51,21 +51,24 @@ CSV Columns
 ~~~~~~~~~~~
 
 :Detector: Name of the detector (string)
-:Frame: Frame number (integer)
-:Row: Row pixel coordinate (float)
-:Column: Column pixel coordinate (float)
+:Times: Timestamp parseable by pandas (required if ``Frames`` is absent)
+:Frames: Frame number (integer, required if ``Times`` is absent)
+:Rows: Row pixel coordinate (float)
+:Columns: Column pixel coordinate (float)
 :Color: Detector marker color. PyQtGraph color string (e.g., 'r', 'g', 'b', '#FF0000') (string, optional)
 :Marker: Marker style ('o', 's', 't', 'd', '+', 'x', 'star') (string, optional)
 :Line Thickness: Detector marker line thickness (integer, optional)
 :Visible: Determines if detector should be visible by default or not (bool, optional)
 :Complete: Show detections regardless of current frame (bool, optional)
 :Labels: Comma-separated labels (string, optional)
+:Label Time: Timestamp recording when each detection was last labeled (optional)
+:Labeler: Name of the person who last labeled each detection (optional)
 
 CSV Requirements
 ~~~~~~~~~~~~~~~~
 
-- Must have columns: Detector (or use name parameter), Frame, Row, Column
-- Labels column is optional
+- Must have columns: Detector (or use name parameter), Row, Column
+- At least one of ``Times`` or ``Frames`` is required
 - Multiple detectors can be in same CSV (grouped by Detector column)
 
 .. _manual-detection_creation:
@@ -164,9 +167,13 @@ making it robust to spatially-varying backgrounds and noise levels.
 
 **Algorithm Parameters:**
 
-:name: Detector identifier (string)
-:kernel: Detection kernel size determining analysis window (int, odd number)
-:n_pixels: Number of standard deviations above mean for detection (float)
+:background_radius: Outer radius of the neighborhood used for statistics (int)
+:ignore_radius: Inner radius excluded from the neighborhood (int)
+:threshold_deviation: Number of local standard deviations used for the threshold (float)
+:min_area: Minimum connected-component area (int)
+:max_area: Maximum connected-component area (int)
+:annulus_shape: ``"circular"`` or ``"square"``
+:detection_mode: ``"above"``, ``"below"``, or ``"both"``
 
 **Example Usage:**
 
@@ -176,9 +183,11 @@ making it robust to spatially-varying backgrounds and noise levels.
 
    # Create CFAR detector
    detector = CFAR(
-       name="CFAR Detector",
-       kernel=21,          # 21x21 pixel analysis window
-       n_pixels=3.0        # 3-sigma threshold
+       background_radius=10,
+       ignore_radius=3,
+       threshold_deviation=3.0,
+       min_area=1,
+       max_area=100,
    )
 
    # Process single frame
@@ -389,9 +398,8 @@ Sensor button. Users may copy only detections that are filtered by label by chec
    :align: center
 
 .. note::
-   For real world applications, copying detections between sensors may require mapping detections in one sensor to 
-   another through some transform operation. The functionality built into VISTA directly copies the detection frames, 
-   rows, columns. It is left to users to add any transforms needed for their real-world applications.
+   If the source detections have timestamps and geodetic coordinates and the target sensor can geolocate, VISTA
+   projects them into the target sensor at ground level (0 km altitude). Otherwise, the copy retains the source pixel rows and columns.
 
 Detection Selection Actions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -570,7 +578,7 @@ Common Programmatic Workflows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Workflow 1: Multi-Algorithm Detection
-'''''''''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Run multiple algorithms and compare results:
 
@@ -584,7 +592,7 @@ Run multiple algorithms and compare results:
    threshold_rows, threshold_cols = threshold_det(frame_data)
 
    # Run CFAR detector
-   cfar_det = CFAR(kernel=21, n_pixels=3.0)
+   cfar_det = CFAR(background_radius=10, ignore_radius=3, threshold_deviation=3.0)
    cfar_rows, cfar_cols = cfar_det(frame_data)
 
    # Compare detection counts
@@ -592,7 +600,7 @@ Run multiple algorithms and compare results:
    print(f"CFAR: {len(cfar_rows)} detections")
 
 Workflow 2: Detection Validation
-''''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Compare algorithm detections with ground truth:
 
@@ -621,7 +629,7 @@ Compare algorithm detections with ground truth:
    print(f"Detection rate: {detection_rate:.1%}")
 
 Workflow 3: Spatial Filtering
-'''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Focus detections in specific regions using AOIs:
 

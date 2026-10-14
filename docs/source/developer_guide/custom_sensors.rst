@@ -103,7 +103,7 @@ to extend the base class. It is the best reference for building your own sensor.
 - **ARF-based geolocation** — uses polynomial coefficients to convert between pixel coordinates
   and geodetic coordinates via the Attitude Reference Frame.
 - **Radiometric gain** — per-frame multiplicative calibration factors.
-- **Full HDF5 round-trip** — serializes position, geolocation, and radiometric data.
+- **Full HDF5 round-trip** — serializes geolocation and and radiometric data.
 
 Key implementation patterns to follow:
 
@@ -177,8 +177,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
    (for converting many pixels at one time) **or** a ``numpy`` array of per-point timestamps
    (for converting pixels that span multiple times in a single call). If your sensor's geolocation
    model is time-invariant (like the pinhole example below, which ignores ``times``), both cases
-   work automatically. For time-dependent sensors, see ``SampledSensor`` for how to handle the
-   array case by grouping points by unique times.
+   work automatically.
 
 .. code-block:: python
 
@@ -419,5 +418,6 @@ See Also
 --------
 
 - :doc:`../api/sensors` — Sensor API reference
+- :doc:`../api/sensor_platforms` - Sensor platform API reference
 - :doc:`../user_guide/imagery` — ARF coordinate system and geolocation polynomials
 - ``vista/sensors/sampled_sensor.py`` — Reference implementation with full HDF5 round-trip

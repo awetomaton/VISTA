@@ -118,23 +118,28 @@ Manage known sources:
 Playback Controls
 -----------------
 
-The playback controls allow navigation through multi-frame imagery:
+The playback controls allow navigation through multi-frame imagery. The display timeline may use timestamps or frame numbers. The slider and previous/next controls move through its sorted
+values; they do not assume that imagery frame numbers are contiguous.
 
 Controls
 ~~~~~~~~
 
 * **Play/Pause**: Start/stop playback
-* **Step Forward/Backward**: Move one frame
-* **Frame Slider**: Scrub through frames
+* **Reverse**: Change playback direction
+* **Step Forward/Backward**: Move one timeline sample
+* **Frame Slider**: Scrub through timeline samples
 * **Frame Rate Control**: Adjust playback speed
 * **Loop Toggle**: Enable/disable loop playback
+* **Bounce Mode**: Reverse direction at the selected start and end indices.
 
 Keyboard Shortcuts
 ~~~~~~~~~~~~~~~~~~
 
-* ``Space``: Play/Pause
-* ``Left/Right Arrow``: Previous/Next frame
-* ``Page Up/Down``: Skip forward/backward by 10 frames
+* ``Space``: Play or pause.
+* ``Left``/``A``: Previous timeline sample.
+* ``Right``/``D``: Next timeline sample.
+* ``Ctrl+Z``: Undo the focused track or detection panel action.
+* ``Delete``: Delete the current selection where supported.
 
 Menus
 -----
@@ -154,6 +159,9 @@ File Menu
 * **Clear Overlays**: Remove all loaded detections, tracks, AOIs, and features from the viewer
 * **Settings**: Open the application settings dialog
 * **Exit**: Close the application
+
+Saving imagery opens a platform/sensor/imagery tree. Select at least one imagery dataset and an output path. VISTA
+saves the selected imagery and its associated platform and sensor data in HDF5 format 2.0.
 
 View Menu
 ~~~~~~~~~
@@ -199,17 +207,40 @@ Image Processing Menu
   * **Non-Uniformity Correction**: Apply flat-field correction using sensor gain images
 
 Filters Menu
-~~~~~~~~~~~~~
+~~~~~~~~~~~~
 
 * **Track Filters**
 
   * **Track Interpolator**: Interpolate missing frames within tracks
   * **Savitzky-Golay Filter**: Smooth track positions using Savitzky-Golay filtering
 
+Toolbar
+-------
+
+The toolbar provides shortcuts for:
+
+* geolocation and pixel-value hover tooltips;
+* drawing AOIs;
+* creating tracks and detections;
+* selecting tracks and detections;
+* lasso selection;
+* histogram and EWMA controls;
+* Map View;
+* application information.
+
+Map View
+--------
+
+Map View requires a selected imagery layer, a selected geolocatable sensor, and a time-based display timeline. Imagery
+is projected over tiles from the selected server. When Map View is active, the Imagery panel displays a separate
+opacity control for each layer.
+
+Configure tile servers, caches, and projection sampling under **File → Settings → Map View**.
+
 Settings
 --------
 
-The Settings dialog is accessible via **File → Settings** and is organized into five tabs.
+The Settings dialog is accessible via **File → Settings** and is organized into eight tabs.
 
 Imagery
 ~~~~~~~
@@ -256,6 +287,11 @@ Data Manager
 * **Undo Depth** (default: 10): Maximum number of undo operations kept in history. Higher values use more memory.
   Changes take effect immediately. Range: 1–100.
 
+Toolbar
+~~~~~~~
+
+Configures the EWMA background-filter decay factor (default ``0.1``) and frame offset (default ``1``).
+
 GPU
 ~~~
 
@@ -266,6 +302,12 @@ Configures the GPU device used by PyTorch-accelerated algorithms (e.g., GoDec).
 .. note::
    This tab requires PyTorch to be installed (``pip install vista-imagery[gpu]``) and a CUDA-capable GPU to be
    detected. If either requirement is not met, the tab displays an informational message.
+
+User
+~~~~
+
+Sets the labeler name recorded when track or detection labels are changed. If left blank, VISTA uses the operating
+system user name.
 
 Map View
 ~~~~~~~~

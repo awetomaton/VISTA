@@ -34,11 +34,12 @@ VISTA provides two ways to create tracks:
 1. **Manual track creation**: Click points across frames to manually define trajectories
 2. **Automated tracking**: Use tracking algorithms to link detections into tracks
 
-The application stores tracks in a hierarchical structure where each Sensor can have multiple Trackers, and each Tracker contains multiple Tracks. This organization allows you to:
+Each track is associated with a sensor and may store a ``tracker`` name. The Tracks panel uses that name for grouping,
+sorting, and comparison. This organization allows you to:
 
 - Compare results from different tracking algorithms
 - Maintain tracks from different sensors separately
-- Export and import tracks in CSV or HDF5 format
+- Export and import tracks in CSV format
 - Apply visualization and analysis operations to entire trackers
 
 .. _manual-track-creation:
@@ -51,14 +52,13 @@ Creating Tracks Manually
 
 To create a track manually by clicking points across frames:
 
-1. Open the **Data Manager** panel (Ctrl+D or View menu)
-2. Select the **Tracks** tab
-3. Select a Sensor from the dropdown
-4. Click **Manual Track** button
-5. Navigate through frames and click to add track points:
+1. Open the Data Manager with **View → Data Manager**
+2. Select an imagery in the **Imagery** tab
+3. Enable **Create Track** on the toolbar
+4. Navigate through the display timeline and click to add track points:
    - Left-click to add a point at the clicked location
    - Re-click a point to remove it
-6. Uncheck the **Manual Track** tool to complete the track.
+5. Disable **Create Track** to complete the track
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_create.gif
    :alt: Create track
@@ -75,25 +75,19 @@ To create a track manually by clicking points across frames:
 Loading Tracks from CSV
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To load tracks from a CSV file:
-
-1. In the Tracks panel, select a Sensor
-2. Click **Load Tracks** button
-3. Browse to your CSV file
-4. Tracks are loaded and added to the selected Sensor
+To load tracks from a CSV file, choose **File → Load Tracks (CSV)** or drop the file on the Tracks tab. If a selected
+sensor is needed for coordinate conversion, VISTA prompts for the relevant imagery/sensor association. Otherwise,
+tracks load against the selected sensor, or an automatically created unknown sensor when none is selected.
 
 See :ref:`tracks-csv-format` for CSV format details.
-
-.. note::
-   Alternatively users can drag and drop a detections file onto the **Tracks** panel in the **Data Manager**.
 
 .. _tracking-algorithms:
 
 Tracking Algorithms
 -------------------
 
-VISTA provides four tracking algorithms for automatically linking detections into tracks. Access these through 
-**Algorithms > Tracking** in the main menu.
+VISTA provides four tracking algorithms for automatically linking detections into tracks. Access these through
+**Image Processing → Tracking** in the main menu. The built-in trackers require frame numbers.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_trackers.gif
    :alt: Run trackers
@@ -407,7 +401,7 @@ This is useful for:
 Order By Multiple Columns
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Press the 
+Click **Order By...** to choose multiple sort columns and set each one to ascending or descending order.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_orderby.gif
    :alt: Order by multiple columns
@@ -432,9 +426,9 @@ Copy to Sensor
 Copy selected tracks to a different sensor or the same sensor (useful for comparing across sensors).
 
 .. note::
-   For real world applications, copying tracks between sensors may require mapping tracks in one sensor to 
-   another through some transform operation. The functionality built into VISTA directly copies the tracks' frames, 
-   rows, columns. It is left to users to add any transforms needed for their real-world applications.
+   If the source track has timestamps and geodetic coordinates and the target sensor can geolocate, VISTA projects
+   those coordinates into the target sensor at ground level (0 km altitude). Otherwise, the copy retains the source
+   pixel rows and columns.
 
 Merge Selected
 ^^^^^^^^^^^^^^
@@ -614,7 +608,7 @@ To manually refine signal masks:
    - **Paint**: Left-click and drag to mark pixels as signal
    - **Erase**: Right-click and drag to remove signal pixels
    - **Adjust brush**: Use mouse wheel to change brush size
-   - **Navigate**: Arrow keys or Page Up/Down to change frames
+   - **Navigate**: Left/right arrow keys or A/D to change timeline samples
 
 4. Press **Save Changes** to update extraction metadata
 5. Press **Cancel** or press Escape to discard changes
@@ -710,8 +704,7 @@ The scale factor allows you to visualize different confidence levels:
 Track Analysis and Refinement
 -----------------------------
 
-VISTA provides several algorithms for analyzing and refining track trajectories, accessible through
-**Algorithms > Track Analysis** in the main menu.
+VISTA provides algorithms for refining track trajectories under **Filters → Track Filters**.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_tracks_interpolate.gif
    :alt: Interpolate tracks
@@ -721,6 +714,9 @@ Interpolation
 ~~~~~~~~~~~~~
 
 **Track Interpolation** fills gaps in track data by interpolating missing frames between existing track points.
+
+Interpolation requires tracks with frame numbers. If timestamps are also present, timestamps are interpolated for the
+new frame samples.
 
 **How it Works**
 
@@ -808,13 +804,16 @@ Tracks can be exported to and imported from CSV files with the following format:
 
 **Required Columns**
 
-One temporal coordinate (choose one):
-  - ``Frames``: Frame numbers (preferred)
-  - ``Times``: Timestamps in ISO format (requires sensor with imagery times)
+One temporal coordinate (choose one or include both):
+  - ``Times``: Timestamps parseable by pandas
+  - ``Frames``: Frame numbers
 
 One spatial coordinate system (choose one):
   - ``Rows`` and ``Columns``: Pixel coordinates (preferred)
-  - ``Latitude (deg)``, ``Longitude (deg)``, ``Altitude (km)``: Geodetic coordinates (requires sensor with geolocation)
+  - ``Latitude (deg)``, ``Longitude (deg)``, ``Altitude (km)``: Geodetic coordinates
+
+Geodetic-only input requires ``Times`` and a sensor capable of geolocation. Pixel coordinates take precedence when both
+coordinate systems are present.
 
 **Optional Columns**
 
@@ -877,11 +876,9 @@ Loading from CSV
 
 Via GUI:
 
-1. Open Data Manager > Tracks tab
-2. Select a Sensor
-3. Press **Load Tracks**
-4. Browse to CSV file
-5. Tracks are loaded and added to the sensor
+1. Select **File → Load Tracks (CSV)**, or drop the file on the Tracks tab.
+2. Choose the CSV file.
+3. If prompted, select the imagery/sensor used for temporal or geodetic mapping.
 
 Via Python:
 
@@ -895,8 +892,7 @@ Via Python:
 
    # Create tracks from DataFrame
    for track_name, track_df in df.groupby('Track'):
-       track = Track.from_dataframe(track_df, sensor, name=track_name)
-       # Add to sensor or tracker
+       track = Track.from_dataframe(track_df, sensor=sensor, imagery=imagery, name=track_name)
 
 Exporting to CSV
 ~~~~~~~~~~~~~~~~
@@ -915,9 +911,6 @@ Via Python:
    # Export single track
    track.to_csv('my_track.csv')
 
-   # Export tracker with multiple tracks
-   tracker.to_csv('all_tracks.csv')
-
 Common Workflows
 ----------------
 
@@ -928,9 +921,9 @@ Create tracks by clicking through frames:
 
 1. Load imagery for a sensor
 2. Open Data Manager > Tracks tab
-3. Press **Manual Track**
-4. Navigate through frames, clicking object positions
-5. Press Enter to finish
+3. Enable **Create Track** on the toolbar
+4. Navigate through the timeline, clicking object positions
+5. Disable **Create Track** to finish
 6. Repeat for additional objects
 7. Export tracks to CSV when complete
 
@@ -941,7 +934,7 @@ Use detection algorithms to create tracks automatically:
 
 1. Run detection algorithm (e.g., Simple Threshold or CFAR)
 2. Review detections in Data Manager > Detections tab
-3. Go to **Algorithms > Tracking** menu
+3. Go to **Image Processing → Tracking**
 4. Select tracking algorithm (e.g., Simple Tracker)
 5. Configure parameters and select input detectors
 6. Run algorithm
@@ -954,8 +947,8 @@ Workflow 3: Track Refinement
 Improve track quality through analysis operations:
 
 1. Load or create initial tracks
-2. Run **Algorithms > Track Analysis > Interpolation** to fill gaps
-3. Run **Algorithms > Track Analysis > Savitzky-Golay** to smooth positions
+2. Run **Filters → Track Filters → Track Interpolator** to fill frame gaps
+3. Run **Filters → Track Filters → Savitzky-Golay Filter** to smooth positions
 4. Select track and click **Extract** for signal analysis
 5. Press **Edit Extraction** to refine signal masks
 6. Export refined tracks for further analysis
@@ -973,7 +966,7 @@ Compare multiple tracking algorithms:
    - Network Flow for global optimization
    - Tracklet Tracker for high clutter
 
-3. Each produces a separate Tracker in the Tracks panel
+3. Each output track is tagged with its tracker name in the Tracks panel
 4. Use **Plot Track Details** to compare trajectories
 5. Use **Copy to Sensor** to compare across sensors
 6. Export best results to CSV

@@ -1,5 +1,5 @@
 Known Sources
-=====================
+=============
 
 This guide covers loading, managing, and creating tracks from known sources. Currently supported known sources include 
 satellites (loaded from TLEs), stars (loaded via astroquery, currently either from the Hipparcos or Gaia catalogs, or 
@@ -21,6 +21,7 @@ objects contained within a single file or data structure.
 
 .. note::
     The limiting magnitude used to filter catalogs when loading in stars can be changed in the Settings → Known Sources tab.
+
 3. **Solar System Bodies**: Known solar system bodies can be loaded via astropy. VISTA currently supports the major planets.
 
 The example files provided include simulated small and large FOV imagery, a TLE for satellites (at the appropriate epoch of the simulated imagery), and a csv file of stars from Hipparcos that are brighter than 5th magnitude. Once loaded, known sources will be visible in the Known Sources tab of the Data Manager. For star catalog queries, the name will default to "{CATALOG} stars", while for stars loaded via csv and satellites loaded via TLEs, the name will typically be the filename (minus the extension). Names can be changed if desired. 
@@ -29,7 +30,11 @@ The example files provided include simulated small and large FOV imagery, a TLE 
    :alt: Loading satellites and stars
    :align: center
 
-If imagery has been loaded in, tracks can be created for the currently selected imagery for any selected source(s) by clicking the "Create Tracks" button.
+If imagery has been loaded in, tracks can be created for the currently selected imagery for any selected source(s) by clicking the "Create Tracks" button. Track creation requires:
+
+* exactly one selected imagery dataset
+* imagery timestamps
+* a sensor that supports geolocation
 
 .. note::
     Remember, each 'known source' in the Known Sources tab is actually a collection of multiple sources. Clicking the "Create Tracks" button for a single known source will in general create multiple tracks.
@@ -79,3 +84,10 @@ An example of a CSV file that defines star locations for inclusion in imagery.
 
 `sample_satellites.tle <https://github.com/awetomaton/VISTA/releases/download/DATA/sample_satellites.tle>`_
 An example of a file that provides satellite Two-Line Element (TLE) data for inclusion in imagery.
+
+See Also
+--------
+
+* :doc:`tracks`
+* :doc:`imagery`
+* :doc:`../api/known_sources`

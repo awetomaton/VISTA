@@ -102,7 +102,7 @@ follows a circular path, along with noisy detections and a ground-truth track.
 Loading Imagery
 ---------------
 
-VISTA supports loading imagery from HDF5 files and can work with version 1.5, 1.6, and 1.7 formats. 
+VISTA supports loading imagery from HDF5 files and can work with version 1.5, 1.6, 1.7, and 2.0 formats. 
 See :doc:`../api/imagery` for programmatic details.
 
 From the GUI
@@ -110,9 +110,9 @@ From the GUI
 
 To load imagery in the VISTA GUI:
 
-1. Click **File → Load Imagery**
+1. Click **File → Load Imagery (HDF5)**
 2. Select an HDF5 file (``.h5`` or ``.hdf5``)
-3. VISTA will automatically detect the format and load all sensors and imagery
+3. VISTA will automatically detect the format and load all platforms, sensors, and imagery
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_loading.gif
    :alt: Loading imagery
@@ -122,8 +122,8 @@ To load imagery in the VISTA GUI:
    Alternatively users can drag and drop an imagery file onto the **Sensors** or **Imagery** panels in the 
    **Data Manager**.
 
-The VISTA GUI includes an imagery simulator **File → Simulate** to help users get familiar with VISTA and to provided
-exmaples of VISTA inputs.
+The VISTA GUI includes an imagery simulator **File → Simulate** to help users get familiar with VISTA and to provide
+examples of VISTA inputs.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/vista-1.10.0-simulate-imagery.gif
    :alt: Simulate
@@ -140,13 +140,9 @@ sensor calibration, and coordinate transformation data.
 Format Overview
 ~~~~~~~~~~~~~~~
 
-**Current Version:** 2.0 (updated hierarchy for sensor platforms, sensors, and imageries)
+**Current Version:** 2.0 (updated hierarchy for sensor platforms, sensors, and imageries; separate sensor platform position and pointing from sensor calibration and geolocation polynomials)
 
 **Legacy Support:** version 1.7 (simplified timestamps with nanosecond precision, deprecated), version 1.6 (hierarchical with split timestamps, deprecated), version 1.5 (flat structure, deprecated)
-
-The version 1.7 format uses a hierarchical sensor-based structure allowing multiple sensors
-and multiple imagery datasets per sensor in a single file, with simplified timestamp
-storage using a single nanosecond field.
 
 File Structure (version 2.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -160,7 +156,7 @@ The HDF5 file has the following hierarchical structure:
    │   ├── format_version: "2.0"
    │   └── created: "2026-01-01T12:00:00"
    └── sensor_platforms/
-       └── <sensor_platform_name>/
+       └── <sensor_platform_uuid>/
            ├── [attributes]
            │   ├── name: "Sensor Platform Name"
            │   └── uuid: "uuid-string"
@@ -171,7 +167,7 @@ The HDF5 file has the following hierarchical structure:
            │   ├── pointings          [3 × M array: x, y, z in ECEF kilometers]
            │   └── unix_nanoseconds   [M array: nanoseconds since epoch]
            └── sensors/
-               └── <sensor_name>/
+               └── <sensor_uuid>/
                    ├── [attributes]
                    │   ├── name: "Sensor Name"
                    │   ├── uuid: "uuid-string"
@@ -192,7 +188,7 @@ The HDF5 file has the following hierarchical structure:
                    │   ├── radiometric_gain               [M array]
                    │   └── radiometric_gain_frames        [M array]
                    └── imagery/
-                       └── <imagery_name>/
+                       └── <imagery_uuid>/
                            ├── [attributes]
                            │   ├── name: "Imagery Name"
                            │   ├── uuid: "uuid-string"
@@ -210,8 +206,21 @@ Detailed Dataset Descriptions
 Root Attributes
 ^^^^^^^^^^^^^^^
 
-:format_version: String indicating the format version (e.g., "1.6")
+:format_version: String indicating the format version (e.g., "2.0")
 :created: ISO 8601 timestamp of file creation
+
+Sensor Platform Data
+^^^^^^^^^^^^^^^^^^^^
+
+:name: Human-readable platform identifier
+:uuid: Unique platform identifier
+:position/positions: ``3 × N`` ECEF positions in kilometers
+:position/unix_nanoseconds: Times corresponding to position samples
+:pointing/pointings: ``3 × M`` ECEF pointing unit vectors
+:pointing/unix_nanoseconds: Times corresponding to pointing samples
+
+Position and pointing are sampled independently and therefore may use different timestamps and sample counts. VISTA
+interpolates within the available range and extrapolates outside it.
 
 Sensor Attributes
 ^^^^^^^^^^^^^^^^^
@@ -220,30 +229,18 @@ Sensor Attributes
 :uuid: Unique identifier for this sensor (UUID string)
 :sensor_type: Either ``"Sensor"`` (base class) or ``"SampledSensor"`` (with position data)
 
-Sensor Position Data (SampledSensor only)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-:positions: 3 × N array of ECEF (Earth-Centered, Earth-Fixed) positions in meters
-
-            - Row 0: X coordinate
-            - Row 1: Y coordinate
-            - Row 2: Z coordinate
-
-:unix_nanoseconds: N-element array of nanoseconds since Unix epoch (1970-01-01 00:00:00 UTC).
-                   int64 datatype provides nanosecond precision with valid range from
-                   1970-01-01 to 2262-04-11.
-
 Geolocation Data (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Required for pixel-to-geodetic coordinate conversion:
 
-:frames: Frame numbers for which polynomial coefficients apply
-:pointing: M × 2 array of sensor pointing [azimuth, elevation] in radians
+:unix_nanoseconds: Times corresponding to the polynomial samples
 :poly_pixel_to_arf_azimuth: Polynomial coefficients for pixel → ARF azimuth
 :poly_pixel_to_arf_elevation: Polynomial coefficients for pixel → ARF elevation
 :poly_arf_to_row: Polynomial coefficients for ARF → pixel row
 :poly_arf_to_col: Polynomial coefficients for ARF → pixel column
+
+Geolocation requires these four arrays plus position and pointing data on the associated platform.
 
 Radiometric Calibration (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -267,6 +264,7 @@ Imagery Attributes
 :name: Human-readable imagery identifier
 :uuid: Unique identifier for this imagery dataset
 :description: Optional long-form description
+:datastream: Name used to group related imagery in the Imagery panel
 :row_offset: Vertical offset if imagery is a spatial crop (default: 0)
 :column_offset: Horizontal offset if imagery is a spatial crop (default: 0)
 
@@ -304,24 +302,24 @@ Using the VISTA API
 
    import numpy as np
    from vista.imagery import Imagery, save_imagery_hdf5
-   from vista.sensors import SampledSensor
+   from vista.sensor_platforms import SensorPlatform
+   from vista.sensors import Sensor
 
-   # Create sensor with position data
-   positions = np.array([[1e6], [2e6], [3e6]])  # ECEF coordinates
-   times = np.array([np.datetime64('2024-01-01T00:00:00')], dtype='datetime64[ns]')
-   frames = np.array([0])
-
-   sensor = SampledSensor(
-       name="MySensor",
-       positions=positions,
-       times=times,
+   sample_time = np.array(["2026-01-01T00:00:00"], dtype="datetime64[ns]")
+   platform = SensorPlatform(
+       name="My Platform",
+       positions=np.array([[7000.0], [0.0], [0.0]]),
+       times_positions=sample_time,
+       pointings=np.array([[-1.0], [0.0], [0.0]]),
+       times_pointings=sample_time,
    )
+   sensor = Sensor(name="My Sensor", platform=platform)
 
    # Create imagery
    images = np.random.randn(100, 256, 256).astype(np.float32)
    img_frames = np.arange(100)
    img_times = np.array([
-       np.datetime64('2024-01-01T00:00:00') + np.timedelta64(i*100, 'ms')
+       np.datetime64("2026-01-01T00:00:00") + np.timedelta64(i * 100, "ms")
        for i in range(100)
    ], dtype='datetime64[ns]')
 
@@ -331,11 +329,15 @@ Using the VISTA API
        frames=img_frames,
        times=img_times,
        sensor=sensor,
-       description="Example imagery dataset"
+       description="Example imagery dataset",
+       datastream="Datastream 1",
    )
 
    # Save to HDF5
    save_imagery_hdf5("output.h5", [imagery])
+
+Use ``save_imagery_hdf5`` instead of manually constructing groups whenever possible. It preserves shared
+platform/sensor relationships, writes UUIDs consistently, and dispatches to the appropriate sensor serializer.
 
 Using h5py Directly
 ^^^^^^^^^^^^^^^^^^^
@@ -349,11 +351,17 @@ For advanced users, you can create HDF5 files directly:
 
    with h5py.File('custom_imagery.h5', 'w') as f:
        # Set root attributes
-       f.attrs['format_version'] = '1.6'
+       f.attrs['format_version'] = '2.0'
        f.attrs['created'] = '2024-01-01T12:00:00'
 
+       # Create platform structure
+       platforms_group = f.create_group('sensor_platforms')
+       platform_group = platforms_group.create_group('platform-uuid-here')
+       platform_group.attrs['name'] = 'MySensorPlatform'
+       platform_group.attrs['uuid'] = 'platform-uuid-here'
+
        # Create sensor structure
-       sensors_group = f.create_group('sensors')
+       sensors_group = platform_group.create_group('sensors')
        sensor_group = sensors_group.create_group('sensor-uuid-here')
        sensor_group.attrs['name'] = 'MySensor'
        sensor_group.attrs['uuid'] = 'sensor-uuid-here'
@@ -380,8 +388,15 @@ For advanced users, you can create HDF5 files directly:
 Format Versions
 ~~~~~~~~~~~~~~~
 
-Version 1.7 (Current)
+Version 2.0 (Current)
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Adds a ``sensor_platforms`` hierarchy.
+- Stores platform position and pointing separately from sensors.
+- Uses time-sampled geolocation polynomials.
+
+Version 1.7 (Legacy, Deprecated)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Uses single ``unix_nanoseconds`` field for timestamps (int64)
 - Simplified timestamp storage with nanosecond precision
@@ -398,9 +413,9 @@ Version 1.6 (Legacy, Deprecated)
 - Fully supported for loading (backward compatible)
 
 .. warning::
-   When opening version 1.6 files, VISTA displays a deprecation warning.
-   Convert legacy files to version 1.7 format by loading and re-saving through
-   the GUI: **File → Open** (load version 1.5) then **File → Save** (saves as version 1.7).
+   When opening version 1.5, 1.6, or 1.7 files, VISTA displays a deprecation warning.
+   Convert legacy files to version 2.0 format by loading and re-saving through the
+   GUI: **File → Open** (load version 1.5, 1.6, or 1.7) then **File → Save** (saves as version 2.0).
 
 Version 1.5 (Legacy, Deprecated)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -411,9 +426,9 @@ Version 1.5 (Legacy, Deprecated)
 - Will be removed in a future VISTA version
 
 .. warning::
-   When opening version 1.5 files, VISTA displays a deprecation warning.
-   Convert legacy files to version 1.7 format by loading and re-saving through
-   the GUI: **File → Open** (load version 1.5) then **File → Save** (saves as version 1.7).
+   When opening version 1.5, 1.6, or 1.7 files, VISTA displays a deprecation warning.
+   Convert legacy files to version 2.0 format by loading and re-saving through the
+   GUI: **File → Open** (load version 1.5, 1.6, or 1.7) then **File → Save** (saves as version 2.0).
 
 .. _arf-coordinate-system:
 
@@ -459,7 +474,7 @@ relative to the sensor's position and pointing direction:
    to the boresight.
 
 **Y-axis (Completes right-hand system)**
-   Computed as the cross product of X and Z axes: **Y = X × Z**. This creates a
+   Computed as the cross product of Z and X axes: **Y = Z × X**. This creates a
    right-handed coordinate system.
 
 .. note::
@@ -724,6 +739,19 @@ VISTA supports efficient imagery slicing:
 Imagery Controls
 ----------------
 
+Selecting Multiple Imagery Layers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Imagery tab groups imagery by datastream for the selected sensor. Use ``Ctrl``/``Cmd`` to select multiple imagery
+rows. All selected layers are displayed together and aligned using the active time- or frame-based timeline.
+
+Layers do not need identical shapes or sampling rates. Larger spatial extents are drawn below smaller extents. At a
+timeline value without an exact imagery sample, VISTA displays that layer's nearest preceding sample; before its first
+sample the layer is blank. See :doc:`temporal_navigation` for the complete timeline rules.
+
+When multiple layers are selected, use the selector above the histogram to choose which layer controls display levels.
+Map View also exposes a separate opacity value for each selected layer in the Imagery tab.
+
 Pan and Zoom
 ~~~~~~~~~~~~
 
@@ -739,7 +767,7 @@ Histogram
 
 * Left-click and drag the histogram boundary box to shift the histogram range displayed in the viewer. 
 * Left-click and drag the bounds of the histogram to adjust its size. 
-* Right-click on the gradient bar to adust the gradient color. 
+* Right-click on the gradient bar to adjust the gradient color.
 * Left-click on the gradient bar to add ticks
 * Left-click and drag on gradient bar ticks to adjust
 * Use scrollwheel to zoom in and out on the histogram
@@ -753,12 +781,12 @@ Histogram
 Playback
 ~~~~~~~~
 
-* Drag the slider to slide through frames.
+* Drag the slider to move through the display timeline.
 * Click the play/pause button (or press spacebar) to play or pause imagery animation.
 * Click the reverse button to reverse playback direction.
-* Click the Prevous Frame or Next Frame buttons or use (left arrow/right arrow or A/D) to step forward or backward by one frame.
-* Check the "Bounce" checkbox to enable setting frames to bounce between. 
-* Adjust the player's objective Frames-Per-Second (FPS) using the FPS input or dial.
+* Click Previous or Next, or use the left/right arrow or A/D keys, to move one timeline sample.
+* Enable **Bounce Mode** to select start and end indices and reverse playback at those limits.
+* Adjust the requested Frames-Per-Second (FPS) using the FPS input or dial. Negative FPS values play in reverse.
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_playback.gif
    :alt: Imagery playback
@@ -806,11 +834,11 @@ Radiometric Corrections
 
 **Bias Removal**
    Subtracts dark current using bias frames from sensor calibration data.
-   Access via **Algorithms → Treatments → Bias Removal**
+   Access via **Image Processing → Treatment → Bias Removal**
 
 **Non-Uniformity Correction (NUC)**
    Applies flat-field correction using uniformity gain images.
-   Access via **Algorithms → Treatments → Non-Uniformity Correction**
+   Access via **Image Processing → Treatment → Non-Uniformity Correction**
 
 **Bad Pixel Replacement**
    Interpolates over defective pixels identified in bad pixel masks.
@@ -821,23 +849,31 @@ Background Removal
 
 **Temporal Median**
    Removes static background by subtracting temporal median of surrounding frames.
-   Access via **Algorithms → Background Removal → Temporal Median**
+   Access via **Image Processing → Background Removal → Temporal Median**
+
+**Static Median**
+   Builds a single median background estimate and subtracts it from the selected imagery.
+   Access via **Image Processing → Background Removal → Static Median**
 
 **Robust PCA**
    Separates low-rank background from sparse foreground using robust PCA.
-   Access via **Algorithms → Background Removal → Robust PCA**
+   Access via **Image Processing → Background Removal → Robust PCA**
 
 **Sliding Subspace**
    Estimates background using a sliding-window low-rank SVD approach. For each frame, reference
    frames from a temporal window (with a gap to exclude target signal) are used to build a low-rank
    background subspace. Supports optional spatial tiling for large images.
-   Access via **Algorithms → Background Removal → Sliding Subspace**
+   Access via **Image Processing → Background Removal → Sliding Subspace**
+
+**Static Subspace**
+   Estimates one low-rank background subspace from selected reference data.
+   Access via **Image Processing → Background Removal → Static Subspace**
 
 **GoDec**
    Decomposes imagery into low-rank background + sparse foreground + noise using the GoDec (Go
    Decomposition) algorithm. Operates on the entire data matrix at once via randomized SVD and
    hard thresholding. Highly efficient on GPU due to large matrix multiplications. Requires PyTorch.
-   Access via **Algorithms → Background Removal → GoDec**
+   Access via **Image Processing → Background Removal → GoDec**
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_background_removal.gif
    :alt: Background removal
@@ -848,7 +884,7 @@ Enhancement
 
 **Frame Coaddition**
    Improves SNR by averaging multiple frames.
-   Access via **Algorithms → Enhancement → Coadd Frames**
+   Access via **Image Processing → Enhancement → Coaddition**
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_enhancement.gif
    :alt: Enhancement
@@ -857,15 +893,16 @@ Enhancement
 Saving and Exporting
 --------------------
 
-Save Entire Dataset
-~~~~~~~~~~~~~~~~~~~
+Save Imagery
+~~~~~~~~~~~~
 
-To save imagery with all metadata and calibration:
+To save imagery with its platform, sensor, metadata, and calibration:
 
 1. Select imagery in the **Imagery** tab
-2. Click **File → Save**
-3. Choose output filename
-4. File is saved in 1.7 HDF5 format with all associated data
+2. Click **File → Save Imagery (HDF5)**
+3. Use the platform/sensor/imagery tree to select the imagery datasets to save
+4. Choose output filename
+5. Click **Save**. File is saved in 2.0 HDF5 format with all associated data
 
 .. image:: https://github.com/awetomaton/VISTA/releases/download/MEDIA/user_guide_imagery_export.gif
    :alt: Imagery export
@@ -914,12 +951,13 @@ Coordinate Systems
 ~~~~~~~~~~~~~~~~~~
 
 - **Check sensor**: Verify sensor has geolocation polynomials before using coordinate conversion
-- **Frame alignment**: Ensure polynomial frame numbers align with imagery frame numbers
+- **Time alignment**: Ensure platform samples and sensor geolocation polynomials cover the imagery timestamps
 - **Time synchronization**: For multi-sensor data, verify time alignment across sensors
 
 See Also
 --------
 
 - :doc:`../api/imagery` - Imagery API reference
+- :doc:`temporal_navigation` - Time and frame alignment
 - :doc:`detections` - Working with detections
 - :doc:`tracks` - Object tracking workflows
