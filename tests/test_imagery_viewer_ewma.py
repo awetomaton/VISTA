@@ -1,7 +1,6 @@
 from types import MethodType, SimpleNamespace
 
 import numpy as np
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox
 
 from vista.imagery.imagery import Imagery

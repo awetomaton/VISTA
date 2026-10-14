@@ -7,7 +7,6 @@ import pytest
 from helpers import assert_constructor_fields_equal
 
 from vista.detections.detector import Detector
-from vista.imagery.imagery import Imagery
 from vista.sensors import Sensor
 
 

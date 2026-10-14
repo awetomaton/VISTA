@@ -1,17 +1,13 @@
-from types import SimpleNamespace
-
 import numpy as np
 
 from vista.algorithms.tracks.interpolation import TrackInterpolation
 from vista.algorithms.tracks.savitzky_golay import SavitzkyGolayFilter
-from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.sensors import Sensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
 from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.algorithms.detectors.base_detector_widget import BaseDetectorProcessingThread
-from vista.widgets.core.imagery_viewer import ImageryViewer
 
 
 class SinglePointDetector:
