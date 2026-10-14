@@ -14,7 +14,7 @@ import numpy as np
 from astropy import units
 from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
-from scipy.interpolate import interp1d, RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator
 
 from vista.sensors.sensor import Sensor
 from vista.transforms import (
@@ -32,7 +32,7 @@ class SampledSensor(Sensor):
     Sensor implementation providing ARF polynomials.
 
     SampledSensor stores ARF polynomials and radiometric gain at known times,
-    providing geodetic coordinate conversion capabilities and gain calibration. 
+    providing geodetic coordinate conversion capabilities and gain calibration.
 
     Attributes
     ----------
@@ -140,30 +140,30 @@ class SampledSensor(Sensor):
             or poly_arf_to_col is None
         ):
             raise ValueError("times is not None, but at least one polynomial is")
-    
+
         if times.ndim != 1:
-            raise ValueError(f"times must be a one dimensional array")
+            raise ValueError("times must be a one dimensional array")
 
         # Validate that polynomials have same number of samples as their times
         if poly_pixel_to_arf_azimuth.shape[0] != times.shape[0]:
-            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
         if poly_pixel_to_arf_elevation.shape[0] != times.shape[0]:
-            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
         if poly_arf_to_row.shape[0] != times.shape[0]:
-            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
         if poly_arf_to_col.shape[0] != times.shape[0]:
-            raise ValueError(f"Number of polynomial samples must match corresponding time samples")
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
 
         # Validate that polynomials have same order of existing polynomials
         if self.times is not None:  # gate check to only occur if sensor has valid samples already
             if poly_pixel_to_arf_azimuth.shape[1:] != self.poly_pixel_to_arf_azimuth.shape[1:]:
-                raise ValueError(f"Polynomial order must match existing polynomial order")
+                raise ValueError("Polynomial order must match existing polynomial order")
             if poly_pixel_to_arf_elevation.shape[1:] != self.poly_pixel_to_arf_elevation.shape[1:]:
-                raise ValueError(f"Polynomial order must match existing polynomial order")
+                raise ValueError("Polynomial order must match existing polynomial order")
             if poly_arf_to_row.shape[1:] != self.poly_arf_to_row.shape[1:]:
-                raise ValueError(f"Polynomial order must match existing polynomial order")
+                raise ValueError("Polynomial order must match existing polynomial order")
             if poly_arf_to_col.shape[1:] != self.poly_arf_to_col.shape[1:]:
-                raise ValueError(f"Polynomial order must match existing polynomial order")
+                raise ValueError("Polynomial order must match existing polynomial order")
 
     def _sort_unique(self):
         if self.times is None:
@@ -184,13 +184,13 @@ class SampledSensor(Sensor):
         poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]],
         poly_arf_to_row: Optional[NDArray[np.float64]],
         poly_arf_to_col: Optional[NDArray[np.float64]],
-        times: Optional[NDArray[np.datetime64]],            
+        times: Optional[NDArray[np.datetime64]],
     ):
         """
         Append new times and polynomials to the sensor.
         Must be compatible with existing data. After appending, duplicate times
         are removed and arrays are sorted in order of increasing time.
-        
+
         Parameters
         ----------
         poly_pixel_to_arf_azimuth : NDArray[np.float64]
@@ -205,11 +205,7 @@ class SampledSensor(Sensor):
             New time sample(s) to append.
         """
         self._validate_arrays(
-            poly_pixel_to_arf_azimuth,
-            poly_pixel_to_arf_elevation,
-            poly_arf_to_row,
-            poly_arf_to_col,
-            times
+            poly_pixel_to_arf_azimuth, poly_pixel_to_arf_elevation, poly_arf_to_row, poly_arf_to_col, times
         )
         if self.times is None:
             self.times = times
@@ -220,7 +216,9 @@ class SampledSensor(Sensor):
         elif times is not None:
             self.times = np.concatenate((self.times, times.astype("datetime64[ns]")))
             self.poly_pixel_to_arf_azimuth = np.concatenate((self.poly_pixel_to_arf_azimuth, poly_pixel_to_arf_azimuth))
-            self.poly_pixel_to_arf_elevation = np.concatenate((self.poly_pixel_to_arf_elevation, poly_pixel_to_arf_elevation))
+            self.poly_pixel_to_arf_elevation = np.concatenate(
+                (self.poly_pixel_to_arf_elevation, poly_pixel_to_arf_elevation)
+            )
             self.poly_arf_to_row = np.concatenate((self.poly_arf_to_row, poly_arf_to_row))
             self.poly_arf_to_col = np.concatenate((self.poly_arf_to_col, poly_arf_to_col))
         self._sort_unique()
@@ -296,7 +294,9 @@ class SampledSensor(Sensor):
 
         return interpolated_coeffs
 
-    def pixel_to_geodetic(self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray) -> EarthLocation:
+    def pixel_to_geodetic(
+        self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray
+    ) -> EarthLocation:
         """
         Convert pixel coordinates to geodetic coordinates using ARF polynomials.
 
@@ -395,7 +395,9 @@ class SampledSensor(Sensor):
         # unpack into xyz arguments
         return EarthLocation.from_geocentric(*result, unit=units.km)
 
-    def geodetic_to_pixel(self, times: Union[np.datetime64, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(
+        self, times: Union[np.datetime64, np.ndarray], loc: EarthLocation
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using ARF polynomials.
 
@@ -514,7 +516,8 @@ class SampledSensor(Sensor):
         group.attrs["sensor_type"] = "SampledSensor"
 
         # Save ARF geolocation polynomials
-        if (self.times is not None
+        if (
+            self.times is not None
             and self.poly_pixel_to_arf_azimuth is not None
             and self.poly_pixel_to_arf_elevation is not None
             and self.poly_arf_to_row is not None

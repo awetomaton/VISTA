@@ -108,7 +108,9 @@ def fit_2d_polynomial(x: NDArray, y: NDArray, f: NDArray, order: int) -> tuple[N
     return coeffs, residuals, rank, singular_values
 
 
-def evaluate_2d_polynomial(coeffs: NDArray, x: Union[NDArray, float], y: Union[NDArray, float], order: Optional[int] = None) -> Union[NDArray, float]:
+def evaluate_2d_polynomial(
+    coeffs: NDArray, x: Union[NDArray, float], y: Union[NDArray, float], order: Optional[int] = None
+) -> Union[NDArray, float]:
     """
     Evaluate a 2D polynomial of arbitrary order.
 

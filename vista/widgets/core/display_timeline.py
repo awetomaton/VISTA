@@ -11,13 +11,18 @@ from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.tracks.track import Track
 
-class DisplayTimeline:
 
+class DisplayTimeline:
     # display modes
     TIME = 0
     FRAME = 1
 
-    def __init__(self, imageries: Optional[list[Imagery]] = None, detectors: Optional[list[Detector]] = None, tracks: Optional[list[Track]] = None):
+    def __init__(
+        self,
+        imageries: Optional[list[Imagery]] = None,
+        detectors: Optional[list[Detector]] = None,
+        tracks: Optional[list[Track]] = None,
+    ):
         self.imageries = list(imageries or [])
         self.detectors = list(detectors or [])
         self.tracks = list(tracks or [])
@@ -55,7 +60,7 @@ class DisplayTimeline:
         all_times = []
         for imagery in self.imageries:
             # clamp to loaded frames
-            all_times.extend(imagery.times[:imagery.loaded_frame_count])
+            all_times.extend(imagery.times[: imagery.loaded_frame_count])
         for detector in self.detectors:
             if detector.visible:
                 all_times.extend(detector.times)
@@ -69,7 +74,7 @@ class DisplayTimeline:
         all_frames = []
         for imagery in self.imageries:
             # clamp to loaded frames
-            all_frames.extend(imagery.frames[:imagery.loaded_frame_count])
+            all_frames.extend(imagery.frames[: imagery.loaded_frame_count])
         for detector in self.detectors:
             if detector.visible:
                 all_frames.extend(detector.frames)

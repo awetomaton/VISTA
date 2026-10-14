@@ -25,8 +25,8 @@ from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.icons import VistaIcons
 from vista.imagery.imagery import HAS_TORCH, Imagery
-from vista.sensors.sensor import Sensor
 from vista.sensors.sampled_sensor import SampledSensor
+from vista.sensors.sensor import Sensor
 from vista.simulate.simulation import Simulation
 from vista.tracks.track import Track
 from vista.widgets.algorithms.background_removal.godec_dialog import GoDecDialog
@@ -163,9 +163,7 @@ class VistaMainWindow(QMainWindow):
 
         # Connect image selection
         self.data_manager.imagery_panel.imagery_selected.connect(self.viewer.select_imagery)
-        self.data_manager.imagery_panel.imagery_selected.connect(
-            lambda _imagery: self._update_map_view_action_state()
-        )
+        self.data_manager.imagery_panel.imagery_selected.connect(lambda _imagery: self._update_map_view_action_state())
         self.data_manager.imagery_panel.data_changed.connect(self.viewer.refresh_histogram_imagery_selector)
         self.data_manager.imagery_panel.data_changed.connect(self._update_map_view_action_state)
 
@@ -1047,7 +1045,7 @@ class VistaMainWindow(QMainWindow):
                     sensor.poly_pixel_to_arf_elevation,
                     sensor.poly_arf_to_row,
                     sensor.poly_arf_to_col,
-                    sensor.times
+                    sensor.times,
                 )
         else:
             # Add new sensor to viewer
@@ -1084,9 +1082,7 @@ class VistaMainWindow(QMainWindow):
             self.viewer.update_timeline()
         # Update frame range and status bar
         total = len(imagery)
-        self.statusBar().showMessage(
-            f"Loading imagery: {imagery.name} ({loaded_count}/{total} frames)...", 0
-        )
+        self.statusBar().showMessage(f"Loading imagery: {imagery.name} ({loaded_count}/{total} frames)...", 0)
 
     def on_imagery_load_complete(self, imagery):
         """Handle imagery loading completion (all frames loaded or cancelled)"""
@@ -1395,7 +1391,7 @@ class VistaMainWindow(QMainWindow):
                     if not (has_times or has_frames):
                         needs_temporal_data.append(file_path)
 
-                    needs_geodetic_mapping |= (has_geodetic and not has_rows_cols)
+                    needs_geodetic_mapping |= has_geodetic and not has_rows_cols
 
                 # Build message explaining what will be used for mapping
                 preamble = []
@@ -1823,14 +1819,20 @@ class VistaMainWindow(QMainWindow):
 
                                 # Try to convert to geodetic if possible
                                 lat, lon, alt = None, None, None
-                                if sensor is not None and sensor.can_geolocate() and self.viewer.timeline.is_time and self.viewer.timeline.current_value is not None:
+                                if (
+                                    sensor is not None
+                                    and sensor.can_geolocate()
+                                    and self.viewer.timeline.is_time
+                                    and self.viewer.timeline.current_value is not None
+                                ):
                                     time = self.viewer.timeline.current_value
                                     location = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
                                     lat = location.lat.deg[0]
                                     lon = location.lon.deg[0]
                                     alt = location.height.to(units.km).value[0]
                                     x, y, z = location.to_geocentric()
-                                    if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
+                                    # one of x, y, or z will have nan value if conversion fails
+                                    if np.isnan((x * y * z)[0]):
                                         lat, lon, alt = None, None, None
                             else:
                                 # Use geodetic coordinates and convert to pixel

@@ -6,14 +6,15 @@ sensor platforms and their characteristics. Sensor platforms support position an
 retrieval via interpolation/extrapolation from discrete samples.
 """
 
+import uuid
 from dataclasses import dataclass, field
 from typing import Optional
-import uuid
 
 import h5py
 import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import RegularGridInterpolator
+
 
 @dataclass
 class SensorPlatform:
@@ -22,7 +23,7 @@ class SensorPlatform:
 
     SensorPlatform stores discrete position and pointing samples at known times and
     provides estimates at arbitrary times through interpolation (within the time range)
-    or extrapolation (outside the time range). 
+    or extrapolation (outside the time range).
 
     Attributes
     ----------
@@ -58,8 +59,8 @@ class SensorPlatform:
     - Positions and pointings are represented as (3, N) arrays with x, y, z in each column
     - Duplicate times and corresponding positions/pointings are automatically removed
     - For 1 sample: returns the same value for all query times
-    - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside    
-    
+    - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside
+
     Examples
     --------
     >>> import numpy as np
@@ -85,6 +86,7 @@ class SensorPlatform:
     >>> # Returns same position for any query time
     >>> pos = platform_static.get_positions(query_times)
     """
+
     name: Optional[str] = None
     positions: Optional[NDArray[np.float64]] = None
     times_positions: Optional[NDArray[np.datetime64]] = None
@@ -114,11 +116,11 @@ class SensorPlatform:
         if self.positions is None:
             self.positions = np.empty((3, 0), dtype=np.float64)
         if self.times_positions is None:
-            self.times_positions = np.empty((0,), dtype='datetime64[ns]')
+            self.times_positions = np.empty((0,), dtype="datetime64[ns]")
         if self.pointings is None:
             self.pointings = np.empty((3, 0), dtype=np.float64)
         if self.times_pointings is None:
-            self.times_pointings = np.empty((0,), dtype='datetime64[ns]')
+            self.times_pointings = np.empty((0,), dtype="datetime64[ns]")
         self._validate_arrays(self.positions, self.times_positions, self.pointings, self.times_pointings)
         self._sort_unique()
         self.uuid = uuid.uuid4()
@@ -129,10 +131,10 @@ class SensorPlatform:
 
     def _validate_arrays(
         self,
-        positions: NDArray[np.float64], 
+        positions: NDArray[np.float64],
         t_positions: NDArray[np.datetime64],
         pointings: NDArray[np.float64],
-        t_pointings: NDArray[np.datetime64]
+        t_pointings: NDArray[np.datetime64],
     ):
         """
         Validate that the input arrays are compatible with existing data.
@@ -164,15 +166,15 @@ class SensorPlatform:
             raise ValueError(f"pointings must be a (3, N) array, got shape {pointings.shape}")
         # Validate shape of times
         if t_positions.ndim != 1:
-            raise ValueError(f"t_positions must be a one dimensional array")
+            raise ValueError("t_positions must be a one dimensional array")
         if t_pointings.ndim != 1:
-            raise ValueError(f"t_pointings must be a one dimensional array")
+            raise ValueError("t_pointings must be a one dimensional array")
 
         # Validate that positions and pointings have same number of samples as their times
         if positions.shape[1] != t_positions.shape[0]:
-            raise ValueError(f"Number of positions must match corresponding time samples")
+            raise ValueError("Number of positions must match corresponding time samples")
         if pointings.shape[1] != t_pointings.shape[0]:
-            raise ValueError(f"Number of pointings must match corresponding time samples")
+            raise ValueError("Number of pointings must match corresponding time samples")
 
     def _sort_unique(self):
         """
@@ -198,13 +200,13 @@ class SensorPlatform:
         positions: NDArray[np.float64],
         t_positions: NDArray[np.datetime64],
         pointings: NDArray[np.float64],
-        t_pointings: NDArray[np.datetime64]
+        t_pointings: NDArray[np.datetime64],
     ):
         """
         Append new times, positions, and pointings to the sensor platform.
         Must be compatible with existing data. After appending, duplicate times
         are removed and arrays are sorted in order of increasing time.
-        
+
         Parameters
         ----------
         positions : NDArray[np.float64]

@@ -6,6 +6,7 @@ from typing import Optional, Union
 import numpy as np
 from numpy.typing import NDArray
 
+
 @dataclass(kw_only=True)
 class TemporalData:
     """
@@ -58,10 +59,10 @@ class TemporalData:
         if self.frames is not None:
             self.frames = np.asarray(self.frames)
             if self.frames.ndim != 1:
-                 raise ValueError("frames must be a one-dimensional array")
+                raise ValueError("frames must be a one-dimensional array")
 
         if self.times is not None and self.frames is not None and len(self.frames) != len(self.times):
-                raise ValueError("frames must have the same length as times")
+            raise ValueError("frames must have the same length as times")
 
     def _check_times_sorted(self):
         """Check if times array is sorted for binary search optimization."""
@@ -83,7 +84,7 @@ class TemporalData:
                 return
             for i, time in enumerate(self.times):
                 self._time_index[time] = i
-    
+
     def _build_frame_index(self):
         """Build index mapping frame numbers to indices for O(1) lookup."""
         if self._frame_index is None:
@@ -175,7 +176,7 @@ class TemporalData:
             if is_time:
                 return self._get_time_index(val)
             return self._get_frame_index(val)
-    
+
         # Find nearest previous value for time
         if is_time:
             time_ns = val.astype("datetime64[ns]").astype(np.int64)
@@ -183,14 +184,14 @@ class TemporalData:
             invalid_time = time_ns < np.min(imagery_times_ns)
             if np.any(invalid_time):
                 return None
-    
+
             sorter = np.argsort(imagery_times_ns)
             # side=right so that desired time gets an index *after* imagery time in case of exact match
             # Since all desired times are guaranted to be >= minimum time, indices will be at least 1,
             # and at most len(imagery_times). Subtracting 1 then gives the *preceeding* index as desired
             index = np.searchsorted(imagery_times_ns, time_ns, side="right", sorter=sorter) - 1
             return sorter[index]
-    
+
         # Find nearest previous value for frame
         invalid_frame = val < np.min(self.frames)
         if np.any(invalid_frame):
@@ -232,7 +233,7 @@ class TemporalData:
 def all_have_times_frames(data: list[TemporalData]) -> tuple[bool, bool]:
     """
     Return a tuple of whether the objects in the list (all_have_times, all_have_frames)
-    
+
     Parameters
     ----------
     data : list

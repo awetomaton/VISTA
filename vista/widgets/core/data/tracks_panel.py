@@ -4,8 +4,8 @@ import pathlib
 
 import numpy as np
 import pandas as pd
-from astropy.coordinates import EarthLocation
 from astropy import units as u
+from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -741,9 +741,6 @@ class TracksPanel(DataPanel):
 
         # Update header labels with filter/sort icons
         self._update_track_header_icons()
-
-        # Get selected sensor from viewer
-        selected_sensor = self.viewer.selected_sensor
 
         # Build list of all tracks, filtering by sensor
         filtered_tracks = [track for track in self.viewer.tracks if track.sensor == self.viewer.selected_sensor]
@@ -2095,16 +2092,20 @@ class TracksPanel(DataPanel):
             min_time = np.min(track_to_split.times)
             max_time = np.max(track_to_split.times)
             can_split = timeline.current_value >= min_time and timeline.current_value < max_time
-            msg = (f"Current time ({timeline.current_value}) is not within the track's time range "
-                   f"({min_time} - {max_time}). "  
-                   "Please navigate to a time within the track to split it.")
+            msg = (
+                f"Current time ({timeline.current_value}) is not within the track's time range "
+                f"({min_time} - {max_time}). "
+                "Please navigate to a time within the track to split it."
+            )
         else:
             min_frame = np.min(track_to_split.frames)
             max_frame = np.max(track_to_split.frames)
             can_split = timeline.current_value >= min_frame and timeline.current_value < max_frame
-            msg = (f"Current frame ({timeline.current_value}) is not within the track's frame range "
-                   f"({min_frame} - {max_frame}). "  
-                   "Please navigate to a frame within the track to split it.")
+            msg = (
+                f"Current frame ({timeline.current_value}) is not within the track's frame range "
+                f"({min_frame} - {max_frame}). "
+                "Please navigate to a frame within the track to split it."
+            )
 
         if not can_split:
             QMessageBox.warning(
@@ -2176,13 +2177,17 @@ class TracksPanel(DataPanel):
         self.data_changed.emit()
 
         if timeline.is_time:
-            msg = (f"Track '{track_to_split.name}' has been split at time {timeline.current_value} into:\n"
-                   f"  - '{first_name}' (times {np.min(first_track.times)} to {np.max(first_track.times)})\n"
-                   f"  - '{second_name}' (times {np.min(second_track.times)} to {np.max(second_track.times)})")
+            msg = (
+                f"Track '{track_to_split.name}' has been split at time {timeline.current_value} into:\n"
+                f"  - '{first_name}' (times {np.min(first_track.times)} to {np.max(first_track.times)})\n"
+                f"  - '{second_name}' (times {np.min(second_track.times)} to {np.max(second_track.times)})"
+            )
         else:
-            msg = (f"Track '{track_to_split.name}' has been split at frame {timeline.current_value} into:\n"
-                   f"  - '{first_name}' (frames {np.min(first_track.frames)} to {np.max(first_track.frames)})\n"
-                   f"  - '{second_name}' (frames {np.min(second_track.frames)} to {np.max(second_track.frames)})")
+            msg = (
+                f"Track '{track_to_split.name}' has been split at frame {timeline.current_value} into:\n"
+                f"  - '{first_name}' (frames {np.min(first_track.frames)} to {np.max(first_track.frames)})\n"
+                f"  - '{second_name}' (frames {np.min(second_track.frames)} to {np.max(second_track.frames)})"
+            )
 
         QMessageBox.information(
             self,
@@ -2546,9 +2551,7 @@ class TracksPanel(DataPanel):
             edited_track = self.viewer.finish_track_editing()
             if edited_track:
                 self.refresh_tracks_table()
-                self.status_message.emit(
-                    f"Track '{edited_track.name}' updated with {len(edited_track)} points", 3000
-                )
+                self.status_message.emit(f"Track '{edited_track.name}' updated with {len(edited_track)} points", 3000)
             else:
                 self.status_message.emit("Track editing cancelled", 3000)
 
@@ -2614,7 +2617,7 @@ class TracksPanel(DataPanel):
                 QMessageBox.StandardButton.Ok,
             )
             return
-        
+
         imagery = self.viewer.selected_imageries[0]
 
         # Open extraction dialog
@@ -2948,7 +2951,9 @@ class TracksPanel(DataPanel):
 
                 geodetics = track.get_geodetic_coords()
                 if geodetics is not None and track.times is not None and target_sensor.can_geolocate():
-                    location = EarthLocation(lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km)
+                    location = EarthLocation(
+                        lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km
+                    )
                     rows, cols = target_sensor.geodetic_to_pixel(track.times, location)
                     track_copy.rows = rows
                     track_copy.columns = cols

@@ -61,7 +61,7 @@ class SaveImageryDialog(QDialog):
         self.tree.setSelectionMode(QTreeWidget.SelectionMode.NoSelection)
         self.populate_tree()
         layout.addWidget(self.tree)
-        
+
         # Connect to the selection change signal
         self.tree.itemChanged.connect(self.sync_tree)
 
@@ -127,9 +127,9 @@ class SaveImageryDialog(QDialog):
         if column == 0:
             # Temporarily block signals to prevent infinite loops during selection updates
             self.tree.blockSignals(True)
-            new_state = item.checkState(0)    
-            self._toggle_all_ancestors(item, new_state)   
-            self._toggle_all_descendants(item, new_state)         
+            new_state = item.checkState(0)
+            self._toggle_all_ancestors(item, new_state)
+            self._toggle_all_descendants(item, new_state)
             self.tree.blockSignals(False)
 
     def _toggle_all_ancestors(self, child_item, state):
@@ -146,7 +146,7 @@ class SaveImageryDialog(QDialog):
         for i in range(parent_item.childCount()):
             child = parent_item.child(i)
             child.setCheckState(0, state)
-            self._toggle_all_descendants(child, state) # Handles deeper nested levels
+            self._toggle_all_descendants(child, state)  # Handles deeper nested levels
 
     def browse_file(self):
         """Open file dialog to choose output file"""

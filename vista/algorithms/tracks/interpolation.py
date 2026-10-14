@@ -80,7 +80,7 @@ class TrackInterpolation:
         # Validate input
         if self.track.frames is None:
             raise ValueError("Track has no frames to interpolate")
-        
+
         if len(self.track) < 2:
             raise ValueError("Track must have at least 2 points to interpolate")
 

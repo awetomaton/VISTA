@@ -39,9 +39,7 @@ class ImageryTreeWidget(QTreeWidget):
             return False
         return super().edit(index, trigger, event)
 
-    def selectionCommand(
-        self, index: QModelIndex, event: Optional[QEvent] = None
-    ) -> QItemSelectionModel.SelectionFlag:
+    def selectionCommand(self, index: QModelIndex, event: Optional[QEvent] = None) -> QItemSelectionModel.SelectionFlag:
         """Prevent non-selectable datastream nodes from changing imagery selection."""
         item = self.itemFromIndex(index)
         if item is not None and not item.flags() & Qt.ItemFlag.ItemIsSelectable:
@@ -128,9 +126,7 @@ class ImageryPanel(DataPanel):
                 datastream_items[imagery.datastream] = datastream_item
 
             imagery_item = QTreeWidgetItem(datastream_item)
-            imagery_item.setFlags(
-                Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
-            )
+            imagery_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
             imagery_item.setText(0, imagery.name)
             imagery_item.setData(0, Qt.ItemDataRole.UserRole, imagery.uuid)
 
@@ -138,9 +134,7 @@ class ImageryPanel(DataPanel):
                 imagery_item.setText(1, str(len(imagery)))
             else:
                 # Frames column: progress bar with cancel button for loading imagery
-                self._set_loading_widget(
-                    imagery_item, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery)
-                )
+                self._set_loading_widget(imagery_item, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery))
 
             if imagery in self.viewer.selected_imageries:
                 timeline = self.viewer.timeline

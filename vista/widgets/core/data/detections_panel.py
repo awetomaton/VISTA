@@ -1,12 +1,11 @@
 """Detections panel for data manager"""
 
 import pathlib
-import traceback
 
 import numpy as np
 import pandas as pd
-from astropy.coordinates import EarthLocation
 from astropy import units as u
+from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -1459,7 +1458,9 @@ class DetectionsPanel(DataPanel):
                 geodetics = detector_to_copy.get_geodetic_coords()
                 if geodetics is not None and detector_to_copy.times is not None and target_sensor.can_geolocate():
                     # assumes 0 height since we don't have height info
-                    location = EarthLocation(lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km)
+                    location = EarthLocation(
+                        lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km
+                    )
                     rows, cols = target_sensor.geodetic_to_pixel(detector_to_copy.times, location)
                     detector_copy.rows = rows
                     detector_copy.columns = cols
@@ -1649,7 +1650,9 @@ class DetectionsPanel(DataPanel):
             return
 
         # Check whether all detectors have times and frames
-        all_have_times, all_have_frames = all_have_times_frames([detector for detector, index in self.selected_detections])
+        all_have_times, all_have_frames = all_have_times_frames(
+            [detector for detector, index in self.selected_detections]
+        )
 
         if not (all_have_times or all_have_frames):
             QMessageBox.warning(
@@ -1820,7 +1823,9 @@ class DetectionsPanel(DataPanel):
             # Store count before clearing
             num_detections_added = len(self.selected_detections)
 
-            all_have_times, all_have_frames = all_have_times_frames([detector for detector, index in self.selected_detections])
+            all_have_times, all_have_frames = all_have_times_frames(
+                [detector for detector, index in self.selected_detections]
+            )
             all_have_times &= track.times is not None
             all_have_frames &= track.frames is not None
 

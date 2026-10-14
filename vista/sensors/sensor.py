@@ -165,7 +165,9 @@ class Sensor:
         """
         return self.uniformity_gain_images is not None
 
-    def geodetic_to_pixel(self, times: Union[np.datetime64, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(
+        self, times: Union[np.datetime64, np.ndarray], loc: EarthLocation
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using polynomial coefficients.
 
@@ -195,7 +197,9 @@ class Sensor:
         invalid = np.full_like(loc.x.value, np.nan, dtype=np.float64)
         return invalid, invalid.copy()
 
-    def pixel_to_geodetic(self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray) -> EarthLocation:
+    def pixel_to_geodetic(
+        self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray
+    ) -> EarthLocation:
         """
         Convert pixel coordinates to geodetic coordinates using polynomial coefficients.
 

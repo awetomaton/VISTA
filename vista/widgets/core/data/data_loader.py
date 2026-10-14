@@ -19,7 +19,6 @@ from vista.sensors.sampled_sensor import SampledSensor
 from vista.sensors.sensor import Sensor
 from vista.temporal_data.temporal_data import TemporalData
 from vista.tracks.track import Track
-from vista.utils.time_mapping import map_frames_to_times
 
 
 class DataLoaderThread(QThread):
@@ -238,7 +237,7 @@ class DataLoaderThread(QThread):
                     if self._cancelled:
                         return
             # remove _geo_data if present
-            if hasattr(sensor, '_geo_data'):
+            if hasattr(sensor, "_geo_data"):
                 del sensor._geo_data
 
     def _load_imagery_v20(self, f: h5py.File):
@@ -288,7 +287,13 @@ class DataLoaderThread(QThread):
             unix_nanoseconds = pointing_group["unix_nanoseconds"][:]
             times_pointings = unix_nanoseconds.astype("datetime64[ns]")
 
-        platform = SensorPlatform(name=platform_name, positions=positions, times_positions=times_positions, pointings=pointings, times_pointings=times_pointings)
+        platform = SensorPlatform(
+            name=platform_name,
+            positions=positions,
+            times_positions=times_positions,
+            pointings=pointings,
+            times_pointings=times_pointings,
+        )
         if platform_uuid is not None:
             platform.uuid = uuid.UUID(platform_uuid)
 
@@ -376,7 +381,7 @@ class DataLoaderThread(QThread):
                 bad_pixel_mask_frames=bad_pixel_mask_frames,
             )
             # Temporarily store geolocation data, as we need frame -> time conversion from imagery
-            sensor._geo_data = geo_data 
+            sensor._geo_data = geo_data
         else:
             # Base Sensor class
             sensor = Sensor(
@@ -543,7 +548,7 @@ class DataLoaderThread(QThread):
                 geo_times = temporal_data.times[indices]
                 sensor.platform.append(
                     positions=np.empty((3, 0), dtype=np.float64),
-                    t_positions=np.empty((0,), dtype='datetime64[ns]'),
+                    t_positions=np.empty((0,), dtype="datetime64[ns]"),
                     pointings=geo_data["pointings"][:, valid],
                     t_pointings=geo_times,
                 )
@@ -601,10 +606,8 @@ class DataLoaderThread(QThread):
 
         # Load images incrementally, emitting signals as blocks become available
         self._load_images_incrementally(imagery, images_dataset)
-    
-    def _load_images_incrementally(
-        self, imagery: Imagery, images_dataset: h5py.Dataset, image_dataset_slice=None
-    ):
+
+    def _load_images_incrementally(self, imagery: Imagery, images_dataset: h5py.Dataset, image_dataset_slice=None):
         """Load images block-by-block, emitting signals so the UI can display frames as they arrive.
 
         Parameters

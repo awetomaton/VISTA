@@ -373,7 +373,9 @@ class Simulation:
 
         # If requested, convert pixel coordinates to geodetic
         if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None and "Times" in tracks_df.keys():
-            location = self.imagery.sensor.pixel_to_geodetic(tracks_df["Times"].to_numpy(), tracks_df["Rows"].to_numpy(), tracks_df["Columns"].to_numpy())
+            location = self.imagery.sensor.pixel_to_geodetic(
+                tracks_df["Times"].to_numpy(), tracks_df["Rows"].to_numpy(), tracks_df["Columns"].to_numpy()
+            )
             latitudes = location.lat.deg
             longitudes = location.lon.deg
             altitudes = location.height.to("km").value
@@ -457,7 +459,12 @@ class Simulation:
             radiometric_gain_frames = frames_array
 
         # Create SensorPlatform
-        platform = SensorPlatform(positions=sensor_positions, times_positions=t_positions, pointings=sensor_pointings, times_pointings=t_pointings)
+        platform = SensorPlatform(
+            positions=sensor_positions,
+            times_positions=t_positions,
+            pointings=sensor_pointings,
+            times_pointings=t_pointings,
+        )
         # Create SampledSensor
         sensor = SampledSensor(
             platform=platform,

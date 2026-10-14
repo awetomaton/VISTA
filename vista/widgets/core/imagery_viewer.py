@@ -131,8 +131,12 @@ class ImageryViewer(QWidget):
         self.detectors: list[Detector] = []  # List of Detector objects
         self.tracks: list[Track] = []  # List of Track objects
         self.aois: list[AOI] = []  # List of AOI objects
-        self.features: list[Union[PlacemarkFeature, ShapefileFeature]] = []  # List of Feature objects (shapefiles, placemarks, etc.)
-        self.known_sources: list[KnownSources] = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
+        self.features: list[
+            Union[PlacemarkFeature, ShapefileFeature]
+        ] = []  # List of Feature objects (shapefiles, placemarks, etc.)
+        self.known_sources: list[
+            KnownSources
+        ] = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
         # Use UUID as key for reliable object identification
@@ -553,7 +557,7 @@ class ImageryViewer(QWidget):
             if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
                 return imagery
         return None
-    
+
     def _get_pixel_mode_pixel_value(
         self,
         row: float,
@@ -2429,7 +2433,7 @@ class ImageryViewer(QWidget):
 
         if track.extraction_metadata is None:
             return False
-        
+
         # prevent starting extraction viewing for non-visible track
         # TODO: stop viewing if visible is set to False later on?
         if not track.visible:
@@ -2522,7 +2526,7 @@ class ImageryViewer(QWidget):
 
         if track.extraction_metadata is None:
             return False
-        
+
         # prevent starting extraction editing for non-visible track
         # TODO: stop editing if visible is set to False later on?
         if not track.visible:
@@ -3045,7 +3049,12 @@ class ImageryViewer(QWidget):
                 if self.extraction_editor is None or self.editing_extraction_track is None:
                     return
 
-                if self.editing_extraction_track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True) is None:
+                if (
+                    self.editing_extraction_track.get_index(
+                        self.timeline.current_value, self.timeline.is_time, nearest=True
+                    )
+                    is None
+                ):
                     return  # clicking on pixels for a timeline value before track start
 
                 # Get chip position
@@ -3553,12 +3562,7 @@ class ImageryViewer(QWidget):
             display timeline is time-based.
         """
         sensor = self.selected_sensor
-        return (
-            sensor is not None
-            and sensor.can_geolocate()
-            and bool(self.selected_imageries)
-            and self.timeline.is_time
-        )
+        return sensor is not None and sensor.can_geolocate() and bool(self.selected_imageries) and self.timeline.is_time
 
     def _disable_map_view_if_unsupported(self) -> None:
         """Disable an active map view when its prerequisites are no longer present."""

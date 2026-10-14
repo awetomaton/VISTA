@@ -57,8 +57,8 @@ def map_frames_to_times(
 
     invalid = indices >= len(imagery_frames)
     indices[invalid] = len(imagery_frames) - 1
-    
-    frame_found = (imagery_frames[sorter][indices] == frames)
+
+    frame_found = imagery_frames[sorter][indices] == frames
     if not np.all(frame_found):
         return None
 

@@ -195,7 +195,7 @@ def run_kalman_tracker(detectors, config):
 
     # Process each frame
     for i, frame in enumerate(frames):
-        old_frame = frames[i-1] if i > 0 else frames[0]
+        old_frame = frames[i - 1] if i > 0 else frames[0]
         detections = detections_by_frame[frame]
 
         # Predict all active tracks and increment age

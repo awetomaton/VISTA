@@ -183,8 +183,7 @@ class PlacemarkDialog(QDialog):
                 QMessageBox.critical(
                     self,
                     "Conversion Error",
-                    "Could not convert geodetic coordinates to pixel coordinates.\n"
-                    "No time currently available.",
+                    "Could not convert geodetic coordinates to pixel coordinates.\nNo time currently available.",
                 )
                 return None
 

@@ -213,7 +213,7 @@ class Track(TemporalData):
         if self.complete:
             # Show entire track
             return np.arange(len(self))
-        
+
         if val is None:
             return None
 
@@ -236,9 +236,9 @@ class Track(TemporalData):
                 # Only show last N times
                 # need to use the index of the tail to get the maximum allowed length
                 if val <= np.max(self.times):
-                    max_time_diff = (val - self.times[index])
+                    max_time_diff = val - self.times[index]
                 else:
-                    max_time_diff = (np.max(self.times) - self.times[index])
+                    max_time_diff = np.max(self.times) - self.times[index]
 
                 mask &= (time_diff <= max_time_diff) & (time_diff >= 0)
             else:
@@ -698,7 +698,7 @@ class Track(TemporalData):
         return track_copy
 
     def to_csv(self, file: Union[str, pathlib.Path]):
-            self.to_dataframe().to_csv(file, index=None)
+        self.to_dataframe().to_csv(file, index=None)
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert track to DataFrame
