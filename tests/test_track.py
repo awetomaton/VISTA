@@ -3,8 +3,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from helpers import assert_constructor_fields_equal
 
+from vista.imagery.imagery import Imagery
 from vista.sensors import Sensor
 from vista.tracks.track import Track
 
@@ -70,3 +72,147 @@ def test_dataframe_round_trip(sensor: Sensor):
     track = Track.from_dataframe(expected.to_dataframe(), sensor)
 
     assert_constructor_fields_equal(track, expected)
+
+
+def test_times_dataframe_round_trip(sensor: Sensor):
+    times = np.array(
+        [
+            "2026-01-02T03:04:05.000000123",
+            "2026-01-02T03:04:06.000000456",
+            "2026-01-02T03:04:09.000000789",
+        ],
+        dtype="datetime64[ns]",
+    )
+    expected = Track(
+        name="timed-track",
+        frames=np.array([5, 6, 9]),
+        rows=np.array([40.0, 41.5, 43.25]),
+        columns=np.array([400.5, 402.0, 405.75]),
+        sensor=sensor,
+        times=times,
+    )
+
+    track = Track.from_dataframe(expected.to_dataframe(), sensor)
+
+    assert_constructor_fields_equal(track, expected)
+    np.testing.assert_array_equal(track.times, times)
+
+
+def test_times_preserved_when_copying_and_slicing(sensor: Sensor):
+    times = np.array(
+        [
+            "2026-01-02T03:04:05",
+            "2026-01-02T03:04:06",
+            "2026-01-02T03:04:09",
+        ],
+        dtype="datetime64[ns]",
+    )
+    track = Track(
+        name="timed-track",
+        frames=np.array([5, 6, 9]),
+        rows=np.array([40.0, 41.5, 43.25]),
+        columns=np.array([400.5, 402.0, 405.75]),
+        sensor=sensor,
+        times=times,
+    )
+
+    track_copy = track.copy()
+    where = np.array([True, False, True])
+    track_slice = track[where]
+
+    np.testing.assert_array_equal(track_copy.times, times)
+    assert track_copy.times is not track.times
+    np.testing.assert_array_equal(track_slice.times, times[where])
+
+
+def test_times_length_must_match_frames(sensor: Sensor):
+    with pytest.raises(ValueError, match="frames must have the same length as times"):
+        Track(
+            name="invalid-track",
+            frames=np.array([1, 2]),
+            rows=np.array([10.0, 20.0]),
+            columns=np.array([100.0, 200.0]),
+            sensor=sensor,
+            times=np.array(["2026-01-02T03:04:05"], dtype="datetime64[ns]"),
+        )
+
+
+def test_get_times_does_not_use_sensor_imagery(sensor: Sensor):
+    Imagery(
+        name="timed-imagery",
+        images=np.zeros((2, 4, 4), dtype=np.float32),
+        frames=np.array([10, 20]),
+        sensor=sensor,
+        times=np.array(
+            [
+                "2026-01-02T03:04:05",
+                "2026-01-02T03:04:06",
+            ],
+            dtype="datetime64[ns]",
+        ),
+    )
+    track = Track(
+        name="frame-only-track",
+        frames=np.array([10, 20]),
+        rows=np.array([1.0, 2.0]),
+        columns=np.array([3.0, 4.0]),
+        sensor=sensor,
+    )
+
+    assert track.times is None
+
+
+def test_times_only_dataframe_uses_explicit_imagery(sensor: Sensor):
+    imagery = Imagery(
+        name="timed-imagery",
+        images=np.zeros((3, 4, 4), dtype=np.float32),
+        frames=np.array([10, 20, 30]),
+        sensor=sensor,
+        times=np.array(
+            [
+                "2026-01-02T03:04:05",
+                "2026-01-02T03:04:06",
+                "2026-01-02T03:04:07",
+            ],
+            dtype="datetime64[ns]",
+        ),
+    )
+    dataframe = pd.DataFrame(
+        {
+            "Track": ["timed-track", "timed-track"],
+            "Times": [
+                "2026-01-02T03:04:05.500000000",
+                "2026-01-02T03:04:07.000000000",
+            ],
+            "Rows": [1.0, 2.0],
+            "Columns": [3.0, 4.0],
+        }
+    )
+
+    track = Track.from_dataframe(dataframe, sensor=sensor, imagery=imagery)
+
+    np.testing.assert_array_equal(track.frames, np.array([10, 30]))
+    np.testing.assert_array_equal(
+        track.times,
+        np.array(
+            [
+                "2026-01-02T03:04:05.500000000",
+                "2026-01-02T03:04:07.000000000",
+            ],
+            dtype="datetime64[ns]",
+        ),
+    )
+
+
+def test_times_only_dataframe_requires_explicit_imagery(sensor: Sensor):
+    dataframe = pd.DataFrame(
+        {
+            "Track": ["timed-track"],
+            "Times": ["2026-01-02T03:04:05"],
+            "Rows": [1.0],
+            "Columns": [3.0],
+        }
+    )
+
+    with pytest.raises(ValueError, match="Imagery with timestamps is required"):
+        Track.from_dataframe(dataframe, sensor=sensor)
