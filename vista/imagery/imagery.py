@@ -184,9 +184,11 @@ class Imagery(TemporalData):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name}, {self.images.shape})"
 
-    def get_index(self, val: Union[np.datetime64, int], is_time: bool, nearest: bool = False) -> Optional[int]:
+    def get_index(
+        self, val: Union[np.datetime64, int], is_time: bool, nearest: bool = False, in_range: bool = False
+    ) -> Optional[int]:
         """Override parent method to clamp to loaded frames"""
-        index = super().get_index(val, is_time, nearest)
+        index = super().get_index(val, is_time, nearest, in_range)
         if index is None:
             return None
         if self.loaded_frame_count is not None and index >= self.loaded_frame_count:

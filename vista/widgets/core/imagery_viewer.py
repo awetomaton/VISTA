@@ -547,7 +547,9 @@ class ImageryViewer(QWidget):
             if image_item is None or not image_item.isVisible():
                 continue
 
-            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            image_index = imagery.get_index(
+                self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+            )
             if image_index is None:
                 continue
 
@@ -691,7 +693,9 @@ class ImageryViewer(QWidget):
         # Update displays for selected imagery
         for imagery in self.selected_imageries:
             # Find nearest image index
-            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            image_index = imagery.get_index(
+                self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+            )
             if image_index is not None:
                 self._update_ewma_state(imagery, image_index, ewma_alpha)
                 display_image, ewma_active = self._get_display_image(
@@ -3625,7 +3629,9 @@ class ImageryViewer(QWidget):
             # Compute the current footprint for each displayed imagery.
             initial_footprints = {}
             for imagery in imagery_stack:
-                image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+                image_index = imagery.get_index(
+                    self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+                )
                 if image_index is None:
                     continue
                 frame_time = imagery.times[image_index]
@@ -3834,7 +3840,9 @@ class ImageryViewer(QWidget):
         if self.ewma_filter_enabled:
             ewma_offset = self.settings.value("toolbar/ewma_frame_offset", ewma_offset, type=int)
         for imagery in self._get_imagery_stack():
-            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            image_index = imagery.get_index(
+                self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+            )
             if image_index is None:
                 projected_item = self.projected_image_items.get(imagery.uuid)
                 if projected_item is not None and projected_item.isVisible():

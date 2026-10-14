@@ -150,7 +150,9 @@ class TemporalData:
             self._build_frame_index()
             return self._frame_index.get(frame_num)
 
-    def get_index(self, val: Union[np.datetime64, int], is_time: bool, nearest: bool = False) -> Optional[int]:
+    def get_index(
+        self, val: Union[np.datetime64, int], is_time: bool, nearest: bool = False, in_range: bool = False
+    ) -> Optional[int]:
         """
         Get the index of a particular value
 
@@ -162,6 +164,9 @@ class TemporalData:
             Whether the value is a time (True) or frame (False)
         nearest : bool, default False
             Whether to search for the nearest preceding value (True) or exact value (False)
+        in_range : bool, default False
+            Whether the value should be required to be in the range of times or frames.
+            Only necessary when the value is outside the range and nearest = True.
 
         Returns
         -------
@@ -179,6 +184,10 @@ class TemporalData:
 
         # Find nearest previous value for time
         if is_time:
+            # If required to be in range and it's not
+            if in_range and (val > np.max(self.times) or val < np.min(self.times)):
+                return None
+
             time_ns = val.astype("datetime64[ns]").astype(np.int64)
             imagery_times_ns = self.times.astype("datetime64[ns]").astype(np.int64)
             invalid_time = time_ns < np.min(imagery_times_ns)
@@ -191,6 +200,10 @@ class TemporalData:
             # and at most len(imagery_times). Subtracting 1 then gives the *preceding* index as desired
             index = np.searchsorted(imagery_times_ns, time_ns, side="right", sorter=sorter) - 1
             return sorter[index]
+
+        # If required to be in range and it's not
+        if in_range and (val > np.max(self.frames) or val < np.min(self.frames)):
+            return None
 
         # Find nearest previous value for frame
         invalid_frame = val < np.min(self.frames)
