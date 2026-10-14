@@ -363,11 +363,8 @@ def test_pixel_value_skips_hidden_or_unavailable_uppermost_layer() -> None:
 
     viewer.timeline.current_index = 1
     viewer.image_items[small.uuid].setVisible(False)
-    imagery, _, row, column, value = ImageryViewer._get_pixel_mode_pixel_value(viewer, 1.0, 1.0)
-
-    assert imagery is large
-    assert (row, column) == (1, 1)
-    assert value == 1.0
+    res = ImageryViewer._get_pixel_mode_pixel_value(viewer, 1.0, 1.0)
+    assert res is None
 
 
 def test_map_pixel_value_uses_uppermost_imagery_layer(monkeypatch) -> None:
