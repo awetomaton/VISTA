@@ -111,10 +111,13 @@ class TrackInterpolation:
         # Create interpolation functions for times, rows, and columns
         try:
             time_interp = None
+            min_time = None
             if existing_times is not None:
+                interp_times = existing_times.astype("datetime64[ns]").astype(np.int64)
+                min_time = np.min(interp_times)
                 time_interp = interp1d(
                     existing_frames,
-                    existing_times,
+                    interp_times - min_time,
                     kind=self.method,
                     assume_sorted=False,
                     fill_value="extrapolate",
@@ -139,7 +142,7 @@ class TrackInterpolation:
         # Interpolate times and positions for all frames
         all_times = None
         if time_interp is not None:
-            all_times = time_interp(all_frames).astype("datetime64[ns]")
+            all_times = (time_interp(all_frames) + min_time).astype("datetime64[ns]")
         all_rows = row_interp(all_frames)
         all_columns = col_interp(all_frames)
 
