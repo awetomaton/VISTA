@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-14
+
+### Improvements
+ - 🥳 Allow for multiple imagery to be selected and displayed at the same time, allowing subframes sampled at higher frequencies to be displayed on top of full frame images
+ - 🥳 Histograms for each of the selected imageries can be viewed in the histogram widget
+ - ✨ Moved position and pointing information from the `Sensor` class to a new `SensorPlatform` class
+ - ✨ Changed `SampledSensor` ARF polynomials to require time, rather than frames, and allow polynomials to be interpolated over time
+ - ✨ Introduced a new `TemporalData` class as a parent for `Imagery`, `Detector`, and `Track` to more easily handle index retrieval for specific times and frames
+ - ✨ Introduced a new `DisplayTimeline` that manages whether the imagery viewer should be displayed in time (preferred) or frame mode, for instances where multiple images, detections, or tracks have different timestamps for duplicate frame numbers from different collections.
+ - 🛠️ Added a `datastream` attribute to imagery
+ - 🛠️ Updated the Sensors and Imagery panels to trees instead of tables in order to reflect `SensorPlatform` and Imagery `datastream` hierarchies
+ - 🛠️ Updated file loading and saving to introduce a new hierarchy that includes the new `SensorPlatform`
+ - 🛠️ Detectors and Tracks no longer require frames, but will accept either/both of times/frames. This means there are less stringent temporal (time/frame) and coordinate (pixel or geodetic) requirements when loading in CSVs
+ - 🛠️ Better vectorized pixel <-> geodetic conversion and related functions
+ - 🔧 Fix ARF handedness from left- to right- handed to match documentation
+ - 🔧 Fixed misnamed column names on track CSV load-in
+ - 🔧 Fixed track selection via click to only include tracks from the currently selected sensor
+ - 🔧 Fixed map mode projection to properly compute footprint at the current timestamp
+ - 🔧 Fixed a bug preventing the FPS spinbox from moving between -1 and 1
+ - 🔧 Fixed Kalman tracker not accounting for potential non-consecutive frames, affecting the stepsize used in velocity calculations
+ - 🔧 Fixed instances where pixel positions were rounded instead of floored, leading to off-center extractions
+ - 🔧 Updated track creation from known sources to account for row/column offsets
+ - 🔧 Ignore bounds for Detection and Track overlays, preventing jitter when playing frames with objects close to image border
+
 ## [1.14.0] - 2026-9-9
 
 ### Credits
@@ -415,6 +439,7 @@ Major thanks to [@nolanking90] for the contributions that made this release poss
 - Fixed bug where tooltips did not take into account imagery row / column offsets.
 - Fixed bug where imagery produced by algorithms did not have pre-computed histograms (which improves playback performance)
 
+[2.0.0]: https://github.com/awetomaton/VISTA/releases/tag/2.0.0
 [1.14.0]: https://github.com/awetomaton/VISTA/releases/tag/1.14.0
 [1.13.0]: https://github.com/awetomaton/VISTA/releases/tag/1.13.0
 [1.12.4]: https://github.com/awetomaton/VISTA/releases/tag/1.12.4
