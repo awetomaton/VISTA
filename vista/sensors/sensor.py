@@ -28,7 +28,7 @@ class Sensor:
     characteristics including projection polynomials and radiometric calibration data.
 
     Core Attributes
-    ----------
+    ---------------
     name : str
         Unique name for this sensor. Used as the primary identifier.
     bias_images : NDArray, optional
@@ -45,7 +45,7 @@ class Sensor:
         1D array specifying frame ranges for each bad pixel mask.
 
     Sensor Platform Information
-    ------------------
+    ---------------------------
     platform : SensorPlatform
         SensorPlatform object containing sensor position and pointing information.
 

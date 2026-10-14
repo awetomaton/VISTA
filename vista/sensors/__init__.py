@@ -1,6 +1,6 @@
 """Sensor module for VISTA
 
-This module provides sensor position and point spread function modeling capabilities.
+This module provides sensor geolocation and point spread function modeling capabilities.
 """
 
 from vista.sensors.sampled_sensor import SampledSensor

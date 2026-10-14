@@ -21,9 +21,9 @@ class TemporalData:
 
     Methods
     -------
-    get_index(val, is_time, exact=False)
+    get_index(val, is_time, nearest=False)
         Get the index of a value based on whether it is a time or frame, and
-        whether it should require an exact match or the nearest preceeding value
+        whether it should require an exact match or the nearest preceding value
     invalidate_caches()
         Invalidate the internal time and frame index caches
 
@@ -33,7 +33,7 @@ class TemporalData:
         Mapping of frame number to index
     _frames_sorted : bool
         Whether frames are sorted or not
-    _time_index : dict(np.datetimte64, int)
+    _time_index : dict(np.datetime64, int)
         Mapping of time to index
     _times_sorted : bool
         Whether times are sorted or not
@@ -161,7 +161,7 @@ class TemporalData:
         is_time : bool
             Whether the value is a time (True) or frame (False)
         nearest : bool, default False
-            Whether to search for the nearest preceeding value (True) or exact value (False)
+            Whether to search for the nearest preceding value (True) or exact value (False)
 
         Returns
         -------
@@ -188,7 +188,7 @@ class TemporalData:
             sorter = np.argsort(imagery_times_ns)
             # side=right so that desired time gets an index *after* imagery time in case of exact match
             # Since all desired times are guaranted to be >= minimum time, indices will be at least 1,
-            # and at most len(imagery_times). Subtracting 1 then gives the *preceeding* index as desired
+            # and at most len(imagery_times). Subtracting 1 then gives the *preceding* index as desired
             index = np.searchsorted(imagery_times_ns, time_ns, side="right", sorter=sorter) - 1
             return sorter[index]
 
@@ -199,7 +199,7 @@ class TemporalData:
         sorter = np.argsort(self.frames)
         # side=right so that desired frame gets an index *after* imagery frame in case of exact match
         # Since all desired frames are guaranted to be >= minimum frame, indices will be at least 1,
-        # and at most len(imagery_frames). Subtracting 1 then gives the *preceeding* index as desired
+        # and at most len(imagery_frames). Subtracting 1 then gives the *preceding* index as desired
         index = np.searchsorted(self.frames, val, side="right", sorter=sorter) - 1
         return sorter[index]
 

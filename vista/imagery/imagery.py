@@ -84,8 +84,8 @@ class Imagery(TemporalData):
         Extract spatial subset defined by Area of Interest
     get_histogram(frame_index)
         Compute or retrieve cached histogram for a frame
-    to_hdf5(file)
-        Save imagery and all metadata to HDF5 file
+    to_hdf5(group)
+        Save imagery metadata and arrays to an HDF5 group
     copy()
         Create a shallow copy of the imagery object
 

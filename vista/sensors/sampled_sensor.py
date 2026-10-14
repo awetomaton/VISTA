@@ -60,8 +60,7 @@ class SampledSensor(Sensor):
     -----
     - Duplicate times in the input are automatically removed during initialization
     - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside
-    - For 1 sample: returns the same position for all query times (stationary sensor)
-    - All coordinates are in ECEF Cartesian frame with units of kilometers
+    - For 1 sample: returns the same polynomial coefficients for all query times
     - ARF (Attitude Reference Frame) is a local coordinate system where the X-axis
       points along the sensor pointing direction
     """
