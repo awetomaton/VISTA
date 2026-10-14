@@ -273,17 +273,22 @@ class SampledSensor(Sensor):
             invalid_shape = times.shape + coeffs.shape[1:]
             return np.full(invalid_shape, np.nan, dtype=np.float64)
 
+        # interpolator needs array
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.int64)
-        query_times_ns = np.atleast_1d(query_times_ns)  # interpolator needs array
+        query_times_ns = np.atleast_1d(times).astype("datetime64[ns]").astype(np.int64)
+
+        interp_times = self.times.astype("datetime64[ns]").astype(np.int64)
+
+        # lowest time to subtract off so floating point interpolation doesn't round
+        min_time = min(np.min(interp_times), np.min(query_times_ns))
 
         interpolator = RegularGridInterpolator(
-            (self.times,),
+            (interp_times - min_time,),
             coeffs,  # shape is already (time, num_coeffs)
             bounds_error=False,  # do not error outside of bounds
             fill_value=None,  # extrapolate instead
         )
-        interpolated_coeffs = interpolator(query_times_ns)
+        interpolated_coeffs = interpolator(query_times_ns - min_time)
 
         # squeeze axis if a number was passed in
         if times.ndim == 0:

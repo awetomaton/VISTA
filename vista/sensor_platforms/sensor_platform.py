@@ -248,22 +248,24 @@ class SensorPlatform:
         """
         if self.positions.shape[1] == 0:
             return None
-        
-        times = np.asarray(times)
 
-        # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.int64)
         # interpolator needs array
         # also, this way, if single number is passed in, return shape is still (3,1)
-        query_times_ns = np.atleast_1d(query_times_ns)
+        # Convert query times to numeric values (nanoseconds since epoch)
+        query_times_ns = np.atleast_1d(times).astype("datetime64[ns]").astype(np.int64)
+
+        interp_times = self.times_positions.astype("datetime64[ns]").astype(np.int64)
+
+        # lowest time to subtract off so floating point interpolation doesn't round
+        min_time = min(np.min(interp_times), np.min(query_times_ns))
 
         interpolator = RegularGridInterpolator(
-            (self.times_positions,),
+            (interp_times - min_time,),
             self.positions.T,  # transpose to make shape (time, xyz)
             bounds_error=False,  # do not error outside of bounds
             fill_value=None,  # extrapolate instead
         )
-        interpolated_positions = interpolator(query_times_ns).T  # transpose to make shape (xyz, time)
+        interpolated_positions = interpolator(query_times_ns - min_time).T  # transpose to make shape (xyz, time)
 
         return interpolated_positions
 
@@ -292,22 +294,24 @@ class SensorPlatform:
         """
         if self.pointings.shape[1] == 0:
             return None
-        
-        times = np.asarray(times)
 
-        # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.int64)
         # interpolator needs array
         # also, this way, if single number is passed in, return shape is still (3,1)
-        query_times_ns = np.atleast_1d(query_times_ns)  
+        # Convert query times to numeric values (nanoseconds since epoch)
+        query_times_ns = np.atleast_1d(times).astype("datetime64[ns]").astype(np.int64)
+
+        interp_times = self.times_pointings.astype("datetime64[ns]").astype(np.int64)
+
+        # lowest time to subtract off so floating point interpolation doesn't round
+        min_time = min(np.min(interp_times), np.min(query_times_ns))
 
         interpolator = RegularGridInterpolator(
-            (self.times_pointings,),
+            (interp_times - min_time,),
             self.pointings.T,  # transpose to make shape (time, xyz)
             bounds_error=False,  # do not error outside of bounds
             fill_value=None,  # extrapolate instead
         )
-        interpolated_pointings = interpolator(query_times_ns).T  # transpose to make shape (xyz, time)
+        interpolated_pointings = interpolator(query_times_ns - min_time).T  # transpose to make shape (xyz, time)
 
         norm = np.linalg.norm(interpolated_pointings, axis=0, keepdims=True)
         interpolated_pointings /= norm  # Normalize pointings to unit vectors
