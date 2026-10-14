@@ -40,24 +40,26 @@ For detailed installation instructions, see the [Installation Guide](https://awe
 ## Quick Start
 
 1. **Load or simulate Imagery**:
- * (a) `File > Open` to load an HDF5 imagery file
+ * (a) `File > Load Imagery (HDF5)` to load an HDF5 imagery file
  * (b) `File > Simulate` to simulate example data
 2. **Navigate**: Use playback controls or arrow keys (Left/Right or A/D)
-3. **Detect Objects**: `Algorithms > Detectors` to run CFAR or threshold detection
-4. **Track Objects**: `Algorithms > Tracking` to link detections into tracks
+3. **Detect Objects**: `Image Processing > Detectors` to run CFAR or threshold detection
+4. **Track Objects**: `Image Processing > Tracking` to link detections into tracks
 5. **Export Results**: Export tracks/detections to CSV from the Data Manager
 
 For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.github.io/VISTA/1.14.0/getting_started/quickstart.html).
 
 ## Key Features
 
-- **Multi-frame imagery viewing** with playback controls and histogram adjustment
+- **Multi-layer imagery viewing** with time- or frame-based playback and histogram adjustment
 - **View frame imagery in image or geodetic space** with tile servers to show imagery in geospatial context
 - **Background removal**: Temporal median, Running sub-space tracker, Robust PCA, GoDec
 - **Signal Enhancement**: Decimating or running Coaddition
 - **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
 - **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
 - **Sensor calibration**: Bias removal, non-uniformity correction
+- **Sensor platforms**: Shared time-sampled position and pointing for one or more sensors
+- **Known sources**: Load stars, satellites, and Solar System bodies and project them into imagery
 - **Geodetic support**: Pixel-to-geodetic coordinate conversion
 - **Manual annotation**: Create/edit/label tracks and detections interactively
 - **Feature overlays**: AOIs, placemarks, and shapefile import
@@ -68,8 +70,8 @@ See the [User Guide](https://awetomaton.github.io/VISTA/1.14.0/user_guide/imager
 
 | Shortcut | Action |
 |----------|--------|
-| **Left Arrow** / **A** | Previous frame |
-| **Right Arrow** / **D** | Next frame |
+| **Left Arrow** / **A** | Previous timeline sample |
+| **Right Arrow** / **D** | Next timeline sample |
 | **CTRL** + **Z** | Undo track / detection panel action |
 | **Spacebar** | Play/Pause |
 | **Delete** | Remove selected sensors, imagery, tracks, detectors, detection points |
@@ -87,9 +89,10 @@ VISTA uses **HDF5** for imagery and **CSV** for tracks/detections. For format sp
 ## Programmatic Usage
 
 ```python
+import numpy as np
+
 from vista.app import VistaApp
 from vista.imagery.imagery import Imagery
-import numpy as np
 
 # Create imagery in memory
 images = np.random.rand(10, 256, 256).astype(np.float32)
@@ -100,7 +103,8 @@ app = VistaApp(imagery=imagery)
 app.exec()
 ```
 
-See the [API Reference](https://awetomaton.github.io/VISTA/1.14.0/api/imagery.html) for complete programmatic documentation.
+See the [API Reference](https://awetomaton.github.io/VISTA/1.14.0/api/imagery.html) for complete programmatic
+documentation.
 
 ## Generating Test Data
 
