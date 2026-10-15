@@ -13,7 +13,6 @@ from vista.tracks.track import Track
 
 
 class DisplayTimeline:
-
     def __init__(
         self,
         imageries: Optional[list[Imagery]] = None,
