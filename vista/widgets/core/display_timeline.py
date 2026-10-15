@@ -13,9 +13,6 @@ from vista.tracks.track import Track
 
 
 class DisplayTimeline:
-    # display modes
-    TIME = 0
-    FRAME = 1
 
     def __init__(
         self,

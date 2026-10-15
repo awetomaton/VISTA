@@ -274,7 +274,7 @@ VISTA's native file format is HDF5 with a hierarchical structure:
    ├── [attrs] format_version, created
    └── sensor_platforms/
        └── <platform_uuid>/
-           ├── position/. # ECEF kilometers and timestamps
+           ├── position/  # ECEF kilometers and timestamps
            ├── pointing/  # ECEF unit vectors and timestamps
            └── sensors/
                └── <sensor_uuid>/

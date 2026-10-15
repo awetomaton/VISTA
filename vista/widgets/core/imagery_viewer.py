@@ -3271,8 +3271,6 @@ class ImageryViewer(QWidget):
         for val in sorted(self.current_track_data.keys()):
             row, col = self.current_track_data[val]
             if self.map_view_mode:
-                if not self.timeline.is_time:
-                    continue
                 # Project pixel coords to map (lon, lat) for display
                 lon, lat = self._pixel_to_map(val, row, col)
                 if np.isnan(lon):
