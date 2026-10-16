@@ -272,10 +272,10 @@ class ImageryPanel(DataPanel):
         imageries_to_deselect = [img for img in self.viewer.selected_imageries if img not in selected_imageries]
         imageries_to_select = [img for img in selected_imageries if img not in self.viewer.selected_imageries]
 
-        for img in imageries_to_deselect:
-            self.viewer.deselect_imagery(img)
         for img in imageries_to_select:
             self.imagery_selected.emit(img)
+        for img in imageries_to_deselect:
+            self.viewer.deselect_imagery(img)
 
     def on_imagery_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         """Handle imagery item changes."""
