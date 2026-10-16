@@ -1,4 +1,4 @@
-"""PlaybackControls widget for controlling imagery playback"""
+"""PlaybackControls widget for controlling playback"""
 
 from PyQt6.QtCore import QElapsedTimer, Qt, QTimer
 from PyQt6.QtWidgets import (
@@ -22,10 +22,10 @@ class PlaybackControls(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.is_playing = False
-        self.min_frame = 0  # Minimum frame number
-        self.max_frame = 0  # Maximum frame number
-        self.current_frame = 0  # Current frame number
-        self.fps = 10  # frames per second
+        self.min_index = 0  # Minimum display index
+        self.max_index = 0  # Maximum display index
+        self.current_index = 0  # Current display index
+        self.fps = 10  # Playback frames (indices) per second
         self.playback_direction = 1  # 1 for forward, -1 for reverse
         self.bounce_mode = False
         self.bounce_start = 0
@@ -41,6 +41,7 @@ class PlaybackControls(QWidget):
 
         # Callback to get current time from imagery
         self.get_current_time = None  # Function that returns current datetime or None
+        self.get_current_frame = None  # Function that returns current frame or None
 
         self.init_ui()
 
@@ -59,22 +60,20 @@ class PlaybackControls(QWidget):
         slider_section.setSpacing(10)
 
         # Slider on top
-        self.frame_slider = QSlider(Qt.Orientation.Horizontal)
-        self.frame_slider.setMinimum(0)
-        self.frame_slider.setMaximum(0)
-        self.frame_slider.valueChanged.connect(self.on_slider_changed)
-        slider_section.addWidget(self.frame_slider)
+        self.index_slider = QSlider(Qt.Orientation.Horizontal)
+        self.index_slider.setMinimum(0)
+        self.index_slider.setMaximum(0)
+        self.index_slider.valueChanged.connect(self.on_slider_changed)
+        slider_section.addWidget(self.index_slider)
 
-        # Frame and time info underneath
+        # Index and time info underneath
         info_layout = QHBoxLayout()
         info_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.frame_label = QLabel("Frame: 0 / 0")
-        self.time_label = QLabel("")  # Will show ISO time when available
+        self.display_label = QLabel("Index: 0 / 0")  # Will show time or frame
 
         info_layout.addStretch()
-        info_layout.addWidget(self.frame_label)
-        info_layout.addWidget(self.time_label)
+        info_layout.addWidget(self.display_label)
         info_layout.addStretch()
 
         slider_section.addLayout(info_layout)
@@ -101,12 +100,12 @@ class PlaybackControls(QWidget):
         self.prev_button = QPushButton()
         self.prev_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSkipBackward))
         self.prev_button.setToolTip("Previous Frame")
-        self.prev_button.clicked.connect(self.prev_frame)
+        self.prev_button.clicked.connect(self.prev_index)
 
         self.next_button = QPushButton()
         self.next_button.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSkipForward))
         self.next_button.setToolTip("Next Frame")
-        self.next_button.clicked.connect(self.next_frame)
+        self.next_button.clicked.connect(self.next_index)
 
         button_layout.addStretch()
         button_layout.addWidget(self.play_button)
@@ -181,63 +180,67 @@ class PlaybackControls(QWidget):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-    def set_frame_range(self, min_frame: int, max_frame: int):
-        """Set the range of frame numbers without changing current frame"""
-        self.min_frame = min_frame
-        self.max_frame = max_frame
+    def set_index_range(self, min_index: int, max_index: int):
+        """Set the range of indices without changing current index"""
+        self.min_index = min_index
+        self.max_index = max_index
 
-        # Block signals to prevent triggering frame changes while updating range
-        self.frame_slider.blockSignals(True)
+        # Block signals to prevent triggering index changes while updating range
+        self.index_slider.blockSignals(True)
 
         # Update slider range
-        self.frame_slider.setMinimum(min_frame)
-        self.frame_slider.setMaximum(max_frame)
-        # Don't set value here - let set_frame() handle it
+        self.index_slider.setMinimum(min_index)
+        self.index_slider.setMaximum(max_index)
+        # Don't set value here - let set_index() handle it
 
         # Unblock signals
-        self.frame_slider.blockSignals(False)
+        self.index_slider.blockSignals(False)
 
         # Update bounce spinboxes
-        self.bounce_start_spinbox.setMinimum(min_frame)
-        self.bounce_start_spinbox.setMaximum(max_frame)
-        self.bounce_start_spinbox.setValue(min_frame)
+        self.bounce_start_spinbox.setMinimum(min_index)
+        self.bounce_start_spinbox.setMaximum(max_index)
+        self.bounce_start_spinbox.setValue(min_index)
 
-        self.bounce_end_spinbox.setMinimum(min_frame)
-        self.bounce_end_spinbox.setMaximum(max_frame)
-        self.bounce_end_spinbox.setValue(max_frame)
+        self.bounce_end_spinbox.setMinimum(min_index)
+        self.bounce_end_spinbox.setMaximum(max_index)
+        self.bounce_end_spinbox.setValue(max_index)
 
-        self.bounce_start = min_frame
-        self.bounce_end = max_frame
+        self.bounce_start = min_index
+        self.bounce_end = max_index
 
         self.update_label()
 
-    def set_frame(self, frame_number: int):
-        """Set current frame by frame number"""
-        self.current_frame = frame_number
-        self.frame_slider.setValue(frame_number)
+    def set_index(self, index: int):
+        """Set current index"""
+        self.current_index = index
+        self.index_slider.setValue(index)
         self.update_label()
 
     def update_label(self):
-        """Update frame label and time display"""
-        self.frame_label.setText(f"Frame: {self.current_frame} / {self.max_frame}")
-
+        """Update label display"""
         # Update time display if callback is available
         if self.get_current_time is not None:
             current_time = self.get_current_time()
             if current_time is not None:
                 # Convert numpy.datetime64 to ISO format string
                 time_str = str(current_time)
-                self.time_label.setText(f"Time: {time_str}")
-            else:
-                self.time_label.setText("")
-        else:
-            self.time_label.setText("")
+                self.display_label.setText(f"Time: {time_str}   ({self.current_index} / {self.max_index})")
+                return
+        # Fallback to frames if no time to display
+        if self.get_current_frame is not None:
+            current_frame = self.get_current_frame()
+            if current_frame is not None:
+                frame_str = str(current_frame)
+                self.display_label.setText(f"Frame: {frame_str}   ({self.current_index} / {self.max_index})")
+                return
+        # Fallback to index if no frame to display
+        self.display_label.setText(f"Index: {self.current_index} / {self.max_index}")
 
     def on_slider_changed(self, value):
         """Handle slider value change"""
-        self.current_frame = value
+        self.current_index = value
+        self.index_changed(value)
         self.update_label()
-        self.frame_changed(value)
 
     def on_fps_dial_changed(self, value):
         """Handle FPS dial change"""
@@ -262,9 +265,8 @@ class PlaybackControls(QWidget):
     def on_fps_spinbox_changed(self, value):
         """Handle FPS spinbox change"""
         if value == 0:
-            # Don't allow 0 FPS, skip to 1 or -1
-            if self.fps_spinbox.value() == 0:
-                self.fps_spinbox.setValue(1 if self.playback_direction > 0 else -1)
+            # Don't allow 0 FPS, skip to 1 or -1 (-playback direction)
+            self.fps_spinbox.setValue(-self.playback_direction)
             return
 
         self.fps = abs(value)
@@ -340,7 +342,7 @@ class PlaybackControls(QWidget):
         # Only advance if enough time has passed
         if time_since_last_frame >= frame_period_ms:
             self.last_frame_time = elapsed_ms
-            self.advance_frame()
+            self.advance_index()
 
             # Track frame time for actual FPS calculation
             self.frame_times.append(elapsed_ms)
@@ -354,49 +356,49 @@ class PlaybackControls(QWidget):
             # This allows pause/stop actions to take effect immediately
             QApplication.processEvents()
 
-    def advance_frame(self):
-        """Advance frame based on playback direction and bounce mode"""
+    def advance_index(self):
+        """Advance index based on playback direction and bounce mode"""
         if self.bounce_mode:
-            # Bounce between start and end frames
-            next_frame = self.current_frame + self.playback_direction
+            # Bounce between start and end indices
+            next_index = self.current_index + self.playback_direction
 
-            if next_frame > self.bounce_end:
+            if next_index > self.bounce_end:
                 # Hit the end, reverse direction
                 self.playback_direction = -1
-                next_frame = self.bounce_end - 1
-            elif next_frame < self.bounce_start:
+                next_index = self.bounce_end - 1
+            elif next_index < self.bounce_start:
                 # Hit the start, reverse direction
                 self.playback_direction = 1
-                next_frame = self.bounce_start + 1
+                next_index = self.bounce_start + 1
 
-            self.set_frame(next_frame)
+            self.set_index(next_index)
         else:
             # Normal playback with looping
             if self.playback_direction == 1:
-                self.next_frame()
+                self.next_index()
             else:
-                self.prev_frame_reverse()
+                self.prev_index_reverse()
 
-    def next_frame(self):
-        """Go to next frame"""
-        if self.current_frame < self.max_frame:
-            self.set_frame(self.current_frame + 1)
+    def next_index(self):
+        """Go to next index"""
+        if self.current_index < self.max_index:
+            self.set_index(self.current_index + 1)
         else:
             # Loop back to beginning
-            self.set_frame(self.min_frame)
+            self.set_index(self.min_index)
 
-    def prev_frame(self):
-        """Go to previous frame"""
-        if self.current_frame > self.min_frame:
-            self.set_frame(self.current_frame - 1)
+    def prev_index(self):
+        """Go to previous index"""
+        if self.current_index > self.min_index:
+            self.set_index(self.current_index - 1)
 
-    def prev_frame_reverse(self):
-        """Go to previous frame (for reverse playback with looping)"""
-        if self.current_frame > self.min_frame:
-            self.set_frame(self.current_frame - 1)
+    def prev_index_reverse(self):
+        """Go to previous index (for reverse playback with looping)"""
+        if self.current_index > self.min_index:
+            self.set_index(self.current_index - 1)
         else:
             # Loop to end
-            self.set_frame(self.max_frame)
+            self.set_index(self.max_index)
 
     def update_actual_fps(self):
         """Calculate and update the actual achieved FPS display"""
@@ -431,6 +433,6 @@ class PlaybackControls(QWidget):
             self.bounce_start_spinbox.setValue(self.bounce_start)
             self.bounce_start_spinbox.blockSignals(False)
 
-    def frame_changed(self, frame_index):
-        """Override this method to handle frame changes"""
+    def index_changed(self, index):
+        """Override this method to handle index changes"""
         pass

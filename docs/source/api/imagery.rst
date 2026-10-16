@@ -16,7 +16,8 @@ Core Classes
 
 The :class:`~imagery.Imagery` class is the foundation for working with image data in VISTA. It provides:
 
-* Frame-based indexing and slicing
+* Time- and frame-based lookup
+* Index-based slicing
 * Area of interest (AOI) extraction
 * Integration with time and geodetic coordinate systems
 * Sensor metadata association

@@ -42,7 +42,7 @@ class BaseBackgroundRemovalThread(QThread):
         self.algorithm_params = algorithm_params
         self.aoi = aoi
         self.start_frame = start_frame
-        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
+        self.end_frame = end_frame if end_frame is not None else len(imagery)
         self._cancelled = False
 
     def cancel(self):
@@ -95,12 +95,12 @@ class BaseBackgroundRemovalThread(QThread):
             processed_imagery.name = new_name
 
             # Pre-compute histograms for performance
-            for i in range(len(processed_imagery.images)):
+            for i in range(len(processed_imagery)):
                 if self._cancelled:
                     return  # Exit early if cancelled
                 processed_imagery.get_histogram(i)  # Lazy computation and caching
                 # Update progress: processing + histogram computation
-                self.progress_updated.emit(i + 1, len(processed_imagery.images), "Computing histograms...")
+                self.progress_updated.emit(i + 1, len(processed_imagery), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled
@@ -296,7 +296,7 @@ class BaseBackgroundRemovalWidget(QDialog):
         # Get common parameter values
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
-        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
+        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery))
 
         # Get algorithm-specific parameters
         algorithm_params = self.build_algorithm_params()

@@ -624,21 +624,21 @@ class TrackPlotWindow(QWidget):
 
         self.update_plot()
 
-    def on_frame_changed(self, _frame: int):
+    def on_index_changed(self, _index: int):
         """
-        Handle frame change from main viewer.
+        Handle index change from main viewer.
 
         Parameters
         ----------
-        _frame : int
-            Current frame number (unused, frame is read from viewer)
+        _index : int
+            Current index (unused, index is read from viewer)
         """
         self.update_plot()
 
     def _refresh_axis_options(self):
         """Refresh axis combo boxes based on available data"""
         # Build list of available axes for X (includes Frame/Time)
-        x_axis_options = ["Frame", "Row", "Column"]
+        x_axis_options = ["Time", "Frame", "Row", "Column"]
         # Y-axis excludes Frame and Time (they don't make sense as dependent variables)
         y_axis_options = ["Row", "Column"]
 
@@ -648,7 +648,7 @@ class TrackPlotWindow(QWidget):
 
         for track in self.tracks:
             # Check geolocation
-            if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
+            if track.sensor.can_geolocate():
                 has_geolocation = True
 
             # Check extraction metadata
@@ -721,63 +721,39 @@ class TrackPlotWindow(QWidget):
             return self._cached_data[track.uuid]
 
         data = {
-            "Frame": track.frames.astype(float),
             "Row": track.rows,
             "Column": track.columns,
         }
 
         # Add times if available
-        times = track.get_times()
-        if times is not None and not np.all(np.isnat(times)):
+        if track.times is not None and not np.all(np.isnat(track.times)):
             # Convert datetime64 to float (seconds since epoch) for plotting
-            data["Time"] = times.astype("datetime64[ns]").astype(np.float64) / 1e9
+            data["Time"] = track.times.astype("datetime64[ns]").astype(np.int64) / 1e9
+        if track.frames is not None:
+            data["Frame"] = track.frames.astype(float)
 
         # Add geolocation if sensor supports it
-        if hasattr(track.sensor, "can_geolocate") and track.sensor.can_geolocate():
-            if isinstance(track.sensor, SampledSensor):
-                azimuths = []
-                elevations = []
-                lats = []
-                lons = []
+        if track.sensor.can_geolocate() and isinstance(track.sensor, SampledSensor) and track.times is not None:
+            az_coeffs = track.sensor.get_coefficients(track.sensor.poly_pixel_to_arf_azimuth, track.times)
+            el_coeffs = track.sensor.get_coefficients(track.sensor.poly_pixel_to_arf_elevation, track.times)
+            azimuths = evaluate_2d_polynomial(az_coeffs, track.columns, track.rows)
+            elevations = evaluate_2d_polynomial(el_coeffs, track.columns, track.rows)
 
-                for i, frame in enumerate(track.frames):
-                    row, col = track.rows[i], track.columns[i]
+            locations = track.sensor.pixel_to_geodetic(track.times, track.rows, track.columns)
+            lats = locations.lat.deg
+            lons = locations.lon.deg
 
-                    # Get ARF angles
-                    try:
-                        frame_idx = np.where(track.sensor.frames == frame)[0]
-                        if len(frame_idx) > 0:
-                            frame_idx = frame_idx[0]
-                            az_coeffs = track.sensor.poly_pixel_to_arf_azimuth[frame_idx]
-                            el_coeffs = track.sensor.poly_pixel_to_arf_elevation[frame_idx]
-                            az = evaluate_2d_polynomial(az_coeffs, np.array([col]), np.array([row]))[0]
-                            el = evaluate_2d_polynomial(el_coeffs, np.array([col]), np.array([row]))[0]
-                            azimuths.append(az)
-                            elevations.append(el)
-                        else:
-                            azimuths.append(np.nan)
-                            elevations.append(np.nan)
-                    except (IndexError, KeyError):
-                        azimuths.append(np.nan)
-                        elevations.append(np.nan)
+            # one of x, y, or z will have nan value if conversion fails
+            x, y, z = locations.to_geocentric()
+            invalid = np.isnan(x * y * z)
+            if np.any(invalid):
+                lats[invalid] = np.nan
+                lons[invalid] = np.nan
 
-                    # Get geodetic coordinates
-                    try:
-                        locations = track.sensor.pixel_to_geodetic(frame, np.array([row]), np.array([col]))
-                        if locations is not None and len(locations) > 0:
-                            lats.append(locations[0].lat.deg)
-                            lons.append(locations[0].lon.deg)
-                        else:
-                            lats.append(np.nan)
-                            lons.append(np.nan)
-                    except Exception:
-                        lats.append(np.nan)
-                        lons.append(np.nan)
-
-                data["ARF Azimuth (rad)"] = np.array(azimuths)
-                data["ARF Elevation (rad)"] = np.array(elevations)
-                data["Latitude"] = np.array(lats)
-                data["Longitude"] = np.array(lons)
+            data["ARF Azimuth (rad)"] = azimuths
+            data["ARF Elevation (rad)"] = elevations
+            data["Latitude"] = lats
+            data["Longitude"] = lons
 
         # Add extraction metadata if available
         if track.extraction_metadata is not None:
@@ -871,7 +847,9 @@ class TrackPlotWindow(QWidget):
         if not x_axis or not y_axis:
             return
 
-        current_frame = self.viewer.current_frame_number if self.viewer else 0
+        timeline = self.viewer.timeline if self.viewer else None
+        if timeline is None:
+            return
         show_complete = self.show_complete_plot.isChecked()
 
         color_by = "track" if self.color_by_track.isChecked() else "tracker"
@@ -887,19 +865,29 @@ class TrackPlotWindow(QWidget):
 
             x_data = data[x_axis]
             y_data_original = data[y_axis]
-            frames = track.frames
 
             # Filter data based on display mode
             if show_complete:
                 # Show all data points
-                mask = np.ones(len(frames), dtype=bool)
+                mask = np.ones(len(x_data), dtype=bool)
             elif self.up_to_frame_radio.isChecked():
-                # Show all data up to current frame
-                mask = frames <= current_frame
+                indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
+                mask = np.zeros(len(x_data), dtype=bool)
+                if indices is not None:
+                    mask[indices] = True
             else:
-                # Show only last N frames
+                # Show only last N values
                 tail_length = self.tail_length_spin.value()
-                mask = (frames <= current_frame) & (frames > current_frame - tail_length)
+                # save old tail length
+                old_tail_length = track.tail_length
+                # temporarily set tail length to get proper indices
+                track.tail_length = tail_length
+                indices = track.get_visible_indices(timeline.current_value, timeline.is_time)
+                mask = np.zeros(len(x_data), dtype=bool)
+                if indices is not None:
+                    mask[indices] = True
+                # restore old tail length
+                track.tail_length = old_tail_length
 
             if not np.any(mask):
                 continue
@@ -929,9 +917,8 @@ class TrackPlotWindow(QWidget):
             self._plot_items.append((track, x_filtered, y_filtered))
 
             # Highlight current frame position with a larger marker
-            current_idx = np.where(frames == current_frame)[0]
-            if len(current_idx) > 0:
-                idx = current_idx[0]
+            idx = track.get_index(timeline.current_value, timeline.is_time)
+            if idx is not None:
                 y_current = self._symlog(np.array([y_data_original[idx]]))[0] if use_symlog else y_data_original[idx]
                 self.plot.plot(
                     [x_data[idx]],
@@ -977,7 +964,7 @@ class TrackPlotWindow(QWidget):
                 data = self._get_plottable_data(track)
                 tracker_name = self.tracker_map.get(track.uuid, "Unknown")
 
-                for i in range(len(track.frames)):
+                for i in range(len(track)):
                     row = {
                         "Tracker": tracker_name,
                         "Track": track.name,

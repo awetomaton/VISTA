@@ -1,10 +1,11 @@
 """Detections panel for data manager"""
 
 import pathlib
-import traceback
 
 import numpy as np
 import pandas as pd
+from astropy import units as u
+from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -30,6 +31,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from vista.detections.detector import Detector
+from vista.temporal_data.temporal_data import all_have_times_frames
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
@@ -54,7 +57,7 @@ class DetectionsPanel(DataPanel):
     def __init__(self, viewer):
         super().__init__(viewer)
         self.settings = QSettings("VISTA", "DataManager")
-        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.selected_detections = []  # List of tuples: [(detector, index), ...]
         self.waiting_for_track_selection = False  # Flag when waiting for user to select track
         self.viewer.detection_editing_ended.connect(self.on_detection_editing_ended)
         self.init_ui()
@@ -357,89 +360,72 @@ class DetectionsPanel(DataPanel):
 
     def refresh_detections_table(self):
         """Refresh the detections table, filtering by selected sensor"""
-        try:
-            self.detections_table.blockSignals(True)
-            self.detections_table.setRowCount(0)
+        self.detections_table.blockSignals(True)
+        self.detections_table.setRowCount(0)
 
-            # Update header labels with filter icons
-            self._update_detections_header_icons()
+        # Update header labels with filter icons
+        self._update_detections_header_icons()
 
-            # Get selected sensor from viewer
-            selected_sensor = self.viewer.selected_sensor
+        # Filter detectors by selected sensor
+        filtered_detectors = [det for det in self.viewer.detectors if det.sensor == self.viewer.selected_sensor]
 
-            # Filter detectors by selected sensor
-            filtered_detectors = []
-            if selected_sensor is not None:
-                filtered_detectors = [det for det in self.viewer.detectors if det.sensor == selected_sensor]
-            else:
-                filtered_detectors = self.viewer.detectors
+        # Apply column filters
+        filtered_detectors = self._apply_detection_filters(filtered_detectors)
 
-            # Apply column filters
-            filtered_detectors = self._apply_detection_filters(filtered_detectors)
+        for row, detector in enumerate(filtered_detectors):
+            self.detections_table.insertRow(row)
 
-            for row, detector in enumerate(filtered_detectors):
-                try:
-                    self.detections_table.insertRow(row)
+            # Visible checkbox
+            visible_item = QTableWidgetItem()
+            visible_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
+            visible_item.setCheckState(Qt.CheckState.Checked if detector.visible else Qt.CheckState.Unchecked)
+            self.detections_table.setItem(row, 0, visible_item)
 
-                    # Visible checkbox
-                    visible_item = QTableWidgetItem()
-                    visible_item.setFlags(
-                        Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-                    )
-                    visible_item.setCheckState(Qt.CheckState.Checked if detector.visible else Qt.CheckState.Unchecked)
-                    self.detections_table.setItem(row, 0, visible_item)
+            # Name
+            name_item = QTableWidgetItem(str(detector.name))
+            name_item.setData(Qt.ItemDataRole.UserRole, detector.uuid)  # Store detector UUID
+            self.detections_table.setItem(row, 1, name_item)
 
-                    # Name
-                    name_item = QTableWidgetItem(str(detector.name))
-                    name_item.setData(Qt.ItemDataRole.UserRole, detector.uuid)  # Store detector UUID
-                    self.detections_table.setItem(row, 1, name_item)
+            # Labels - show unique labels for this detector (across all detections)
+            unique_labels = detector.get_unique_labels()
+            labels_text = ", ".join(sorted(unique_labels))
+            labels_item = QTableWidgetItem(labels_text)
+            labels_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Read-only
+            self.detections_table.setItem(row, 2, labels_item)
 
-                    # Labels - show unique labels for this detector (across all detections)
-                    unique_labels = detector.get_unique_labels()
-                    labels_text = ", ".join(sorted(unique_labels)) if unique_labels else ""
-                    labels_item = QTableWidgetItem(labels_text)
-                    labels_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Read-only
-                    self.detections_table.setItem(row, 2, labels_item)
+            # Color
+            color_item = QTableWidgetItem()
+            color_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            color = pg_color_to_qcolor(detector.color)
+            if not color.isValid():
+                print(f"Warning: Invalid color '{detector.color}' for detector '{detector.name}', using red")
+                color = QColor("red")
+            color_item.setBackground(QBrush(color))
+            color_item.setData(Qt.ItemDataRole.UserRole, detector.color)  # Store original color string
+            self.detections_table.setItem(row, 3, color_item)
 
-                    # Color
-                    color_item = QTableWidgetItem()
-                    color_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                    color = pg_color_to_qcolor(detector.color)
-                    if not color.isValid():
-                        print(f"Warning: Invalid color '{detector.color}' for detector '{detector.name}', using red")
-                        color = QColor("red")
-                    color_item.setBackground(QBrush(color))
-                    color_item.setData(Qt.ItemDataRole.UserRole, detector.color)  # Store original color string
-                    self.detections_table.setItem(row, 3, color_item)
+            # Marker
+            self.detections_table.setItem(row, 4, QTableWidgetItem(str(detector.marker)))
 
-                    # Marker
-                    self.detections_table.setItem(row, 4, QTableWidgetItem(str(detector.marker)))
+            # Size
+            size_item = QTableWidgetItem(str(detector.marker_size))
+            self.detections_table.setItem(row, 5, size_item)
 
-                    # Size
-                    size_item = QTableWidgetItem(str(detector.marker_size))
-                    self.detections_table.setItem(row, 5, size_item)
+            # Line thickness
+            line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
+            self.detections_table.setItem(row, 6, line_thickness_item)
 
-                    # Line thickness
-                    line_thickness_item = QTableWidgetItem(str(detector.line_thickness))
-                    self.detections_table.setItem(row, 6, line_thickness_item)
+            # Complete checkbox
+            complete_item = QTableWidgetItem()
+            complete_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
+            complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
+            self.detections_table.setItem(row, 7, complete_item)
 
-                    # Complete checkbox
-                    complete_item = QTableWidgetItem()
-                    complete_item.setFlags(
-                        Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-                    )
-                    complete_item.setCheckState(Qt.CheckState.Checked if detector.complete else Qt.CheckState.Unchecked)
-                    self.detections_table.setItem(row, 7, complete_item)
-
-                except Exception as e:
-                    print(f"Error adding detector '{detector.name}' to table at row {row}: {e}")
-                    traceback.print_exc()
-
-            self.detections_table.blockSignals(False)
-        except Exception as e:
-            print(f"Error in refresh_detections_table: {e}")
-            traceback.print_exc()
-            self.detections_table.blockSignals(False)
+        self.detections_table.blockSignals(False)
 
         self.on_detector_selection_changed()
 
@@ -478,7 +464,7 @@ class DetectionsPanel(DataPanel):
 
                         # Check if ANY detection point in this detector matches the filter
                         matches_filter = False
-                        for i in range(len(detector.frames)):
+                        for i in range(len(detector)):
                             if i < len(detector.labels):
                                 detection_labels = detector.labels[i]
                                 has_no_labels = len(detection_labels) == 0
@@ -567,7 +553,7 @@ class DetectionsPanel(DataPanel):
         has_blank_labels = False
         for detector in self.viewer.detectors:
             # Check each detection point
-            for i in range(len(detector.frames)):
+            for i in range(len(detector)):
                 if i < len(detector.labels):
                     if len(detector.labels[i]) > 0:
                         unique_labels.update(detector.labels[i])
@@ -770,15 +756,15 @@ class DetectionsPanel(DataPanel):
         """
         if not self.detection_column_filters:
             # No filters active, all detections visible
-            return np.ones(len(detector.frames), dtype=bool)
+            return np.ones(len(detector), dtype=bool)
 
         filter_config = self.detection_column_filters.get(2)  # Labels column
         if not filter_config:
-            return np.ones(len(detector.frames), dtype=bool)
+            return np.ones(len(detector), dtype=bool)
 
         filter_values = filter_config.get("values")
         if not filter_values:
-            return np.ones(len(detector.frames), dtype=bool)
+            return np.ones(len(detector), dtype=bool)
 
         label_filter_values = filter_values - {"(No Labels)"}
         no_labels_selected = "(No Labels)" in filter_values
@@ -786,14 +772,14 @@ class DetectionsPanel(DataPanel):
         # Ensure detector.labels is properly initialized with the right length
         if not isinstance(detector.labels, list):
             # If labels is not a list, initialize it as empty sets
-            detector.labels = [set() for _ in range(len(detector.frames))]
-        elif len(detector.labels) < len(detector.frames):
+            detector.labels = [set() for _ in range(len(detector))]
+        elif len(detector.labels) < len(detector):
             # If labels list is too short, pad it with empty sets
-            detector.labels.extend([set() for _ in range(len(detector.frames) - len(detector.labels))])
+            detector.labels.extend([set() for _ in range(len(detector) - len(detector.labels))])
 
         # Vectorized approach using list comprehension (much faster than explicit loop)
         # For each detection, check if it matches the filter criteria
-        num_detections = len(detector.frames)
+        num_detections = len(detector)
 
         if no_labels_selected and not label_filter_values:
             # Only "(No Labels)" selected - return detections with no labels
@@ -1021,7 +1007,7 @@ class DetectionsPanel(DataPanel):
                 detector.invalidate_caches()
             elif property_name == "Labels":
                 # Set labels on all detection points in the detector
-                n_detections = len(detector.frames)
+                n_detections = len(detector)
                 detector.labels = [self.bulk_labels.copy() for _ in range(n_detections)]
                 now = get_current_label_time()
                 labeler = get_current_labeler()
@@ -1293,13 +1279,21 @@ class DetectionsPanel(DataPanel):
             edited_detector = self.viewer.finish_detection_editing()
             if edited_detector:
                 self.refresh_detections_table()
-                total_detections = len(edited_detector.frames)
-                unique_frames = len(np.unique(edited_detector.frames))
-                self.status_message.emit(
-                    f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
-                    f"{unique_frames} frames",
-                    3000,
-                )
+                total_detections = len(edited_detector)
+                if edited_detector.times is not None:
+                    unique_times = len(np.unique(edited_detector.times))
+                    self.status_message.emit(
+                        f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
+                        f"{unique_times} times",
+                        3000,
+                    )
+                else:
+                    unique_frames = len(np.unique(edited_detector.frames))
+                    self.status_message.emit(
+                        f"Detector '{edited_detector.name}' updated with {total_detections} detections across "
+                        f"{unique_frames} frames",
+                        3000,
+                    )
             else:
                 self.status_message.emit("Detector editing cancelled", 3000)
 
@@ -1362,7 +1356,7 @@ class DetectionsPanel(DataPanel):
                 # Save to CSV
                 all_detections_df.to_csv(file_path, index=False)
 
-                num_detections = sum(len(d.frames) for d in selected_detectors)
+                num_detections = sum(len(d) for d in selected_detectors)
                 QMessageBox.information(
                     self,
                     "Success",
@@ -1461,9 +1455,19 @@ class DetectionsPanel(DataPanel):
                 detector_copy.sensor = target_sensor
                 detector_copy.name = f"{detector.name} (copy)"
 
+                geodetics = detector_to_copy.get_geodetic_coords()
+                if geodetics is not None and detector_to_copy.times is not None and target_sensor.can_geolocate():
+                    # assumes 0 height since we don't have height info
+                    location = EarthLocation(
+                        lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km
+                    )
+                    rows, cols = target_sensor.geodetic_to_pixel(detector_to_copy.times, location)
+                    detector_copy.rows = rows
+                    detector_copy.columns = cols
+
                 # Add to viewer
                 self.viewer.add_detector(detector_copy)
-                total_detections_copied += len(detector_copy.frames)
+                total_detections_copied += len(detector_copy)
 
             # Refresh the table and emit data changed
             self.refresh_detections_table()
@@ -1502,7 +1506,7 @@ class DetectionsPanel(DataPanel):
             # Set selected labels to each selected detection point (empty set clears labels)
             now = get_current_label_time()
             labeler = get_current_labeler()
-            for detector, _frame, index in self.selected_detections:
+            for detector, index in self.selected_detections:
                 # Ensure per-detection lists are initialized and have enough entries
                 while len(detector.labels) <= index:
                     detector.labels.append(set())
@@ -1568,7 +1572,7 @@ class DetectionsPanel(DataPanel):
 
         # Group indices by detector
         detector_indices = {}
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if detector.uuid not in detector_indices:
                 detector_indices[detector.uuid] = {"detector": detector, "indices": []}
             detector_indices[detector.uuid]["indices"].append(index)
@@ -1582,16 +1586,19 @@ class DetectionsPanel(DataPanel):
             indices_to_delete = sorted(data["indices"], reverse=True)
 
             # Create mask for points to keep
-            keep_mask = np.ones(len(detector.frames), dtype=bool)
+            keep_mask = np.ones(len(detector), dtype=bool)
             for idx in indices_to_delete:
                 if 0 <= idx < len(keep_mask):
                     keep_mask[idx] = False
                     total_deleted += 1
 
             # Update detector arrays
-            detector.frames = detector.frames[keep_mask]
+            detector.times = detector.times[keep_mask] if detector.times is not None else None
+            detector.frames = detector.frames[keep_mask] if detector.frames is not None else None
             detector.rows = detector.rows[keep_mask]
             detector.columns = detector.columns[keep_mask]
+            detector._cached_lats = detector._cached_lats[keep_mask] if detector._cached_lats is not None else None
+            detector._cached_lons = detector._cached_lons[keep_mask] if detector._cached_lons is not None else None
 
             # Update labels if they exist
             if detector.labels and len(detector.labels) > 0:
@@ -1601,11 +1608,12 @@ class DetectionsPanel(DataPanel):
             if detector.labelers and len(detector.labelers) > 0:
                 detector.labelers = [name for i, name in enumerate(detector.labelers) if keep_mask[i]]
 
-            # Invalidate frame index cache
+            # Invalidate time and frame index cache
+            detector._time_index = None
             detector._frame_index = None
 
             # Check if detector is now empty
-            if len(detector.frames) == 0:
+            if len(detector) == 0:
                 detectors_to_remove.append(detector)
 
         # Remove empty detectors
@@ -1641,17 +1649,31 @@ class DetectionsPanel(DataPanel):
             QMessageBox.warning(self, "Insufficient Detections", "Select at least 2 detections to create a track.")
             return
 
+        # Check whether all detectors have times and frames
+        all_have_times, all_have_frames = all_have_times_frames(
+            [detector for detector, index in self.selected_detections]
+        )
+
+        if not (all_have_times or all_have_frames):
+            QMessageBox.warning(
+                self,
+                "Cannot Create Track",
+                "Selected detections must all have times or frames.",
+            )
+            return
+
         # Immediately clear the viewer's selected detections highlight
         self.viewer.selected_detections = []
         self.viewer._update_selected_detections_display()
 
-        # Extract frames, rows, columns from selected detections
+        # Extract times, frames, rows, columns from selected detections
+        times_list = []
         frames_list = []
         rows_list = []
         columns_list = []
         sensor = None
 
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if sensor is None:
                 sensor = detector.sensor
             elif sensor != detector.sensor:
@@ -1662,13 +1684,20 @@ class DetectionsPanel(DataPanel):
                 )
                 return
 
-            frames_list.append(frame)
+            if detector.times is not None:
+                times_list.append(detector.times[index])
+            if detector.frames is not None:
+                frames_list.append(detector.frames[index])
             rows_list.append(detector.rows[index])
             columns_list.append(detector.columns[index])
 
-        # Sort by frame
-        sorted_indices = np.argsort(frames_list)
-        frames = np.array(frames_list)[sorted_indices].astype(np.int_)
+        if all_have_times:
+            sorted_indices = np.argsort(times_list)
+        else:
+            sorted_indices = np.argsort(frames_list)
+
+        times = np.array(times_list)[sorted_indices].astype("datetime64[ns]") if all_have_times else None
+        frames = np.array(frames_list)[sorted_indices].astype(np.int_) if all_have_frames else None
         rows = np.array(rows_list)[sorted_indices]
         columns = np.array(columns_list)[sorted_indices]
 
@@ -1676,6 +1705,7 @@ class DetectionsPanel(DataPanel):
         track_name = f"Track from Detections {len(self.viewer.tracks) + 1}"
         track = Track(
             name=track_name,
+            times=times,
             frames=frames,
             rows=rows,
             columns=columns,
@@ -1684,7 +1714,7 @@ class DetectionsPanel(DataPanel):
         )
 
         # Add track to viewer
-        self.viewer.tracks.append(track)
+        self.viewer.add_track(track)
 
         # Clear selection
         self.clear_detection_selection()
@@ -1694,11 +1724,18 @@ class DetectionsPanel(DataPanel):
         # Exit detection selection mode
         self._exit_detection_selection_mode()
 
-        QMessageBox.information(
-            self,
-            "Track Created",
-            f"Track '{track_name}' created with {len(frames)} points across {len(np.unique(frames))} frames.",
-        )
+        if track.times is not None:
+            QMessageBox.information(
+                self,
+                "Track Created",
+                f"Track '{track.name}' created with {len(track)} points across {len(np.unique(track.times))} times.",
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Track Created",
+                f"Track '{track.name}' created with {len(track)} points across {len(np.unique(track.frames))} frames.",
+            )
 
     def start_add_to_existing_track(self):
         """Start the process of adding detections to an existing track"""
@@ -1752,7 +1789,7 @@ class DetectionsPanel(DataPanel):
 
         # Check if detections are from same sensor as track
         sensor = None
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if sensor is None:
                 sensor = detector.sensor
             elif sensor != detector.sensor:
@@ -1786,29 +1823,47 @@ class DetectionsPanel(DataPanel):
             # Store count before clearing
             num_detections_added = len(self.selected_detections)
 
+            all_have_times, all_have_frames = all_have_times_frames(
+                [detector for detector, index in self.selected_detections]
+            )
+            all_have_times &= track.times is not None
+            all_have_frames &= track.frames is not None
+
+            if not (all_have_times or all_have_frames):
+                QMessageBox.warning(
+                    self,
+                    "Cannot Add Detections To Track",
+                    "Selected detections and track must all have times or frames.",
+                )
+                self.cancel_add_to_existing_track()
+                return
+
             # Extract frames, rows, columns from selected detections
-            frames_list = list(track.frames)
+            times_list = list(track.times) if track.times is not None else []
+            frames_list = list(track.frames) if track.frames is not None else []
             rows_list = list(track.rows)
             columns_list = list(track.columns)
 
-            for detector, frame, index in self.selected_detections:
-                frames_list.append(frame)
+            for detector, index in self.selected_detections:
+                if detector.times is not None:
+                    times_list.append(detector.times[index])
+                if detector.frames is not None:
+                    frames_list.append(detector.frames[index])
                 rows_list.append(detector.rows[index])
                 columns_list.append(detector.columns[index])
 
-            # Sort by frame and remove duplicates
-            sorted_indices = np.argsort(frames_list)
-            frames = np.array(frames_list)[sorted_indices].astype(np.int_)
+            # Sort by time or frame and remove duplicates
+            if all_have_times:
+                _, sorted_indices = np.unique(times_list, return_index=True)
+            else:
+                _, sorted_indices = np.unique(frames_list, return_index=True)
+            times = np.asarray(times_list)[sorted_indices].astype("datetime64[ns]") if all_have_times else None
+            frames = np.array(frames_list)[sorted_indices].astype(np.int_) if all_have_frames else None
             rows = np.array(rows_list)[sorted_indices]
             columns = np.array(columns_list)[sorted_indices]
 
-            # Remove duplicate frames (keep first occurrence)
-            unique_mask = np.concatenate(([True], frames[1:] != frames[:-1]))
-            frames = frames[unique_mask]
-            rows = rows[unique_mask]
-            columns = columns[unique_mask]
-
             # Update track
+            track.times = times
             track.frames = frames
             track.rows = rows
             track.columns = columns
@@ -1826,12 +1881,20 @@ class DetectionsPanel(DataPanel):
             # Exit detection selection mode
             self._exit_detection_selection_mode()
 
-            QMessageBox.information(
-                self,
-                "Detections Added",
-                f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
-                f"Track now has {len(frames)} points across {len(np.unique(frames))} frames.",
-            )
+            if track.times is not None:
+                QMessageBox.information(
+                    self,
+                    "Detections Added",
+                    f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
+                    f"Track now has {len(track)} points across {len(np.unique(track.times))} times.",
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Detections Added",
+                    f"Added {num_detections_added} detection(s) to track '{track.name}'.\n"
+                    f"Track now has {len(track)} points across {len(np.unique(track.frames))} frames.",
+                )
         else:
             self.cancel_add_to_existing_track()
 
@@ -1881,10 +1944,22 @@ class DetectionsPanel(DataPanel):
             )
             return
 
+        # Check whether all detectors have times and frames
+        all_have_times, all_have_frames = all_have_times_frames(detectors_to_merge)
+
+        if not (all_have_times or all_have_frames):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected detectors must all have times or frames.",
+            )
+            return
+
         # Save state before merge
         self.save_undo_state(f"Merge {len(detectors_to_merge)} detectors")
 
         # Combine all frames, rows, columns, and labels
+        all_times = []
         all_frames = []
         all_rows = []
         all_columns = []
@@ -1893,11 +1968,14 @@ class DetectionsPanel(DataPanel):
         all_labelers = []
 
         for detector in detectors_to_merge:
-            all_frames.extend(detector.frames.tolist())
+            if detector.times is not None:
+                all_times.extend(detector.times.tolist())
+            if detector.frames is not None:
+                all_frames.extend(detector.frames.tolist())
             all_rows.extend(detector.rows.tolist())
             all_columns.extend(detector.columns.tolist())
             # Extend labels, padding with empty sets if needed
-            for i in range(len(detector.frames)):
+            for i in range(len(detector)):
                 if i < len(detector.labels):
                     all_labels.append(detector.labels[i].copy())
                 else:
@@ -1922,11 +2000,10 @@ class DetectionsPanel(DataPanel):
             merged_name = f"{base_name}_{counter}"
             counter += 1
 
-        from vista.detections.detector import Detector
-
         merged_detector = Detector(
             name=merged_name,
-            frames=np.array(all_frames, dtype=np.int_),
+            times=np.asarray(all_times, dtype="datetime64[ns]") if all_have_times else None,
+            frames=np.array(all_frames, dtype=np.int_) if all_have_frames else None,
             rows=np.array(all_rows),
             columns=np.array(all_columns),
             sensor=sensor,
@@ -1962,7 +2039,7 @@ class DetectionsPanel(DataPanel):
             self,
             "Merge Complete",
             f"Successfully merged {len(detectors_to_merge)} detectors into '{merged_name}'.\n"
-            f"The merged detector has {len(all_frames)} detection points.",
+            f"The merged detector has {len(merged_detector)} detection points.",
         )
 
     # -------------------------------------------------------------------------

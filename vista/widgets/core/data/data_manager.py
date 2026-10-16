@@ -48,14 +48,16 @@ class DataManagerPanel(QWidget):
         self.known_sources_panel = KnownSourcesPanel(self.viewer)
 
         # Connect panel signals
-        self.sensors_panel.data_changed.connect(self.on_sensor_data_changed)
-        self.sensors_panel.sensor_selected.connect(self.on_sensor_selected)
+        self.sensors_panel.data_changed.connect(self.data_changed.emit)
         self.imagery_panel.data_changed.connect(self.data_changed.emit)
         self.tracks_panel.data_changed.connect(self.data_changed.emit)
         self.detections_panel.data_changed.connect(self.data_changed.emit)
         self.aois_panel.data_changed.connect(self.data_changed.emit)
         self.features_panel.data_changed.connect(self.data_changed.emit)
         self.known_sources_panel.data_changed.connect(self.data_changed.emit)
+
+        # refresh sensors panel when imagery changes (in case of filename updates)
+        self.imagery_panel.data_changed.connect(self.sensors_panel.refresh_sensors_table)
 
         # refresh tracks panel when known_sources add tracks
         self.known_sources_panel.data_changed.connect(self.tracks_panel.refresh_tracks_table)
@@ -76,22 +78,6 @@ class DataManagerPanel(QWidget):
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
-
-    def on_sensor_selected(self, sensor):
-        """Handle sensor selection change"""
-        # Filter the viewer to show only data for selected sensor
-        self.viewer.filter_by_sensor(sensor)
-        # Refresh other panels to show only data for selected sensor
-        self.imagery_panel.refresh_imagery_table()
-        self.tracks_panel.refresh_tracks_table()
-        self.detections_panel.refresh_detections_table()
-
-    def on_sensor_data_changed(self):
-        """Handle sensor data changes (e.g., sensor deletion)"""
-        # Refresh all panels
-        self.refresh()
-        # Emit data changed signal
-        self.data_changed.emit()
 
     def refresh(self):
         """Refresh all panels"""

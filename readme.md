@@ -5,7 +5,7 @@
 
 VISTA is a PyQt6-based desktop application for viewing, analyzing, and managing multi-frame imagery datasets along with associated detection and track overlays. It's designed for scientific and analytical workflows involving temporal image sequences with support for time-based and geodetic coordinate systems, sensor calibration data, and radiometric processing.
 
-![Version](https://img.shields.io/badge/version-1.14.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.13+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 [![PyPI](https://img.shields.io/badge/pypi-vista--imagery-blue)](https://pypi.org/project/vista-imagery/)
@@ -35,41 +35,43 @@ cd VISTA
 pip install -e .
 ```
 
-For detailed installation instructions, see the [Installation Guide](https://awetomaton.github.io/VISTA/1.14.0/getting_started/installation.html).
+For detailed installation instructions, see the [Installation Guide](https://awetomaton.github.io/VISTA/2.0.0/getting_started/installation.html).
 
 ## Quick Start
 
 1. **Load or simulate Imagery**:
- * (a) `File > Open` to load an HDF5 imagery file
+ * (a) `File > Load Imagery (HDF5)` to load an HDF5 imagery file
  * (b) `File > Simulate` to simulate example data
 2. **Navigate**: Use playback controls or arrow keys (Left/Right or A/D)
-3. **Detect Objects**: `Algorithms > Detectors` to run CFAR or threshold detection
-4. **Track Objects**: `Algorithms > Tracking` to link detections into tracks
+3. **Detect Objects**: `Image Processing > Detectors` to run CFAR or threshold detection
+4. **Track Objects**: `Image Processing > Tracking` to link detections into tracks
 5. **Export Results**: Export tracks/detections to CSV from the Data Manager
 
-For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.github.io/VISTA/1.14.0/getting_started/quickstart.html).
+For a complete walkthrough, see the [Quick Start Guide](https://awetomaton.github.io/VISTA/2.0.0/getting_started/quickstart.html).
 
 ## Key Features
 
-- **Multi-frame imagery viewing** with playback controls and histogram adjustment
+- **Multi-layer imagery viewing** with time- or frame-based playback and histogram adjustment
 - **View frame imagery in image or geodetic space** with tile servers to show imagery in geospatial context
 - **Background removal**: Temporal median, Running sub-space tracker, Robust PCA, GoDec
 - **Signal Enhancement**: Decimating or running Coaddition
 - **Detection algorithms**: simple threshold detectors, CFAR, PSTNN
 - **Tracking algorithms**: Simple, Kalman, Network Flow, and Tracklet trackers
 - **Sensor calibration**: Bias removal, non-uniformity correction
+- **Sensor platforms**: Shared time-sampled position and pointing for one or more sensors
+- **Known sources**: Load stars, satellites, and Solar System bodies and project them into imagery
 - **Geodetic support**: Pixel-to-geodetic coordinate conversion
 - **Manual annotation**: Create/edit/label tracks and detections interactively
 - **Feature overlays**: AOIs, placemarks, and shapefile import
 
-See the [User Guide](https://awetomaton.github.io/VISTA/1.14.0/user_guide/imagery.html) for detailed feature documentation.
+See the [User Guide](https://awetomaton.github.io/VISTA/2.0.0/user_guide/imagery.html) for detailed feature documentation.
 
 ## App Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
-| **Left Arrow** / **A** | Previous frame |
-| **Right Arrow** / **D** | Next frame |
+| **Left Arrow** / **A** | Previous timeline sample |
+| **Right Arrow** / **D** | Next timeline sample |
 | **CTRL** + **Z** | Undo track / detection panel action |
 | **Spacebar** | Play/Pause |
 | **Delete** | Remove selected sensors, imagery, tracks, detectors, detection points |
@@ -80,16 +82,17 @@ See the [User Guide](https://awetomaton.github.io/VISTA/1.14.0/user_guide/imager
 ## Input Data Formats
 
 VISTA uses **HDF5** for imagery and **CSV** for tracks/detections. For format specifications, see:
-- [Imagery HDF5 Format](https://awetomaton.github.io/VISTA/1.14.0/user_guide/imagery.html#hdf5-file-format)
-- [Track CSV Format](https://awetomaton.github.io/VISTA/1.14.0/user_guide/tracks.html#csv-format)
-- [Detection CSV Format](https://awetomaton.github.io/VISTA/1.14.0/user_guide/detections.html#export-to-csv)
+- [Imagery HDF5 Format](https://awetomaton.github.io/VISTA/2.0.0/user_guide/imagery.html#hdf5-file-format)
+- [Track CSV Format](https://awetomaton.github.io/VISTA/2.0.0/user_guide/tracks.html#csv-format)
+- [Detection CSV Format](https://awetomaton.github.io/VISTA/2.0.0/user_guide/detections.html#export-to-csv)
 
 ## Programmatic Usage
 
 ```python
+import numpy as np
+
 from vista.app import VistaApp
 from vista.imagery.imagery import Imagery
-import numpy as np
 
 # Create imagery in memory
 images = np.random.rand(10, 256, 256).astype(np.float32)
@@ -100,7 +103,8 @@ app = VistaApp(imagery=imagery)
 app.exec()
 ```
 
-See the [API Reference](https://awetomaton.github.io/VISTA/1.14.0/api/imagery.html) for complete programmatic documentation.
+See the [API Reference](https://awetomaton.github.io/VISTA/2.0.0/api/imagery.html) for complete programmatic
+documentation.
 
 ## Generating Test Data
 
@@ -128,7 +132,7 @@ pyinstaller vista/app.py --onefile --windowed -n vista --icon=vista/icons/logo.i
 
 ## Contributing
 
-Contributions are welcome! See the [Contributing Guide](https://awetomaton.github.io/VISTA/1.14.0/developer_guide/contributing.html) for details.
+Contributions are welcome! See the [Contributing Guide](https://awetomaton.github.io/VISTA/2.0.0/developer_guide/contributing.html) for details.
 
 ## License
 

@@ -1,12 +1,12 @@
 """General transform support functions"""
 
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 from numpy.typing import NDArray
 
 
-def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[float, NDArray]) -> NDArray:
+def spherical_to_cartesian(azimuth: Union[float, NDArray], elevation: Union[float, NDArray]) -> NDArray:
     """Convert spherical angle(s) to Cartesian vector(s)
 
     Parameters
@@ -19,20 +19,31 @@ def spherical_to_cartesian(azimuth: Tuple[float, NDArray], elevation: Tuple[floa
     Returns
     -------
     NDArray
-        Cartesian unit-vector(s) pointing in the direction of the given anglees
-    """
+        Cartesian unit-vector(s) pointing in the direction of the given angles.
+        Shape is (3,) + azimuth.shape
 
-    cos_elevation = np.cos(elevation)
+    Raises
+    ------
+    ValueError
+        If azimuth and elevation do not have the same shape
+    """
+    az = np.asarray(azimuth)
+    el = np.asarray(elevation)
+
+    if az.shape != el.shape:
+        raise ValueError("azimuth and elevation must have same shape")
+
+    cos_elevation = np.cos(el)
     return np.array(
         [
-            cos_elevation * np.cos(azimuth),
-            cos_elevation * np.sin(azimuth),
-            np.sin(elevation),
+            cos_elevation * np.cos(az),
+            cos_elevation * np.sin(az),
+            np.sin(el),
         ]
-    ).squeeze()
+    )
 
 
-def cartesian_to_spherical(unit_vector) -> Tuple[NDArray, NDArray]:
+def cartesian_to_spherical(unit_vector: NDArray) -> Tuple[NDArray, NDArray]:
     """Convert Cartesian vector(s) to spherical angle(s)
 
     Parameters

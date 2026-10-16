@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from helpers import assert_constructor_fields_equal
 
 from vista.detections.detector import Detector
@@ -62,3 +63,82 @@ def test_dataframe_round_trip(sensor: Sensor):
     detector = Detector.from_dataframe(expected.to_dataframe(), sensor)
 
     assert_constructor_fields_equal(detector, expected)
+
+
+def test_times_dataframe_round_trip(sensor: Sensor):
+    times = np.array(
+        [
+            "2026-02-03T04:05:06.000000123",
+            "2026-02-03T04:05:07.000000456",
+            "2026-02-03T04:05:11.000000789",
+        ],
+        dtype="datetime64[ns]",
+    )
+    expected = Detector(
+        name="timed-detector",
+        frames=np.array([3, 7, 11]),
+        rows=np.array([10.25, 20.5, 30.75]),
+        columns=np.array([101.5, 202.25, 303.0]),
+        sensor=sensor,
+        times=times,
+        labels=[set(), set(), set()],
+        label_times=[None, None, None],
+        labelers=[None, None, None],
+    )
+
+    detector = Detector.from_dataframe(expected.to_dataframe(), sensor)
+
+    assert_constructor_fields_equal(detector, expected)
+    np.testing.assert_array_equal(detector.times, times)
+
+
+def test_times_preserved_when_copying_and_slicing(sensor: Sensor):
+    times = np.array(
+        [
+            "2026-02-03T04:05:06",
+            "2026-02-03T04:05:07",
+            "2026-02-03T04:05:11",
+        ],
+        dtype="datetime64[ns]",
+    )
+    detector = Detector(
+        name="timed-detector",
+        frames=np.array([3, 7, 11]),
+        rows=np.array([10.25, 20.5, 30.75]),
+        columns=np.array([101.5, 202.25, 303.0]),
+        sensor=sensor,
+        times=times,
+    )
+
+    detector_copy = detector.copy()
+
+    where = np.array([True, False, True])
+    detector_slice = detector[where]
+
+    np.testing.assert_array_equal(detector_copy.times, times)
+    assert detector_copy.times is not detector.times
+    np.testing.assert_array_equal(detector_slice.times, times[where])
+
+
+def test_times_length_must_match_frames(sensor: Sensor):
+    with pytest.raises(ValueError, match="frames must have the same length as times"):
+        Detector(
+            name="invalid-detector",
+            frames=np.array([1, 2]),
+            rows=np.array([10.0, 20.0]),
+            columns=np.array([100.0, 200.0]),
+            sensor=sensor,
+            times=np.array(["2026-02-03T04:05:06"], dtype="datetime64[ns]"),
+        )
+
+
+def test_get_times_returns_none_when_unavailable(sensor: Sensor):
+    detector = Detector(
+        name="frame-only-detector",
+        frames=np.array([1, 2]),
+        rows=np.array([10.0, 20.0]),
+        columns=np.array([100.0, 200.0]),
+        sensor=sensor,
+    )
+
+    assert detector.times is None

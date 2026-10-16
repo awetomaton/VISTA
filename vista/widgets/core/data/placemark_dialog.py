@@ -29,9 +29,8 @@ class PlacemarkDialog(QDialog):
 
         # Check if geolocation is available
         self.can_geolocate = False
-        if self.viewer.imagery and hasattr(self.viewer.imagery, "sensor"):
-            if self.viewer.imagery.sensor and hasattr(self.viewer.imagery.sensor, "can_geolocate"):
-                self.can_geolocate = self.viewer.imagery.sensor.can_geolocate()
+        if self.viewer.selected_sensor is not None:
+            self.can_geolocate = self.viewer.selected_sensor.can_geolocate()
 
         self.init_ui()
 
@@ -163,16 +162,15 @@ class PlacemarkDialog(QDialog):
 
             # Try to convert to geodetic if possible
             lat, lon, alt = None, None, None
-            if self.can_geolocate:
-                try:
-                    frame = self.viewer.current_frame_number
-                    location = self.viewer.imagery.sensor.pixel_to_geodetic(frame, np.array([row]), np.array([col]))
-                    # Handle both scalar and array returns
-                    lat = np.atleast_1d(location.lat.deg)[0]
-                    lon = np.atleast_1d(location.lon.deg)[0]
-                    alt = np.atleast_1d(location.height.to(units.km).value)[0]
-                except Exception as e:
-                    print(f"Warning: Could not convert pixel to geodetic: {e}")
+            if self.can_geolocate and self.viewer.timeline.is_time:
+                time = self.viewer.timeline.current_value
+                location = self.viewer.selected_sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
+                lat = location.lat.deg[0]
+                lon = location.lon.deg[0]
+                alt = location.height.to(units.km).value[0]
+                x, y, z = location.to_geocentric()
+                if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
+                    lat, lon, alt = None, None, None
 
             return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
         else:
@@ -181,27 +179,25 @@ class PlacemarkDialog(QDialog):
             lon = self.lon_spinbox.value()
             alt = self.alt_spinbox.value()
 
-            # Convert to pixel coordinates
-            try:
-                frame = self.viewer.current_frame_number
-                location = EarthLocation(lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km)
-                rows, cols = self.viewer.imagery.sensor.geodetic_to_pixel(frame, location)
-                # Handle both scalar and array returns
-                row = np.atleast_1d(rows)[0]
-                col = np.atleast_1d(cols)[0]
-
-                if np.isnan(row) or np.isnan(col):
-                    QMessageBox.warning(
-                        self,
-                        "Conversion Error",
-                        "Could not convert geodetic coordinates to pixel coordinates.\n"
-                        "The location may be outside the sensor's field of view.",
-                    )
-                    return None
-
-                return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}
-            except Exception as e:
+            if not self.viewer.timeline.is_time:
                 QMessageBox.critical(
-                    self, "Conversion Error", f"Failed to convert geodetic to pixel coordinates:\n{str(e)}"
+                    self,
+                    "Conversion Error",
+                    "Could not convert geodetic coordinates to pixel coordinates.\nNo time currently available.",
                 )
                 return None
+
+            time = self.viewer.timeline.current_value
+            location = EarthLocation(lat=lat * units.deg, lon=lon * units.deg, height=alt * units.km)
+            row, col = self.viewer.selected_sensor.geodetic_to_pixel(time, location)
+
+            if np.isnan(row) or np.isnan(col):
+                QMessageBox.warning(
+                    self,
+                    "Conversion Error",
+                    "Could not convert geodetic coordinates to pixel coordinates.\n"
+                    "The location may be outside the sensor's field of view.",
+                )
+                return None
+
+            return {"name": name, "row": row, "col": col, "lat": lat, "lon": lon, "alt": alt}

@@ -87,7 +87,6 @@ docs/
 │   ├── _static/             # Static files (images, CSS, etc.)
 │   └── _templates/          # Custom templates
 ├── build/                   # Built documentation (generated)
-├── requirements.txt         # Documentation dependencies
 ├── Makefile                 # Linux/macOS build script
 └── make.bat                 # Windows build script
 ```
@@ -297,7 +296,7 @@ smv_branch_whitelist = r"^(main|develop)$"
 If you get import errors when building:
 
 1. Make sure VISTA is installed: `pip install -e .`
-2. Check that all dependencies are installed: `pip install -r docs/requirements.txt`
+2. Check that all dependencies are installed: `pip install -e ".[docs]"`
 3. Verify Python can import vista: `python -c "import vista; print(vista.__version__)"`
 
 ### Missing Module Warnings

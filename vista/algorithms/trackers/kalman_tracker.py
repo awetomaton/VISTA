@@ -3,6 +3,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.algorithms.trackers.utils import get_times_for_track_frames
+from vista.temporal_data.temporal_data import all_have_times_frames
+
 
 class KalmanTrack:
     """Single track with constant velocity Kalman filter"""
@@ -159,6 +162,7 @@ def run_kalman_tracker(detectors, config):
         - 'frames': numpy array of frame numbers
         - 'rows': numpy array of row coordinates
         - 'columns': numpy array of column coordinates
+        - 'times': numpy array of timestamps, or None when unavailable
     """
     # Extract configuration
     process_noise = config["process_noise"]
@@ -166,6 +170,10 @@ def run_kalman_tracker(detectors, config):
     gating_distance = config["gating_distance"]
     min_detections = config["min_detections"]
     delete_threshold = config["delete_threshold"]
+
+    all_have_times, all_have_frames = all_have_times_frames(detectors)
+    if not all_have_frames:
+        raise ValueError("Selected detections must all have frames.")
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -186,12 +194,13 @@ def run_kalman_tracker(detectors, config):
     tentative_tracks = []  # Tracks waiting for confirmation
 
     # Process each frame
-    for frame in frames:
+    for i, frame in enumerate(frames):
+        old_frame = frames[i - 1] if i > 0 else frames[0]
         detections = detections_by_frame[frame]
 
         # Predict all active tracks and increment age
         for track in active_tracks + tentative_tracks:
-            track.predict()
+            track.predict(frame - old_frame)
             track.age += 1
 
         if len(detections) == 0:
@@ -300,6 +309,7 @@ def run_kalman_tracker(detectors, config):
             "frames": frames_array,
             "rows": rows,
             "columns": columns,
+            "times": get_times_for_track_frames(detectors, frames_array),
         }
         track_data_list.append(track_data)
 

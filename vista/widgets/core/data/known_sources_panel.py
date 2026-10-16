@@ -200,8 +200,12 @@ class KnownSourcesPanel(DataPanel):
             return
 
         # early return if no imagery selected
-        if self.viewer.imagery is None:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(self, "No Imagery", "Please load Imagery before creating Tracks.")
+            return
+
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(self, "Multiple Imagery", "Please select a single Imagery before creating Tracks.")
             return
 
         # Collect Known Sources from selected rows
@@ -230,7 +234,7 @@ class KnownSourcesPanel(DataPanel):
         self.progress_dialog.show()
 
         # Create tracks in a worker thread. Viewer updates remain on the GUI thread.
-        self.create_tracks_thread = KnownSourcesTrackCreationThread(known_sources, self.viewer.imagery)
+        self.create_tracks_thread = KnownSourcesTrackCreationThread(known_sources, self.viewer.selected_imageries[0])
         self.create_tracks_thread.progress_updated.connect(self.on_track_creation_progress)
         self.create_tracks_thread.tracks_created.connect(self.on_tracks_created)
         self.create_tracks_thread.creation_cancelled.connect(self.on_track_creation_cancelled)

@@ -4,6 +4,9 @@ from collections import defaultdict
 
 import numpy as np
 
+from vista.algorithms.trackers.utils import get_times_for_track_frames
+from vista.temporal_data.temporal_data import all_have_times_frames
+
 
 def run_network_flow_tracker(detectors, config):
     """
@@ -42,6 +45,7 @@ def run_network_flow_tracker(detectors, config):
         - 'frames': numpy array of frame numbers
         - 'rows': numpy array of row coordinates
         - 'columns': numpy array of column coordinates
+        - 'times': numpy array of timestamps, or None when unavailable
     """
     # Extract configuration with defaults
     max_gap = config.get("max_gap", 5)
@@ -49,6 +53,10 @@ def run_network_flow_tracker(detectors, config):
     entrance_cost = config.get("entrance_cost", 50.0)
     exit_cost = config.get("exit_cost", 50.0)
     min_track_length = config.get("min_track_length", 3)
+
+    all_have_times, all_have_frames = all_have_times_frames(detectors)
+    if not all_have_frames:
+        raise ValueError("Selected detections must all have frames.")
 
     # Collect all detections with unique IDs
     all_detections = []
@@ -199,6 +207,7 @@ def run_network_flow_tracker(detectors, config):
             "frames": frames_array,
             "rows": rows,
             "columns": columns,
+            "times": get_times_for_track_frames(detectors, frames_array),
         }
         track_data_list.append(track_data)
 

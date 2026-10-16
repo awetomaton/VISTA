@@ -1,7 +1,7 @@
 """Class for stars"""
 
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -30,7 +30,7 @@ class Stars(KnownSources):
         E.g., Hipparcos Hp, Gaia G
     """
 
-    def __init__(self, name: str, catalog: Union[str, None] = None, V_max: Union[int, None] = None, V_min: int = -10):
+    def __init__(self, name: str, catalog: Optional[str] = None, V_max: Optional[int] = None, V_min: int = -10):
         """
         Create a Stars object
 
@@ -276,21 +276,20 @@ class Stars(KnownSources):
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
         # quick return if no stars exist
         if len(self.stars) == 0:
-            return EarthLocation([], [], [])
+            return EarthLocation([], [], [], unit=u.km)
 
-        # TODO: cache results for specific times (frames)?
+        astro_times = Time(np.atleast_1d(times))
 
-        times = Time(times)
-
-        # stars is a (num_stars, 3) array
+        # stars is a (num_stars,) array
         # need to add a time axis to propagate motion to desired times
-        ecef_coords = self.stars[:, None].apply_space_motion(times).transform_to(ITRS(obstime=times))
-        # but we can squeeze missing axes after
-        ecef_coords = ecef_coords.squeeze()
+        ecef_coords = self.stars[:, None].apply_space_motion(astro_times).transform_to(ITRS(obstime=astro_times))
+        # but we can squeeze time axis after if necessary
+        if np.asarray(times).ndim == 0:
+            ecef_coords = ecef_coords.squeeze(axis=1)
 
         # unpack cartesian xyz coordinates into xyz arguments
-        return EarthLocation(*ecef_coords.cartesian.xyz)
+        return EarthLocation(*ecef_coords.cartesian.xyz, unit=u.km)

@@ -90,16 +90,16 @@ Using the GUI
 Main Interface Components
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **Imagery Viewer**: Central display area showing the current frame
-* **Playback Controls**: Navigate through frames and control playback
-* **Data Panels**: Manage sensors, imagery, tracks, detections, and features
+* **Imagery Viewer**: Central display area showing the selected imagery layers
+* **Playback Controls**: Navigate through the active time- or frame-based timeline
+* **Data Manager**: Manage sensor platforms, sensors, imagery, tracks, detections, AOIs, features, and known sources
 * **Menu Bar**: Access file operations, algorithms, and settings
-* **Status Bar**: Shows current frame, coordinates, and pixel values
+* **Status Bar**: Shows current time or frame, coordinates, and pixel values
 
 Navigation
 ~~~~~~~~~~
 
-* **Frame Navigation**: Use the playback controls or arrow keys to move between frames
+* **Timeline Navigation**: Use the playback controls or arrow keys to move between time or frame samples
 * **Zoom**: Use the mouse wheel or zoom controls to zoom in/out
 * **Pan**: Click and drag to pan around the imagery
 * **AOI Selection**: Draw areas of interest by clicking and dragging
@@ -113,13 +113,16 @@ Running Algorithms
 4. Click ``Run`` to execute the algorithm
 5. Results will appear in the appropriate data panel
 
+Most imagery algorithms require exactly one selected imagery layer. Select it in the **Imagery** tab before opening
+the algorithm dialog.
+
 Keyboard Shortcuts
 ------------------
 
 Common keyboard shortcuts:
 
 * ``Space``: Play/Pause playback
-* ``Left/Right Arrow`` or ``A/D``: Previous/Next frame
+* ``Left/Right Arrow`` or ``A/D``: Previous/Next timeline sample
 * ``CTRL`` + ``Z``: Undo track / detection panel action
 * ``Spacebar``: Play/Pause
 * ``Delete``: Remove selected sensors, imagery, tracks, detectors, detection points

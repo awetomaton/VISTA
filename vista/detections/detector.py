@@ -9,11 +9,13 @@ import pandas as pd
 import pyqtgraph as pg
 from numpy.typing import NDArray
 
+from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 
 
-@dataclass
-class Detector:
+@dataclass(kw_only=True)
+class Detector(TemporalData):
     """
     Collection of detection points from a detection algorithm or manual creation.
 
@@ -25,8 +27,6 @@ class Detector:
     ----------
     name : str
         Unique identifier for this detector
-    frames : NDArray[np.int_]
-        Frame numbers where detections occur
     rows : NDArray[np.float64]
         Row (vertical) pixel coordinates for each detection
     columns : NDArray[np.float64]
@@ -75,7 +75,6 @@ class Detector:
     """
 
     name: str
-    frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
@@ -95,14 +94,14 @@ class Detector:
     labelers: list[Optional[str]] = field(default_factory=list)  # Username that last labeled each detection
 
     # Performance optimization: cached data structures
-    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> detection indices
     _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
     _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
     _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
-    uuid: str = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
+        super().__post_init__()
         self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
@@ -110,106 +109,14 @@ class Detector:
             return False
         return self.uuid == other.uuid
 
-    def _build_frame_index(self):
-        """Build index mapping frame numbers to detection indices for O(1) lookup."""
-        if self._frame_index is None:
-            self._frame_index = {}
-            for i, frame in enumerate(self.frames):
-                if frame not in self._frame_index:
-                    self._frame_index[frame] = []
-                self._frame_index[frame].append(i)
-
-    def get_detections_at_frame(self, frame_num):
-        """
-        Get detection coordinates at a specific frame using O(1) cached lookup.
-
-        Parameters
-        ----------
-        frame_num : int
-            Frame number to query
-
-        Returns
-        -------
-        rows : NDArray
-            Row coordinates of detections at this frame
-        cols : NDArray
-            Column coordinates of detections at this frame
-        """
-        self._build_frame_index()
-        indices = self._frame_index.get(frame_num, [])
-        if len(indices) > 0:
-            return self.rows[indices], self.columns[indices]
-        return np.array([]), np.array([])
-
-    def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
-        """Get geodetic coordinates for all detection points, computing and caching if needed.
-
-        Projects each detection point using its own frame's sensor geometry, so the
-        result represents the true geographic location. The result is cached so
-        subsequent calls return immediately.
-
-        Returns
-        -------
-        tuple[NDArray[np.float64], NDArray[np.float64]] or None
-            (longitudes, latitudes) in degrees, or None if the sensor cannot geolocate.
-        """
-        if self._cached_lons is not None and self._cached_lats is not None:
-            return self._cached_lons, self._cached_lats
-
-        if not self.sensor or not self.sensor.can_geolocate():
-            return None
-
-        # Single vectorized call — sensor handles frame grouping internally
-        locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
-        lons = np.asarray(locations.lon.deg, dtype=np.float64)
-        lats = np.asarray(locations.lat.deg, dtype=np.float64)
-
-        # Set invalid locations to NaN
-        invalid = (locations.y.value == 0) & (locations.z.value == 0)
-        lons[invalid] = np.nan
-        lats[invalid] = np.nan
-
-        self._cached_lons = lons
-        self._cached_lats = lats
-        return self._cached_lons, self._cached_lats
-
-    def invalidate_caches(self):
-        """Invalidate cached data structures when detector data changes."""
-        self._frame_index = None
-        self._cached_pen = None
-        self._pen_params = None
-        self._cached_lons = None
-        self._cached_lats = None
-
-    def get_pen(self, width=None, **kwargs):
-        """
-        Get cached PyQtGraph pen object, creating only if parameters changed.
-
-        Parameters
-        ----------
-        width : int, optional
-            Line width override, uses self.line_thickness if None
-
-        Returns
-        -------
-        pg.mkPen
-            PyQtGraph pen object
-        """
-
-        actual_width = width if width is not None else self.line_thickness
-        params = (self.color, actual_width)
-
-        if self._pen_params != params:
-            self._cached_pen = pg.mkPen(color=self.color, width=actual_width)
-            self._pen_params = params
-
-        return self._cached_pen
-
     def __getitem__(self, s):
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects
             detector_slice = self.copy()
-            detector_slice.frames = detector_slice.frames[s]
+            if detector_slice.times is not None:
+                detector_slice.times = detector_slice.times[s]
+            if detector_slice.frames is not None:
+                detector_slice.frames = detector_slice.frames[s]
             detector_slice.rows = detector_slice.rows[s]
             detector_slice.columns = detector_slice.columns[s]
             # Subset labels if they exist
@@ -263,7 +170,7 @@ class Detector:
             raise TypeError("Invalid index or slice type.")
 
     def __len__(self):
-        return len(self.frames)
+        return len(self.rows)
 
     def __str__(self):
         return self.__repr__()
@@ -274,18 +181,129 @@ class Detector:
         s += str(self.to_dataframe())
         return s
 
+    def _build_time_index(self):
+        """
+        Build index mapping times to detection indices for O(1) lookup.
+
+        Since multiple detections can share a time, this index needs to override
+        the parent class method to return a list of indices.
+        """
+        if self._time_index is None:
+            self._time_index = {}
+            if self.times is None:
+                return
+            for i, time in enumerate(self.times):
+                if time not in self._time_index:
+                    self._time_index[time] = []
+                self._time_index[time].append(i)
+
+    def _build_frame_index(self):
+        """
+        Build index mapping frame numbers to detection indices for O(1) lookup.
+
+        Since multiple detections can share a frame, this index needs to override
+        the parent class method to return a list of indices.
+        """
+        if self._frame_index is None:
+            self._frame_index = {}
+            if self.frames is None:
+                return
+            for i, frame in enumerate(self.frames):
+                if frame not in self._frame_index:
+                    self._frame_index[frame] = []
+                self._frame_index[frame].append(i)
+
+    def _get_time_index(self, time: np.datetime64) -> Optional[int]:
+        """Override parent method to avoid binary search"""
+        # Use dictionary lookup for unsorted frames
+        self._build_time_index()
+        return self._time_index.get(time)
+
+    def _get_frame_index(self, frame_num: int) -> Optional[int]:
+        """Override parent method to avoid binary search"""
+        # Use dictionary lookup for unsorted frames
+        self._build_frame_index()
+        return self._frame_index.get(frame_num)
+
+    def get_geodetic_coords(self) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None:
+        """Get geodetic coordinates for all detection points, computing and caching if needed.
+
+        Projects each detection point using its own frame's sensor geometry, so the
+        result represents the true geographic location. The result is cached so
+        subsequent calls return immediately.
+
+        Returns
+        -------
+        tuple[NDArray[np.float64], NDArray[np.float64]] or None
+            (longitudes, latitudes) in degrees, or None if the sensor cannot geolocate.
+        """
+        if self._cached_lons is not None and self._cached_lats is not None:
+            return self._cached_lons, self._cached_lats
+
+        if not self.sensor.can_geolocate() or self.times is None:
+            return None
+
+        # Single vectorized call — sensor handles time grouping internally
+        locations = self.sensor.pixel_to_geodetic(self.times, self.rows, self.columns)
+        lons = np.asarray(locations.lon.deg, dtype=np.float64)
+        lats = np.asarray(locations.lat.deg, dtype=np.float64)
+
+        self._cached_lons = lons
+        self._cached_lats = lats
+        return self._cached_lons, self._cached_lats
+
+    def invalidate_caches(self):
+        """Invalidate cached data structures when detector data changes."""
+        super().invalidate_caches()
+        self._cached_pen = None
+        self._pen_params = None
+        self._cached_lons = None
+        self._cached_lats = None
+
+    def get_pen(self, width=None, **kwargs):
+        """
+        Get cached PyQtGraph pen object, creating only if parameters changed.
+
+        Parameters
+        ----------
+        width : int, optional
+            Line width override, uses self.line_thickness if None
+
+        Returns
+        -------
+        pg.mkPen
+            PyQtGraph pen object
+        """
+
+        actual_width = width if width is not None else self.line_thickness
+        params = (self.color, actual_width)
+
+        if self._pen_params != params:
+            self._cached_pen = pg.mkPen(color=self.color, width=actual_width)
+            self._pen_params = params
+
+        return self._cached_pen
+
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, sensor, name: str = None):
+    def from_dataframe(
+        cls,
+        df: pd.DataFrame,
+        sensor: Sensor,
+        imagery: Optional[Imagery] = None,
+        name: str = None,
+    ):
         """
         Create Detector from pandas DataFrame.
 
         Parameters
         ----------
         df : pd.DataFrame
-            DataFrame containing detection data with required columns:
-            "Detector", "Frames", "Rows", "Columns"
+            DataFrame containing detection data. "Detector", "Rows", and "Columns"
+            are required columns, along with either "Times" or "Frames".
         sensor : Sensor
-            Sensor object for these detections
+            Sensor object for these detections.
+        imagery : Imagery, optional
+            Imagery used to convert times and frames.
         name : str, optional
             Detector name, by default taken from df["Detector"]
 
@@ -293,6 +311,12 @@ class Detector:
         -------
         Detector
             New Detector object
+
+        Raises
+        ------
+        ValueError
+            If temporal columns are missing or time-to-frame mapping cannot be
+            performed.
 
         Notes
         -----
@@ -316,6 +340,29 @@ class Detector:
             kwargs["visible"] = df["Visible"].iloc[0]
         if "Complete" in df.columns:
             kwargs["complete"] = df["Complete"].iloc[0]
+
+        times = None
+        if "Times" in df.columns:
+            times = pd.to_datetime(df["Times"], format="mixed").to_numpy().astype("datetime64[ns]")
+
+        frames = None
+        if "Frames" in df.columns:
+            frames = df["Frames"].to_numpy()
+
+        # attempt any conversions if able and necessary
+        if imagery is not None and imagery.times is not None:
+            if times is not None and frames is None:
+                indices = [imagery.get_index(time, True) for time in times]
+                if np.all([index is not None for index in indices]):
+                    frames = imagery.frames[indices]
+            elif times is None and frames is not None:
+                indices = [imagery.get_index(frame, False) for frame in frames]
+                if np.all([index is not None for index in indices]):
+                    times = imagery.times[indices]
+
+        if times is None and frames is None:
+            raise ValueError(f"Detector '{name}' must have either 'Times' or 'Frames' column")
+
         if "Labels" in df.columns:
             # Parse labels from comma-separated string for each detection
             labels_list = []
@@ -347,7 +394,8 @@ class Detector:
 
         detector = cls(
             name=name,
-            frames=df["Frames"].to_numpy(),
+            times=times,
+            frames=frames,
             rows=df["Rows"].to_numpy(),
             columns=df["Columns"].to_numpy(),
             sensor=sensor,
@@ -372,15 +420,18 @@ class Detector:
         """
         detector_copy = self.__class__(
             name=self.name,
-            frames=self.frames.copy(),
+            times=self.times.copy() if self.times is not None else None,
+            frames=self.frames.copy() if self.frames is not None else None,
             rows=self.rows.copy(),
             columns=self.columns.copy(),
             sensor=self.sensor,
+            description=self.description,
             color=self.color,
             marker=self.marker,
             marker_size=self.marker_size,
             line_thickness=self.line_thickness,
             visible=self.visible,
+            complete=self.complete,
             labels=[label_set.copy() for label_set in self.labels],
             label_times=list(self.label_times),
             labelers=list(self.labelers),
@@ -400,7 +451,7 @@ class Detector:
         labels_column = []
         label_times_column = []
         labelers_column = []
-        for i in range(len(self.frames)):
+        for i in range(len(self)):
             if i < len(self.labels) and self.labels[i]:
                 labels_column.append(", ".join(sorted(self.labels[i])))
             else:
@@ -414,23 +465,26 @@ class Detector:
             else:
                 labelers_column.append("")
 
-        return pd.DataFrame(
-            {
-                "Detector": len(self) * [self.name],
-                "Frames": self.frames,
-                "Rows": self.rows,
-                "Columns": self.columns,
-                "Color": self.color,
-                "Marker": self.marker,
-                "Marker Size": self.marker_size,
-                "Line Thickness": self.line_thickness,
-                "Visible": self.visible,
-                "Complete": self.complete,
-                "Labels": labels_column,
-                "Label Time": label_times_column,
-                "Labeler": labelers_column,
-            }
-        )
+        data = {
+            "Detector": len(self) * [self.name],
+            "Rows": self.rows,
+            "Columns": self.columns,
+            "Color": self.color,
+            "Marker": self.marker,
+            "Marker Size": self.marker_size,
+            "Line Thickness": self.line_thickness,
+            "Visible": self.visible,
+            "Complete": self.complete,
+            "Labels": labels_column,
+            "Label Time": label_times_column,
+            "Labeler": labelers_column,
+        }
+        if self.times is not None:
+            data["Times"] = self.times.astype(str)
+        if self.frames is not None:
+            data["Frames"] = self.frames
+
+        return pd.DataFrame(data)
 
     def get_unique_labels(self) -> set[str]:
         """

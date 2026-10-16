@@ -4,6 +4,8 @@ import pathlib
 
 import numpy as np
 import pandas as pd
+from astropy import units as u
+from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QEvent, QItemSelectionModel, QSettings, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor
 from PyQt6.QtWidgets import (
@@ -35,6 +37,7 @@ from PyQt6.QtWidgets import (
 )
 
 from vista.detections.detector import Detector
+from vista.temporal_data.temporal_data import all_have_times_frames
 from vista.tracks.track import Track
 from vista.utils.color import pg_color_to_qcolor, qcolor_to_pg_color
 from vista.utils.labeler import get_current_label_time, get_current_labeler
@@ -739,18 +742,11 @@ class TracksPanel(DataPanel):
         # Update header labels with filter/sort icons
         self._update_track_header_icons()
 
-        # Get selected sensor from viewer
-        selected_sensor = self.viewer.selected_sensor
-
         # Build list of all tracks, filtering by sensor
-        all_tracks = []
-        for track in self.viewer.tracks:
-            # Filter by selected sensor
-            if selected_sensor is None or track.sensor == selected_sensor:
-                all_tracks.append(track)
+        filtered_tracks = [track for track in self.viewer.tracks if track.sensor == self.viewer.selected_sensor]
 
         # Apply filters
-        filtered_tracks = self._apply_track_filters(all_tracks)
+        filtered_tracks = self._apply_track_filters(filtered_tracks)
 
         # Apply sorting (multi-column takes precedence over single-column)
         if self.track_multi_sort_order:
@@ -1946,6 +1942,28 @@ class TracksPanel(DataPanel):
             QMessageBox.warning(self, "Cannot Merge", "Could not find enough valid tracks to merge.")
             return
 
+        # Check that all tracks are from the same sensor (compare by UUID)
+        first_track = tracks_to_merge[0]
+        sensor = first_track.sensor
+        if not all(t.sensor == sensor for t in tracks_to_merge):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected tracks belong to different sensors. Please select tracks from the same sensor.",
+            )
+            return
+
+        # Check whether all tracks have times and frames
+        all_have_times, all_have_frames = all_have_times_frames(tracks_to_merge)
+
+        if not (all_have_times or all_have_frames):
+            QMessageBox.warning(
+                self,
+                "Cannot Merge",
+                "Selected tracks must all have times or frames.",
+            )
+            return
+
         # Save state before merge
         self.save_undo_state(f"Merge {len(tracks_to_merge)} tracks")
 
@@ -1958,14 +1976,22 @@ class TracksPanel(DataPanel):
         # Combine all DataFrames
         combined_df = pd.concat(track_dfs, ignore_index=True)
 
-        # Sort by frame to handle overlapping times
-        combined_df = combined_df.sort_values("Frames").reset_index(drop=True)
-
-        # Remove duplicate frames (keep first occurrence)
-        combined_df = combined_df.drop_duplicates(subset=["Frames"], keep="first")
+        if all_have_times:
+            # Sort by time to handle overlapping times
+            combined_df.sort_values("Times", ignore_index=True, inplace=True)
+            # Remove duplicate times (keep first occurrence)
+            combined_df.drop_duplicates(subset=["Times"], keep="first", inplace=True)
+            if not all_have_frames:
+                combined_df.drop(columns="Frames", errors="ignore", inplace=True)
+        else:
+            # Sort by frame to handle overlapping frames
+            combined_df.sort_values("Frames", ignore_index=True, inplace=True)
+            # Remove duplicate frames (keep first occurrence)
+            combined_df.drop_duplicates(subset=["Frames"], keep="first", inplace=True)
+            # If we've reached this block, we know they don't all have times, so drop column
+            combined_df.drop(columns="Times", errors="ignore", inplace=True)
 
         # Use styling from the first track
-        first_track = tracks_to_merge[0]
         merged_name = f"Merged_{first_track.name}"
 
         # Make sure the merged name is unique
@@ -1986,7 +2012,8 @@ class TracksPanel(DataPanel):
         merged_track = Track(
             name=merged_name,
             tracker=merged_tracker,
-            frames=combined_df["Frames"].to_numpy().astype(np.int_),
+            times=pd.to_datetime(combined_df["Times"]).to_numpy().astype("datetime64[ns]") if all_have_times else None,
+            frames=combined_df["Frames"].to_numpy().astype(np.int_) if all_have_frames else None,
             rows=combined_df["Rows"].to_numpy(),
             columns=combined_df["Columns"].to_numpy(),
             sensor=first_track.sensor,
@@ -2002,7 +2029,7 @@ class TracksPanel(DataPanel):
         )
 
         # Add merged track to viewer
-        self.viewer.tracks.append(merged_track)
+        self.viewer.add_track(merged_track)
 
         # Delete the original tracks
         for track in tracks_to_merge:
@@ -2058,25 +2085,47 @@ class TracksPanel(DataPanel):
             QMessageBox.warning(self, "Cannot Split", "Could not find the selected track.")
             return
 
-        # Get current frame from viewer
-        current_frame = self.viewer.current_frame_number
+        timeline = self.viewer.timeline
 
-        # Check if the current frame is within the track's range
-        if current_frame < track_to_split.frames[0] or current_frame >= track_to_split.frames[-1]:
+        # Check if the current timeline value is within the track's range
+        if timeline.is_time:
+            min_time = np.min(track_to_split.times)
+            max_time = np.max(track_to_split.times)
+            can_split = timeline.current_value >= min_time and timeline.current_value < max_time
+            msg = (
+                f"Current time ({timeline.current_value}) is not within the track's time range "
+                f"({min_time} - {max_time}). "
+                "Please navigate to a time within the track to split it."
+            )
+        else:
+            min_frame = np.min(track_to_split.frames)
+            max_frame = np.max(track_to_split.frames)
+            can_split = timeline.current_value >= min_frame and timeline.current_value < max_frame
+            msg = (
+                f"Current frame ({timeline.current_value}) is not within the track's frame range "
+                f"({min_frame} - {max_frame}). "
+                "Please navigate to a frame within the track to split it."
+            )
+
+        if not can_split:
             QMessageBox.warning(
                 self,
                 "Cannot Split",
-                f"Current frame ({current_frame}) is not within the track's frame range "
-                f"({track_to_split.frames[0]} - {track_to_split.frames[-1]}). "
-                "Please navigate to a frame within the track to split it.",
+                msg,
             )
             return
 
         # Split the track data
-        # First track: frames <= current_frame
-        mask_first = track_to_split.frames <= current_frame
-        # Second track: frames > current_frame
-        mask_second = track_to_split.frames > current_frame
+        if timeline.is_time:
+            # First track: times <= current time
+            mask_first = track_to_split.times <= timeline.current_value
+            # Second track: times > current time
+            mask_second = track_to_split.times > timeline.current_value
+        else:
+            # First track: frames <= current frame
+            mask_first = track_to_split.frames <= timeline.current_value
+            # Second track: frames > current frame
+            mask_second = track_to_split.frames > timeline.current_value
 
         # Check if split would create valid tracks
         if not np.any(mask_first) or not np.any(mask_second):
@@ -2121,19 +2170,29 @@ class TracksPanel(DataPanel):
         # Add the new tracks (preserve tracker name)
         first_track.tracker = track_to_split.tracker
         second_track.tracker = track_to_split.tracker
-        self.viewer.tracks.append(first_track)
-        self.viewer.tracks.append(second_track)
+        self.viewer.add_tracks([first_track, second_track])
 
         # Refresh table
         self.refresh_tracks_table()
         self.data_changed.emit()
 
+        if timeline.is_time:
+            msg = (
+                f"Track '{track_to_split.name}' has been split at time {timeline.current_value} into:\n"
+                f"  - '{first_name}' (times {np.min(first_track.times)} to {np.max(first_track.times)})\n"
+                f"  - '{second_name}' (times {np.min(second_track.times)} to {np.max(second_track.times)})"
+            )
+        else:
+            msg = (
+                f"Track '{track_to_split.name}' has been split at frame {timeline.current_value} into:\n"
+                f"  - '{first_name}' (frames {np.min(first_track.frames)} to {np.max(first_track.frames)})\n"
+                f"  - '{second_name}' (frames {np.min(second_track.frames)} to {np.max(second_track.frames)})"
+            )
+
         QMessageBox.information(
             self,
             "Split Complete",
-            f"Track '{track_to_split.name}' has been split at frame {current_frame} into:\n"
-            f"  - '{first_name}' (frames {first_track.frames[0]} to {first_track.frames[-1]})\n"
-            f"  - '{second_name}' (frames {second_track.frames[0]} to {second_track.frames[-1]})",
+            msg,
         )
 
     def delete_selected_tracks(self):
@@ -2300,7 +2359,6 @@ class TracksPanel(DataPanel):
         self.merge_selected_tracks_btn.setEnabled(num_selected >= 2)
         self.delete_selected_tracks_btn.setEnabled(num_selected >= 1)
         self.label_selected_btn.setEnabled(num_selected >= 1)
-        self.extract_track_btn.setEnabled(num_selected == 1)
         self.copy_to_sensor_btn.setEnabled(num_selected >= 1)
         self.break_into_detections_btn.setEnabled(num_selected >= 1)
         self.plot_details_btn.setEnabled(num_selected >= 1)
@@ -2309,13 +2367,13 @@ class TracksPanel(DataPanel):
         self.edit_track_btn.setEnabled(num_selected == 1)
         self.split_track_btn.setEnabled(num_selected == 1)
         # If button is checked but selection changed, uncheck it
-        if self.edit_track_btn.isChecked() and len(selected_rows) != 1:
+        if self.edit_track_btn.isChecked() and num_selected != 1:
             self.edit_track_btn.setChecked(False)
 
         # Enable View Extraction and Edit Extraction buttons only if exactly one track with extraction is selected
         has_extraction = False
         selected_track = None
-        if len(selected_rows) == 1:
+        if num_selected == 1:
             row = list(selected_rows)[0]
             # Check if extracted checkbox is checked
             extracted_item = self.tracks_table.item(row, 13)  # Extracted column
@@ -2335,6 +2393,7 @@ class TracksPanel(DataPanel):
 
         # Disable extraction buttons in map view mode (extraction is pixel-space only)
         in_map_view = getattr(self.viewer, "map_view_mode", False)
+        self.extract_track_btn.setEnabled(num_selected >= 1 and not in_map_view)
         self.view_extraction_btn.setEnabled(has_extraction and not in_map_view)
         self.edit_extraction_btn.setEnabled(has_extraction and not in_map_view)
 
@@ -2344,16 +2403,26 @@ class TracksPanel(DataPanel):
                 # Update to view the new track's extraction
                 if self.viewer.viewing_extraction_track != selected_track:
                     self.viewer.finish_extraction_viewing()
-                    self.viewer.start_extraction_viewing(selected_track)
+                    success = self.viewer.start_extraction_viewing(selected_track)
+                    if success:
+                        self.view_extraction_btn.setChecked(True)
             else:
                 # No extraction, turn off view mode
                 self.viewer.finish_extraction_viewing()
-                self.view_extraction_btn.setChecked(False)
 
         if self.edit_extraction_btn.isChecked():
-            if not has_extraction:
+            if has_extraction and selected_track:
+                # Update extraction track
+                if self.viewer.editing_extraction_track != selected_track:
+                    self.viewer.finish_extraction_editing()
+                    if len(self.viewer.selected_imageries) == 1:
+                        imagery = self.viewer.selected_imageries[0]
+                        # Start extraction editing mode
+                        success = self.viewer.start_extraction_editing(selected_track, imagery)
+                        if success:
+                            self.edit_extraction_btn.setChecked(True)
+            else:
                 self.viewer.finish_extraction_editing()
-                self.edit_extraction_btn.setChecked(False)
 
         # Collect selected track IDs for highlighting in the viewer
         selected_track_ids = set()
@@ -2482,9 +2551,7 @@ class TracksPanel(DataPanel):
             edited_track = self.viewer.finish_track_editing()
             if edited_track:
                 self.refresh_tracks_table()
-                self.status_message.emit(
-                    f"Track '{edited_track.name}' updated with {len(edited_track.frames)} points", 3000
-                )
+                self.status_message.emit(f"Track '{edited_track.name}' updated with {len(edited_track)} points", 3000)
             else:
                 self.status_message.emit("Track editing cancelled", 3000)
 
@@ -2531,9 +2598,8 @@ class TracksPanel(DataPanel):
         # Check if imagery is available for the selected sensor
         # Get the sensor from the first selected track (all selected tracks should have the same sensor)
         sensor = selected_tracks[0].sensor
-        imagery = self.viewer.imagery
 
-        if imagery is None:
+        if not self.viewer.selected_imageries:
             QMessageBox.warning(
                 self,
                 "No Imagery",
@@ -2542,6 +2608,17 @@ class TracksPanel(DataPanel):
                 QMessageBox.StandardButton.Ok,
             )
             return
+
+        if len(self.viewer.selected_imageries) > 1:
+            QMessageBox.warning(
+                self,
+                "Multiple Imagery",
+                "Please select a single imagery before extracting tracks.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+
+        imagery = self.viewer.selected_imageries[0]
 
         # Open extraction dialog
         dialog = TrackExtractionDialog(parent=self, tracks=selected_tracks, imagery=imagery)
@@ -2693,22 +2770,28 @@ class TracksPanel(DataPanel):
                 self.edit_extraction_btn.setChecked(False)
                 return
 
-            # Get imagery for this track
-            imagery = None
-            for img in self.viewer.imageries:
-                if img.sensor == track.sensor:
-                    imagery = img
-                    break
-
-            if imagery is None:
+            if not self.viewer.selected_imageries:
                 QMessageBox.warning(
                     self,
                     "No Imagery",
-                    f"No imagery available for sensor '{track.sensor.name}'.",
+                    f"No imagery available for sensor '{track.sensor.name}'.\n"
+                    "Please load imagery for this sensor before editing extractions.",
                     QMessageBox.StandardButton.Ok,
                 )
                 self.edit_extraction_btn.setChecked(False)
                 return
+
+            if len(self.viewer.selected_imageries) > 1:
+                QMessageBox.warning(
+                    self,
+                    "Multiple Imagery",
+                    "Please select a single imagery before editing extractions.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                self.edit_extraction_btn.setChecked(False)
+                return
+
+            imagery = self.viewer.selected_imageries[0]
 
             # Start extraction editing mode
             success = self.viewer.start_extraction_editing(track, imagery)
@@ -2866,8 +2949,17 @@ class TracksPanel(DataPanel):
                 track_copy.sensor = target_sensor
                 track_copy.name = f"{track.name} (copy)"
 
+                geodetics = track.get_geodetic_coords()
+                if geodetics is not None and track.times is not None and target_sensor.can_geolocate():
+                    location = EarthLocation(
+                        lon=geodetics[0] * u.deg, lat=geodetics[1] * u.deg, height=np.zeros_like(geodetics[0]) * u.km
+                    )
+                    rows, cols = target_sensor.geodetic_to_pixel(track.times, location)
+                    track_copy.rows = rows
+                    track_copy.columns = cols
+
                 # Add to the viewer tracks list
-                self.viewer.tracks.append(track_copy)
+                self.viewer.add_track(track_copy)
 
             # Refresh the table and emit data changed
             self.refresh_tracks_table()
@@ -2911,7 +3003,8 @@ class TracksPanel(DataPanel):
         for track in selected_tracks:
             detector = Detector(
                 name=f"From Track: {track.name}",
-                frames=track.frames.copy(),
+                times=track.times.copy() if track.times is not None else None,
+                frames=track.frames.copy() if track.frames is not None else None,
                 rows=track.rows.copy(),
                 columns=track.columns.copy(),
                 sensor=track.sensor,
@@ -2990,8 +3083,8 @@ class TracksPanel(DataPanel):
         # Always create a new plot window (allows multiple windows)
         plot_window = TrackPlotWindow(self, self.viewer)
 
-        # Connect to frame_changed signal
-        self.viewer.frame_changed.connect(plot_window.on_frame_changed)
+        # Connect to index_changed signal
+        self.viewer.index_changed.connect(plot_window.on_index_changed)
 
         # Connect to destroyed signal to remove from list when closed
         plot_window.destroyed.connect(lambda: self._remove_plot_window(plot_window))
@@ -3026,7 +3119,7 @@ class TracksPanel(DataPanel):
         # Update all visible windows
         for window in self.track_plot_windows:
             window.set_tracks(selected_tracks, tracker_map)
-            window.on_frame_changed(self.viewer.current_frame_number)
+            window.on_index_changed(self.viewer.timeline.current_index)
 
     def _update_single_plot_window(self, window):
         """Update a single plot window with currently selected tracks"""
@@ -3035,7 +3128,7 @@ class TracksPanel(DataPanel):
 
         selected_tracks, tracker_map = self._get_selected_tracks_for_plot()
         window.set_tracks(selected_tracks, tracker_map)
-        window.on_frame_changed(self.viewer.current_frame_number)
+        window.on_index_changed(self.viewer.timeline.current_index)
 
     def _get_selected_tracks_for_plot(self):
         """Get currently selected tracks and tracker map for plotting"""

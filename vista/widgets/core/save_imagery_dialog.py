@@ -23,33 +23,19 @@ from vista.imagery.imagery import save_imagery_hdf5
 class SaveImageryDialog(QDialog):
     """Dialog for selecting and saving imagery data to HDF5 format"""
 
-    def __init__(self, sensors, imageries, parent=None):
+    def __init__(self, imageries, parent=None):
         """
         Initialize the Save Imagery dialog.
 
         Parameters
         ----------
-        sensors : list of Sensor
-            List of Sensor objects available in the viewer
         imageries : list of Imagery
             List of Imagery objects available in the viewer
         parent : QWidget, optional
             Parent widget, by default None
         """
         super().__init__(parent)
-        self.sensors = sensors
         self.imageries = imageries
-        self.sensor_imagery_map = {}  # Maps sensor names (str) to their imagery
-        self.sensor_objects = {}  # Maps sensor names (str) to Sensor objects
-
-        # Build sensor name -> imagery mapping
-        for imagery in imageries:
-            sensor = imagery.sensor
-            sensor_name = sensor.name
-            if sensor_name not in self.sensor_imagery_map:
-                self.sensor_imagery_map[sensor_name] = []
-                self.sensor_objects[sensor_name] = sensor
-            self.sensor_imagery_map[sensor_name].append(imagery)
 
         self.init_ui()
 
@@ -76,6 +62,9 @@ class SaveImageryDialog(QDialog):
         self.populate_tree()
         layout.addWidget(self.tree)
 
+        # Connect to the selection change signal
+        self.tree.itemChanged.connect(self.sync_tree)
+
         # File path selection
         file_layout = QHBoxLayout()
         file_layout.addWidget(QLabel("Output File:"))
@@ -97,29 +86,67 @@ class SaveImageryDialog(QDialog):
         self.setLayout(layout)
 
     def populate_tree(self):
-        """Populate tree with sensors and imagery"""
+        """Populate tree with sensor platforms, sensors, and imagery"""
         self.tree.clear()
-        self.sensor_items = {}  # Maps sensor names (str) to tree items
-        self.imagery_items = {}  # Maps imagery UUIDs (str) to tree items
+        self.sensor_platform_items = {}  # Maps sensor platform uuids to tree items
+        self.sensor_items = {}  # Maps sensor uuids to tree items
+        self.imagery_items = {}  # Maps imagery uuids to tree items
 
-        for sensor_name, imagery_list in self.sensor_imagery_map.items():
-            # Create sensor item
-            sensor_item = QTreeWidgetItem(self.tree)
-            sensor_item.setText(0, f"{sensor_name} (Sensor)")
-            sensor_item.setFlags(sensor_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            sensor_item.setCheckState(0, Qt.CheckState.Checked)
-            self.sensor_items[sensor_name] = sensor_item
+        for imagery in self.imageries:
+            sensor = imagery.sensor
+            platform = sensor.platform
 
-            # Add imagery under this sensor
-            for imagery in imagery_list:
-                imagery_item = QTreeWidgetItem(sensor_item)
-                imagery_item.setText(0, imagery.name)
-                imagery_item.setFlags(imagery_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                imagery_item.setCheckState(0, Qt.CheckState.Checked)
-                self.imagery_items[str(imagery.uuid)] = imagery_item
+            if platform.uuid in self.sensor_platform_items:
+                platform_item = self.sensor_platform_items[platform.uuid]
+            else:
+                platform_item = QTreeWidgetItem(self.tree)
+                platform_item.setText(0, f"{platform.name} (Sensor Platform)")
+                platform_item.setFlags(platform_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                platform_item.setCheckState(0, Qt.CheckState.Checked)
+                self.sensor_platform_items[platform.uuid] = platform_item
 
-            # Expand sensor node
+            if sensor.uuid in self.sensor_items:
+                sensor_item = self.sensor_items[sensor.uuid]
+            else:
+                sensor_item = QTreeWidgetItem(platform_item)
+                sensor_item.setText(0, f"{sensor.name} (Sensor)")
+                sensor_item.setFlags(sensor_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                sensor_item.setCheckState(0, Qt.CheckState.Checked)
+                self.sensor_items[sensor.uuid] = sensor_item
+
+            imagery_item = QTreeWidgetItem(sensor_item)
+            imagery_item.setText(0, imagery.name)
+            imagery_item.setFlags(imagery_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            imagery_item.setCheckState(0, Qt.CheckState.Checked)
+            self.imagery_items[imagery.uuid] = imagery_item
+
             sensor_item.setExpanded(True)
+            platform_item.setExpanded(True)
+
+    def sync_tree(self, item, column):
+        if column == 0:
+            # Temporarily block signals to prevent infinite loops during selection updates
+            self.tree.blockSignals(True)
+            new_state = item.checkState(0)
+            self._toggle_all_ancestors(item, new_state)
+            self._toggle_all_descendants(item, new_state)
+            self.tree.blockSignals(False)
+
+    def _toggle_all_ancestors(self, child_item, state):
+        # don't touch ancestors if unchecking something
+        if state != Qt.CheckState.Checked:
+            return
+        # but if we are checking something, make sure its ancestors become checked
+        parent = child_item.parent()
+        while parent is not None:
+            parent.setCheckState(0, state)
+            parent = parent.parent()
+
+    def _toggle_all_descendants(self, parent_item, state):
+        for i in range(parent_item.childCount()):
+            child = parent_item.child(i)
+            child.setCheckState(0, state)
+            self._toggle_all_descendants(child, state)  # Handles deeper nested levels
 
     def browse_file(self):
         """Open file dialog to choose output file"""
@@ -135,32 +162,21 @@ class SaveImageryDialog(QDialog):
 
     def get_selected_data(self):
         """
-        Get the selected sensors and imagery.
+        Get the selected imagery.
 
         Returns
         -------
-        dict
-            Dictionary mapping sensor names (str) to lists of selected Imagery objects
+        list
+            List of selected Imagery objects
         """
-        selected_map = {}
 
-        for sensor_name, sensor_item in self.sensor_items.items():
-            # Check if sensor is checked
-            if sensor_item.checkState(0) == Qt.CheckState.Checked:
-                # Get checked imagery under this sensor
-                imagery_list = self.sensor_imagery_map[sensor_name]
-                selected_imagery = []
+        selected_imagery = []
+        for imagery in self.imageries:
+            item = self.imagery_items[imagery.uuid]
+            if item.checkState(0) == Qt.CheckState.Checked:
+                selected_imagery.append(imagery)
 
-                for imagery in imagery_list:
-                    imagery_item = self.imagery_items[str(imagery.uuid)]
-                    if imagery_item.checkState(0) == Qt.CheckState.Checked:
-                        selected_imagery.append(imagery)
-
-                # Only add sensor if it has at least one selected imagery
-                if selected_imagery:
-                    selected_map[sensor_name] = selected_imagery
-
-        return selected_map
+        return selected_imagery
 
     def accept(self):
         """Handle save button click"""
@@ -173,20 +189,20 @@ class SaveImageryDialog(QDialog):
             return
 
         # Get selected data
-        selected_map = self.get_selected_data()
+        selected_imagery = self.get_selected_data()
 
-        if not selected_map:
+        if len(selected_imagery) == 0:
             QMessageBox.warning(
                 self,
                 "No Data Selected",
-                "Please select at least one sensor with imagery to save.",
+                "Please select at least one imagery to save.",
                 QMessageBox.StandardButton.Ok,
             )
             return
 
         # Attempt to save
         try:
-            save_imagery_hdf5(file_path, selected_map)
+            save_imagery_hdf5(file_path, selected_imagery)
             QMessageBox.information(
                 self,
                 "Save Successful",

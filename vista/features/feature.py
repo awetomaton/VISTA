@@ -19,7 +19,7 @@ class Feature:
     geometry: Any  # Geometry data (varies by type)
     visible: bool = True
     color: str = "y"  # Yellow by default
-    uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
+    uuid: str = field(init=False, default=None)
 
     # PyQtGraph plot item (not serialized)
     _plot_items: Optional[list] = field(default=None, init=False, repr=False)
@@ -35,6 +35,7 @@ class Feature:
         """
         if self._plot_items is None:
             self._plot_items = []
+        self.uuid = uuid.uuid4()
 
     def to_dict(self):
         """
@@ -52,7 +53,7 @@ class Feature:
             "geometry": self.geometry,
             "visible": self.visible,
             "color": self.color,
-            "uuid": self.uuid,
+            "uuid": str(self.uuid),
         }
 
     @classmethod
@@ -72,14 +73,15 @@ class Feature:
             New Feature instance created from the dictionary data. If uuid
             is not provided, a new UUID is generated.
         """
-        return cls(
+        feature = cls(
             name=data["name"],
             feature_type=data["feature_type"],
             geometry=data["geometry"],
             visible=data.get("visible", True),
             color=data.get("color", "y"),
-            uuid=data.get("uuid", str(uuid.uuid4())),
         )
+        feature.uuid = uuid.UUID(data.get("uuid", str(uuid.uuid4())))
+        return feature
 
 
 @dataclass

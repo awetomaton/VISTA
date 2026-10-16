@@ -2,9 +2,10 @@ Custom Sensors
 ==============
 
 VISTA's sensor system is built around a base ``Sensor`` class that can be subclassed to support
-custom sensor platforms with their own position models, geolocation logic, point spread functions,
-and serialization formats. This guide walks through the base class interface, explains what each
-method does, and shows how to implement a fully functional custom sensor.
+custom sensors with their own geolocation logic, point spread functions, and serialization formats.
+Every ``Sensor`` contains a reference to a ``SensorPlatform`` that handles position and pointing queries.
+This guide walks through the base class interface, explains what each method does, and shows how
+to implement a fully functional custom sensor.
 
 Sensor Base Class Overview
 --------------------------
@@ -13,7 +14,7 @@ The ``Sensor`` class (``vista/sensors/sensor.py``) is a Python ``dataclass`` tha
 
 1. **Identity** — a ``name`` and auto-generated ``uuid``
 2. **Radiometric calibration data** — bias images, uniformity gain images, bad pixel masks
-3. **Overridable methods** for position queries, geolocation, PSF modeling, and HDF5 serialization
+3. **Overridable methods** for geolocation, PSF modeling, and HDF5 serialization
 
 .. code-block:: text
 
@@ -24,7 +25,6 @@ The ``Sensor`` class (``vista/sensors/sensor.py``) is a Python ``dataclass`` tha
    │   ├── uniformity_gain_images / uniformity_gain_image_frames
    │   └── bad_pixel_masks / bad_pixel_mask_frames
    └── Methods to override
-       ├── get_positions(times)        → NDArray or None
        ├── can_geolocate()             → bool
        ├── pixel_to_geodetic(...)      → EarthLocation
        ├── geodetic_to_pixel(...)      → (rows, columns)
@@ -44,19 +44,16 @@ your sensor needs.
    * - Method
      - Purpose
      - Default Return
-   * - ``get_positions(times)``
-     - Return ECEF positions (3, N) in km for given times
-     - ``None``
    * - ``can_geolocate()``
      - Whether pixel ↔ geodetic conversion is supported
      - ``False``
-   * - ``pixel_to_geodetic(frame, rows, columns)``
+   * - ``pixel_to_geodetic(times, rows, columns)``
      - Convert pixel coordinates to geodetic (``EarthLocation``).
-       ``frame`` may be an int or an array of per-point frame numbers.
-     - ``EarthLocation`` at (0, 0, 0)
-   * - ``geodetic_to_pixel(frame, loc)``
+       ``times`` may be a np.datetime64 or an array of per-point times.
+     - ``EarthLocation`` at (np.nan, np.nan. np.nan)
+   * - ``geodetic_to_pixel(times, loc)``
      - Convert ``EarthLocation`` to pixel (rows, columns).
-       ``frame`` may be an int or an array of per-point frame numbers.
+       ``times`` may be a np.datetime64 or an array of per-point times.
      - ``NaN`` arrays
    * - ``model_psf(sigma, size)``
      - Return a 2D PSF kernel
@@ -103,17 +100,15 @@ to extend the base class. It is the best reference for building your own sensor.
 
 ``SampledSensor`` adds:
 
-- **Position interpolation** — stores discrete ECEF position samples and interpolates (or
-  extrapolates) to arbitrary query times.
 - **ARF-based geolocation** — uses polynomial coefficients to convert between pixel coordinates
   and geodetic coordinates via the Attitude Reference Frame.
 - **Radiometric gain** — per-frame multiplicative calibration factors.
-- **Full HDF5 round-trip** — serializes position, geolocation, and radiometric data.
+- **Full HDF5 round-trip** — serializes geolocation and and radiometric data.
 
 Key implementation patterns to follow:
 
 1. **Call** ``super().__post_init__()`` in ``__post_init__`` to initialize the base class (UUID
-   generation, instance counting, imagery registry).
+   generation, instance counting).
 2. **Call** ``super().to_hdf5(group)`` at the start of ``to_hdf5`` to write base radiometric data,
    then add your own datasets.
 3. **Override** ``can_geolocate()`` to return ``True`` when the sensor has the data needed for
@@ -171,43 +166,18 @@ Step 1: Define the Dataclass
            if self.rotation_matrix is None:
                self.rotation_matrix = np.eye(3)
 
-Step 2: Implement get_positions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Return the sensor's ECEF position for any set of query times. For a fixed sensor this is trivial.
-
-.. code-block:: python
-
-       def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
-           """Return the fixed position for all query times.
-
-           Parameters
-           ----------
-           times : NDArray[np.datetime64]
-               Array of query times (ignored for a stationary sensor).
-
-           Returns
-           -------
-           NDArray[np.float64]
-               Positions as (3, N) array in ECEF km.
-           """
-           if self.position_ecef_km is None:
-               return None
-           return np.tile(self.position_ecef_km.reshape(3, 1), (1, len(times)))
-
-Step 3: Implement Geolocation
+Step 2: Implement Geolocation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
 .. note::
 
-   ``pixel_to_geodetic`` and ``geodetic_to_pixel`` accept ``frame`` as either a single ``int``
-   (for converting many pixels at one frame) **or** a ``numpy`` array of per-point frame numbers
-   (for converting pixels that span multiple frames in a single call). If your sensor's geolocation
-   model is frame-invariant (like the pinhole example below, which ignores ``frame``), both cases
-   work automatically. For frame-dependent sensors, see ``SampledSensor`` for how to handle the
-   array case by grouping points by unique frame.
+   ``pixel_to_geodetic`` and ``geodetic_to_pixel`` accept ``times`` as either a single ``np.datetime64``
+   (for converting many pixels at one time) **or** a ``numpy`` array of per-point timestamps
+   (for converting pixels that span multiple times in a single call). If your sensor's geolocation
+   model is time-invariant (like the pinhole example below, which ignores ``times``), both cases
+   work automatically.
 
 .. code-block:: python
 
@@ -216,14 +186,14 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
            return (self.position_ecef_km is not None and
                    self.rotation_matrix is not None)
 
-       def pixel_to_geodetic(self, frame, rows: np.ndarray,
+       def pixel_to_geodetic(self, times, rows: np.ndarray,
                              columns: np.ndarray) -> EarthLocation:
            """Convert pixel coordinates to geodetic via ray-Earth intersection.
 
            Parameters
            ----------
-           frame : int or np.ndarray
-               Frame number(s). Unused for this static model.
+           times : np.datetime64 or np.ndarray
+               Time(s). Unused for this static model.
            rows : np.ndarray
                Row pixel coordinates.
            columns : np.ndarray
@@ -235,7 +205,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
                Geodetic coordinates for each pixel.
            """
            if not self.can_geolocate():
-               return super().pixel_to_geodetic(frame, rows, columns)
+               return super().pixel_to_geodetic(times, rows, columns)
 
            # Build ray directions in camera frame
            pr, pc = self.principal_point
@@ -251,24 +221,22 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
            # Intersect with Earth — use your own intersection routine here
            from vista.transforms import los_to_earth
-           _, intersections = los_to_earth(self.position_ecef_km, rays_ecef)
-           if intersections.ndim == 1:
-               intersections = intersections.reshape(3, 1)
+           _, intersections = los_to_earth(self.position_ecef_km, rays_ecef.T) # transpose so last axis is length 3
 
            return EarthLocation.from_geocentric(
-               x=intersections[0] * units.km,
-               y=intersections[1] * units.km,
-               z=intersections[2] * units.km,
+               x=intersections[...,0] * units.km,
+               y=intersections[...,1] * units.km,
+               z=intersections[...,2] * units.km,
            )
 
-       def geodetic_to_pixel(self, frame,
+       def geodetic_to_pixel(self, times,
                              loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
            """Convert geodetic coordinates to pixel coordinates.
 
            Parameters
            ----------
-           frame : int or np.ndarray
-               Frame number(s). Unused for this static model.
+           times : np.datetime64 or np.ndarray
+               Time(s). Unused for this static model.
            loc : EarthLocation
                Geodetic coordinates to project.
 
@@ -280,7 +248,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
                Column pixel coordinates.
            """
            if not self.can_geolocate():
-               return super().geodetic_to_pixel(frame, loc)
+               return super().geodetic_to_pixel(times, loc)
 
            # Target ECEF positions in km
            target = np.array([
@@ -304,7 +272,7 @@ Override ``can_geolocate``, ``pixel_to_geodetic``, and ``geodetic_to_pixel``.
 
            return rows, columns
 
-Step 4: Implement PSF Modeling (Optional)
+Step 3: Implement PSF Modeling (Optional)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Override ``model_psf`` if your sensor has a known point spread function.
@@ -331,7 +299,7 @@ Override ``model_psf`` if your sensor has a known point spread function.
            kernel = np.exp(-((x - center) ** 2 + (y - center) ** 2) / (2 * sigma ** 2))
            return kernel / kernel.sum()
 
-Step 5: Implement HDF5 Serialization
+Step 4: Implement HDF5 Serialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Override ``to_hdf5`` so your sensor can be saved with imagery. Call ``super().to_hdf5(group)``
@@ -438,9 +406,7 @@ Design Guidelines
   registry, and increments the instance counter.
 - **Always call** ``super().to_hdf5(group)`` — it writes the base identification attributes and
   radiometric calibration data that VISTA's treatments rely on.
-- **Return** ``None`` from ``get_positions`` if positions are not available rather than raising
-  an exception. VISTA checks for ``None`` to determine capability.
-- **Return** ``NaN``/zero arrays from geolocation methods when conversion is not possible for the
+- **Return** ``NaN`` arrays from geolocation methods when conversion is not possible for the
   given frame, rather than raising exceptions. This allows VISTA to gracefully handle partial data.
 - **Use ECEF kilometers** for all position data to remain consistent with the rest of VISTA.
 - **Set** ``sensor_type`` to a unique string in ``to_hdf5`` so that the HDF5 loader can dispatch
@@ -452,5 +418,6 @@ See Also
 --------
 
 - :doc:`../api/sensors` — Sensor API reference
+- :doc:`../api/sensor_platforms` - Sensor platform API reference
 - :doc:`../user_guide/imagery` — ARF coordinate system and geolocation polynomials
 - ``vista/sensors/sampled_sensor.py`` — Reference implementation with full HDF5 round-trip

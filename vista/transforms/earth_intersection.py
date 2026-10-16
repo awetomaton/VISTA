@@ -5,41 +5,44 @@ from numpy.typing import NDArray
 
 
 def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray]:
-    """Find the intersection of a pointing vector with the Earth
-
-    Finds the intersection of a pointing vector u and starting point s with the WGS-84 geoid
+    """Finds the intersection with the WGS-84 geoid for a position and pointing.
+    If either parameter is an array of values, their shapes must be broadcastable
+    for numpy array operations.
 
     Parameters
     ----------
     position : NDArray
-        Length 3 or (3 X N) array defining the starting point location(s) in kilometers
+        Array defining the starting point location(s) in kilometers.
+        Shape along last axis must be 3.
     pointing : NDArray
-        Length 3 or (3 X N) array defining the pointing vector(s) (must be a unit vector)
+        Array defining the pointing vector(s).
+        Shape along last axis must be 3.
 
     Returns
     -------
     NDArray :
-        Distance(s) to the Earth's surface
+        Distance(s) to the Earth's surface.
     NDArray :
-        Length 3 or (3 X N) array of point(s) of intersection with the Earth in kilometers. NaN's represent
-        non-intersection
+        Array of point(s) of intersection with the Earth in kilometers.
+        Shape along last axis is 3.
+        NaNs represent non-intersection.
     """
+    new_position = np.atleast_2d(position)
+    new_pointing = np.atleast_2d(pointing)
 
-    return_singleton = False
-    if (len(position.shape) == 1) and (len(pointing.shape) == 1):
-        return_singleton = True
-        position = position.reshape((3, 1))
-        pointing = pointing.reshape((3, 1))
+    pointing_norm = np.linalg.norm(new_pointing, axis=-1, keepdims=True)
+    new_pointing = new_pointing / pointing_norm
 
     a = 6378.1370
     b = 6378.1370
     c = 6356.752314245
-    x = position[0]
-    y = position[1]
-    z = position[2]
-    u = pointing[0]
-    v = pointing[1]
-    w = pointing[2]
+    # grab coordinates
+    x = new_position[..., 0]
+    y = new_position[..., 1]
+    z = new_position[..., 2]
+    u = new_pointing[..., 0]
+    v = new_pointing[..., 1]
+    w = new_pointing[..., 2]
 
     value = -(a**2) * b**2 * w * z - a**2 * c**2 * v * y - b**2 * c**2 * u * x
     radical = (
@@ -67,14 +70,16 @@ def los_to_earth(position: NDArray, pointing: NDArray) -> Tuple[NDArray, NDArray
     # Can't move backward along line-of-sight, negative values are non-intersecting
     d[d < 0] = np.nan
 
-    intersection = np.array(
+    intersection = np.stack(
         [
             x + d * u,
             y + d * v,
             z + d * w,
-        ]
+        ],
+        axis=-1,  # xyz axis is last axis to match inputs
     )
+    if np.asarray(position).ndim == 1 and np.asarray(pointing).ndim == 1:
+        d = np.squeeze(d, axis=-1)
+        intersection = np.squeeze(intersection, axis=-2)
 
-    if return_singleton:
-        return d, intersection.squeeze()
     return d, intersection

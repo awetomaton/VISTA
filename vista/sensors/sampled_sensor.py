@@ -1,9 +1,8 @@
 """
-Sampled sensor with interpolated position and geodetic conversion capabilities.
+Sampled sensor with geodetic conversion capabilities.
 
-This module defines the SampledSensor class, which extends the base Sensor class to provide
-position retrieval via interpolation/extrapolation from discrete position samples. It also
-supports geodetic coordinate conversion using ARF (Attitude Reference Frame) polynomials and
+This module defines the SampledSensor class, which extends the base Sensor class to support
+geodetic coordinate conversion using ARF (Attitude Reference Frame) polynomials and
 radiometric gain calibration.
 """
 
@@ -15,7 +14,7 @@ import numpy as np
 from astropy import units
 from astropy.coordinates import EarthLocation
 from numpy.typing import NDArray
-from scipy.interpolate import interp1d
+from scipy.interpolate import RegularGridInterpolator
 
 from vista.sensors.sensor import Sensor
 from vista.transforms import (
@@ -30,135 +29,198 @@ from vista.transforms import (
 @dataclass(eq=False)
 class SampledSensor(Sensor):
     """
-    Sensor implementation using sampled position data with interpolation/extrapolation.
+    Sensor implementation providing ARF polynomials.
 
-    SampledSensor stores discrete position samples at known times and provides
-    position estimates at arbitrary times through interpolation (within the time range)
-    or extrapolation (outside the time range). For single-position sensors, the same
-    position is returned for all query times.
+    SampledSensor stores ARF polynomials and radiometric gain at known times,
+    providing geodetic coordinate conversion capabilities and gain calibration.
 
     Attributes
     ----------
-    positions : NDArray[np.float64]
-        Sensor positions as (3, N) array where N is the number of samples.
-        Each column contains [x, y, z] ECEF coordinates in kilometers.
-        Required - will raise ValueError in __post_init__ if not provided.
-    times : NDArray[np.datetime64]
-        Times corresponding to each position sample. Must have length N.
-        Required - will raise ValueError in __post_init__ if not provided.
-    frames : NDArray[np.int64]
-        Sensor frames numbers corresponding to each time sample. Must have length N.
-        Required - will raise ValueError in __post_init__ if not provided.
     radiometric_gain : NDArray, optional
-        1D array of multiplicative factors for each frame to convert from counts to
-        irradiance in units of kW/km²/sr.
-    pointing : NDArray[np.float64], optional
-        Sensor pointing unit vectors in ECEF coordinates. Shape: (3, num_frames).
-        Each column is the direction the sensor is pointing for that frame.
+        1D array of multiplicative factors to convert from counts to irradiance
+        in units of kW/km²/sr.
+    radiometric_gain_frames : NDArray, optional
+        1D array specifying frame ranges for each radiometric gain value.
     poly_pixel_to_arf_azimuth : NDArray[np.float64], optional
         Polynomial coefficients for converting (column, row) to ARF azimuth (radians).
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
     poly_pixel_to_arf_elevation : NDArray[np.float64], optional
         Polynomial coefficients for converting (column, row) to ARF elevation (radians).
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
     poly_arf_to_row : NDArray[np.float64], optional
         Polynomial coefficients for converting (azimuth, elevation) to row.
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
     poly_arf_to_col : NDArray[np.float64], optional
         Polynomial coefficients for converting (azimuth, elevation) to column.
-        Shape: (num_frames, num_coeffs) where num_coeffs depends on polynomial order.
-
-    Methods
-    -------
-    get_positions(times)
-        Return interpolated/extrapolated sensor positions for given times
+        Shape: (N, num_coeffs) where num_coeffs depends on polynomial order.
+    times : NDArray[np.datetime64]
+        Times corresponding to each ARF polynomial. Must have length N.
 
     Notes
     -----
     - Duplicate times in the input are automatically removed during initialization
     - For 2+ unique samples: uses linear interpolation within range, linear extrapolation outside
-    - For 1 sample: returns the same position for all query times (stationary sensor)
-    - Positions must be (3, N) arrays with x, y, z in each column
-    - All coordinates are in ECEF Cartesian frame with units of kilometers
+    - For 1 sample: returns the same polynomial coefficients for all query times
     - ARF (Attitude Reference Frame) is a local coordinate system where the X-axis
       points along the sensor pointing direction
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> # Create sensor with multiple position samples
-    >>> positions = np.array([[1000, 1100, 1200],
-    ...                       [2000, 2100, 2200],
-    ...                       [3000, 3100, 3200]])  # (3, 3) array
-    >>> times = np.array(['2024-01-01T00:00:00',
-    ...                   '2024-01-01T00:01:00',
-    ...                   '2024-01-01T00:02:00'], dtype='datetime64')
-    >>> sensor = SampledSensor(positions=positions, times=times)
-
-    >>> # Get interpolated position
-    >>> query_times = np.array(['2024-01-01T00:00:30'], dtype='datetime64')
-    >>> pos = sensor.get_positions(query_times)
-    >>> pos.shape
-    (3, 1)
-
-    >>> # Create stationary sensor with single position
-    >>> positions_static = np.array([[1000], [2000], [3000]])  # (3, 1) array
-    >>> times_static = np.array(['2024-01-01T00:00:00'], dtype='datetime64')
-    >>> sensor_static = SampledSensor(positions=positions_static, times=times_static)
-    >>> # Returns same position for any query time
-    >>> pos = sensor_static.get_positions(query_times)
     """
 
-    positions: Optional[NDArray[np.float64]] = None
-    times: Optional[NDArray[np.datetime64]] = None
-    frames: Optional[NDArray[np.int64]] = None
     radiometric_gain: Optional[NDArray] = None
-    pointing: Optional[NDArray[np.float64]] = None
+    radiometric_gain_frames: Optional[NDArray] = None
     poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]] = None
     poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]] = None
     poly_arf_to_row: Optional[NDArray[np.float64]] = None
     poly_arf_to_col: Optional[NDArray[np.float64]] = None
+    times: Optional[NDArray[np.datetime64]] = None
 
     def __post_init__(self):
         """
         Validate inputs and remove duplicate times.
 
-        Ensures positions and times have compatible shapes and removes any
-        duplicate time entries along with their corresponding positions.
+        Ensures times and polynomials have compatible shapes and removes any
+        duplicate time entries along with their corresponding polynomial coefficients.
 
         Raises
         ------
         ValueError
-            If positions or times are not provided, or if they have incompatible shapes.
+            If polynomial coefficients have incompatible shapes with their times.
         """
         # Call parent's __post_init__ to increment instance counter
         super().__post_init__()
 
-        # Validate required fields
-        if self.positions is None:
-            raise ValueError("positions is required for SampledSensor")
+        self._validate_arrays(
+            self.poly_pixel_to_arf_azimuth,
+            self.poly_pixel_to_arf_elevation,
+            self.poly_arf_to_row,
+            self.poly_arf_to_col,
+            self.times,
+        )
+        self._sort_unique()
+
+    def _validate_arrays(
+        self,
+        poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]],
+        poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]],
+        poly_arf_to_row: Optional[NDArray[np.float64]],
+        poly_arf_to_col: Optional[NDArray[np.float64]],
+        times: Optional[NDArray[np.datetime64]],
+    ):
+        """
+        Validate that the input arrays are compatible with existing data.
+
+        Ensures that the new times and polynomials have compatible shapes and match
+        the expected dimensions. Raises ValueError if any incompatibility is found.
+
+        Parameters
+        ----------
+        poly_pixel_to_arf_azimuth : NDArray[np.float64]
+            Polynomial samples to validate.
+        poly_pixel_to_arf_elevation : NDArray[np.float64]
+            Polynomial samples to validate.
+        poly_arf_to_row : NDArray[np.float64]
+            Polynomial samples to validate.
+        poly_arf_to_col : NDArray[np.float64]
+            Polynomial samples to validate.
+        times : NDArray[np.datetime64]
+            Time samples to validate.
+
+        Raises
+        ------
+        ValueError
+            If any of the input arrays have incompatible shapes or dimensions.
+        """
+        if times is None:
+            return
+
+        if (
+            poly_pixel_to_arf_azimuth is None
+            or poly_pixel_to_arf_elevation is None
+            or poly_arf_to_row is None
+            or poly_arf_to_col is None
+        ):
+            raise ValueError("times is not None, but at least one polynomial is")
+
+        if times.ndim != 1:
+            raise ValueError("times must be a one dimensional array")
+
+        # Validate that polynomials have same number of samples as their times
+        if poly_pixel_to_arf_azimuth.shape[0] != times.shape[0]:
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
+        if poly_pixel_to_arf_elevation.shape[0] != times.shape[0]:
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
+        if poly_arf_to_row.shape[0] != times.shape[0]:
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
+        if poly_arf_to_col.shape[0] != times.shape[0]:
+            raise ValueError("Number of polynomial samples must match corresponding time samples")
+
+        # Validate that polynomials have same order of existing polynomials
+        if self.times is not None:  # gate check to only occur if sensor has valid samples already
+            if poly_pixel_to_arf_azimuth.shape[1:] != self.poly_pixel_to_arf_azimuth.shape[1:]:
+                raise ValueError("Polynomial order must match existing polynomial order")
+            if poly_pixel_to_arf_elevation.shape[1:] != self.poly_pixel_to_arf_elevation.shape[1:]:
+                raise ValueError("Polynomial order must match existing polynomial order")
+            if poly_arf_to_row.shape[1:] != self.poly_arf_to_row.shape[1:]:
+                raise ValueError("Polynomial order must match existing polynomial order")
+            if poly_arf_to_col.shape[1:] != self.poly_arf_to_col.shape[1:]:
+                raise ValueError("Polynomial order must match existing polynomial order")
+
+    def _sort_unique(self):
         if self.times is None:
-            raise ValueError("times is required for SampledSensor")
-        if self.frames is None:
-            raise ValueError("frame numbers are required for SampledSensor")
+            return
 
-        # Validate shape of positions
-        if self.positions.ndim != 2 or self.positions.shape[0] != 3:
-            raise ValueError(f"positions must be a (3, N) array, got shape {self.positions.shape}")
-
-        # Validate that times and positions have matching counts
-        n_positions = self.positions.shape[1]
-        n_times = len(self.times)
-        if n_positions != n_times:
-            raise ValueError(f"Number of positions ({n_positions}) must match number of times ({n_times})")
-
-        # Remove duplicate times and corresponding positions
+        # Sort times, removing duplicates
         unique_times, unique_indices = np.unique(self.times, return_index=True)
 
-        if len(unique_times) < len(self.times):
-            # Duplicates were found, keep only unique entries
-            self.times = unique_times
-            self.positions = self.positions[:, unique_indices]
+        self.times = unique_times
+        self.poly_pixel_to_arf_azimuth = self.poly_pixel_to_arf_azimuth[unique_indices]
+        self.poly_pixel_to_arf_elevation = self.poly_pixel_to_arf_elevation[unique_indices]
+        self.poly_arf_to_row = self.poly_arf_to_row[unique_indices]
+        self.poly_arf_to_col = self.poly_arf_to_col[unique_indices]
+
+    def append(
+        self,
+        poly_pixel_to_arf_azimuth: Optional[NDArray[np.float64]],
+        poly_pixel_to_arf_elevation: Optional[NDArray[np.float64]],
+        poly_arf_to_row: Optional[NDArray[np.float64]],
+        poly_arf_to_col: Optional[NDArray[np.float64]],
+        times: Optional[NDArray[np.datetime64]],
+    ):
+        """
+        Append new times and polynomials to the sensor.
+        Must be compatible with existing data. After appending, duplicate times
+        are removed and arrays are sorted in order of increasing time.
+
+        Parameters
+        ----------
+        poly_pixel_to_arf_azimuth : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        poly_pixel_to_arf_elevation : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        poly_arf_to_row : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        poly_arf_to_col : NDArray[np.float64]
+            New polynomial samples corresponding to the new times.
+        times : NDArray[np.datetime64]
+            New time sample(s) to append.
+        """
+        self._validate_arrays(
+            poly_pixel_to_arf_azimuth, poly_pixel_to_arf_elevation, poly_arf_to_row, poly_arf_to_col, times
+        )
+        if self.times is None:
+            self.times = times
+            self.poly_pixel_to_arf_azimuth = poly_pixel_to_arf_azimuth
+            self.poly_pixel_to_arf_elevation = poly_pixel_to_arf_elevation
+            self.poly_arf_to_row = poly_arf_to_row
+            self.poly_arf_to_col = poly_arf_to_col
+        elif times is not None:
+            self.times = np.concatenate((self.times, times.astype("datetime64[ns]")))
+            self.poly_pixel_to_arf_azimuth = np.concatenate((self.poly_pixel_to_arf_azimuth, poly_pixel_to_arf_azimuth))
+            self.poly_pixel_to_arf_elevation = np.concatenate(
+                (self.poly_pixel_to_arf_elevation, poly_pixel_to_arf_elevation)
+            )
+            self.poly_arf_to_row = np.concatenate((self.poly_arf_to_row, poly_arf_to_row))
+            self.poly_arf_to_col = np.concatenate((self.poly_arf_to_col, poly_arf_to_col))
+        self._sort_unique()
 
     def can_geolocate(self) -> bool:
         """
@@ -167,119 +229,73 @@ class SampledSensor(Sensor):
         Returns
         -------
         bool
-            True if sensor has all required ARF geolocation data: pointing vectors
-            and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
+            True if sensor has all required ARF geolocation data: platform position and
+            pointing vectors and both forward (pixel→ARF) and reverse (ARF→pixel) polynomials.
         """
         return (
-            self.pointing is not None
+            self.platform.positions.shape[1] > 0
+            and self.platform.pointings.shape[1] > 0
+            and self.times is not None
             and self.poly_pixel_to_arf_azimuth is not None
             and self.poly_pixel_to_arf_elevation is not None
             and self.poly_arf_to_row is not None
             and self.poly_arf_to_col is not None
         )
 
-    def get_positions(self, times: NDArray[np.datetime64]) -> NDArray[np.float64]:
+    def get_coefficients(self, coeffs: NDArray[np.float64], times: NDArray[np.datetime64]) -> NDArray[np.float64]:
         """
-        Return sensor positions for given times via interpolation/extrapolation.
+        Return polynomial coefficients for the given times via interpolation/extrapolation.
 
         Parameters
         ----------
+        coeffs : NDArray[np.float64]
+            A reference to one of the sensor's already existing ARF polynomial coefficients arrays
         times : NDArray[np.datetime64]
-            Array of times for which to retrieve sensor positions
+            Array of times for which to retrieve polynomial coefficients
 
         Returns
         -------
         NDArray[np.float64]
-            Sensor positions as (3, N) array where N is the number of query times.
-            Each column contains [x, y, z] coordinates in ECEF frame (km).
+            Polynomial coefficients as (N, num_coeffs) array where N is the number of query times.
 
         Notes
         -----
-        - For sensors with 1 sample: returns the single position for all times
+        - For sensors with 1 sample: returns the single set of coefficients for all times
         - For sensors with 2+ samples: uses linear interpolation within the time
           range and linear extrapolation outside the range
         """
+        times = np.asarray(times)
+
+        if self.times is None:
+            invalid_shape = times.shape + coeffs.shape[1:]
+            return np.full(invalid_shape, np.nan, dtype=np.float64)
+
+        # interpolator needs array
         # Convert query times to numeric values (nanoseconds since epoch)
-        query_times_ns = times.astype("datetime64[ns]").astype(np.float64)
+        query_times_ns = np.atleast_1d(times).astype("datetime64[ns]").astype(np.int64)
 
-        # Handle single-position case (stationary sensor)
-        if self.positions.shape[1] == 1:
-            # Return the same position for all query times
-            return np.tile(self.positions, (1, len(times)))
+        interp_times = self.times.astype("datetime64[ns]").astype(np.int64)
 
-        # Multi-position case: use interpolation/extrapolation
-        # Convert sample times to numeric values
-        sample_times_ns = self.times.astype("datetime64[ns]").astype(np.float64)
+        # lowest time to subtract off so floating point interpolation doesn't round
+        min_time = min(np.min(interp_times), np.min(query_times_ns))
 
-        # Create interpolators for each coordinate (x, y, z)
-        # fill_value='extrapolate' enables linear extrapolation outside the range
-        interpolated_positions = np.zeros((3, len(times)))
+        interpolator = RegularGridInterpolator(
+            (interp_times - min_time,),
+            coeffs,  # shape is already (time, num_coeffs)
+            bounds_error=False,  # do not error outside of bounds
+            fill_value=None,  # extrapolate instead
+        )
+        interpolated_coeffs = interpolator(query_times_ns - min_time)
 
-        for i in range(3):
-            interpolator = interp1d(
-                sample_times_ns,
-                self.positions[i, :],
-                kind="linear",
-                fill_value="extrapolate",
-            )
-            interpolated_positions[i, :] = interpolator(query_times_ns)
+        # squeeze axis if a number was passed in
+        if times.ndim == 0:
+            interpolated_coeffs = interpolated_coeffs.squeeze(axis=0)
 
-        return interpolated_positions
+        return interpolated_coeffs
 
-    def _pixel_to_geodetic_single_frame(self, frame_idx: int, rows: np.ndarray, columns: np.ndarray) -> np.ndarray:
-        """
-        Convert pixel coordinates to ECEF for a single frame index.
-
-        Parameters
-        ----------
-        frame_idx : int
-            Index into self.frames (NOT the frame number itself)
-        rows : np.ndarray
-            Row pixel coordinates
-        columns : np.ndarray
-            Column pixel coordinates
-
-        Returns
-        -------
-        np.ndarray
-            ECEF intersections with shape (3, N). NaN for off-Earth pixels.
-        """
-        # Get polynomial coefficients for this frame
-        az_coeffs = self.poly_pixel_to_arf_azimuth[frame_idx]
-        el_coeffs = self.poly_pixel_to_arf_elevation[frame_idx]
-
-        # Evaluate polynomials: pixel → ARF angles (radians)
-        azimuth = evaluate_2d_polynomial(az_coeffs, columns, rows)
-        elevation = evaluate_2d_polynomial(el_coeffs, columns, rows)
-
-        # Convert ARF spherical → ARF Cartesian unit vectors
-        arf_vectors = spherical_to_cartesian(azimuth, elevation)
-
-        # Get sensor position for this frame
-        if self.positions.shape[1] == 1:
-            sensor_pos = self.positions[:, 0]
-        else:
-            time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
-
-        sensor_pointing = self.pointing[:, frame_idx]
-
-        # Get ARF transform and invert (transpose for orthonormal matrix)
-        arf_to_ecef = get_arf_transform(sensor_pos, sensor_pointing).T
-
-        # Transform ARF → ECEF line-of-sight vectors
-        ecef_vectors = arf_to_ecef @ arf_vectors
-
-        # Ray-cast to Earth (returns NaN for non-intersecting rays)
-        _, intersections = los_to_earth(sensor_pos, ecef_vectors)
-
-        # Ensure intersections is 2D (3, N) even for single point
-        if intersections.ndim == 1:
-            intersections = intersections.reshape(3, 1)
-
-        return intersections
-
-    def pixel_to_geodetic(self, frame: Union[int, np.ndarray], rows: np.ndarray, columns: np.ndarray):
+    def pixel_to_geodetic(
+        self, times: Union[np.datetime64, np.ndarray], rows: np.ndarray, columns: np.ndarray
+    ) -> EarthLocation:
         """
         Convert pixel coordinates to geodetic coordinates using ARF polynomials.
 
@@ -289,10 +305,11 @@ class SampledSensor(Sensor):
 
         Parameters
         ----------
-        frame : int or np.ndarray
-            Frame number(s) for which to perform the conversion. If an array,
-            must have the same length as rows/columns and each element specifies
-            the frame for the corresponding pixel coordinate.
+        times : np.datetime64 or np.ndarray
+            Time(s) for which to perform the conversion. If a number, it is assumed
+            that a time axis for the rows and columns is not present. If an array, it
+            is expected to have the same length as the final (time) axis of rows/columns,
+            and each element specifies the time for the corresponding pixel coordinates.
         rows : np.ndarray
             Array of row pixel coordinates
         columns : np.ndarray
@@ -303,116 +320,83 @@ class SampledSensor(Sensor):
         EarthLocation
             Astropy EarthLocation object(s) with geodetic coordinates.
             Returns NaN coordinates for pixels that do not intersect Earth.
-            Returns zero coordinates if polynomials are not available or frame not found.
+            Returns NaN coordinates if polynomials are not available.
+
+        Raises
+        ------
+        ValueError
+            If times is an array and its length does not match the length of the last
+            axis of rows and columns
 
         Notes
         -----
-        - Requires ARF polynomials and pointing vectors to be defined
-        - Frame must exist in self.frames array
-        - Off-Earth pixels will have NaN lat/lon/height values
+        - Requires ARF polynomials to be defined
+        - Returns NaN coordinates if polynomials are not available
+        - Off-Earth pixels will have NaN x/y/z geocentric coordinates.
+          This corresponds to 90/0/NaN for its lat/lon/height values,
+          so a check for NaN coordinates need only check for NaN height.
         """
-        # If no polynomial coefficients provided, return zeros
-        if not self.can_geolocate() or self.frames is None:
-            invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(x=invalid, y=invalid, z=invalid, unit=units.km)
+        # If no polynomial coefficients provided, return NaN
+        if not self.can_geolocate():
+            invalid = np.full_like(rows, np.nan, dtype=np.float64)
+            return EarthLocation(x=invalid, y=invalid, z=invalid, unit=units.km)
 
-        # Handle array of frames: group by unique frame for efficient batch processing
-        if isinstance(frame, np.ndarray):
-            all_intersections = np.full((3, len(rows)), np.nan)
+        # we want to use numpy arrays, so convert if not an array
+        times_array = np.atleast_1d(times)
 
-            for uframe in np.unique(frame):
-                # Find sensor frame index
-                sensor_mask = self.frames == uframe
-                if not np.any(sensor_mask):
-                    continue  # Unknown frame, leave as NaN
-                frame_idx = np.where(sensor_mask)[0][0]
+        # we don't want to consider the multidimensional case where times is more than 1d
+        if times_array.ndim > 1:
+            raise ValueError("times should be a number or 1d array")
 
-                # Gather pixels belonging to this frame
-                point_mask = frame == uframe
-                intersections = self._pixel_to_geodetic_single_frame(
-                    frame_idx,
-                    rows[point_mask],
-                    columns[point_mask],
-                )
-                all_intersections[:, point_mask] = intersections
+        # if passing in a number for the times, assume time axis is missing for rows and columns and add it
+        if np.asarray(times).ndim == 0:
+            rows = rows[..., None]
+            columns = columns[..., None]
+        elif (times_array.shape[-1] != rows.shape[-1]) or (times_array.shape[-1] != columns.shape[-1]):
+            raise ValueError("Length of times must be the same as the last axis of rows and columns")
 
-            return EarthLocation.from_geocentric(
-                x=all_intersections[0] * units.km,
-                y=all_intersections[1] * units.km,
-                z=all_intersections[2] * units.km,
-            )
+        # arrays are of shape times.shape + (num_coeffs,)
+        az_coeffs = self.get_coefficients(self.poly_pixel_to_arf_azimuth, times_array)
+        el_coeffs = self.get_coefficients(self.poly_pixel_to_arf_elevation, times_array)
 
-        # Single frame path (original fast path)
-        frame_mask = self.frames == frame
-        if not np.any(frame_mask):
-            invalid = np.zeros_like(rows, dtype=np.float64)
-            return EarthLocation.from_geocentric(
-                x=invalid,
-                y=invalid,
-                z=invalid,
-                unit=units.km,
-            )
+        # arrays are of shape rows.shape
+        azimuth = evaluate_2d_polynomial(az_coeffs, columns, rows)
+        elevation = evaluate_2d_polynomial(el_coeffs, columns, rows)
 
-        frame_idx = np.where(frame_mask)[0][0]
-        intersections = self._pixel_to_geodetic_single_frame(frame_idx, rows, columns)
+        # Convert ARF spherical → ARF Cartesian unit vectors
+        # output array has shape (3,) + rows.shape
+        arf_vectors = spherical_to_cartesian(azimuth, elevation)
 
-        return EarthLocation.from_geocentric(
-            x=intersections[0] * units.km,
-            y=intersections[1] * units.km,
-            z=intersections[2] * units.km,
-        )
+        # get sensor position and pointing at the times
+        # transpose so that each array has shape times.shape + (3,)
+        sensor_pos = self.platform.get_positions(times_array).T
+        sensor_pointing = self.platform.get_pointings(times_array).T
 
-    def _geodetic_to_pixel_single_frame(self, frame_idx: int, target_ecef: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Convert ECEF target positions to pixel coordinates for a single frame index.
+        # Get ARF transform and invert (transpose for orthonormal matrix) for each time
+        # array has shape times.shape + (3,3)
+        # so it is only the last two axes which need swapped
+        arf_to_ecef = np.moveaxis(get_arf_transform(sensor_pos, sensor_pointing), -1, -2)
 
-        Parameters
-        ----------
-        frame_idx : int
-            Index into self.frames (NOT the frame number itself)
-        target_ecef : np.ndarray
-            ECEF coordinates with shape (3, N)
+        # Transform ARF → ECEF line-of-sight vectors
+        # resulting array is of shape rows.shape + (3,)
+        ecef_vectors = np.einsum("tij, j...t -> ...ti", arf_to_ecef, arf_vectors)
 
-        Returns
-        -------
-        rows : np.ndarray
-            Row pixel coordinates
-        columns : np.ndarray
-            Column pixel coordinates
-        """
-        # Get sensor position for this frame
-        if self.positions.shape[1] == 1:
-            sensor_pos = self.positions[:, 0]
-        else:
-            time_idx = min(frame_idx, len(self.times) - 1)
-            sensor_pos = self.get_positions(self.times[time_idx : time_idx + 1])[:, 0]
+        # Ray-cast to Earth (returns NaN for non-intersecting rays)
+        # intersections has shape rows.shape + (3,)
+        _, intersections = los_to_earth(sensor_pos, ecef_vectors)
 
-        # Compute line-of-sight vectors from sensor to targets
-        los_vectors = target_ecef - sensor_pos.reshape(3, 1)
-        los_norms = np.linalg.norm(los_vectors, axis=0, keepdims=True)
-        los_vectors = los_vectors / los_norms
+        if np.asarray(times).ndim == 0:
+            intersections = np.squeeze(intersections, axis=-2)
 
-        # Get sensor pointing and compute ECEF → ARF transform
-        sensor_pointing = self.pointing[:, frame_idx]
-        ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
+        # move xyz axis from -1 to 0 so shape is (3,) + rows.shape
+        result = np.moveaxis(intersections, -1, 0)
 
-        # Transform ECEF LOS → ARF Cartesian
-        arf_vectors = ecef_to_arf @ los_vectors
+        # unpack into xyz arguments
+        return EarthLocation.from_geocentric(*result, unit=units.km)
 
-        # Convert ARF Cartesian → spherical (azimuth, elevation in radians)
-        azimuth, elevation = cartesian_to_spherical(arf_vectors)
-
-        # Get polynomial coefficients for this frame
-        row_coeffs = self.poly_arf_to_row[frame_idx]
-        col_coeffs = self.poly_arf_to_col[frame_idx]
-
-        # Evaluate polynomials: ARF angles → pixel coordinates
-        rows = evaluate_2d_polynomial(row_coeffs, azimuth, elevation)
-        columns = evaluate_2d_polynomial(col_coeffs, azimuth, elevation)
-
-        return rows, columns
-
-    def geodetic_to_pixel(self, frame: Union[int, np.ndarray], loc: EarthLocation) -> Tuple[np.ndarray, np.ndarray]:
+    def geodetic_to_pixel(
+        self, times: Union[np.datetime64, np.ndarray], loc: EarthLocation
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert geodetic coordinates to pixel coordinates using ARF polynomials.
 
@@ -422,77 +406,92 @@ class SampledSensor(Sensor):
 
         Parameters
         ----------
-        frame : int or np.ndarray
-            Frame number(s) for which to perform the conversion. If an array,
-            must have the same length as loc and each element specifies the frame
-            for the corresponding location.
+        times : np.datetime64 or np.ndarray
+            Time(s) for which to perform the conversion. If a number, it is assumed
+            that a time axis for the location is not present. If an array, it is
+            expected to have the same length as the final (time) axis of the location,
+            and each element specifies the time for the corresponding location.
         loc : EarthLocation
-            Astropy EarthLocation object(s) containing geodetic coordinates
+            Astropy EarthLocation object(s) containing geodetic coordinates in km
 
         Returns
         -------
         rows : np.ndarray
-            Array of row pixel coordinates (zeros if polynomials unavailable)
+            Array of row pixel coordinates (NaNs if polynomials unavailable)
         columns : np.ndarray
-            Array of column pixel coordinates (zeros if polynomials unavailable)
+            Array of column pixel coordinates (NaNs if polynomials unavailable)
+
+        Raises
+        ------
+        ValueError
+            If times is an array and its length does not match the length of the last
+            axis of location
 
         Notes
         -----
-        - Requires ARF polynomials and pointing vectors to be defined
-        - Frame must exist in self.frames array
-        - Returns zero coordinates if polynomials are not available or frame not found
+        - Requires ARF polynomials to be defined
+        - Returns NaN coordinates if polynomials are not available
         - Properly handles targets at any altitude (not limited to ground level)
         """
-        # If no polynomial coefficients provided, return zeros
-        if not self.can_geolocate() or self.frames is None:
-            try:
-                n_points = len(loc.lat)
-            except TypeError:
-                n_points = 1
-            invalid = np.zeros(n_points)
-            return invalid, invalid
-
-        # Convert geodetic → ECEF Cartesian (km) once for all points
-        target_ecef = np.array(
-            [
-                loc.geocentric[0].to(units.km).value,
-                loc.geocentric[1].to(units.km).value,
-                loc.geocentric[2].to(units.km).value,
-            ]
-        )
-        if target_ecef.ndim == 1:
-            target_ecef = target_ecef.reshape(3, 1)
-
-        # Handle array of frames: group by unique frame for efficient batch processing
-        if isinstance(frame, np.ndarray):
-            n_points = target_ecef.shape[1]
-            all_rows = np.zeros(n_points, dtype=np.float64)
-            all_cols = np.zeros(n_points, dtype=np.float64)
-
-            for uframe in np.unique(frame):
-                sensor_mask = self.frames == uframe
-                if not np.any(sensor_mask):
-                    continue  # Unknown frame, leave as zeros
-                frame_idx = np.where(sensor_mask)[0][0]
-
-                point_mask = frame == uframe
-                r, c = self._geodetic_to_pixel_single_frame(
-                    frame_idx,
-                    target_ecef[:, point_mask],
-                )
-                all_rows[point_mask] = r
-                all_cols[point_mask] = c
-
-            return all_rows, all_cols
-
-        # Single frame path (original fast path)
-        frame_mask = self.frames == frame
-        if not np.any(frame_mask):
-            invalid = np.zeros(target_ecef.shape[1])
+        # If no polynomial coefficients provided, return NaN
+        if not self.can_geolocate():
+            invalid = np.full_like(loc.x.value, np.nan, dtype=np.float64)
             return invalid, invalid.copy()
 
-        frame_idx = np.where(frame_mask)[0][0]
-        return self._geodetic_to_pixel_single_frame(frame_idx, target_ecef)
+        # we want to use numpy arrays, so convert if not an array
+        times_array = np.atleast_1d(times)
+
+        # we don't want to consider the multidimensional case where times is more than 1d
+        if times_array.ndim > 1:
+            raise ValueError("times should be a number or 1d array")
+
+        # if passing in a number for the times, assume time axis is missing for rows and columns and add it
+        if np.asarray(times).ndim == 0:
+            loc = loc[..., None]
+        elif times_array.shape[-1] != loc.shape[-1]:
+            raise ValueError("Length of times must be the same as the last axis of location")
+
+        # get sensor position and pointing at the times
+        # transpose so that each array has shape times.shape + (3,)
+        sensor_pos = self.platform.get_positions(times_array).T
+        sensor_pointing = self.platform.get_pointings(times_array).T
+
+        # shape times.shape + (3, 3)
+        ecef_to_arf = get_arf_transform(sensor_pos, sensor_pointing)
+
+        # Convert geodetic → ECEF Cartesian (km) once for all points
+        x, y, z = loc.to(units.km).to_geocentric()
+        target_ecef = np.stack([x.value, y.value, z.value], axis=-1)
+        # target_ecef now has shape loc.shape + (3,)
+
+        # Compute line-of-sight vectors from sensor to targets
+        # los_vectors has shape loc.shape + (3,)
+        los_vectors = target_ecef - sensor_pos
+
+        # Transform ECEF LOS → ARF Cartesian
+        # resulting array is of shape (3,) + loc.shape
+        arf_vectors = np.einsum("tij, ...tj -> i...t", ecef_to_arf, los_vectors)
+
+        # Convert ARF Cartesian → spherical (azimuth, elevation in radians)
+        # each resulting array is of shape loc.shape
+        azimuth, elevation = cartesian_to_spherical(arf_vectors)
+
+        # Get polynomial coefficients for times
+        # arrays are of shape times.shape + (num_coeffs,)
+        row_coeffs = self.get_coefficients(self.poly_arf_to_row, times_array)
+        col_coeffs = self.get_coefficients(self.poly_arf_to_col, times_array)
+
+        # Evaluate polynomials: ARF angles → pixel coordinates
+        # output is of shape loc.shape
+        rows = evaluate_2d_polynomial(row_coeffs, azimuth, elevation)
+        columns = evaluate_2d_polynomial(col_coeffs, azimuth, elevation)
+
+        # squeeze time (last) axis if time was just a number
+        if np.asarray(times).ndim == 0:
+            rows = np.squeeze(rows, axis=-1)
+            columns = np.squeeze(columns, axis=-1)
+
+        return rows, columns
 
     def to_hdf5(self, group: h5py.Group):
         """
@@ -501,12 +500,11 @@ class SampledSensor(Sensor):
         Parameters
         ----------
         group : h5py.Group
-            HDF5 group to write sensor data to (typically sensors/<sensor_name>/)
+            HDF5 group to write sensor data to (typically sensors/<sensor_uuid>/)
 
         Notes
         -----
         This method extends the base Sensor.to_hdf5() by adding:
-        - Position data (positions, times) in position/ subgroup
         - Geolocation polynomials in geolocation/ subgroup
         - Radiometric gain values in radiometric/ subgroup
         """
@@ -516,24 +514,21 @@ class SampledSensor(Sensor):
         # Override sensor type
         group.attrs["sensor_type"] = "SampledSensor"
 
-        # Save position data
-        if self.positions is not None and self.times is not None:
-            position_group = group.create_group("position")
-            position_group.create_dataset("positions", data=self.positions)
-
-            # Convert times to unix nanoseconds
-            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
-            position_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
-
         # Save ARF geolocation polynomials
-        if self.can_geolocate():
+        if (
+            self.times is not None
+            and self.poly_pixel_to_arf_azimuth is not None
+            and self.poly_pixel_to_arf_elevation is not None
+            and self.poly_arf_to_row is not None
+            and self.poly_arf_to_col is not None
+        ):
             geolocation_group = group.create_group("geolocation")
+            unix_nanoseconds = self.times.astype("datetime64[ns]").astype(np.int64)
+            geolocation_group.create_dataset("unix_nanoseconds", data=unix_nanoseconds)
             geolocation_group.create_dataset("poly_pixel_to_arf_azimuth", data=self.poly_pixel_to_arf_azimuth)
             geolocation_group.create_dataset("poly_pixel_to_arf_elevation", data=self.poly_pixel_to_arf_elevation)
             geolocation_group.create_dataset("poly_arf_to_row", data=self.poly_arf_to_row)
             geolocation_group.create_dataset("poly_arf_to_col", data=self.poly_arf_to_col)
-            geolocation_group.create_dataset("pointing", data=self.pointing)
-            geolocation_group.create_dataset("frames", data=self.frames)
 
         # Save radiometric gain (extend radiometric group if exists, or create it)
         if self.radiometric_gain is not None:
@@ -543,4 +538,4 @@ class SampledSensor(Sensor):
                 radiometric_group = group.create_group("radiometric")
 
             radiometric_group.create_dataset("radiometric_gain", data=self.radiometric_gain)
-            radiometric_group.create_dataset("radiometric_gain_frames", data=self.frames)
+            radiometric_group.create_dataset("radiometric_gain_frames", data=self.radiometric_gain_frames)

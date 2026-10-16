@@ -81,7 +81,7 @@ class SubsetFramesProcessingThread(QThread):
                 # Copy histograms from original imagery, adjusting frame indices
                 sliced_imagery._histograms = {}
                 sliced_imagery.default_histogram_bounds = {}
-                for i in range(len(sliced_imagery.images)):
+                for i in range(len(sliced_imagery)):
                     if self._cancelled:
                         return  # Exit early if cancelled
                     original_frame_idx = self.start_frame + i
@@ -91,15 +91,15 @@ class SubsetFramesProcessingThread(QThread):
                         sliced_imagery.default_histogram_bounds[i] = self.imagery.default_histogram_bounds[
                             original_frame_idx
                         ]
-                    self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Copying histograms...")
+                    self.progress_updated.emit(i + 1, len(sliced_imagery), "Copying histograms...")
             else:
                 # Compute histograms (for AOI or if original doesn't have cached histograms)
-                for i in range(len(sliced_imagery.images)):
+                for i in range(len(sliced_imagery)):
                     if self._cancelled:
                         return  # Exit early if cancelled
                     sliced_imagery.get_histogram(i)  # Lazy computation and caching
                     # Update progress: histogram computation
-                    self.progress_updated.emit(i + 1, len(sliced_imagery.images), "Computing histograms...")
+                    self.progress_updated.emit(i + 1, len(sliced_imagery), "Computing histograms...")
 
             if self._cancelled:
                 return  # Exit early if cancelled

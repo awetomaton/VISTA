@@ -11,6 +11,7 @@ from scipy.ndimage import shift
 
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery, save_imagery_hdf5
+from vista.sensor_platforms.sensor_platform import SensorPlatform
 from vista.sensors.sampled_sensor import SampledSensor
 from vista.simulate.data import EARTH_IMAGE
 from vista.tracks.track import Track
@@ -371,34 +372,13 @@ class Simulation:
                 tracks_df = tracks_df.drop(columns=["Frames"])
 
         # If requested, convert pixel coordinates to geodetic
-        if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None:
-            # Convert rows/columns to lat/lon/alt for each frame
-            latitudes = []
-            longitudes = []
-            altitudes = []
-
-            for idx, row in tracks_df.iterrows():
-                # Get frame (might be in Times column if save_times_only)
-                if "Frames" in tracks_df.columns:
-                    frame = int(row["Frames"])
-                else:
-                    # Need to map time back to frame
-                    time_str = row["Times"]
-                    time_dt = pd.to_datetime(time_str)
-                    frame_idx = np.where(self.imagery.times == time_dt)[0]
-                    if len(frame_idx) > 0:
-                        frame = self.imagery.frames[frame_idx[0]]
-                    else:
-                        frame = 0  # Default to first frame
-
-                pixel_row = row["Rows"]
-                pixel_col = row["Columns"]
-
-                # Use sensor's pixel_to_geodetic method
-                location = self.imagery.sensor.pixel_to_geodetic(frame, np.array([pixel_row]), np.array([pixel_col]))
-                latitudes.append(location.lat.deg[0])
-                longitudes.append(location.lon.deg[0])
-                altitudes.append(location.height.to("m").value[0])
+        if save_geodetic_tracks and self.enable_geodetic and self.imagery is not None and "Times" in tracks_df.keys():
+            location = self.imagery.sensor.pixel_to_geodetic(
+                tracks_df["Times"].to_numpy(), tracks_df["Rows"].to_numpy(), tracks_df["Columns"].to_numpy()
+            )
+            latitudes = location.lat.deg
+            longitudes = location.lon.deg
+            altitudes = location.height.to("km").value
 
             tracks_df["Latitude"] = latitudes
             tracks_df["Longitude"] = longitudes
@@ -416,7 +396,7 @@ class Simulation:
 
         # Save imagery using new HDF5 v2.0 format
         if self.imagery is not None and self.imagery.sensor is not None:
-            save_imagery_hdf5(dir / "imagery.h5", {self.imagery.sensor.name: [self.imagery]})
+            save_imagery_hdf5(dir / "imagery.h5", [self.imagery])
 
     def simulate(self):
         # Create sensor first (before tracks/detectors) so we can pass it to them
@@ -429,12 +409,6 @@ class Simulation:
 
         # Create sensor with calibration data
         sensor_kwargs = {"name": f"{self.name} Sensor"}
-
-        # Default sensor position at origin (will be overwritten if geodetic enabled)
-        sensor_positions = np.array([[0.0], [0.0], [0.0]])
-        sensor_times = np.array(
-            [times[0] if times is not None else np.datetime64("2000-01-01T00:00:00")], dtype="datetime64[ns]"
-        )
 
         # Add bias images if enabled
         if self.enable_bias_images:
@@ -454,38 +428,53 @@ class Simulation:
             sensor_kwargs["bad_pixel_masks"] = bad_pixel_masks
             sensor_kwargs["bad_pixel_mask_frames"] = bad_pixel_mask_frames
 
-        # Add ARF geolocation polynomials to sensor if enabled
-        pointing = None
+        # Get sensor platform information and ARF geolocation polynomials if geolocation enabled
+        sensor_positions = None
+        t_positions = None
+        sensor_pointings = None
+        t_pointings = None
         poly_pixel_to_arf_azimuth = None
         poly_pixel_to_arf_elevation = None
         poly_arf_to_row = None
         poly_arf_to_col = None
+        t_polynomials = None
         if self.enable_geodetic:
             (
                 sensor_positions,
-                pointing,
+                sensor_pointings,
                 poly_pixel_to_arf_azimuth,
                 poly_pixel_to_arf_elevation,
                 poly_arf_to_row,
                 poly_arf_to_col,
             ) = self._generate_arf_polynomials()
+            t_pointings = times if times is not None else self._generate_times()
+            t_positions = t_pointings[:1]
+            t_polynomials = t_pointings
 
         # Add radiometric gain if enabled
         radiometric_gain = None
+        radiometric_gain_frames = None
         if self.enable_radiometric_gain:
             radiometric_gain = self._generate_radiometric_gains()
+            radiometric_gain_frames = frames_array
 
+        # Create SensorPlatform
+        platform = SensorPlatform(
+            positions=sensor_positions,
+            times_positions=t_positions,
+            pointings=sensor_pointings,
+            times_pointings=t_pointings,
+        )
         # Create SampledSensor
         sensor = SampledSensor(
-            positions=sensor_positions,
-            times=sensor_times,
-            frames=frames_array,
-            pointing=pointing,
+            platform=platform,
+            times=t_polynomials,
             poly_pixel_to_arf_azimuth=poly_pixel_to_arf_azimuth,
             poly_pixel_to_arf_elevation=poly_pixel_to_arf_elevation,
             poly_arf_to_row=poly_arf_to_row,
             poly_arf_to_col=poly_arf_to_col,
             radiometric_gain=radiometric_gain,
+            radiometric_gain_frames=radiometric_gain_frames,
             **sensor_kwargs,
         )
 
@@ -551,7 +540,7 @@ class Simulation:
         # Initialize all the detectors with spurious detections
         self.detectors = []
         for d in range(self.num_detectors):
-            frames = np.empty((0,))
+            frames = np.empty((0,), dtype=np.int_)
             rows = np.empty((0,))
             columns = np.empty((0,))
             for f in range(self.frames):
@@ -563,6 +552,7 @@ class Simulation:
             self.detectors.append(
                 Detector(
                     name=f"Detector {d}",
+                    times=times[frames] if times is not None else None,
                     frames=frames,
                     rows=rows,
                     columns=columns,
@@ -662,6 +652,7 @@ class Simulation:
 
                 track = Track(
                     name=f"Tracker {tracker_index} - Track {track_index}",
+                    times=times[frames] if times is not None else None,
                     frames=frames,
                     rows=rows,
                     columns=columns,
@@ -679,6 +670,8 @@ class Simulation:
                     detector.frames = np.concatenate((detector.frames, frames[detected_frames]))
                     detector.rows = np.concatenate((detector.rows, rows[detected_frames]))
                     detector.columns = np.concatenate((detector.columns, columns[detected_frames]))
+                    if detector.times is not None:
+                        detector.times = np.concatenate((detector.times, times[frames[detected_frames]]))
 
         # Create imagery with sensor reference (sensor was created at the beginning)
         self.imagery = Imagery(

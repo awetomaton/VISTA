@@ -60,7 +60,7 @@ class SubspaceBackgroundRemovalThread(QThread):
         self.tile_size = tile_size
         self.aoi = aoi
         self.start_frame = start_frame
-        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
+        self.end_frame = end_frame if end_frame is not None else len(imagery)
         self._cancelled = False
 
     def cancel(self):
@@ -106,7 +106,7 @@ class SubspaceBackgroundRemovalThread(QThread):
                 return
 
             self.status_updated.emit("Running subspace background removal...")
-            self.progress_updated.emit(0, len(imagery_to_process.frames))
+            self.progress_updated.emit(0, len(imagery_to_process))
 
             # Run the algorithm on numpy images directly
             background_images, foreground_images = subspace_background_removal(
@@ -147,19 +147,19 @@ class SubspaceBackgroundRemovalThread(QThread):
             )
 
             # Pre-compute histograms
-            total_histograms = len(background_imagery.images) + len(foreground_imagery.images)
+            total_histograms = len(background_imagery) + len(foreground_imagery)
             self.status_updated.emit("Computing histograms...")
             self.progress_updated.emit(0, total_histograms)
 
             histogram_count = 0
-            for i in range(len(background_imagery.images)):
+            for i in range(len(background_imagery)):
                 if self._cancelled:
                     return
                 background_imagery.get_histogram(i)
                 histogram_count += 1
                 self.progress_updated.emit(histogram_count, total_histograms)
 
-            for i in range(len(foreground_imagery.images)):
+            for i in range(len(foreground_imagery)):
                 if self._cancelled:
                     return
                 foreground_imagery.get_histogram(i)
@@ -421,7 +421,7 @@ class SubspaceBackgroundRemovalDialog(QDialog):
         tile_size = self.tile_size_spinbox.value() if self.tile_size_spinbox.value() > 0 else None
         selected_aoi = self.aoi_combo.currentData()
         start_frame = self.start_frame.value()
-        end_frame = min(self.end_frame.value(), len(self.imagery.frames))
+        end_frame = min(self.end_frame.value(), len(self.imagery))
 
         self.save_settings()
 

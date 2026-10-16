@@ -7,6 +7,7 @@ from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
 from vista.detections.detector import Detector
+from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.utils.algorithm_utils import create_aoi_selector, create_frame_range_spinboxes
 
 
@@ -63,7 +64,7 @@ class BaseDetectorProcessingThread(QThread):
         self.algorithm_params = algorithm_params
         self.aoi = aoi
         self.start_frame = start_frame
-        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
+        self.end_frame = end_frame if end_frame is not None else len(imagery)
         self.detector_name = detector_name
         self.default_color = default_color
         self.default_marker = default_marker
@@ -139,6 +140,7 @@ class BaseDetectorProcessingThread(QThread):
 
             detector = Detector(
                 name=detector_name,
+                times=map_frames_to_times(all_frames, temp_imagery.frames, temp_imagery.times),
                 frames=all_frames,
                 rows=all_rows,
                 columns=all_columns,
@@ -350,7 +352,7 @@ class BaseDetectorWidget(QDialog):
         # Get common parameter values
         selected_aoi = self.aoi_combo.currentData()  # Get the AOI object (or None)
         start_frame = self.start_frame_spinbox.value()
-        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
+        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery))
 
         # Get algorithm-specific parameters
         algorithm_params = self.build_algorithm_params()
@@ -442,7 +444,7 @@ class BaseDetectorWidget(QDialog):
         self.detector_processed.emit(detector)
 
         # Show success message
-        num_detections = len(detector.frames)
+        num_detections = len(detector)
         QMessageBox.information(
             self,
             "Processing Complete",

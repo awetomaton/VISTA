@@ -150,8 +150,8 @@ class TrackExtraction:
         chip = np.full((self.chip_diameter, self.chip_diameter), np.nan, dtype=np.float32)
 
         # Calculate chip bounds in image coordinates
-        row_center = int(np.round(row))
-        col_center = int(np.round(col))
+        row_center = int(np.floor(row))
+        col_center = int(np.floor(col))
 
         chip_row_start = row_center - radius
         chip_row_end = row_center + radius + 1

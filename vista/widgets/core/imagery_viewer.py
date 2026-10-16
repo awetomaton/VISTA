@@ -2,6 +2,8 @@
 
 import os
 import time
+from dataclasses import dataclass
+from typing import Optional, Union
 
 import numpy as np
 import pyqtgraph as pg
@@ -9,7 +11,16 @@ from astropy import units
 from astropy.coordinates import EarthLocation
 from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import QApplication, QGraphicsEllipseItem, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QGraphicsEllipseItem,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 from shapely.geometry import Point, Polygon
 
 from vista.aoi.aoi import AOI
@@ -17,8 +28,11 @@ from vista.detections.detector import Detector
 from vista.features import PlacemarkFeature, ShapefileFeature
 from vista.imagery.imagery import Imagery
 from vista.known_sources.known_sources import KnownSources
+from vista.sensor_platforms.sensor_platform import SensorPlatform
+from vista.sensors.sensor import Sensor
 from vista.tracks.track import Track
 from vista.utils.point_refinement import refine_point
+from vista.widgets.core.display_timeline import DisplayTimeline
 from vista.widgets.core.extraction_editor_widget import ExtractionEditorWidget
 from vista.widgets.core.point_selection_dialog import PointSelectionDialog
 from vista.wms.imagery_projector import ImageryProjector
@@ -28,6 +42,15 @@ from vista.wms.wms_tile_fetcher import WMSTileFetcherThread
 
 # Performance monitoring (enabled via environment variable)
 ENABLE_PERF_MONITORING = os.environ.get("VISTA_PERF_MONITOR", "0") == "1"
+
+
+@dataclass
+class _EWMAState:
+    """Transient EWMA filter state for one imagery layer."""
+
+    background: Optional[np.ndarray] = None
+    frame_counter: int = 0
+    last_image_index: Optional[int] = None
 
 
 class CustomViewBox(pg.ViewBox):
@@ -82,30 +105,38 @@ class ImageryViewer(QWidget):
     # Signal emitted when detector editing mode ends
     detection_editing_ended = pyqtSignal()
 
-    # Signal emitted after sensor-specific interactive state is reset
-    sensor_context_reset = pyqtSignal()
+    # Signal emitted after sensor and imagery specific interactive state is reset
+    context_reset = pyqtSignal()
 
     # Signal emitted when lasso selection completes (emits dict with 'tracks', 'detections', 'aois', 'features')
     lasso_selection_completed = pyqtSignal(dict)
 
-    # Signal emitted when frame changes (emits frame number)
-    frame_changed = pyqtSignal(int)
+    # Signal emitted when timeline index changes (emits index)
+    index_changed = pyqtSignal(int)
+
+    # Signal emitted when timeline is updated
+    timeline_updated = pyqtSignal()
 
     # Signals for WMS tile loading status (emits status message string; empty string = done)
     wms_status_changed = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
-        self.current_frame_number = 0  # Actual frame number from imagery
-        self.sensors = []  # List of Sensor objects
-        self.selected_sensor = None  # Currently selected sensor for filtering display
-        self.imageries = []  # List of Imagery objects
-        self.imagery = None  # Currently selected imagery for display
-        self.detectors = []  # List of Detector objects
-        self.tracks = []  # List of Track objects
-        self.aois = []  # List of AOI objects
-        self.features = []  # List of Feature objects (shapefiles, placemarks, etc.)
-        self.known_sources = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
+        self.timeline = DisplayTimeline()  # Timeline object holding times or frames for imagery, detectors, and tracks
+        self.platforms: list[SensorPlatform] = []  # List of SensorPlatform objects
+        self.sensors: list[Sensor] = []  # List of Sensor objects
+        self.selected_sensor: Optional[Sensor] = None  # Currently selected sensor for filtering display
+        self.imageries: list[Imagery] = []  # List of Imagery objects
+        self.selected_imageries: list[Imagery] = []  # List of selected imageries to display
+        self.detectors: list[Detector] = []  # List of Detector objects
+        self.tracks: list[Track] = []  # List of Track objects
+        self.aois: list[AOI] = []  # List of AOI objects
+        self.features: list[
+            Union[PlacemarkFeature, ShapefileFeature]
+        ] = []  # List of Feature objects (shapefiles, placemarks, etc.)
+        self.known_sources: list[
+            KnownSources
+        ] = []  # List of KnownSources objects (stars, planets, asteroids, satellites, etc.)
 
         # Persistent plot items (created once, reused for efficiency)
         # Use UUID as key for reliable object identification
@@ -132,14 +163,14 @@ class ImageryViewer(QWidget):
         # Track creation/editing mode
         self.track_creation_mode = False
         self.track_editing_mode = False
-        self.current_track_data = {}  # frame_number -> (row, col) for track being created/edited
+        self.current_track_data = {}  # time or frame -> (row, col) for track being created/edited
         self.editing_track = None  # Track object being edited
         self.temp_track_plot = None  # Temporary plot item for track being created/edited
 
         # Detection creation/editing mode
         self.detection_creation_mode = False
         self.detection_editing_mode = False
-        self.current_detection_data = {}  # frame_number -> [(row, col), ...] for detections being created/edited
+        self.current_detection_data = {}  # time or frame -> [(row, col), ...] for detections being created/edited
         self.editing_detector = None  # Detector object being edited
         self.temp_detection_plot = None  # Temporary plot item for detections being created/edited
 
@@ -148,7 +179,7 @@ class ImageryViewer(QWidget):
 
         # Detection selection mode
         self.detection_selection_mode = False
-        self.selected_detections = []  # List of tuples: [(detector, frame, index), ...]
+        self.selected_detections = []  # List of tuples: [(detector, index), ...]
         self.selected_detections_plot = None  # ScatterPlotItem for highlighting selected detections
 
         # Extraction view mode
@@ -194,7 +225,7 @@ class ImageryViewer(QWidget):
         # Map view mode state
         self.map_view_mode = False
         self.wms_image_item = None  # pg.ImageItem for WMS basemap tiles
-        self.projected_image_item = None  # pg.ImageItem for projected VISTA imagery
+        self.projected_image_items = {}  # imagery.uuid -> pg.ImageItem for projected VISTA imagery
         self.wms_client = None  # WMSClient instance
         self.wms_tile_cache = None  # WMSTileCache instance
         self.wms_fetcher_thread = None  # WMSTileFetcherThread (background)
@@ -207,7 +238,7 @@ class ImageryViewer(QWidget):
         self._current_zoom_level = None  # Current WMS zoom level
         self._pending_tiles = []  # Tiles received during a fetch cycle
         self._pending_tile_bbox = None  # View bbox for the pending tile fetch
-        self._imagery_footprint = None  # Cached imagery footprint bbox
+        self._imagery_footprints = {}  # imagery.uuid -> cached imagery footprint bbox
         self._wms_total_tiles = 0  # Total tiles expected in current fetch
 
         # Persistent settings (avoid constructing QSettings on every frame)
@@ -215,10 +246,7 @@ class ImageryViewer(QWidget):
 
         # EWMA background filter state
         self.ewma_filter_enabled = False
-        self.ewma_background = None  # Running EWMA background estimate (float64 array)
-        self.ewma_image = None
-        self.ewma_frame_counter = 0  # Number of unique frames viewed since filter enabled
-        self.ewma_last_frame_number = None  # Last frame_number passed to set_frame_number
+        self.ewma_states: dict[object, _EWMAState] = {}
 
         # Performance monitoring
         self.perf_frame_times = []  # List of frame update times
@@ -246,9 +274,8 @@ class ImageryViewer(QWidget):
         # self.plot_item.hideAxis('left')
         # self.plot_item.hideAxis('bottom')
 
-        # Create image item with OpenGL acceleration enabled
-        self.image_item = pg.ImageItem(useOpenGL=True)
-        self.plot_item.addItem(self.image_item)
+        # Dictionary to hold image items for selected imageries with OpenGL acceleration enabled
+        self.image_items = {}  # imagery uuid -> ImageItem
 
         # Create geolocation text overlay using TextItem positioned in scene coordinates
         self.geolocation_text = pg.TextItem(text="", color="yellow", anchor=(1, 1))
@@ -275,16 +302,31 @@ class ImageryViewer(QWidget):
         # Keep default context menu enabled
         # We'll add to it in getContextMenus()
 
-        # Create a horizontal HistogramLUTItem
+        # Create histogram with selection box
+        self.histogram_container = QWidget()
+        self.histogram_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        histogram_layout = QVBoxLayout(self.histogram_container)
+        histogram_layout.setContentsMargins(0, 0, 0, 0)
+        histogram_layout.setSpacing(2)
+
+        histogram_selector_layout = QHBoxLayout()
+        histogram_selector_layout.setContentsMargins(0, 0, 0, 0)
+        histogram_selector_layout.addWidget(QLabel("Histogram:"))
+        self.histogram_imagery_combo = QComboBox()
+        self.histogram_imagery_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.histogram_imagery_combo.setToolTip("Select the imagery represented by the histogram")
+        self.histogram_imagery_combo.currentIndexChanged.connect(self._on_histogram_imagery_changed)
+        histogram_selector_layout.addWidget(self.histogram_imagery_combo)
+        histogram_selector_layout.addStretch()
+        histogram_layout.addLayout(histogram_selector_layout)
+
         self.hist_widget = pg.GraphicsLayoutWidget()
-        self.hist_widget.setMaximumHeight(150)
+        self.hist_widget.setMaximumHeight(175)
+        histogram_layout.addWidget(self.hist_widget)
 
         # Create HistogramLUTItem and set it to horizontal orientation
         self.histogram = pg.HistogramLUTItem(orientation="horizontal")
         self.hist_widget.addItem(self.histogram)
-
-        # Link the histogram to the image item
-        self.histogram.setImageItem(self.image_item)
 
         # Connect to histogram level change signals to track user adjustments
         self.histogram.sigLevelChangeFinished.connect(self.on_histogram_levels_changed)
@@ -292,174 +334,401 @@ class ImageryViewer(QWidget):
         # Connect to gradient change signals to track gradient adjustments
         self.histogram.sigLookupTableChanged.connect(self.on_histogram_gradient_changed)
 
-        # Block signals to prevent histogram recomputation
-        try:
-            self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
-        except TypeError:
-            # Signal not connected yet, ignore
-            pass
-
         # Add widgets to layout
         layout.addWidget(self.graphics_layout)
-        layout.addWidget(self.hist_widget)
+        layout.addWidget(self.histogram_container)
 
         self.setLayout(layout)
+
+    def update_timeline(self, set_index: bool = True):
+        """
+        Update timeline object based on current imagery, detectors, and tracks
+
+        Parameters
+        ----------
+        set_index : bool, default True
+            Whether the ImageryViewer's set_index function should be called to
+            update the displayed imagery and overlays in addition to the timeline.
+            Typically left as True, unless set_index will be manually called after
+            updating the timeline and taking additional actions before wanting to
+            update the display
+        """
+        # filter by selected sensor
+        imageries = [img for img in self.selected_imageries if img.sensor == self.selected_sensor]
+        detectors = [d for d in self.detectors if d.sensor == self.selected_sensor]
+        tracks = [t for t in self.tracks if t.sensor == self.selected_sensor]
+
+        # try to save current value to load back in
+        curr_value = self.timeline.current_value
+        self.timeline = DisplayTimeline(imageries, detectors, tracks)
+        try:
+            self.timeline.set_index_from_value(curr_value)
+        except Exception:
+            self.timeline.current_index = -1  # set to invalid if previous value could not be loaded in
+
+        if self.timeline.current_value != curr_value:
+            # timeline value changed on load in attempt, so we need to finish all editing/creation
+            self._reset_context_state()
+
+        min_index, max_index = self.timeline.get_range()
+        # if value loading failed, but there is a valid range of indices, use index 0
+        if self.timeline.current_index is None and max_index >= min_index:
+            self.timeline.current_index = 0
+
+        self.timeline_updated.emit()
+        if set_index and self.timeline.current_index is not None:
+            self.set_index(self.timeline.current_index)
+
+    def add_sensor(self, sensor: Sensor):
+        """Add sensor to the list of available sensors"""
+        if sensor not in self.sensors:
+            if sensor.platform not in self.platforms:
+                self.platforms.append(sensor.platform)
+            self.sensors.append(sensor)
+            if self.selected_sensor is None:
+                self.select_sensor(sensor)
+
+    def remove_sensor(self, sensor: Sensor):
+        self.sensors.remove(sensor)
+        if not any(s.platform == sensor.platform for s in self.sensors):
+            self.platforms.remove(sensor.platform)
+
+    def select_sensor(self, sensor: Optional[Sensor]):
+        """Select a sensor"""
+        self._reset_context_state()
+        # TODO: come up with a more robust way to preserve map status when swapping sensors
+        # than toggling set_map_view_mode twice
+        is_map_mode = self.map_view_mode  # preserve state to restore later
+        if is_map_mode:
+            self.set_map_view_mode(False)
+        self.selected_sensor = sensor
+
+        while len(self.selected_imageries) > 0:
+            self.deselect_imagery(self.selected_imageries[0])
+
+        # try to select an imagery for the selected sensor
+        filtered_imagery = [img for img in self.imageries if img.sensor == self.selected_sensor]
+        if len(filtered_imagery) > 0:
+            self.select_imagery(filtered_imagery[0])
+
+        if is_map_mode:
+            self.set_map_view_mode(is_map_mode)
 
     def add_imagery(self, imagery: Imagery):
         """Add imagery to the list of available imageries"""
         if imagery not in self.imageries:
             self.imageries.append(imagery)
-            # If this is the first imagery, select it for display
-            if len(self.imageries) == 1:
-                self.select_imagery(imagery)
+            self.image_items[imagery.uuid] = pg.ImageItem(useOpenGL=True)
+            self.image_items[imagery.uuid].setLookupTable(self.histogram.getLookupTable(n=512))
+            self.plot_item.addItem(self.image_items[imagery.uuid])
+            self.image_items[imagery.uuid].setPos(imagery.column_offset, imagery.row_offset)
+            self.image_items[imagery.uuid].hide()
 
-    def select_imagery(self, imagery: Imagery, preserve_ewma: bool = False):
-        """Select which imagery to display"""
-        self.ignore_changing_histogram_levels = True
-        if imagery in self.imageries:
-            self.imagery = imagery
+    def remove_imagery(self, imagery: Imagery):
+        if imagery in self.selected_imageries:
+            self.deselect_imagery(imagery)
+        self._disable_map_view_if_unsupported()
+        self.ewma_states.pop(imagery.uuid, None)
+        self.plot_item.removeItem(self.image_items[imagery.uuid])
+        self.image_items.pop(imagery.uuid)
+        self.imageries.remove(imagery)
 
-            # Reset EWMA state when switching imagery
-            if not preserve_ewma:
-                self.ewma_background = None
-                self.ewma_image = None
-                self.ewma_frame_counter = 0
-                self.ewma_last_frame_number = None
+    def refresh_histogram_imagery_selector(self) -> None:
+        """Refresh the selector labels and synchronize it with the selected imagery."""
+        # save current selection to try and use after rebuild
+        selected_imagery_uuid = self.histogram_imagery_combo.currentData()
 
-            # Try to retain the current frame number if it exists in the new imagery
-            if len(imagery.frames) > 0:
-                if self.current_frame_number in imagery.frames:
-                    # Current frame exists in new imagery, keep it
-                    frame_to_display = self.current_frame_number
-                else:
-                    # Current frame doesn't exist, use first frame
-                    frame_to_display = imagery.frames[0]
-            else:
-                frame_to_display = 0
+        selected_imageries = self.selected_imageries
+        selected_imagery_uuids = {imagery.uuid for imagery in selected_imageries}
+        if selected_imagery_uuid not in selected_imagery_uuids:
+            selected_imagery_uuid = selected_imageries[0].uuid if selected_imageries else None
 
-            self.current_frame_number = frame_to_display
+        self.histogram_imagery_combo.blockSignals(True)
+        self.histogram_imagery_combo.clear()
+        for imagery in selected_imageries:
+            self.histogram_imagery_combo.addItem(f"{imagery.datastream} - {imagery.name}", imagery.uuid)
 
-            # Display the selected frame using optimized lookup
-            frame_index = imagery.get_frame_index(frame_to_display)
-            if frame_index is None:
-                frame_index = 0
+        if selected_imagery_uuid is not None:
+            selected_index = self.histogram_imagery_combo.findData(selected_imagery_uuid)
+            self.histogram_imagery_combo.setCurrentIndex(selected_index)
+        self.histogram_imagery_combo.setEnabled(len(selected_imageries) > 1)
+        self.histogram_imagery_combo.blockSignals(False)
+        self._sync_histogram_image_item()
 
-            # Clamp to loaded frames if imagery is still loading incrementally
-            if imagery.loaded_frame_count is not None and frame_index >= imagery.loaded_frame_count:
-                frame_index = max(0, imagery.loaded_frame_count - 1)
+    def _get_histogram_imagery_uuid(self) -> Optional[Imagery]:
+        """Return the uuid of the selected imagery represented by the histogram."""
+        return self.histogram_imagery_combo.currentData()
 
+    def _sync_histogram_image_item(self) -> None:
+        """Link the histogram to its selected imagery item in the current view mode."""
+        image_item = None
+        histogram_imagery_uuid = self._get_histogram_imagery_uuid()
+        if histogram_imagery_uuid is not None:
             if self.map_view_mode:
-                # In map mode, update projected imagery and recompute footprint
-                if self.imagery_projector is not None:
-                    frame = imagery.frames[frame_index]
-                    img_shape = imagery.images[frame_index].shape
-                    self._imagery_footprint = self.imagery_projector.compute_footprint(
-                        frame,
-                        img_shape[0],
-                        img_shape[1],
-                        imagery.row_offset,
-                        imagery.column_offset,
-                    )
-                # Apply opacity
-                if self.projected_image_item is not None:
-                    opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
-                    self.projected_image_item.setOpacity(opacity)
+                image_item = self.projected_image_items.get(histogram_imagery_uuid)
             else:
-                self.image_item.setImage(imagery.images[frame_index], autoLevels=False)
+                image_item = self.image_items.get(histogram_imagery_uuid)
 
-                # Apply imagery offsets for positioning
-                self.image_item.setPos(imagery.column_offset, imagery.row_offset)
+        if image_item is None:
+            self.histogram.plot.setData([], [])
+            return
 
-            # Refresh the current frame display
-            self.set_frame_number(self.current_frame_number)
-            self.histogram.vb.autoRange()
+        if self.histogram.imageItem() is image_item:
+            return
+
+        self.ignore_changing_histogram_levels = True
+        self.histogram.setImageItem(image_item)
         self.ignore_changing_histogram_levels = False
 
-    def load_imagery(self, imagery: Imagery):
-        """Load imagery data into the viewer (legacy method, now adds and selects)"""
-        self.add_imagery(imagery)
-        self.select_imagery(imagery)
+        # Histogram data is supplied explicitly in set_index.
+        try:
+            image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
+        except (AttributeError, TypeError):
+            pass
 
-    def set_frame_number(self, frame_number: int):
-        """Set the current frame to display by frame number"""
+    def _on_histogram_imagery_changed(self, _index: int) -> None:
+        """Update the histogram when the user chooses another selected imagery."""
+        self._sync_histogram_image_item()
+        self.set_index(self.timeline.current_index)
+        self.histogram.vb.autoRange()
+
+    def select_imagery(self, imagery: Optional[Imagery]):
+        """Select an imagery to display"""
+        if imagery not in self.selected_imageries:
+            self.selected_imageries.append(imagery)
+            self.image_items[imagery.uuid].show()
+            if self.ewma_filter_enabled:
+                self.user_histogram_bounds.pop(imagery.uuid, None)
+        self.update_timeline(set_index=False)
+        self._disable_map_view_if_unsupported()
+        self._sync_imagery_stack_order()
+        self._sync_map_imagery_items()
+        self.refresh_histogram_imagery_selector()
+        # Refresh the current display
+        self.set_index(self.timeline.current_index)
+        self.histogram.vb.autoRange()
+
+    def deselect_imagery(self, imagery: Imagery):
+        """Deselect an imagery to display"""
+        self.image_items[imagery.uuid].clear()  # clear to save memory
+        self.image_items[imagery.uuid].hide()
+        self.selected_imageries.remove(imagery)
+        self.ewma_states.pop(imagery.uuid, None)
+        self.update_timeline(set_index=False)
+        self._sync_imagery_stack_order()
+        self._sync_map_imagery_items()
+        self.refresh_histogram_imagery_selector()
+        # Refresh the current display
+        self.set_index(self.timeline.current_index)
+        self.histogram.vb.autoRange()
+
+    def _get_imagery_stack(self) -> list[Imagery]:
+        """Return selected imagery ordered from bottom to top for display.
+
+        Larger imagery is placed below smaller imagery so subframes remain visible.
+        Equal-sized imagery retains selection order, with the later-selected imagery
+        appearing on top.
+
+        Returns
+        -------
+        list[Imagery]
+            Selected imagery ordered from bottom to top.
+        """
+        return sorted(
+            self.selected_imageries,
+            key=lambda imagery: imagery.images.shape[1] * imagery.images.shape[2],
+            reverse=True,
+        )
+
+    def _get_uppermost_imagery(self, row: float, column: float) -> Optional[Imagery]:
+        """Return the uppermost visible imagery beneath a pixel position"""
+        for imagery in reversed(self._get_imagery_stack()):
+            image_item = self.image_items.get(imagery.uuid)
+            if image_item is None or not image_item.isVisible():
+                continue
+
+            image_index = imagery.get_index(
+                self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+            )
+            if image_index is None:
+                continue
+
+            relative_row = row - imagery.row_offset
+            relative_column = column - imagery.column_offset
+            image_shape = imagery.images[image_index].shape
+            if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
+                return imagery
+        return None
+
+    def _get_pixel_mode_pixel_value(
+        self,
+        row: float,
+        column: float,
+    ) -> Optional[tuple[Imagery, int, int, int, float]]:
+        """Return the pixel value from the uppermost imagery beneath a pixel position.
+
+        Parameters
+        ----------
+        row : float
+            Row in full-sensor pixel coordinates.
+        column : float
+            Column in full-sensor pixel coordinates.
+
+        Returns
+        -------
+        tuple[Imagery, int, int, int, float] or None
+            Imagery, frame index, relative row, relative column, and pixel value
+            for the uppermost displayed layer containing the position, or None.
+        """
+        imagery = self._get_uppermost_imagery(row, column)
+        if imagery is None:
+            return None
+
+        # if getting uppermost imagery succeeded, we know the following is valid behavior that doesn't require any None checks
+        image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+        relative_row = row - imagery.row_offset
+        relative_column = column - imagery.column_offset
+        row_index = int(np.floor(relative_row))
+        column_index = int(np.floor(relative_column))
+        value = float(imagery.images[image_index, row_index, column_index])
+        return imagery, int(image_index), row_index, column_index, value
+
+    def _sync_imagery_stack_order(self) -> None:
+        """Apply the selected imagery stack order to pixel and map image items."""
+        imagery_stack = self._get_imagery_stack()
+        for i, imagery in enumerate(imagery_stack):
+            # Keep imagery at z levels in [-0.9, 0),
+            # below overlays at z=0 and above the map basemap at z=-1
+            z_fraction = i / len(imagery_stack)
+            z_value = -0.9 + 0.9 * z_fraction
+            self.image_items[imagery.uuid].setZValue(z_value)
+
+            projected_item = self.projected_image_items.get(imagery.uuid)
+            if projected_item is not None:
+                projected_item.setZValue(z_value)
+
+    def _update_ewma_state(
+        self,
+        imagery: Imagery,
+        image_index: int,
+        alpha: float,
+    ) -> None:
+        """Advance the EWMA background model for one imagery layer.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery containing the source frame.
+        image_index : int
+            Index of the source frame.
+        alpha : float
+            EWMA decay factor.
+        """
+        if not self.ewma_filter_enabled:
+            return
+
+        current_image = imagery.images[image_index]
+        state = self.ewma_states.get(imagery.uuid)
+        if state is None:
+            state = _EWMAState()
+            self.ewma_states[imagery.uuid] = state
+
+        if image_index == state.last_image_index:
+            return
+
+        state.frame_counter += 1
+        state.last_image_index = image_index
+        if state.background is None:
+            state.background = current_image.copy()
+        else:
+            state.background = alpha * current_image + (1.0 - alpha) * state.background
+
+    def _get_display_image(
+        self,
+        imagery: Imagery,
+        image_index: int,
+        frame_offset: int,
+    ) -> tuple[np.ndarray, bool]:
+        """Return the original or EWMA-filtered image for display.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery containing the source frame.
+        image_index : int
+            Index of the source frame.
+        frame_offset : int
+            Number of unique frames to observe before displaying residuals if EWMA is enabled.
+
+        Returns
+        -------
+        tuple[np.ndarray, bool]
+            Display image and whether EWMA subtraction is active.
+        """
+        current_image = imagery.images[image_index]
+        if not self.ewma_filter_enabled:
+            return current_image, False
+
+        state = self.ewma_states.get(imagery.uuid)
+        if state is None or state.background is None or state.frame_counter <= frame_offset:
+            return current_image, False
+
+        return current_image - state.background, True
+
+    def set_index(self, index: int):
+        """Set the current index to display"""
         perf_start = time.time() if ENABLE_PERF_MONITORING else None
         self.ignore_changing_histogram_levels = True
 
-        self.current_frame_number = frame_number
+        self.timeline.current_index = index
 
-        # Update imagery if available
-        if self.imagery is not None and len(self.imagery.frames) > 0:
-            # Try exact frame match first using optimized lookup
-            image_index = self.imagery.get_frame_index(frame_number)
+        ewma_alpha = 0.1
+        ewma_offset = 1
+        if self.ewma_filter_enabled:
+            ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", ewma_alpha, type=float)
+            ewma_offset = self.settings.value("toolbar/ewma_frame_offset", ewma_offset, type=int)
 
-            # If exact match not found, find closest frame <= frame_number
-            if image_index is None:
-                valid_indices = np.where(self.imagery.frames <= frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                else:
-                    image_index = None
+        histogram_imagery_uuid = self._get_histogram_imagery_uuid()
 
-            # Clamp to loaded frames if imagery is still loading incrementally
-            if image_index is not None and self.imagery.loaded_frame_count is not None:
-                if image_index >= self.imagery.loaded_frame_count:
-                    image_index = max(0, self.imagery.loaded_frame_count - 1)
-
+        # Update displays for selected imagery
+        for imagery in self.selected_imageries:
+            # Find nearest image index
+            image_index = imagery.get_index(
+                self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+            )
             if image_index is not None:
-                ewma_active = False  # Whether we're displaying a filtered image
-                current_image = self.imagery.images[image_index]
-
-                # EWMA background filter logic
-                if self.ewma_filter_enabled:
-                    ewma_alpha = self.settings.value("toolbar/ewma_decay_factor", 0.1, type=float)
-                    ewma_offset = self.settings.value("toolbar/ewma_frame_offset", 1, type=int)
-
-                    # Check if frame_number changed from last call
-                    if frame_number != self.ewma_last_frame_number:
-                        self.ewma_frame_counter += 1
-                        self.ewma_last_frame_number = frame_number
-
-                        # Update EWMA background model once past the offset
-                        if self.ewma_background is None:
-                            self.ewma_background = current_image.copy()
-                        else:
-                            self.ewma_background = (
-                                ewma_alpha * current_image + (1.0 - ewma_alpha) * self.ewma_background
-                            )
-
-                    # Display filtered image if background model exists
-                    if (self.ewma_background is not None) and (self.ewma_frame_counter > ewma_offset):
-                        self.ewma_image = current_image - self.ewma_background
-                        ewma_active = True
+                self._update_ewma_state(imagery, image_index, ewma_alpha)
+                display_image, ewma_active = self._get_display_image(
+                    imagery,
+                    image_index,
+                    ewma_offset,
+                )
 
                 if self.map_view_mode:
                     # In map mode, update projected imagery instead of raw image
-                    if ewma_active:
-                        self._update_projected_imagery(self.ewma_image)
-                    else:
-                        self._update_projected_imagery(current_image)
+                    frame_time = imagery.times[image_index]
+                    self._update_projected_imagery(
+                        imagery,
+                        display_image,
+                        frame_time,
+                        use_cache=not ewma_active,
+                    )
                 else:
-                    if ewma_active:
-                        # EWMA image
-                        self.image_item.setImage(self.ewma_image, autoLevels=False)
-                    else:
-                        # Normal display
-                        self.image_item.setImage(current_image, autoLevels=False)
+                    self.image_items[imagery.uuid].setImage(display_image, autoLevels=False)
 
                 # Get user histogram limits if set
                 user_histogram_bounds = None
-                if self.imagery.uuid in self.user_histogram_bounds:
-                    user_histogram_bounds = self.user_histogram_bounds[self.imagery.uuid]
+                if imagery.uuid in self.user_histogram_bounds:
+                    user_histogram_bounds = self.user_histogram_bounds[imagery.uuid]
 
                 if ewma_active:
                     min_percentile = self.settings.value("imagery/histogram_min_percentile", 1.0, type=float)
                     max_percentile = self.settings.value("imagery/histogram_max_percentile", 99.0, type=float)
-                    settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
                     settings_max_rowcol = self.settings.value("imagery/histogram_max_rowcol", 512, type=int)
 
-                    row_downsample = max(1, self.ewma_image.shape[0] // settings_max_rowcol)
-                    col_downsample = max(1, self.ewma_image.shape[1] // settings_max_rowcol)
-                    downsampled_display_image = self.ewma_image[::row_downsample, ::col_downsample]
+                    row_downsample = max(1, display_image.shape[0] // settings_max_rowcol)
+                    col_downsample = max(1, display_image.shape[1] // settings_max_rowcol)
+                    downsampled_display_image = display_image[::row_downsample, ::col_downsample]
 
                     # Remove zero values since there are often many of these values
                     nonzero_downsampled_display_image = downsampled_display_image[downsampled_display_image != 0]
@@ -473,46 +742,58 @@ class ImageryViewer(QWidget):
                             hist_min = -1.0
                             hist_max = 1.0
 
-                    hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
-                    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-                    nonzero_hist = hist_y > 0
-
                     # Compute histogram directly from the filtered image
                     # and apply levels explicitly, bypassing pyqtgraph's
                     # signal chain which can silently skip updates.
-                    if self.histogram_visible:
+                    if imagery.uuid == histogram_imagery_uuid and self.histogram_visible:
+                        settings_bins = self.settings.value("imagery/histogram_bins", 256, type=int)
+                        hist_y, bin_edges = np.histogram(nonzero_downsampled_display_image, bins=settings_bins)
+                        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+                        nonzero_hist = hist_y > 0
                         self.histogram.plot.setData(bin_centers[nonzero_hist], hist_y[nonzero_hist])
-                        if self.ewma_frame_counter < 10:
+                        if self.ewma_states[imagery.uuid].frame_counter < 10:
                             # It takes some time for EWMA to settle, so auto range until it settles
                             self.histogram.vb.autoRange()
                     if user_histogram_bounds is not None:
-                        mn, mx = user_histogram_bounds
+                        levels = user_histogram_bounds
                     else:
-                        mn, mx = hist_min, hist_max
-                    self.histogram.setLevels(mn, mx)
+                        levels = (hist_min, hist_max)
                 else:
                     # Use or create pre-computed histogram data
-                    hist_y, hist_x = self.imagery.get_histogram(image_index)
-                    if self.histogram_visible:
+                    hist_y, hist_x = imagery.get_histogram(image_index)
+
+                    if user_histogram_bounds is not None:
+                        levels = user_histogram_bounds
+                    elif imagery.default_histogram_bounds is None and len(hist_x) > 0:
+                        levels = hist_x[[0, -1]]
+                    else:
+                        levels = imagery.default_histogram_bounds[image_index]
+
+                    if imagery.uuid == histogram_imagery_uuid and self.histogram_visible:
                         self.histogram.plot.setData(hist_x, hist_y)
 
-                    # Apply histogram bounds
-                    if user_histogram_bounds is not None:
-                        self.histogram.setLevels(*user_histogram_bounds)
-                    elif self.imagery.default_histogram_bounds is None and len(hist_x) > 0:
-                        self.histogram.setLevels(hist_x[0], hist_x[-1])
-                    else:
-                        self.histogram.setLevels(*self.imagery.default_histogram_bounds[image_index])
+                # Apply histogram bounds
+                if imagery.uuid == histogram_imagery_uuid:
+                    self.histogram.setLevels(*levels)
 
                 # Explicitly sync levels to the image item. histogram.setLevels() goes through
                 # LinearRegionItem.setRegion() which skips the signal if the region values haven't
                 # changed, leaving the image item with stale levels.
-                if self.histogram.imageItem() is not None:
-                    self.histogram.imageItem().setLevels(self.histogram.getLevels())
+                self.image_items[imagery.uuid].setLevels(levels)
+                if self.map_view_mode and imagery.uuid in self.projected_image_items:
+                    self.projected_image_items[imagery.uuid].setLevels(levels)
+            else:
+                self.image_items[imagery.uuid].clear()
+                self._imagery_footprints.pop(imagery.uuid, None)
+                projected_item = self.projected_image_items.get(imagery.uuid)
+                if projected_item is not None and projected_item.isVisible():
+                    projected_item.setVisible(False)
+
+        if self.histogram.imageItem() is None or self.histogram.imageItem().image is None:
+            self.histogram.plot.setData([], [])
 
         # Always update overlays (tracks/detections can exist without imagery)
         self.update_overlays()
-
         # Re-render shapefile features in pixel view (their pixel coords change per frame)
         if not self.map_view_mode:
             self._rerender_shapefile_features()
@@ -520,7 +801,7 @@ class ImageryViewer(QWidget):
         # Update extraction overlay if in extraction view or edit mode
         # Prioritize editing mode over viewing mode (editing shows working copy)
         if self.extraction_editing_mode:
-            # Update overlay (will automatically sync track index to current frame)
+            # Update overlay (will automatically sync track index to current time or frame)
             self._update_extraction_overlay_from_editor()
         elif self.extraction_view_mode:
             self._update_extraction_overlay()
@@ -529,8 +810,8 @@ class ImageryViewer(QWidget):
         if self.last_mouse_pos is not None and (self.geolocation_enabled or self.pixel_value_enabled):
             self._update_tooltips_at_position(self.last_mouse_pos)
 
-        # Emit frame_changed signal
-        self.frame_changed.emit(frame_number)
+        # Emit index_changed signal
+        self.index_changed.emit(index)
 
         # Performance monitoring
         if ENABLE_PERF_MONITORING and perf_start is not None:
@@ -546,57 +827,29 @@ class ImageryViewer(QWidget):
         self.ignore_changing_histogram_levels = False
 
     def get_current_time(self):
-        """Get the current time for the displayed frame (if available)"""
-        if self.imagery is not None and self.imagery.times is not None and len(self.imagery.frames) > 0:
-            # Try exact frame match first using optimized lookup
-            image_index = self.imagery.get_frame_index(self.current_frame_number)
-
-            # If exact match not found, find closest frame <= current_frame_number
-            if image_index is None:
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                else:
-                    image_index = None
-
-            if image_index is not None:
-                return self.imagery.times[image_index]
-
+        """Get the current time (if available)"""
+        if self.timeline.is_time:
+            return self.timeline.current_value
         return None
 
-    def get_frame_range(self):
-        """Get the min and max frame numbers from all data sources (imagery, tracks, detections)"""
-        all_frames = []
-
-        # Collect frames from imagery
-        if self.imagery is not None and len(self.imagery.frames) > 0:
-            all_frames.extend(self.imagery.frames)
-
-        # Collect frames from detectors
-        for detector in self.detectors:
-            if (self.selected_sensor is not None) and (self.selected_sensor != detector.sensor):
-                continue
-            if len(detector.frames) > 0:
-                all_frames.extend(detector.frames)
-
-        # Collect frames from tracks
-        for track in self.tracks:
-            if (self.selected_sensor is not None) and (self.selected_sensor != track.sensor):
-                continue
-            if len(track.frames) > 0:
-                all_frames.extend(track.frames)
-
-        if len(all_frames) > 0:
-            return int(np.min(all_frames)), int(np.max(all_frames))
-
-        return 0, 0
+    def get_current_frame(self):
+        """Get the current frame (if available)"""
+        if not self.timeline.is_time:
+            return self.timeline.current_value
+        return None
 
     def on_histogram_levels_changed(self):
         """Called when user manually adjusts histogram levels"""
         # Store the user's selected bounds
-        if self.ignore_changing_histogram_levels or self.setting_imagery or (self.imagery is None):
+        histogram_imagery_uuid = self._get_histogram_imagery_uuid()
+        if self.ignore_changing_histogram_levels or self.setting_imagery or histogram_imagery_uuid is None:
             return
-        self.user_histogram_bounds[self.imagery.uuid] = self.histogram.getLevels()
+        levels = self.histogram.getLevels()
+        self.user_histogram_bounds[histogram_imagery_uuid] = levels
+        self.image_items[histogram_imagery_uuid].setLevels(levels)
+        projected_item = self.projected_image_items.get(histogram_imagery_uuid)
+        if projected_item is not None:
+            projected_item.setLevels(levels)
 
     def on_histogram_gradient_changed(self):
         """Called when user manually adjusts histogram gradient (color mapping)"""
@@ -604,14 +857,19 @@ class ImageryViewer(QWidget):
         if self.setting_imagery:
             return
         self.user_histogram_state = self.histogram.saveState()
+        lookup_table = self.histogram.getLookupTable(n=512)
+        for image_item in self.image_items.values():
+            image_item.setLookupTable(lookup_table)
+        for projected_item in self.projected_image_items.values():
+            projected_item.setLookupTable(lookup_table)
 
     def set_histogram_visible(self, visible: bool):
         """
         Show or hide the histogram widget.
 
-        When hidden, histogram updates are skipped during frame changes for improved performance.
-        The image levels/LUT remain frozen at their last values so rendering is unaffected.
-        When shown again, the histogram is refreshed to match the current frame.
+        When hidden, histogram updates are skipped during display index changes for improved
+        performance. The image levels/LUT remain frozen at their last values so rendering is
+        unaffected. When shown again, the histogram is refreshed to match the current display index.
 
         Parameters
         ----------
@@ -619,11 +877,11 @@ class ImageryViewer(QWidget):
             True to show the histogram, False to hide it
         """
         self.histogram_visible = visible
-        self.hist_widget.setVisible(visible)
+        self.histogram_container.setVisible(visible)
 
-        # Refresh histogram for the current frame when becoming visible
-        if visible and self.imagery is not None:
-            self.set_frame_number(self.current_frame_number)
+        # Refresh histogram for the current index when becoming visible
+        if visible and self._get_histogram_imagery_uuid() is not None:
+            self.set_index(self.timeline.current_index)
 
     def set_ewma_filter_enabled(self, enabled: bool):
         """
@@ -637,27 +895,23 @@ class ImageryViewer(QWidget):
         enabled : bool
             True to enable the EWMA filter, False to disable it
         """
-        if self.imagery.uuid in self.user_histogram_bounds:
-            del self.user_histogram_bounds[self.imagery.uuid]
-        self.ewma_filter_enabled = enabled
-        if self.projection_cache is not None:
-            self.projection_cache.invalidate_imagery(self.imagery.uuid)
+        for imagery in self.selected_imageries:
+            self.user_histogram_bounds.pop(imagery.uuid, None)
+            if self.projection_cache is not None:
+                self.projection_cache.invalidate_imagery(imagery.uuid)
 
-        # Reset EWMA state
-        self.ewma_background = None
-        self.ewma_image = None
-        self.ewma_frame_counter = 0
-        self.ewma_last_frame_number = None
+        self.ewma_filter_enabled = enabled
+        self.ewma_states.clear()
 
         if not enabled:
             # Refresh display to show original image
-            if self.imagery is not None:
-                self.set_frame_number(self.current_frame_number)
+            if self.selected_imageries:
+                self.set_index(self.timeline.current_index)
                 self.histogram.vb.autoRange()
         else:
             # Refresh to apply filter logic from the start
-            if self.imagery is not None:
-                self.set_frame_number(self.current_frame_number)
+            if self.selected_imageries:
+                self.set_index(self.timeline.current_index)
 
     def update_text_positions(self):
         """Update positions of text overlays to keep them in bottom-right corner"""
@@ -683,16 +937,11 @@ class ImageryViewer(QWidget):
             # If pixel value is also visible, offset geolocation above it
             if self.pixel_value_enabled and self.pixel_value_text.isVisible():
                 # Calculate offset in data coordinates
-                # Get approximate height of one line of text in data coordinates
-                view_height = view_rect.height()
-                # Offset by ~20 pixels worth in view space
-                # Approximate: 20 pixels / viewport_height_pixels * view_height_data
-                viewport_height = self.plot_item.vb.height()
-                if viewport_height > 0:
-                    text_offset = (20 / viewport_height) * view_height
-                else:
-                    text_offset = view_height * 0.05  # Fallback to 5% of view height
+                view_height = view_rect.height()  # view height in data units
+                view_height_pixels = self.plot_item.vb.height()  # view height in pixel units
 
+                # Convert text height from pixels to data units
+                text_offset = (self.pixel_value_text.boundingRect().height() / view_height_pixels) * view_height
                 self.geolocation_text.setPos(view_rect.right(), bottom_y + offset_sign * text_offset)
             else:
                 # No pixel value, position at bottom-right
@@ -704,8 +953,6 @@ class ImageryViewer(QWidget):
 
     def update_overlays(self):
         """Update track and detection overlays for current frame"""
-        # Get current frame number
-        frame_num = self.current_frame_number
 
         # Clean up orphaned detector plot items (detectors that have been removed)
         current_detector_uuids = {detector.uuid for detector in self.detectors}
@@ -721,7 +968,7 @@ class ImageryViewer(QWidget):
             detector_uuid = detector.uuid
             if detector_uuid not in self.detector_plot_items:
                 scatter = pg.ScatterPlotItem()
-                self.plot_item.addItem(scatter)
+                self.plot_item.addItem(scatter, ignoreBounds=bool(self.selected_imageries))
                 self.detector_plot_items[detector_uuid] = scatter
 
             scatter = self.detector_plot_items[detector_uuid]
@@ -738,9 +985,12 @@ class ImageryViewer(QWidget):
 
             # Build a boolean mask over the full detector arrays for filtering
             if detector.complete:
-                det_mask = np.ones(len(detector.frames), dtype=bool)
+                det_mask = np.ones(len(detector), dtype=bool)
             else:
-                det_mask = detector.frames == frame_num
+                if self.timeline.is_time:
+                    det_mask = detector.times == self.timeline.current_value
+                else:
+                    det_mask = detector.frames == self.timeline.current_value
 
             # Apply label filter if detections panel has active filters
             if np.any(det_mask):
@@ -754,7 +1004,7 @@ class ImageryViewer(QWidget):
 
             if np.any(det_mask):
                 # Use cached geodetic coords in map view
-                _det_map_mode = self.map_view_mode and detector.sensor and detector.sensor.can_geolocate()
+                _det_map_mode = self.map_view_mode and detector.sensor.can_geolocate()
                 geodetic = detector.get_geodetic_coords() if _det_map_mode else None
                 if geodetic is not None:
                     plot_x, plot_y = geodetic[0][det_mask], geodetic[1][det_mask]
@@ -794,8 +1044,8 @@ class ImageryViewer(QWidget):
             if track_id not in self.track_path_items:
                 path = pg.PlotCurveItem()
                 marker = pg.ScatterPlotItem()
-                self.plot_item.addItem(path)
-                self.plot_item.addItem(marker)
+                self.plot_item.addItem(path, ignoreBounds=bool(self.selected_imageries))
+                self.plot_item.addItem(marker, ignoreBounds=bool(self.selected_imageries))
                 self.track_path_items[track_id] = path
                 self.track_marker_items[track_id] = marker
 
@@ -834,7 +1084,7 @@ class ImageryViewer(QWidget):
             marker_size = track.marker_size + 5 if is_selected else track.marker_size
 
             # Use cached geodetic coords in map view (avoids re-projecting every frame)
-            _map_mode = self.map_view_mode and track.sensor and track.sensor.can_geolocate()
+            _map_mode = self.map_view_mode and track.sensor.can_geolocate()
             geodetic = track.get_geodetic_coords() if _map_mode else None
             _map_mode = geodetic is not None  # Fall back if projection fails
 
@@ -856,9 +1106,8 @@ class ImageryViewer(QWidget):
                 else:
                     path.setData(x=[], y=[])  # Hide line
 
-                # Update current position marker (show marker at current frame if it exists)
-                track._build_frame_index()
-                idx = track._frame_index.get(frame_num)
+                # Update latest position marker
+                idx = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
                 if idx is not None:
                     if _map_mode:
                         mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
@@ -875,10 +1124,10 @@ class ImageryViewer(QWidget):
                 else:
                     marker.setData(x=[], y=[])  # No current position
             else:
-                # Show track history up to current frame using optimized method
-                visible_indices = track.get_visible_indices(frame_num)
+                # Show track history up to current index using optimized method
+                visible_indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
 
-                if visible_indices is not None and len(visible_indices) > 0:
+                if visible_indices is not None:
                     # Get coordinates for visible portion
                     if _map_mode:
                         path_x, path_y = geodetic[0][visible_indices], geodetic[1][visible_indices]
@@ -895,9 +1144,8 @@ class ImageryViewer(QWidget):
                     else:
                         path.setData(x=[], y=[])  # Hide line
 
-                    # Update current position marker
-                    track._build_frame_index()
-                    idx = track._frame_index.get(frame_num)
+                    # Update latest position marker
+                    idx = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
                     if idx is not None:
                         if _map_mode:
                             mx, my = [geodetic[0][idx]], [geodetic[1][idx]]
@@ -929,71 +1177,61 @@ class ImageryViewer(QWidget):
                         del self.track_uncertainty_items[track_id]
                     continue
 
-                # Get track data at current frame
-                track_data = track.get_track_data_at_frame(frame_num)
-                if track_data is not None:
+                # Get track data at current index
+                idx = track.get_index(self.timeline.current_value, self.timeline.is_time)
+                if idx is not None:
                     # Get settings
                     settings = QSettings("Vista", "VistaApp")
                     uncertainty_style = settings.value("tracks/uncertainty_line_style", "DashLine", type=str)
                     uncertainty_width = settings.value("tracks/uncertainty_line_width", 1, type=int)
                     uncertainty_scale = settings.value("tracks/uncertainty_scale", 1.0, type=float)
 
-                    # Find index for current frame
-                    track._build_frame_index()
-                    idx = track._frame_index.get(frame_num)
-                    if idx is not None:
-                        row = track.rows[idx]
-                        col = track.columns[idx]
+                    row = track.rows[idx]
+                    col = track.columns[idx]
 
-                        # Get ellipse parameters from covariance matrix
-                        ellipse_params = track.get_uncertainty_ellipse_parameters()
-                        if ellipse_params is not None:
-                            semi_major, semi_minor, rotation_deg = ellipse_params
+                    # Get ellipse parameters from covariance matrix
+                    ellipse_params = track.get_uncertainty_ellipse_parameters()
+                    if ellipse_params is not None:
+                        semi_major, semi_minor, rotation_deg = ellipse_params
 
-                            # Apply uncertainty scale to semi-axes
-                            scaled_semi_major = semi_major[idx] * uncertainty_scale
-                            scaled_semi_minor = semi_minor[idx] * uncertainty_scale
-                            rot = rotation_deg[idx]
+                        # Apply uncertainty scale to semi-axes
+                        scaled_semi_major = semi_major[idx] * uncertainty_scale
+                        scaled_semi_minor = semi_minor[idx] * uncertainty_scale
+                        rot = rotation_deg[idx]
 
-                            # Remove old ellipse
-                            if track_id in self.track_uncertainty_items:
-                                for item in self.track_uncertainty_items[track_id]:
-                                    self.plot_item.removeItem(item)
-
-                            # Create ellipse bounding rectangle
-                            # Center at (col, row), size (2*semi_major, 2*semi_minor)
-                            # Note: QGraphicsEllipseItem expects width/height in axis-aligned orientation
-                            ellipse = QGraphicsEllipseItem(
-                                QRectF(
-                                    col - scaled_semi_major,
-                                    row - scaled_semi_minor,
-                                    2 * scaled_semi_major,
-                                    2 * scaled_semi_minor,
-                                )
-                            )
-
-                            # Set rotation around center
-                            ellipse.setTransformOriginPoint(col, row)
-                            ellipse.setRotation(rot)
-
-                            # Set pen style using track color and uncertainty settings
-                            pen = track.get_pen(width=uncertainty_width, style=uncertainty_style)
-                            ellipse.setPen(pen)
-
-                            # No fill brush (transparent interior)
-                            ellipse.setBrush(pg.mkBrush(None))
-
-                            # Add to plot
-                            self.plot_item.addItem(ellipse)
-                            self.track_uncertainty_items[track_id] = [ellipse]
-                    else:
-                        # No data at current frame, remove ellipse
+                        # Remove old ellipse
                         if track_id in self.track_uncertainty_items:
                             for item in self.track_uncertainty_items[track_id]:
                                 self.plot_item.removeItem(item)
-                            del self.track_uncertainty_items[track_id]
+
+                        # Create ellipse bounding rectangle
+                        # Center at (col, row), size (2*semi_major, 2*semi_minor)
+                        # Note: QGraphicsEllipseItem expects width/height in axis-aligned orientation
+                        ellipse = QGraphicsEllipseItem(
+                            QRectF(
+                                col - scaled_semi_major,
+                                row - scaled_semi_minor,
+                                2 * scaled_semi_major,
+                                2 * scaled_semi_minor,
+                            )
+                        )
+
+                        # Set rotation around center
+                        ellipse.setTransformOriginPoint(col, row)
+                        ellipse.setRotation(rot)
+
+                        # Set pen style using track color and uncertainty settings
+                        pen = track.get_pen(width=uncertainty_width, style=uncertainty_style)
+                        ellipse.setPen(pen)
+
+                        # No fill brush (transparent interior)
+                        ellipse.setBrush(pg.mkBrush(None))
+
+                        # Add to plot
+                        self.plot_item.addItem(ellipse, ignoreBounds=bool(self.selected_imageries))
+                        self.track_uncertainty_items[track_id] = [ellipse]
                 else:
-                    # No track data at current frame, remove ellipse
+                    # No track data at current index, remove ellipse
                     if track_id in self.track_uncertainty_items:
                         for item in self.track_uncertainty_items[track_id]:
                             self.plot_item.removeItem(item)
@@ -1017,16 +1255,22 @@ class ImageryViewer(QWidget):
 
     def add_detector(self, detector: Detector):
         """Add a detector's detections to display"""
-        self.detectors.append(detector)
-        self.update_overlays()
-        return self.get_frame_range()  # Return updated frame range
+        if detector not in self.detectors:
+            self.detectors.append(detector)
+        self.update_timeline()
+
+    def add_detectors(self, detectors: list[Detector]):
+        """Add multiple detectors' detections to display"""
+        for detector in detectors:
+            if detector not in self.detectors:
+                self.detectors.append(detector)
+        self.update_timeline()
 
     def add_track(self, track: Track):
         """Add a single track to display"""
         if track not in self.tracks:
             self.tracks.append(track)
-        self.update_overlays()
-        return self.get_frame_range()
+        self.update_timeline()
 
     def add_tracks(self, tracks, tracker_name: str = None):
         """
@@ -1044,23 +1288,7 @@ class ImageryViewer(QWidget):
                 track.tracker = tracker_name
             if track not in self.tracks:
                 self.tracks.append(track)
-        self.update_overlays()
-        return self.get_frame_range()
-
-    def add_tracker(self, tracker):
-        """Add a tracker (with its tracks) to display - DEPRECATED
-
-        This method is deprecated. Use add_tracks() instead.
-        """
-        import warnings
-
-        warnings.warn("add_tracker() is deprecated. Use add_tracks() instead.", DeprecationWarning, stacklevel=2)
-        for track in tracker.tracks:
-            track.tracker = tracker.name
-            if track not in self.tracks:
-                self.tracks.append(track)
-        self.update_overlays()
-        return self.get_frame_range()
+        self.update_timeline()
 
     def get_tracks_by_tracker(self, tracker_name: str):
         """Get all tracks belonging to a specific tracker"""
@@ -1081,39 +1309,6 @@ class ImageryViewer(QWidget):
             Set of track UUIDs (track.uuid) to highlight
         """
         self.selected_track_ids = track_ids
-        self.update_overlays()
-
-    def filter_by_sensor(self, sensor):
-        """
-        Filter displayed imagery, tracks, and detections by sensor.
-
-        Parameters
-        ----------
-        sensor : Sensor or None
-            Sensor object to filter by, or None to show all
-        """
-        if self.selected_sensor != sensor:
-            self._reset_sensor_context_state()
-
-        self.selected_sensor = sensor
-
-        if sensor is not None:
-            # Check if current imagery is from the selected sensor
-            if self.imagery is None or self.imagery.sensor != sensor:
-                # Find imagery from this sensor
-                sensor_imageries = [img for img in self.imageries if img.sensor == sensor]
-                if sensor_imageries:
-                    # Select the first imagery from this sensor
-                    self.select_imagery(sensor_imageries[0])
-                else:
-                    # No imagery from this sensor, clear display
-                    self.imagery = None
-                    # Clear the image display
-                    self.image_item.clear()
-                    # Clear the histogram plot
-                    self.histogram.plot.setData([], [])
-
-        # Update display to show only items from selected sensor
         self.update_overlays()
 
     def set_track_selection_mode(self, enabled):
@@ -1271,13 +1466,13 @@ class ImageryViewer(QWidget):
             if self.selected_sensor is not None and track.sensor != self.selected_sensor:
                 continue
 
-            # Get visible indices for current frame
-            visible_indices = track.get_visible_indices(self.current_frame_number)
-            if visible_indices is None or len(visible_indices) == 0:
+            # Get visible track indices for current display index
+            visible_indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
+            if visible_indices is None:
                 continue
 
             # Check if ALL visible points are contained
-            if _map_mode and track.sensor and track.sensor.can_geolocate():
+            if _map_mode and track.sensor.can_geolocate():
                 geodetic = track.get_geodetic_coords()
                 if geodetic is not None:
                     check_x, check_y = geodetic[0][visible_indices], geodetic[1][visible_indices]
@@ -1305,14 +1500,17 @@ class ImageryViewer(QWidget):
             if detector.complete:
                 # Check all detections when complete mode is enabled
                 rows, cols = detector.rows, detector.columns
-                indices = np.arange(len(detector.frames))
+                indices = np.arange(len(detector))
             else:
-                # Check only detections at current frame
-                rows, cols = detector.get_detections_at_frame(self.current_frame_number)
-                if len(rows) == 0:
+                # Check only detections at current index
+                indices = detector.get_index(self.timeline.current_value, self.timeline.is_time)
+                if indices is None:
                     continue
-                frame_mask = detector.frames == self.current_frame_number
-                indices = np.where(frame_mask)[0]
+                rows, cols = detector.rows[indices], detector.columns[indices]
+                if self.timeline.is_time:
+                    det_mask = detector.times == self.timeline.current_value
+                else:
+                    det_mask = detector.frames == self.timeline.current_value
 
             # Apply label filter if detections panel has active filters
             if len(rows) > 0:
@@ -1332,7 +1530,7 @@ class ImageryViewer(QWidget):
                                     indices = np.array([])
                             else:
                                 # For current frame mode, combine frame and label filters
-                                combined_mask = frame_mask & label_mask
+                                combined_mask = det_mask & label_mask
                                 if np.any(combined_mask):
                                     rows = detector.rows[combined_mask]
                                     cols = detector.columns[combined_mask]
@@ -1343,7 +1541,7 @@ class ImageryViewer(QWidget):
                 except AttributeError:
                     pass  # Use unfiltered rows/cols/indices
 
-            if _map_mode and detector.sensor and detector.sensor.can_geolocate():
+            if _map_mode and detector.sensor.can_geolocate():
                 geodetic = detector.get_geodetic_coords()
                 if geodetic is not None:
                     check_x, check_y = geodetic[0][indices], geodetic[1][indices]
@@ -1354,9 +1552,8 @@ class ImageryViewer(QWidget):
 
             for i, (x, y) in enumerate(zip(check_x, check_y)):
                 if not np.isnan(x) and not np.isnan(y) and lasso_polygon.contains(Point(x, y)):
-                    # Store as (detector, frame, original_index)
-                    detection_frame = detector.frames[indices[i]]
-                    selected_items["detections"].append((detector, int(detection_frame), int(indices[i])))
+                    # Store as (detector, original_index)
+                    selected_items["detections"].append((detector, int(indices[i])))
 
         # Check AOIs (wholly contained = ALL 4 corners inside) — skip in map view (AOIs are pixel-space)
         if not _map_mode:
@@ -1425,7 +1622,7 @@ class ImageryViewer(QWidget):
                             all_lats.append(point[1])
                         shape_lengths.append(len(shape.points))
 
-                    if has_points and self.selected_sensor and self.selected_sensor.can_geolocate():
+                    if has_points and self.selected_sensor is not None and self.selected_sensor.can_geolocate():
                         px_x, px_y = self._shapefile_geo_to_pixel(np.array(all_lons), np.array(all_lats))
                         for x, y in zip(px_x, px_y):
                             if np.isnan(x) or np.isnan(y) or not lasso_polygon.contains(Point(x, y)):
@@ -1496,7 +1693,13 @@ class ImageryViewer(QWidget):
 
     def _update_tooltips_at_position(self, pos):
         """Update geolocation and pixel value tooltips at a given scene position"""
-        if not (self.geolocation_enabled or self.pixel_value_enabled) or self.imagery is None:
+        if not (self.geolocation_enabled or self.pixel_value_enabled):
+            return
+        if not self.selected_imageries:
+            if self.geolocation_enabled:
+                self.geolocation_text.setVisible(False)
+            if self.pixel_value_enabled:
+                self.pixel_value_text.setVisible(False)
             return
 
         # Map mouse position to view coordinates
@@ -1512,32 +1715,15 @@ class ImageryViewer(QWidget):
                 self.geolocation_text.setText(text)
                 self.geolocation_text.setVisible(True)
 
-            if self.pixel_value_enabled and self.imagery.sensor.can_geolocate():
-                # Reverse-project (lon, lat) to pixel coordinates to read pixel value
-                earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
-                # Get current frame
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                    frame = self.imagery.frames[image_index]
-                    src_rows, src_cols = self.imagery.sensor.geodetic_to_pixel(frame, earth_loc)
-                    row_int = int(np.round(src_rows[0])) - self.imagery.row_offset
-                    col_int = int(np.round(src_cols[0])) - self.imagery.column_offset
-                    img_shape = self.imagery.images[0].shape
-                    if (
-                        0 <= row_int < img_shape[0]
-                        and 0 <= col_int < img_shape[1]
-                        and not np.isnan(src_rows[0])
-                        and not np.isnan(src_cols[0])
-                    ):
-                        pixel_value = self.imagery.images[image_index, row_int, col_int]
-                        text = f"({col_int}, {row_int}: {pixel_value:.2f})"
-                        self.pixel_value_text.setText(text)
-                        self.pixel_value_text.setVisible(True)
-                    else:
-                        self.pixel_value_text.setVisible(False)
-                else:
+            if self.pixel_value_enabled:
+                pixel_data = self._get_map_pixel_value(lon, lat)
+                if pixel_data is None:
                     self.pixel_value_text.setVisible(False)
+                else:
+                    imagery, row_int, col_int, pixel_value = pixel_data
+                    text = f"{imagery.name}\n({col_int}, {row_int}, {pixel_value:.2f})"
+                    self.pixel_value_text.setText(text)
+                    self.pixel_value_text.setVisible(True)
 
             # Update positions of text items
             self.update_text_positions()
@@ -1547,62 +1733,39 @@ class ImageryViewer(QWidget):
         col = mouse_point.x()
         row = mouse_point.y()
 
-        # Convert scene coordinates to imagery-relative coordinates
-        imagery_relative_row = row - self.imagery.row_offset
-        imagery_relative_col = col - self.imagery.column_offset
+        pixel_data = self._get_pixel_mode_pixel_value(row, col)
+        if pixel_data is None:
+            if self.geolocation_enabled:
+                self.geolocation_text.setVisible(False)
+            if self.pixel_value_enabled:
+                self.pixel_value_text.setVisible(False)
+            return
 
-        # Check if position is within image bounds (using imagery-relative coordinates)
-        if self.imagery.images is not None and len(self.imagery.images) > 0:
-            img_shape = self.imagery.images[0].shape
-            if 0 <= imagery_relative_row < img_shape[0] and 0 <= imagery_relative_col < img_shape[1]:
-                # Get current frame index
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                    frame = self.imagery.frames[image_index]
+        imagery, image_index, row_index, column_index, pixel_value = pixel_data
+        if self.geolocation_enabled:
+            if imagery.sensor.can_geolocate() and self.timeline.is_time:
+                frame_time = imagery.times[image_index]
+                location = imagery.sensor.pixel_to_geodetic(frame_time, np.array([row]), np.array([col]))
 
-                    if self.geolocation_enabled and self.imagery.sensor.can_geolocate():
-                        # Convert pixel to geodetic coordinates (using imagery-relative coordinates)
-                        rows_array = np.array([row])
-                        cols_array = np.array([col])
+                lat = location.lat.deg[0]
+                lon = location.lon.deg[0]
 
-                        locations = self.imagery.sensor.pixel_to_geodetic(frame, rows_array, cols_array)
-
-                        # Extract lat/lon from EarthLocation
-                        if locations is not None and len(locations) > 0:
-                            location = locations[0]
-                            lat = location.lat.deg
-                            lon = location.lon.deg
-
-                            # Check if coordinates are valid (not NaN)
-                            if not (np.isnan(lat) or np.isnan(lon)):
-                                # Update text content
-                                text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
-                                self.geolocation_text.setText(text)
-                                self.geolocation_text.setVisible(True)
-                            else:
-                                self.geolocation_text.setVisible(False)
-                        else:
-                            self.geolocation_text.setVisible(False)
-
-                    if self.pixel_value_enabled:
-                        # Extract pixel value from floored imagery-relative coordinates
-                        row_floor = int(np.floor(imagery_relative_row))
-                        col_floor = int(np.floor(imagery_relative_col))
-                        pixel_value = self.imagery.images[image_index, row_floor, col_floor]
-
-                        # Update text content
-                        text = f"({col_floor}, {row_floor} {pixel_value:.2f})"
-                        self.pixel_value_text.setText(text)
-                        self.pixel_value_text.setVisible(True)
-
-                    # Update positions of text items
-                    self.update_text_positions()
-            else:
-                if self.geolocation_enabled:
+                x, y, z = location.to_geocentric()
+                if np.isnan((x * y * z)[0]):  # one of x, y, or z will have nan value if conversion fails
                     self.geolocation_text.setVisible(False)
-                if self.pixel_value_enabled:
-                    self.pixel_value_text.setVisible(False)
+                else:
+                    text = f"Lat: {lat:.6f}°\nLon: {lon:.6f}°"
+                    self.geolocation_text.setText(text)
+                    self.geolocation_text.setVisible(True)
+            else:
+                self.geolocation_text.setVisible(False)
+
+        if self.pixel_value_enabled:
+            text = f"{imagery.name}\n({column_index}, {row_index}, {pixel_value:.2f})"
+            self.pixel_value_text.setText(text)
+            self.pixel_value_text.setVisible(True)
+
+        self.update_text_positions()
 
     def clear_overlays(self):
         """Clear all tracks and detections"""
@@ -1627,8 +1790,6 @@ class ImageryViewer(QWidget):
         self.detectors = []
         self.tracks = []
 
-        return self.get_frame_range()  # Return updated frame range
-
     def set_draw_roi_mode(self, enabled):
         """Enable or disable ROI drawing mode"""
         self.draw_roi_mode = enabled
@@ -1639,7 +1800,7 @@ class ImageryViewer(QWidget):
 
     def start_draw_roi(self):
         """Start drawing a new ROI"""
-        if self.imagery is None or self.map_view_mode:
+        if self.map_view_mode or not self.selected_imageries:
             return
 
         # Size and center the AOI relative to the user's current view.
@@ -1965,15 +2126,20 @@ class ImageryViewer(QWidget):
         -------
         pixel_x : np.ndarray
             Column (x) pixel coordinates.
+            NaN if current frame has no time.
         pixel_y : np.ndarray
             Row (y) pixel coordinates.
+            NaN if current frame has no time.
         """
+        if not self.timeline.is_time:
+            invalid = np.full_like(all_lons, np.nan, dtype=np.float64)
+            return invalid, invalid.copy()
         earth_locs = EarthLocation.from_geodetic(
             lon=all_lons * units.deg,
             lat=all_lats * units.deg,
-            height=0 * units.m,
+            height=0 * units.km,
         )
-        rows, cols = self.selected_sensor.geodetic_to_pixel(self.current_frame_number, earth_locs)
+        rows, cols = self.selected_sensor.geodetic_to_pixel(self.timeline.current_value, earth_locs)
         return cols, rows
 
     def _render_shapefile(self, feature):
@@ -2137,8 +2303,9 @@ class ImageryViewer(QWidget):
         self.editing_track = track
         # Load existing track data
         self.current_track_data = {}
-        for i in range(len(track.frames)):
-            self.current_track_data[track.frames[i]] = (track.rows[i], track.columns[i])
+        keys = track.times if self.timeline.is_time else track.frames
+        for i in range(len(track)):
+            self.current_track_data[keys[i]] = (track.rows[i], track.columns[i])
         self.temp_track_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -2159,14 +2326,35 @@ class ImageryViewer(QWidget):
 
         # Create Track object if we have data
         if len(self.current_track_data) > 0:
-            # Sort by frame number
-            sorted_frames = sorted(self.current_track_data.keys())
-            frames = np.array(sorted_frames, dtype=np.int_)
-            rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
-            columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
+            # Sort by time or frame
+            sorted_keys = sorted(self.current_track_data.keys())
+
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(sorted_keys, dtype="datetime64[ns]")
+            else:
+                frames = np.array(sorted_keys, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
+            rows = np.array([self.current_track_data[f][0] for f in sorted_keys])
+            columns = np.array([self.current_track_data[f][1] for f in sorted_keys])
 
             track = Track(
                 name=f"Track {len(self.tracks) + 1}",
+                times=times,
                 frames=frames,
                 rows=rows,
                 columns=columns,
@@ -2201,11 +2389,33 @@ class ImageryViewer(QWidget):
 
         # Update Track object with new data
         if editing_track and len(self.current_track_data) > 0:
-            # Sort by frame number
-            sorted_frames = sorted(self.current_track_data.keys())
-            editing_track.frames = np.array(sorted_frames, dtype=np.int_)
-            editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_frames])
-            editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_frames])
+            # Sort by time or frame
+            sorted_keys = sorted(self.current_track_data.keys())
+
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(sorted_keys, dtype="datetime64[ns]")
+            else:
+                frames = np.array(sorted_keys, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
+            editing_track.times = times
+            editing_track.frames = frames
+            editing_track.rows = np.array([self.current_track_data[f][0] for f in sorted_keys])
+            editing_track.columns = np.array([self.current_track_data[f][1] for f in sorted_keys])
 
             # Invalidate caches since track data was modified
             editing_track.invalidate_caches()
@@ -2236,6 +2446,11 @@ class ImageryViewer(QWidget):
         if track.extraction_metadata is None:
             return False
 
+        # prevent starting extraction viewing for non-visible track
+        # TODO: stop viewing if visible is set to False later on?
+        if not track.visible:
+            return False
+
         self.extraction_view_mode = True
         self.viewing_extraction_track = track
 
@@ -2250,8 +2465,8 @@ class ImageryViewer(QWidget):
         self._update_extraction_overlay()
         return True
 
-    def _reset_sensor_context_state(self):
-        """Clear overlays, selections, and edit modes tied to the selected sensor."""
+    def _reset_context_state(self):
+        """Clear overlays, selections, and edit modes tied to the selected sensor and imageries."""
         if self.track_creation_mode:
             self.cancel_track_creation()
         if self.track_editing_mode:
@@ -2265,7 +2480,7 @@ class ImageryViewer(QWidget):
         if self.extraction_view_mode:
             self.finish_extraction_viewing()
         self.clear_selected_detections()
-        self.sensor_context_reset.emit()
+        self.context_reset.emit()
 
     def finish_extraction_viewing(self):
         """Finish extraction viewing mode"""
@@ -2288,15 +2503,11 @@ class ImageryViewer(QWidget):
         if track.extraction_metadata is None:
             return
 
-        # Find track point index for current frame
-        frame_mask = track.frames == self.current_frame_number
-        if not np.any(frame_mask):
-            # No track point at current frame
-            if self.extraction_overlay is not None:
-                self.extraction_overlay.setImage(np.zeros((1, 1)))
+        # Find track point index for current time or frame
+        track_idx = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+        if track_idx is None:
+            self.extraction_overlay.clear()
             return
-
-        track_idx = np.where(frame_mask)[0][0]
 
         # Get signal mask for this track point
         signal_mask = track.extraction_metadata["signal_masks"][track_idx]
@@ -2313,8 +2524,8 @@ class ImageryViewer(QWidget):
 
         # Calculate chip top-left corner
         radius = chip_size // 2
-        chip_top = int(np.round(track_row)) - radius
-        chip_left = int(np.round(track_col)) - radius
+        chip_top = int(np.floor(track_row)) - radius
+        chip_left = int(np.floor(track_col)) - radius
 
         # Update overlay image
         self.extraction_overlay.setImage(overlay, autoLevels=False)
@@ -2328,6 +2539,18 @@ class ImageryViewer(QWidget):
         if track.extraction_metadata is None:
             return False
 
+        # prevent starting extraction editing for non-visible track
+        # TODO: stop editing if visible is set to False later on?
+        if not track.visible:
+            return False
+
+        if track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True) is None:
+            return False  # attempt to start extraction editing before track start
+
+        # get nearest index, as that is the one currently displayed
+        if imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True) is None:
+            return False  # no imagery available
+
         self.extraction_editing_mode = True
         self.editing_extraction_track = track
         self.editing_extraction_imagery = imagery
@@ -2335,7 +2558,6 @@ class ImageryViewer(QWidget):
         # Create extraction editor widget if it doesn't exist
         if self.extraction_editor is None:
             self.extraction_editor = ExtractionEditorWidget(self)
-            self.extraction_editor.frame_changed.connect(self.on_extraction_editor_frame_changed)
             self.extraction_editor.signal_mask_updated.connect(self._update_extraction_overlay_from_editor)
             self.extraction_editor.extraction_saved.connect(self.on_extraction_saved)
             self.extraction_editor.extraction_cancelled.connect(self.on_extraction_cancelled)
@@ -2345,7 +2567,7 @@ class ImageryViewer(QWidget):
         self.extraction_editor.show()
 
         # Start editing
-        self.extraction_editor.start_editing(track, imagery, self.current_frame_number)
+        self.extraction_editor.start_editing(track, imagery, self.timeline)
 
         # Create or update extraction overlay
         if self.extraction_overlay is None:
@@ -2395,10 +2617,6 @@ class ImageryViewer(QWidget):
         # Emit signal so UI can update (e.g., uncheck Edit Extraction button)
         self.extraction_editing_ended.emit()
 
-    def on_extraction_editor_frame_changed(self, frame_number):
-        """Handle frame change from extraction editor"""
-        self.set_frame_number(frame_number)
-
     def on_extraction_saved(self, _extraction_data):
         """Handle save from extraction editor"""
         # Extraction data is already saved in track by editor
@@ -2429,19 +2647,21 @@ class ImageryViewer(QWidget):
         # This is a safeguard to prevent desynchronization
         if self.editing_extraction_track is not None:
             track = self.editing_extraction_track
-            frame_mask = track.frames == self.current_frame_number
-            if np.any(frame_mask):
-                correct_idx = int(np.where(frame_mask)[0][0])
-                if self.extraction_editor.current_track_idx != correct_idx:
-                    self.extraction_editor.current_track_idx = correct_idx
-                    # Update UI elements (like centroid preview) for the new frame
-                    if self.extraction_editor.show_centroid_check.isChecked():
-                        self.extraction_editor.update_centroid_preview()
+            index = track.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            if index is None:
+                self.extraction_overlay.clear()
+                return
+            if self.extraction_editor.current_track_idx != index:
+                self.extraction_editor.current_track_idx = index
+                # Update UI elements (like centroid preview) for the new frame
+                if self.extraction_editor.show_centroid_check.isChecked():
+                    self.extraction_editor.update_centroid_preview()
 
         signal_mask = self.extraction_editor.get_current_signal_mask()
         chip_position = self.extraction_editor.get_current_chip_position()
 
         if signal_mask is None or chip_position is None:
+            self.extraction_overlay.clear()
             return
 
         chip_size = signal_mask.shape[0]
@@ -2471,11 +2691,12 @@ class ImageryViewer(QWidget):
         self.editing_detector = detector
         # Load existing detection data
         self.current_detection_data = {}
-        for i in range(len(detector.frames)):
-            frame = detector.frames[i]
-            if frame not in self.current_detection_data:
-                self.current_detection_data[frame] = []
-            self.current_detection_data[frame].append((detector.rows[i], detector.columns[i]))
+        keys = detector.times if self.timeline.is_time else detector.frames
+        for i in range(len(detector)):
+            key = keys[i]
+            if key not in self.current_detection_data:
+                self.current_detection_data[key] = []
+            self.current_detection_data[key].append((detector.rows[i], detector.columns[i]))
         self.temp_detection_plot = None
         # Update cursor based on all interactive modes
         self.update_cursor()
@@ -2497,19 +2718,40 @@ class ImageryViewer(QWidget):
         # Create Detector object if we have data
         if len(self.current_detection_data) > 0:
             # Flatten the detection data into arrays
-            frames_list = []
+            keys_list = []
             rows_list = []
             columns_list = []
 
-            for frame, detections in sorted(self.current_detection_data.items()):
+            for key, detections in sorted(self.current_detection_data.items()):
                 for row, col in detections:
-                    frames_list.append(frame)
+                    keys_list.append(key)
                     rows_list.append(row)
                     columns_list.append(col)
 
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(keys_list, dtype="datetime64[ns]")
+            else:
+                frames = np.array(keys_list, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
             detector = Detector(
                 name=f"Detector {len(self.detectors) + 1}",
-                frames=np.array(frames_list, dtype=np.int_),
+                times=times,
+                frames=frames,
                 rows=np.array(rows_list),
                 columns=np.array(columns_list),
                 sensor=self.selected_sensor,
@@ -2545,17 +2787,38 @@ class ImageryViewer(QWidget):
         # Update Detector object with new data
         if editing_detector and len(self.current_detection_data) > 0:
             # Flatten the detection data into arrays
-            frames_list = []
+            keys_list = []
             rows_list = []
             columns_list = []
 
-            for frame, detections in sorted(self.current_detection_data.items()):
+            for key, detections in sorted(self.current_detection_data.items()):
                 for row, col in detections:
-                    frames_list.append(frame)
+                    keys_list.append(key)
                     rows_list.append(row)
                     columns_list.append(col)
 
-            editing_detector.frames = np.array(frames_list, dtype=np.int_)
+            times = None
+            frames = None
+            if self.timeline.is_time:
+                times = np.array(keys_list, dtype="datetime64[ns]")
+            else:
+                frames = np.array(keys_list, dtype=np.int_)
+
+            # attempt any conversions if able and necessary
+            if len(self.selected_imageries) == 1:
+                imagery = self.selected_imageries[0]
+                if imagery.times is not None:
+                    if times is not None and frames is None:
+                        indices = [imagery.get_index(time, True) for time in times]
+                        if np.all([index is not None for index in indices]):
+                            frames = imagery.frames[indices]
+                    elif times is None and frames is not None:
+                        indices = [imagery.get_index(frame, False) for frame in frames]
+                        if np.all([index is not None for index in indices]):
+                            times = imagery.times[indices]
+
+            editing_detector.times = times
+            editing_detector.frames = frames
             editing_detector.rows = np.array(rows_list)
             editing_detector.columns = np.array(columns_list)
 
@@ -2640,16 +2903,10 @@ class ImageryViewer(QWidget):
         tuple
             (refined_row, refined_col) - refined coordinates
         """
-        if self.point_selection_dialog is None or self.imagery is None:
+        imagery = self._get_uppermost_imagery(row, col)
+        if self.point_selection_dialog is None or imagery is None:
             # No dialog or no imagery, return verbatim
             return row, col
-
-        # Get the current frame index
-        frame_index = np.where(self.imagery.frames == self.current_frame_number)[0]
-        if len(frame_index) == 0:
-            # Current frame not in imagery, return verbatim
-            return row, col
-        frame_index = frame_index[0]
 
         # Get parameters from dialog
         params = self.point_selection_dialog.get_parameters()
@@ -2657,7 +2914,8 @@ class ImageryViewer(QWidget):
 
         # Call refine_point with appropriate parameters
         try:
-            refined_row, refined_col = refine_point(row, col, self.imagery, frame_index, mode=mode, **params)
+            index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            refined_row, refined_col = refine_point(row, col, imagery, index, mode=mode, **params)
             return refined_row, refined_col
         except Exception as e:
             # If refinement fails, return original coordinates
@@ -2729,19 +2987,19 @@ class ImageryViewer(QWidget):
                     pixel_row, pixel_col = row, col
 
                 # Check if there's already a track point at the current frame
-                if self.current_frame_number in self.current_track_data:
-                    existing_row, existing_col = self.current_track_data[self.current_frame_number]
+                if self.timeline.current_value in self.current_track_data:
+                    existing_row, existing_col = self.current_track_data[self.timeline.current_value]
 
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
-                        ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
+                        ex_lon, ex_lat = self._pixel_to_map(self.timeline.current_value, existing_row, existing_col)
                         distance = np.sqrt((col - ex_lon) ** 2 + (row - ex_lat) ** 2)
                     else:
                         distance = np.sqrt((col - existing_col) ** 2 + (row - existing_row) ** 2)
 
                     # If click is near the existing point, remove it
                     if distance < tolerance:
-                        del self.current_track_data[self.current_frame_number]
+                        del self.current_track_data[self.timeline.current_value]
                         # Update temporary track display
                         self._update_temp_track_display()
                         return
@@ -2750,7 +3008,7 @@ class ImageryViewer(QWidget):
                 refined_row, refined_col = self._refine_clicked_point(pixel_row, pixel_col)
 
                 # Store in pixel coordinates (tracks always store row/col)
-                self.current_track_data[self.current_frame_number] = (refined_row, refined_col)
+                self.current_track_data[self.timeline.current_value] = (refined_row, refined_col)
 
                 # Update temporary track display
                 self._update_temp_track_display()
@@ -2766,15 +3024,15 @@ class ImageryViewer(QWidget):
                     pixel_row, pixel_col = row, col
 
                 # Initialize list for this frame if needed
-                if self.current_frame_number not in self.current_detection_data:
-                    self.current_detection_data[self.current_frame_number] = []
+                if self.timeline.current_value not in self.current_detection_data:
+                    self.current_detection_data[self.timeline.current_value] = []
 
                 # Check if click is near an existing detection point on this frame
-                detection_list = self.current_detection_data[self.current_frame_number]
+                detection_list = self.current_detection_data[self.timeline.current_value]
                 for i, (existing_row, existing_col) in enumerate(detection_list):
                     if self.map_view_mode:
                         # Compare in map (lon, lat) space for consistent tolerance
-                        ex_lon, ex_lat = self._pixel_to_map(existing_row, existing_col)
+                        ex_lon, ex_lat = self._pixel_to_map(self.timeline.current_value, existing_row, existing_col)
                         distance = np.sqrt((col - ex_lon) ** 2 + (row - ex_lat) ** 2)
                     else:
                         distance = np.sqrt((col - existing_col) ** 2 + (row - existing_row) ** 2)
@@ -2784,7 +3042,7 @@ class ImageryViewer(QWidget):
                         detection_list.pop(i)
                         # Clean up empty frame entries
                         if len(detection_list) == 0:
-                            del self.current_detection_data[self.current_frame_number]
+                            del self.current_detection_data[self.timeline.current_value]
                         # Update temporary detection display
                         self._update_temp_detection_display()
                         return
@@ -2793,7 +3051,7 @@ class ImageryViewer(QWidget):
                 refined_row, refined_col = self._refine_clicked_point(pixel_row, pixel_col)
 
                 # Store in pixel coordinates (detections always store row/col)
-                self.current_detection_data[self.current_frame_number].append((refined_row, refined_col))
+                self.current_detection_data[self.timeline.current_value].append((refined_row, refined_col))
 
                 # Update temporary detection display
                 self._update_temp_detection_display()
@@ -2802,6 +3060,14 @@ class ImageryViewer(QWidget):
             elif self.extraction_editing_mode:
                 if self.extraction_editor is None or self.editing_extraction_track is None:
                     return
+
+                if (
+                    self.editing_extraction_track.get_index(
+                        self.timeline.current_value, self.timeline.is_time, nearest=True
+                    )
+                    is None
+                ):
+                    return  # clicking on pixels for a timeline value before track start
 
                 # Get chip position
                 chip_position = self.extraction_editor.get_current_chip_position()
@@ -2830,32 +3096,33 @@ class ImageryViewer(QWidget):
                     if not track.visible:
                         continue
 
-                    # Determine which points to check based on track settings
-                    if track.complete:
-                        # Show all points regardless of current frame
-                        frame_mask = np.ones(len(track.frames), dtype=bool)
-                    elif track.tail_length > 0:
-                        # Show only last N frames
-                        frame_mask = track.frames >= (self.current_frame_number - track.tail_length)
-                        frame_mask &= track.frames <= self.current_frame_number
-                    else:
-                        # Show all history up to current frame
-                        frame_mask = track.frames <= self.current_frame_number
-
-                    if not np.any(frame_mask):
+                    # Filter by sensor if one is selected
+                    if self.selected_sensor is not None and track.sensor != self.selected_sensor:
                         continue
+
+                    # Determine which points to check based on track settings
+                    indices = track.get_visible_indices(self.timeline.current_value, self.timeline.is_time)
+                    if indices is None:
+                        continue
+
+                    if track.complete:
+                        # Show all points regardless of current index
+                        mask = np.ones(len(track), dtype=bool)
+                    else:
+                        mask = np.zeros(len(track), dtype=bool)
+                        mask[indices] = True
 
                     if self.map_view_mode:
                         geodetic = track.get_geodetic_coords()
                         if geodetic is not None:
-                            track_x, track_y = geodetic[0][frame_mask], geodetic[1][frame_mask]
+                            track_x, track_y = geodetic[0][mask], geodetic[1][mask]
                         else:
-                            track_x = track.columns[frame_mask]
-                            track_y = track.rows[frame_mask]
+                            track_x = track.columns[mask]
+                            track_y = track.rows[mask]
                         distances = np.sqrt((track_x - col) ** 2 + (track_y - row) ** 2)
                     else:
-                        visible_cols = track.columns[frame_mask]
-                        visible_rows = track.rows[frame_mask]
+                        visible_cols = track.columns[mask]
+                        visible_rows = track.rows[mask]
                         distances = np.sqrt((visible_cols - col) ** 2 + (visible_rows - row) ** 2)
 
                     valid = ~np.isnan(distances)
@@ -2890,10 +3157,13 @@ class ImageryViewer(QWidget):
                         # All detections are visible
                         rows = detector.rows
                         cols = detector.columns
-                        indices = np.arange(len(detector.frames))
+                        indices = np.arange(len(detector))
                     else:
-                        # Only detections at current frame
-                        mask = detector.frames == self.current_frame_number
+                        # Only detections at current timeline value
+                        if self.timeline.is_time:
+                            mask = detector.times == self.timeline.current_value
+                        else:
+                            mask = detector.frames == self.timeline.current_value
                         if not np.any(mask):
                             continue
                         rows = detector.rows[mask]
@@ -2918,9 +3188,12 @@ class ImageryViewer(QWidget):
                                             rows, cols = np.array([]), np.array([])
                                             indices = np.array([])
                                     else:
-                                        # For current frame mode, combine frame and label filters
-                                        frame_mask = detector.frames == self.current_frame_number
-                                        combined_mask = frame_mask & label_mask
+                                        # For current index mode, combine index and label filters
+                                        if self.timeline.is_time:
+                                            mask = detector.times == self.timeline.current_value
+                                        else:
+                                            mask = detector.frames == self.timeline.current_value
+                                        combined_mask = mask & label_mask
                                         if np.any(combined_mask):
                                             rows = detector.rows[combined_mask]
                                             cols = detector.columns[combined_mask]
@@ -2935,7 +3208,7 @@ class ImageryViewer(QWidget):
                         continue
 
                     # Calculate distances to all visible detections
-                    if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
+                    if self.map_view_mode and detector.sensor.can_geolocate():
                         geodetic = detector.get_geodetic_coords()
                         if geodetic is not None:
                             det_x, det_y = geodetic[0][indices], geodetic[1][indices]
@@ -2957,8 +3230,7 @@ class ImageryViewer(QWidget):
                     if min_distance < tolerance and min_distance < closest_distance:
                         closest_distance = min_distance
                         original_index = indices[min_idx]
-                        detection_frame = int(detector.frames[original_index])
-                        closest_detection = (detector, detection_frame, int(original_index))
+                        closest_detection = (detector, int(original_index))
 
                 # If we found a detection, add/toggle in selection
                 if closest_detection:
@@ -2996,18 +3268,18 @@ class ImageryViewer(QWidget):
         other_frame_x = []
         other_frame_y = []
 
-        for frame in sorted(self.current_track_data.keys()):
-            row, col = self.current_track_data[frame]
+        for val in sorted(self.current_track_data.keys()):
+            row, col = self.current_track_data[val]
             if self.map_view_mode:
                 # Project pixel coords to map (lon, lat) for display
-                lon, lat = self._pixel_to_map(row, col)
+                lon, lat = self._pixel_to_map(val, row, col)
                 if np.isnan(lon):
                     continue
                 x, y = lon, lat
             else:
                 x, y = col, row
 
-            if frame == self.current_frame_number:
+            if val == self.timeline.current_value:
                 current_frame_x.append(x)
                 current_frame_y.append(y)
             else:
@@ -3066,10 +3338,10 @@ class ImageryViewer(QWidget):
         current_frame_y = []
 
         # Get detections for current frame only
-        if self.current_frame_number in self.current_detection_data:
-            for row, col in self.current_detection_data[self.current_frame_number]:
+        if self.timeline.current_value in self.current_detection_data:
+            for row, col in self.current_detection_data[self.timeline.current_value]:
                 if self.map_view_mode:
-                    lon, lat = self._pixel_to_map(row, col)
+                    lon, lat = self._pixel_to_map(self.timeline.current_value, row, col)
                     if np.isnan(lon):
                         continue
                     current_frame_x.append(lon)
@@ -3116,22 +3388,24 @@ class ImageryViewer(QWidget):
         other_frame_x = []
         other_frame_y = []
 
-        for detector, frame, index in self.selected_detections:
+        for detector, index in self.selected_detections:
             if self.selected_sensor is not None and detector.sensor != self.selected_sensor:
                 continue
 
             row = detector.rows[index]
             col = detector.columns[index]
 
-            if self.map_view_mode and detector.sensor and detector.sensor.can_geolocate():
-                lon, lat = self._pixel_to_map(row, col)
+            if self.map_view_mode and detector.sensor.can_geolocate():
+                if detector.times is None:
+                    continue
+                lon, lat = self._pixel_to_map(detector.times[index], row, col)
                 if np.isnan(lon):
                     continue
                 x, y = lon, lat
             else:
                 x, y = col, row
 
-            if frame == self.current_frame_number:
+            if detector.get_value(index, self.timeline.is_time) == self.timeline.current_value:
                 current_frame_x.append(x)
                 current_frame_y.append(y)
             else:
@@ -3171,6 +3445,140 @@ class ImageryViewer(QWidget):
 
     # ==================== Map View Methods ====================
 
+    def _compute_map_footprint(
+        self,
+        imagery: Imagery,
+        frame_time: np.datetime64,
+    ) -> Optional[tuple[float, float, float, float]]:
+        """Compute an imagery footprint for its displayed frame.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery whose footprint should be computed.
+        frame_time : np.datetime64
+            Timestamp of the displayed imagery frame.
+
+        Returns
+        -------
+        tuple[float, float, float, float] or None
+            Bounding box as ``(lon_min, lat_min, lon_max, lat_max)``, or None.
+        """
+        if self.imagery_projector is None:
+            return None
+
+        _, nrows, ncols = imagery.images.shape
+        return self.imagery_projector.compute_footprint(
+            frame_time,
+            nrows,
+            ncols,
+            imagery.row_offset,
+            imagery.column_offset,
+        )
+
+    def _sync_map_imagery_items(self) -> None:
+        """Synchronize projected map items with the selected imagery."""
+        if not self.map_view_mode:
+            return
+
+        imagery_stack = self._get_imagery_stack()
+        selected_uuids = {imagery.uuid for imagery in imagery_stack}
+
+        for imagery_uuid in list(self.projected_image_items):
+            if imagery_uuid not in selected_uuids:
+                self.plot_item.removeItem(self.projected_image_items.pop(imagery_uuid))
+                self._imagery_footprints.pop(imagery_uuid, None)
+
+        lookup_table = self.histogram.getLookupTable(n=512)
+        for imagery in imagery_stack:
+            projected_item = self.projected_image_items.get(imagery.uuid)
+            if projected_item is None:
+                projected_item = pg.ImageItem()
+                projected_item.setVisible(False)
+                self.projected_image_items[imagery.uuid] = projected_item
+                self.plot_item.addItem(projected_item)
+
+            projected_item.setOpacity(self.imagery_opacity.get(imagery.uuid, 1.0))
+            projected_item.setLookupTable(lookup_table)
+
+        self._sync_imagery_stack_order()
+        self._sync_histogram_image_item()
+
+    def _clear_map_imagery_items(self) -> None:
+        """Remove all projected imagery items and their transient map state."""
+        for projected_item in self.projected_image_items.values():
+            self.plot_item.removeItem(projected_item)
+        self.projected_image_items.clear()
+        self._imagery_footprints.clear()
+
+    def _get_map_pixel_value(
+        self,
+        lon: float,
+        lat: float,
+    ) -> Optional[tuple[Imagery, int, int, float]]:
+        """Return the pixel value from the uppermost imagery beneath a map position.
+
+        Parameters
+        ----------
+        lon : float
+            Longitude in degrees.
+        lat : float
+            Latitude in degrees.
+
+        Returns
+        -------
+        tuple[Imagery, int, int, float] or None
+            Imagery, relative row, relative column, and value for the uppermost
+            visible layer containing the position, or None.
+        """
+        earth_location = EarthLocation.from_geodetic(
+            lon=lon * units.deg,
+            lat=lat * units.deg,
+            height=0 * units.km,
+        )
+
+        for imagery in reversed(self._get_imagery_stack()):
+            projected_item = self.projected_image_items.get(imagery.uuid)
+            if (
+                projected_item is None
+                or not projected_item.isVisible()
+                or self.imagery_opacity.get(imagery.uuid, 1.0) <= 0.0
+            ):
+                continue
+            image_index = imagery.get_index(self.timeline.current_value, self.timeline.is_time, nearest=True)
+            if image_index is None:
+                continue
+            frame_time = imagery.times[image_index]
+            row, col = imagery.sensor.geodetic_to_pixel(frame_time, earth_location)
+            if not np.isfinite(row) or not np.isfinite(col):
+                continue
+
+            relative_row = int(np.floor(row)) - imagery.row_offset
+            relative_column = int(np.floor(col)) - imagery.column_offset
+            image_shape = imagery.images[image_index].shape
+            if 0 <= relative_row < image_shape[0] and 0 <= relative_column < image_shape[1]:
+                value = float(imagery.images[image_index, relative_row, relative_column])
+                return imagery, relative_row, relative_column, value
+
+        return None
+
+    def can_enable_map_view(self) -> bool:
+        """Return whether the current viewer state supports map view.
+
+        Returns
+        -------
+        bool
+            True when imagery is selected for a geolocatable sensor and the
+            display timeline is time-based.
+        """
+        sensor = self.selected_sensor
+        return sensor is not None and sensor.can_geolocate() and bool(self.selected_imageries) and self.timeline.is_time
+
+    def _disable_map_view_if_unsupported(self) -> None:
+        """Disable an active map view when its prerequisites are no longer present."""
+        if self.map_view_mode and not self.can_enable_map_view():
+            self.set_map_view_mode(False)
+
     def set_map_view_mode(self, enabled: bool) -> bool:
         """Toggle between pixel coordinate mode and WMS map view mode.
 
@@ -3188,14 +3596,10 @@ class ImageryViewer(QWidget):
             True if the mode was successfully changed, False otherwise.
         """
         if enabled:
-            # Validate sensor
-            if self.selected_sensor is None or not self.selected_sensor.can_geolocate():
+            if not self.can_enable_map_view():
                 return False
 
-            if self.imagery is None:
-                return False
-
-            self.map_view_mode = True
+            imagery_stack = self._get_imagery_stack()
 
             # Initialize WMS infrastructure (re-create each time to pick up server changes)
             settings = QSettings("Vista", "VistaApp")
@@ -3220,49 +3624,41 @@ class ImageryViewer(QWidget):
             coarse_size = settings.value("wms/coarse_grid_size", 64, type=int) if coarse_enabled else 0
             self.imagery_projector = ImageryProjector(self.selected_sensor, coarse_grid_size=coarse_size)
 
-            # Compute imagery footprint
-            frame = self.imagery.frames[0]
-            img_shape = self.imagery.images[0].shape
-            self._imagery_footprint = self.imagery_projector.compute_footprint(
-                frame,
-                img_shape[0],
-                img_shape[1],
-                self.imagery.row_offset,
-                self.imagery.column_offset,
-            )
-            if self._imagery_footprint is None:
-                self.map_view_mode = False
+            # Compute the current footprint for each displayed imagery.
+            initial_footprints = {}
+            for imagery in imagery_stack:
+                image_index = imagery.get_index(
+                    self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+                )
+                if image_index is None:
+                    continue
+                frame_time = imagery.times[image_index]
+                footprint = self._compute_map_footprint(imagery, frame_time)
+                if footprint is not None:
+                    initial_footprints[imagery.uuid] = footprint
+
+            if not initial_footprints:
                 return False
+
+            self.map_view_mode = True
+            self._imagery_footprints = initial_footprints
 
             # Switch axes to lon/lat
             self.plot_item.invertY(False)
             self.plot_item.setLabel("bottom", "Longitude (deg)")
             self.plot_item.setLabel("left", "Latitude (deg)")
 
-            # Hide the normal image display
-            self.image_item.setVisible(False)
+            # Hide all selected imagery
+            for imagery in self.selected_imageries:
+                self.image_items[imagery.uuid].setVisible(False)
 
             # Create WMS basemap ImageItem (behind everything)
             self.wms_image_item = pg.ImageItem()
             self.wms_image_item.setZValue(-1)
             self.plot_item.addItem(self.wms_image_item)
 
-            # Create projected imagery ImageItem (above basemap, below overlays)
-            self.projected_image_item = pg.ImageItem()
-            self.projected_image_item.setZValue(-0.5)
-            opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
-            self.projected_image_item.setOpacity(opacity)
-            self.plot_item.addItem(self.projected_image_item)
-
-            # Link histogram to projected imagery item
-            self.histogram.setImageItem(self.projected_image_item)
-
-            # Block signals to prevent histogram recomputation
-            try:
-                self.projected_image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
-            except TypeError:
-                # Signal not connected yet, ignore
-                pass
+            # Create one projected image item per selected imagery.
+            self._sync_map_imagery_items()
 
             # Disable extraction view if active
             if self.extraction_view_mode:
@@ -3280,8 +3676,11 @@ class ImageryViewer(QWidget):
             # Re-render features with geographic coordinates
             self._rerender_all_features()
 
-            # Set view range to imagery footprint
-            lon_min, lat_min, lon_max, lat_max = self._imagery_footprint
+            # Set view range to the union of all current imagery footprints.
+            lon_min = min(footprint[0] for footprint in initial_footprints.values())
+            lat_min = min(footprint[1] for footprint in initial_footprints.values())
+            lon_max = max(footprint[2] for footprint in initial_footprints.values())
+            lat_max = max(footprint[3] for footprint in initial_footprints.values())
             # Add 10% padding
             lon_pad = (lon_max - lon_min) * 0.1
             lat_pad = (lat_max - lat_min) * 0.1
@@ -3327,36 +3726,23 @@ class ImageryViewer(QWidget):
             if self.wms_image_item is not None:
                 self.plot_item.removeItem(self.wms_image_item)
                 self.wms_image_item = None
-            if self.projected_image_item is not None:
-                self.plot_item.removeItem(self.projected_image_item)
-                self.projected_image_item = None
-
-            # Restore histogram to original image item
-            self.ignore_changing_histogram_levels = True
-            self.histogram.setImageItem(self.image_item)
-            self.ignore_changing_histogram_levels = False
-
-            # Block signals to prevent histogram recomputation
-            try:
-                self.image_item.sigImageChanged.disconnect(self.histogram.imageChanged)
-            except TypeError:
-                # Signal not connected yet, ignore
-                pass
+            self._clear_map_imagery_items()
 
             # Restore pixel coordinate axes
             self.plot_item.invertY(True)
             self.plot_item.setLabel("bottom", "")
             self.plot_item.setLabel("left", "")
 
-            # Restore the normal image display
-            self.image_item.setVisible(True)
+            # Restore all selected imagery in pixel coordinates
+            for imagery in self.selected_imageries:
+                self.image_items[imagery.uuid].setVisible(True)
+            self._sync_histogram_image_item()
 
             # Reset state
             self._wms_composite = None
             self._wms_composite_bbox = None
             self._current_zoom_level = None
             self._pending_tiles = []
-            self._imagery_footprint = None
 
             # Restore AOI visibility
             for aoi in self.aois:
@@ -3368,10 +3754,6 @@ class ImageryViewer(QWidget):
             # Re-render features with pixel coordinates
             self._rerender_all_features()
 
-            # Re-select the current imagery to restore display
-            if self.imagery is not None:
-                self.select_imagery(self.imagery, preserve_ewma=True)
-
             # Reset view to fit imagery in pixel mode
             self.plot_item.vb.autoRange()
 
@@ -3381,7 +3763,7 @@ class ImageryViewer(QWidget):
         # Re-project selected detection highlights for the new coordinate system
         self._update_selected_detections_display()
 
-        self.set_frame_number(self.current_frame_number)
+        self.set_index(self.timeline.current_index)
         return True
 
     def _on_map_view_range_changed(self) -> None:
@@ -3450,19 +3832,33 @@ class ImageryViewer(QWidget):
         self.wms_fetcher_thread.error_occurred.connect(self._on_wms_error)
         self.wms_fetcher_thread.start()
 
-        # Display filtered image if background model exists
-        if self.ewma_image is not None:
-            self._update_projected_imagery(image=self.ewma_image)
-        else:
-            # Get current frame
-            image_index = self.imagery.get_frame_index(self.current_frame_number)
+        # Re-project every visible imagery layer for the new view extent.
+        self._sync_map_imagery_items()
+        ewma_offset = 1
+        if self.ewma_filter_enabled:
+            ewma_offset = self.settings.value("toolbar/ewma_frame_offset", ewma_offset, type=int)
+        for imagery in self._get_imagery_stack():
+            image_index = imagery.get_index(
+                self.timeline.current_value, self.timeline.is_time, nearest=True, in_range=True
+            )
             if image_index is None:
-                valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-                if len(valid_indices) > 0:
-                    image_index = valid_indices[-1]
-                else:
-                    return
-            self._update_projected_imagery(self.imagery.images[image_index])
+                projected_item = self.projected_image_items.get(imagery.uuid)
+                if projected_item is not None and projected_item.isVisible():
+                    projected_item.setVisible(False)
+                continue
+            frame_time = imagery.times[image_index]
+            display_image, ewma_active = self._get_display_image(
+                imagery,
+                image_index,
+                ewma_offset,
+            )
+
+            self._update_projected_imagery(
+                imagery,
+                display_image,
+                frame_time,
+                use_cache=not ewma_active,
+            )
 
     def _on_wms_tile_fetched(self, tile) -> None:
         """Handle a single WMS tile being fetched.
@@ -3584,13 +3980,39 @@ class ImageryViewer(QWidget):
         # Log but don't interrupt the user
         print(f"[WMS] {message}")
 
-    def _update_projected_imagery(self, image=None) -> None:
-        """Update the projected VISTA imagery display in map mode."""
-        if not self.map_view_mode or self.imagery is None or self.imagery_projector is None:
+    def _update_projected_imagery(
+        self,
+        imagery: Imagery,
+        image: np.ndarray,
+        frame_time: np.datetime64,
+        use_cache: bool = True,
+    ) -> None:
+        """Update one projected VISTA imagery layer in map mode.
+
+        Parameters
+        ----------
+        imagery : Imagery
+            Imagery represented by the projected layer.
+        image : np.ndarray
+            Image frame to project.
+        frame_time : np.datetime64
+            Timestamp of the image frame.
+        use_cache : bool, optional
+            Whether cached projections may be read or written.
+        """
+        if not self.map_view_mode or not self.timeline.is_time or self.imagery_projector is None:
             return
 
-        if self.projected_image_item is None:
+        projected_item = self.projected_image_items.get(imagery.uuid)
+        if projected_item is None:
             return
+
+        footprint = self._compute_map_footprint(imagery, frame_time)
+        if footprint is None:
+            self._imagery_footprints.pop(imagery.uuid, None)
+            projected_item.setVisible(False)
+            return
+        self._imagery_footprints[imagery.uuid] = footprint
 
         # Determine output parameters from current view
         view_rect = self.plot_item.viewRect()
@@ -3602,22 +4024,18 @@ class ImageryViewer(QWidget):
         )
 
         # Clip output to imagery footprint to avoid projecting empty space
-        if self._imagery_footprint is not None:
-            fp = self._imagery_footprint
-            output_bbox = (
-                max(view_bbox[0], fp[0]),
-                max(view_bbox[1], fp[1]),
-                min(view_bbox[2], fp[2]),
-                min(view_bbox[3], fp[3]),
-            )
-            if output_bbox[0] >= output_bbox[2] or output_bbox[1] >= output_bbox[3]:
-                # Footprint not visible in current view
-                self.projected_image_item.setVisible(False)
-                return
-        else:
-            output_bbox = view_bbox
+        output_bbox = (
+            max(view_bbox[0], footprint[0]),
+            max(view_bbox[1], footprint[1]),
+            min(view_bbox[2], footprint[2]),
+            min(view_bbox[3], footprint[3]),
+        )
+        if output_bbox[0] >= output_bbox[2] or output_bbox[1] >= output_bbox[3]:
+            # Footprint not visible in current view
+            projected_item.setVisible(False)
+            return
 
-        self.projected_image_item.setVisible(True)
+        projected_item.setVisible(True)
 
         # Compute output dimensions based on view pixel density
         view_width_px = max(1, int(self.graphics_layout.width()))
@@ -3638,58 +4056,44 @@ class ImageryViewer(QWidget):
             output_width = max(1, int(output_width * scale))
             output_height = max(1, int(output_height * scale))
 
-        # Get current frame
-        image_index = self.imagery.get_frame_index(self.current_frame_number)
-        if image_index is None:
-            valid_indices = np.where(self.imagery.frames <= self.current_frame_number)[0]
-            if len(valid_indices) > 0:
-                image_index = valid_indices[-1]
-            else:
-                return
-
-        # Clamp to loaded frames
-        if self.imagery.loaded_frame_count is not None:
-            if image_index >= self.imagery.loaded_frame_count:
-                image_index = max(0, self.imagery.loaded_frame_count - 1)
-
-        frame = self.imagery.frames[image_index]
         zoom_level = self._current_zoom_level if self._current_zoom_level is not None else 0
 
         # Check projection cache
-        cached = self.projection_cache.get(self.imagery.uuid, frame, zoom_level, output_bbox)
+        cached = None
+        if use_cache and self.projection_cache is not None:
+            cached = self.projection_cache.get(imagery.uuid, frame_time, zoom_level, output_bbox)
         if cached is not None:
             projected = cached
         else:
             # Project imagery
-            if image is None:
-                image = self.imagery.images[image_index]
             # Always use CPU projection — the bottleneck is sensor.geodetic_to_pixel()
             # which runs on CPU regardless, so the GPU path only adds transfer overhead.
             projected = self.imagery_projector.project_frame_cpu(
                 image,
-                frame,
+                frame_time,
                 output_bbox,
                 output_width,
                 output_height,
-                self.imagery.row_offset,
-                self.imagery.column_offset,
+                imagery.row_offset,
+                imagery.column_offset,
             )
 
             # Cache the result
-            self.projection_cache.put(self.imagery.uuid, frame, zoom_level, output_bbox, projected)
+            if use_cache and self.projection_cache is not None:
+                self.projection_cache.put(imagery.uuid, frame_time, zoom_level, output_bbox, projected)
 
         # Display the projected image
-        self.projected_image_item.setImage(projected, autoLevels=False)
+        projected_item.setImage(projected, autoLevels=False)
 
         # Position and scale the projected image to cover output_bbox
         scale_x = (output_bbox[2] - output_bbox[0]) / max(1, projected.shape[1])
         scale_y = (output_bbox[3] - output_bbox[1]) / max(1, projected.shape[0])
-        self.projected_image_item.setTransform(pg.QtGui.QTransform().scale(scale_x, scale_y))
-        self.projected_image_item.setPos(output_bbox[0], output_bbox[1])
+        projected_item.setTransform(pg.QtGui.QTransform().scale(scale_x, scale_y))
+        projected_item.setPos(output_bbox[0], output_bbox[1])
 
         # Apply opacity
-        opacity = self.imagery_opacity.get(self.imagery.uuid, 1.0)
-        self.projected_image_item.setOpacity(opacity)
+        opacity = self.imagery_opacity.get(imagery.uuid, 1.0)
+        projected_item.setOpacity(opacity)
 
     def set_imagery_opacity(self, imagery_uuid: str, opacity: float) -> None:
         """Set the opacity for imagery display in map view.
@@ -3702,44 +4106,9 @@ class ImageryViewer(QWidget):
             Opacity value from 0.0 (transparent) to 1.0 (opaque).
         """
         self.imagery_opacity[imagery_uuid] = opacity
-        if (
-            self.map_view_mode
-            and self.projected_image_item is not None
-            and self.imagery is not None
-            and self.imagery.uuid == imagery_uuid
-        ):
-            self.projected_image_item.setOpacity(opacity)
-
-    def _project_overlay_coords(
-        self, sensor, frame: int, rows: np.ndarray, cols: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Convert pixel coordinates to (lon, lat) for map view overlay display.
-
-        Parameters
-        ----------
-        sensor : Sensor
-            Sensor for geolocation.
-        frame : int
-            Frame number.
-        rows : np.ndarray
-            Row pixel coordinates.
-        cols : np.ndarray
-            Column pixel coordinates.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            (x_coords, y_coords) where x=longitude and y=latitude in degrees.
-            Invalid projections are set to NaN.
-        """
-        if not sensor.can_geolocate() or len(rows) == 0:
-            return cols, rows  # Fallback to pixel coords
-
-        locations = sensor.pixel_to_geodetic(frame, rows, cols)
-        lons = locations.lon.deg
-        lats = locations.lat.deg
-
-        return lons, lats
+        projected_item = self.projected_image_items.get(imagery_uuid)
+        if self.map_view_mode and projected_item is not None:
+            projected_item.setOpacity(opacity)
 
     def _map_click_to_pixel(self, lon: float, lat: float) -> tuple[float, float]:
         """Convert a map view click position (lon, lat) to pixel (row, col).
@@ -3756,21 +4125,24 @@ class ImageryViewer(QWidget):
         tuple[float, float]
             (row, col) in pixel coordinates, or (NaN, NaN) if projection fails.
         """
-        sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
-        if sensor is None or not sensor.can_geolocate():
+        sensor = self.selected_sensor
+        if sensor is None or not sensor.can_geolocate() or not self.timeline.is_time:
             return float("nan"), float("nan")
 
-        earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.m)
-        rows, cols = sensor.geodetic_to_pixel(self.current_frame_number, earth_loc)
-        if len(rows) > 0 and not np.isnan(rows[0]) and not np.isnan(cols[0]):
-            return float(rows[0]), float(cols[0])
+        earth_loc = EarthLocation.from_geodetic(lon=lon * units.deg, lat=lat * units.deg, height=0 * units.km)
+        time = self.timeline.current_value
+        row, col = sensor.geodetic_to_pixel(time, earth_loc)
+        if not np.isnan(row) and not np.isnan(col):
+            return float(row), float(col)
         return float("nan"), float("nan")
 
-    def _pixel_to_map(self, row: float, col: float) -> tuple[float, float]:
+    def _pixel_to_map(self, time: np.datetime64, row: float, col: float) -> tuple[float, float]:
         """Convert pixel (row, col) to map view coordinates (lon, lat).
 
         Parameters
         ----------
+        time : np.datetime64
+            Time at which to project coordinate.
         row : float
             Row pixel coordinate.
         col : float
@@ -3781,13 +4153,15 @@ class ImageryViewer(QWidget):
         tuple[float, float]
             (lon, lat) in degrees, or (NaN, NaN) if projection fails.
         """
-        sensor = self.selected_sensor or (self.imagery.sensor if self.imagery else None)
-        if sensor is None or not sensor.can_geolocate():
+        sensor = self.selected_sensor
+        if sensor is None or not sensor.can_geolocate() or not self.timeline.is_time:
             return float("nan"), float("nan")
 
-        locations = sensor.pixel_to_geodetic(self.current_frame_number, np.array([row]), np.array([col]))
+        locations = sensor.pixel_to_geodetic(time, np.array([row]), np.array([col]))
         lon = float(locations.lon.deg[0])
         lat = float(locations.lat.deg[0])
-        if not np.isnan(lon) and not np.isnan(lat):
+
+        x, y, z = locations.to_geocentric()
+        if not np.isnan((x * y * z)[0]):
             return lon, lat
         return float("nan"), float("nan")

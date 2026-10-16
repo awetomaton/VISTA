@@ -40,21 +40,21 @@ class ImageryProjector:
 
     def compute_footprint(
         self,
-        frame: int,
+        time: np.datetime64,
         n_rows: int,
         n_cols: int,
         row_offset: int = 0,
         column_offset: int = 0,
     ) -> tuple[float, float, float, float] | None:
-        """Compute the geodetic bounding box of the imagery footprint for a given frame.
+        """Compute the geodetic bounding box of the imagery footprint for a given time.
 
         Samples the image corners and edges using sensor.pixel_to_geodetic() to find
         the full extent on the ground.
 
         Parameters
         ----------
-        frame : int
-            Frame number.
+        time : np.datetime64
+            Time.
         n_rows : int
             Number of rows in the image.
         n_cols : int
@@ -81,29 +81,31 @@ class ImageryProjector:
         # Top edge
         for i in range(n_edge_samples + 1):
             rows.append(row_offset)
-            cols.append(column_offset + i * (n_cols - 1) / n_edge_samples)
+            cols.append(column_offset + i * n_cols / n_edge_samples)
         # Bottom edge
         for i in range(n_edge_samples + 1):
-            rows.append(row_offset + n_rows - 1)
-            cols.append(column_offset + i * (n_cols - 1) / n_edge_samples)
+            rows.append(row_offset + n_rows)
+            cols.append(column_offset + i * n_cols / n_edge_samples)
         # Left edge
-        for i in range(1, n_edge_samples):
-            rows.append(row_offset + i * (n_rows - 1) / n_edge_samples)
+        for i in range(n_edge_samples + 1):
+            rows.append(row_offset + i * n_rows / n_edge_samples)
             cols.append(column_offset)
         # Right edge
-        for i in range(1, n_edge_samples):
-            rows.append(row_offset + i * (n_rows - 1) / n_edge_samples)
-            cols.append(column_offset + n_cols - 1)
+        for i in range(n_edge_samples + 1):
+            rows.append(row_offset + i * n_rows / n_edge_samples)
+            cols.append(column_offset + n_cols)
 
         rows_arr = np.array(rows)
         cols_arr = np.array(cols)
 
-        locations = self.sensor.pixel_to_geodetic(frame, rows_arr, cols_arr)
+        locations = self.sensor.pixel_to_geodetic(time, rows_arr, cols_arr)
         lats = locations.lat.deg
         lons = locations.lon.deg
 
         # Filter out NaN values (pixels that don't intersect Earth)
-        valid = ~(np.isnan(lats) | np.isnan(lons))
+        # one of x, y, or z will have nan value if conversion fails
+        x, y, z = locations.to_geocentric()
+        valid = ~np.isnan(x * y * z)
         if not np.any(valid):
             return None
 
@@ -114,7 +116,7 @@ class ImageryProjector:
 
     def _compute_coordinate_mapping(
         self,
-        frame: int,
+        time: np.datetime64,
         output_bbox: tuple[float, float, float, float],
         output_width: int,
         output_height: int,
@@ -129,8 +131,8 @@ class ImageryProjector:
 
         Parameters
         ----------
-        frame : int
-            Frame number for geolocation.
+        time : np.datetime64
+            Time for geolocation.
         output_bbox : tuple[float, float, float, float]
             Output bounding box as (lon_min, lat_min, lon_max, lat_max).
         output_width : int
@@ -174,9 +176,9 @@ class ImageryProjector:
             earth_locs = EarthLocation.from_geodetic(
                 lon=coarse_lon_grid.ravel() * units.deg,
                 lat=coarse_lat_grid.ravel() * units.deg,
-                height=0 * units.m,
+                height=0 * units.km,
             )
-            c_rows, c_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
+            c_rows, c_cols = self.sensor.geodetic_to_pixel(time, earth_locs)
             c_rows = np.asarray(c_rows).ravel()
             c_cols = np.asarray(c_cols).ravel()
             expected_size = coarse_h * coarse_w
@@ -216,9 +218,9 @@ class ImageryProjector:
             earth_locs = EarthLocation.from_geodetic(
                 lon=lon_grid.ravel() * units.deg,
                 lat=lat_grid.ravel() * units.deg,
-                height=0 * units.m,
+                height=0 * units.km,
             )
-            src_rows, src_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
+            src_rows, src_cols = self.sensor.geodetic_to_pixel(time, earth_locs)
             src_rows = np.asarray(src_rows).ravel() - row_offset
             src_cols = np.asarray(src_cols).ravel() - column_offset
 
@@ -227,7 +229,7 @@ class ImageryProjector:
     def project_frame_cpu(
         self,
         image: NDArray[np.float32],
-        frame: int,
+        time: np.datetime64,
         output_bbox: tuple[float, float, float, float],
         output_width: int,
         output_height: int,
@@ -244,8 +246,8 @@ class ImageryProjector:
         ----------
         image : NDArray[np.float32]
             Source image array with shape (height, width).
-        frame : int
-            Frame number for geolocation.
+        time : np.datetime64
+            Time for geolocation.
         output_bbox : tuple[float, float, float, float]
             Output bounding box as (lon_min, lat_min, lon_max, lat_max).
         output_width : int
@@ -264,7 +266,7 @@ class ImageryProjector:
             the source image bounds are set to NaN.
         """
         src_rows, src_cols = self._compute_coordinate_mapping(
-            frame,
+            time,
             output_bbox,
             output_width,
             output_height,
@@ -326,7 +328,7 @@ class ImageryProjector:
     def project_frame_gpu(
         self,
         gpu_image: "torch.Tensor",
-        frame: int,
+        time: np.datetime64,
         output_bbox: tuple[float, float, float, float],
         output_width: int,
         output_height: int,
@@ -343,8 +345,8 @@ class ImageryProjector:
         ----------
         gpu_image : torch.Tensor
             Source image tensor on GPU with shape (height, width).
-        frame : int
-            Frame number for geolocation.
+        time : np.datetime64
+            Time for geolocation.
         output_bbox : tuple[float, float, float, float]
             Output bounding box as (lon_min, lat_min, lon_max, lat_max).
         output_width : int
@@ -379,9 +381,9 @@ class ImageryProjector:
         earth_locs = EarthLocation.from_geodetic(
             lon=flat_lons * units.deg,
             lat=flat_lats * units.deg,
-            height=0 * units.m,
+            height=0 * units.km,
         )
-        src_rows, src_cols = self.sensor.geodetic_to_pixel(frame, earth_locs)
+        src_rows, src_cols = self.sensor.geodetic_to_pixel(time, earth_locs)
         src_rows = src_rows - row_offset
         src_cols = src_cols - column_offset
 

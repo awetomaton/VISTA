@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 class ProjectionCache:
     """LRU cache for projected VISTA imagery.
 
-    Caches projected image arrays keyed by (imagery_uuid, frame_number, zoom_level,
+    Caches projected image arrays keyed by (imagery_uuid, time, zoom_level,
     output_bbox) to enable rapid retrieval when the user changes frames or view extent
     at the same zoom level.
 
@@ -27,7 +27,7 @@ class ProjectionCache:
     def _make_key(
         self,
         imagery_uuid: str,
-        frame: int,
+        time: np.datetime64,
         zoom_level: int,
         output_bbox: tuple[float, float, float, float],
     ) -> tuple:
@@ -37,8 +37,8 @@ class ProjectionCache:
         ----------
         imagery_uuid : str
             UUID of the imagery.
-        frame : int
-            Frame number.
+        time : np.datetime64
+            Time.
         zoom_level : int
             WMS zoom level.
         output_bbox : tuple[float, float, float, float]
@@ -50,12 +50,12 @@ class ProjectionCache:
             Hashable cache key.
         """
         rounded_bbox = tuple(round(v, 6) for v in output_bbox)
-        return (imagery_uuid, frame, zoom_level, rounded_bbox)
+        return (imagery_uuid, time, zoom_level, rounded_bbox)
 
     def get(
         self,
         imagery_uuid: str,
-        frame: int,
+        time: np.datetime64,
         zoom_level: int,
         output_bbox: tuple[float, float, float, float],
     ) -> Optional[NDArray[np.float32]]:
@@ -65,8 +65,8 @@ class ProjectionCache:
         ----------
         imagery_uuid : str
             UUID of the imagery.
-        frame : int
-            Frame number.
+        time : np.datetime64
+            Time.
         zoom_level : int
             WMS zoom level.
         output_bbox : tuple[float, float, float, float]
@@ -77,7 +77,7 @@ class ProjectionCache:
         NDArray[np.float32] or None
             The cached projected image, or None if not found.
         """
-        key = self._make_key(imagery_uuid, frame, zoom_level, output_bbox)
+        key = self._make_key(imagery_uuid, time, zoom_level, output_bbox)
         if key in self._cache:
             self._cache.move_to_end(key)
             return self._cache[key]
@@ -86,7 +86,7 @@ class ProjectionCache:
     def put(
         self,
         imagery_uuid: str,
-        frame: int,
+        time: np.datetime64,
         zoom_level: int,
         output_bbox: tuple[float, float, float, float],
         projected_image: NDArray[np.float32],
@@ -97,8 +97,8 @@ class ProjectionCache:
         ----------
         imagery_uuid : str
             UUID of the imagery.
-        frame : int
-            Frame number.
+        time : np.datetime64
+            Time.
         zoom_level : int
             WMS zoom level.
         output_bbox : tuple[float, float, float, float]
@@ -106,7 +106,7 @@ class ProjectionCache:
         projected_image : NDArray[np.float32]
             The projected image array.
         """
-        key = self._make_key(imagery_uuid, frame, zoom_level, output_bbox)
+        key = self._make_key(imagery_uuid, time, zoom_level, output_bbox)
         if key in self._cache:
             self._cache.move_to_end(key)
         self._cache[key] = projected_image

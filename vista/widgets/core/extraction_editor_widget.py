@@ -25,7 +25,6 @@ class ExtractionEditorWidget(QDialog):
     """Floating dialog widget for editing track extraction interactively"""
 
     # Signals
-    frame_changed = pyqtSignal(int)  # Emitted when user navigates to different frame
     extraction_saved = pyqtSignal(dict)  # Emitted when extraction is saved
     extraction_cancelled = pyqtSignal()  # Emitted when editing is cancelled
     signal_mask_updated = pyqtSignal()  # Emitted when signal mask changes (for viewer update)
@@ -152,7 +151,7 @@ class ExtractionEditorWidget(QDialog):
         layout.addStretch()
         self.setLayout(layout)
 
-    def start_editing(self, track, imagery, viewer_frame):
+    def start_editing(self, track, imagery, timeline):
         """
         Start editing extraction for a track.
 
@@ -162,8 +161,8 @@ class ExtractionEditorWidget(QDialog):
             Track to edit
         imagery : Imagery
             Imagery for this track
-        viewer_frame : int
-            Current frame in viewer
+        timeline : DisplayTimeline
+            Current timeline in viewer
         """
         self.track = track
         self.imagery = imagery
@@ -172,19 +171,17 @@ class ExtractionEditorWidget(QDialog):
         if track.extraction_metadata is None:
             raise ValueError("Track has no extraction metadata")
 
+        # Find track point index for current time or frame
+        self.current_track_idx = track.get_index(timeline.current_value, timeline.is_time, nearest=True)
+        if self.current_track_idx is None:
+            raise ValueError("Attempt to edit track extraction at invalid timeline value")
+
         self.working_extraction = {
             "chip_size": track.extraction_metadata["chip_size"],
             "chips": track.extraction_metadata["chips"].copy(),
             "signal_masks": track.extraction_metadata["signal_masks"].copy(),
             "noise_stds": track.extraction_metadata["noise_stds"].copy(),
         }
-
-        # Find track point index for current frame
-        frame_mask = track.frames == viewer_frame
-        if np.any(frame_mask):
-            self.current_track_idx = int(np.where(frame_mask)[0][0])
-        else:
-            self.current_track_idx = 0
 
         # Update UI
         self.update_ui()
@@ -419,7 +416,7 @@ class ExtractionEditorWidget(QDialog):
         track_row = self.track.rows[self.current_track_idx]
         track_col = self.track.columns[self.current_track_idx]
 
-        chip_top = int(np.round(track_row)) - radius
-        chip_left = int(np.round(track_col)) - radius
+        chip_top = int(np.floor(track_row)) - radius
+        chip_left = int(np.floor(track_col)) - radius
 
         return chip_top, chip_left

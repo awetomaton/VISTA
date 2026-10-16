@@ -7,9 +7,10 @@ time-based), visualization styling, and data persistence.
 """
 
 import datetime
+import pathlib
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -17,13 +18,14 @@ import pyqtgraph as pg
 from numpy.typing import NDArray
 from PyQt6.QtCore import Qt
 
+from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 from vista.utils.geodetic_mapping import map_geodetic_to_pixel
-from vista.utils.time_mapping import map_times_to_frames
 
 
-@dataclass
-class Track:
+@dataclass(kw_only=True)
+class Track(TemporalData):
     """
     Represents a single object trajectory across multiple frames.
 
@@ -36,8 +38,6 @@ class Track:
     ----------
     name : str
         Unique identifier for this track
-    frames : NDArray[np.int_]
-        Frame numbers where track positions are defined
     rows : NDArray[np.float64]
         Row (vertical) pixel coordinates for each frame
     columns : NDArray[np.float64]
@@ -79,8 +79,6 @@ class Track:
     -------
     __getitem__(slice)
         Slice track by frame range
-    get_times()
-        Get timestamps for each track point using sensor imagery times
     from_dataframe(df, sensor, name)
         Create Track from pandas DataFrame with coordinate conversion
     length
@@ -95,13 +93,12 @@ class Track:
     Notes
     -----
     - Track coordinates can be provided as pixel (row/col) or geodetic (lat/lon/alt)
-    - Times can be used instead of frames with automatic conversion via sensor
+    - Times can be used instead of frames if included at creation
     - The from_dataframe() method handles coordinate system conversions automatically
     - Track length is computed lazily and cached for performance
     """
 
     name: str
-    frames: NDArray[np.int_]
     rows: NDArray[np.float64]
     columns: NDArray[np.float64]
     sensor: Sensor
@@ -130,16 +127,16 @@ class Track:
     _length: int = field(init=False, default=None)
 
     # Performance optimization: cached data structures
-    _frame_index: dict = field(default=None, init=False, repr=False)  # Frame number -> index
     _cached_pen: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph pen
     _cached_brush: object = field(default=None, init=False, repr=False)  # Cached PyQtGraph brush
     _pen_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached pen
     _brush_params: tuple = field(default=None, init=False, repr=False)  # Parameters used for cached brush
     _cached_lons: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached longitude coords
     _cached_lats: Optional[NDArray[np.float64]] = field(default=None, init=False, repr=False)  # Cached latitude coords
-    uuid: str = field(init=None, default=None)
+    uuid: str = field(init=False, default=None)
 
     def __post_init__(self):
+        super().__post_init__()
         self.uuid = uuid.uuid4()
 
     def __eq__(self, other):
@@ -151,7 +148,10 @@ class Track:
         if isinstance(s, slice) or isinstance(s, np.ndarray):
             # Handle slice objects
             track_slice = self.copy()
-            track_slice.frames = track_slice.frames[s]
+            if track_slice.times is not None:
+                track_slice.times = track_slice.times[s]
+            if track_slice.frames is not None:
+                track_slice.frames = track_slice.frames[s]
             track_slice.rows = track_slice.rows[s]
             track_slice.columns = track_slice.columns[s]
 
@@ -183,7 +183,7 @@ class Track:
             raise TypeError("Invalid index or slice type.")
 
     def __len__(self):
-        return len(self.frames)
+        return len(self.rows)
 
     def __str__(self):
         return self.__repr__()
@@ -194,41 +194,16 @@ class Track:
         s += str(self.to_dataframe())
         return s
 
-    def _build_frame_index(self):
-        """Build index mapping frame numbers to track indices for O(1) lookup."""
-        if self._frame_index is None:
-            self._frame_index = {}
-            for i, frame in enumerate(self.frames):
-                self._frame_index[frame] = i
-
-    def get_track_data_at_frame(self, frame_num):
+    def get_visible_indices(self, val: Union[np.datetime64, int], is_time: bool):
         """
-        Get track position at a specific frame using O(1) cached lookup.
+        Get indices of track points that should be visible at the current value.
 
         Parameters
         ----------
-        frame_num : int
-            Frame number to query
-
-        Returns
-        -------
-        tuple or None
-            (row, column) coordinates at this frame, or None if frame not in track
-        """
-        self._build_frame_index()
-        idx = self._frame_index.get(frame_num)
-        if idx is not None:
-            return self.rows[idx], self.columns[idx]
-        return None
-
-    def get_visible_indices(self, current_frame):
-        """
-        Get indices of track points that should be visible at the current frame.
-
-        Parameters
-        ----------
-        current_frame : int
-            Current frame number
+        val : np.datetime64, int
+            Current value, either a time or frame number
+        is_time : bool
+            Whether the value is a time (True) or frame (False)
 
         Returns
         -------
@@ -237,15 +212,39 @@ class Track:
         """
         if self.complete:
             # Show entire track
-            return np.arange(len(self.frames))
+            return np.arange(len(self))
 
-        # Find points up to current frame
-        mask = self.frames <= current_frame
+        if val is None:
+            return None
 
-        if self.tail_length > 0:
-            # Only show last N frames
-            frame_diff = current_frame - self.frames
-            mask &= (frame_diff <= self.tail_length) & (frame_diff >= 0)
+        # Find points up to current value
+        if is_time:
+            mask = self.times <= val
+        else:
+            mask = self.frames <= val
+
+        if self.tail_length > 0 and np.any(mask):
+            if is_time:
+                # need to sort since times can, technically, be unordered
+                sorter = np.argsort(self.times)
+                index = np.where(mask[sorter])[0][-1]  # last true index in sorted times
+                index = max(index - self.tail_length, 0)  # start of tail
+                index = sorter[index]  # convert back to index in initial array
+
+                time_diff = val - self.times
+
+                # Only show last N times
+                # need to use the index of the tail to get the maximum allowed length
+                if val <= np.max(self.times):
+                    max_time_diff = val - self.times[index]
+                else:
+                    max_time_diff = np.max(self.times) - self.times[index]
+
+                mask &= (time_diff <= max_time_diff) & (time_diff >= 0)
+            else:
+                # Only show last N frames
+                frame_diff = val - self.frames
+                mask &= (frame_diff <= self.tail_length) & (frame_diff >= 0)
 
         indices = np.where(mask)[0]
         return indices if len(indices) > 0 else None
@@ -265,18 +264,13 @@ class Track:
         if self._cached_lons is not None and self._cached_lats is not None:
             return self._cached_lons, self._cached_lats
 
-        if not self.sensor or not self.sensor.can_geolocate():
+        if not self.sensor.can_geolocate() or self.times is None:
             return None
 
-        # Single vectorized call — sensor handles frame grouping internally
-        locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
+        # Single vectorized call — sensor handles time grouping internally
+        locations = self.sensor.pixel_to_geodetic(self.times, self.rows, self.columns)
         lons = np.asarray(locations.lon.deg, dtype=np.float64)
         lats = np.asarray(locations.lat.deg, dtype=np.float64)
-
-        # Set invalid locations to NaN
-        invalid = (locations.y.value == 0) & (locations.z.value == 0)
-        lons[invalid] = np.nan
-        lats[invalid] = np.nan
 
         self._cached_lons = lons
         self._cached_lats = lats
@@ -284,7 +278,7 @@ class Track:
 
     def invalidate_caches(self):
         """Invalidate cached data structures when track data changes."""
-        self._frame_index = None
+        super().invalidate_caches()
         self._cached_pen = None
         self._cached_brush = None
         self._pen_params = None
@@ -421,53 +415,20 @@ class Track:
         det = self.covariance_00 * self.covariance_11 - self.covariance_01**2
         return np.sqrt(np.sqrt(np.maximum(det, 0)))
 
-    def get_times(self) -> NDArray[np.datetime64]:
-        """
-        Get timestamps for each track point using sensor imagery times.
-
-        Matches track frames to sensor imagery frames and returns corresponding
-        timestamps. Returns NaT (Not-a-Time) for frames without matching imagery.
-
-        Returns
-        -------
-        NDArray[np.datetime64] or None
-            Array of timestamps with same length as track, or None if sensor
-            has no imagery times
-
-        Notes
-        -----
-        Uses binary search (searchsorted) for efficient frame matching.
-        """
-        sensor_imagery_frames, sensor_imagery_times = self.sensor.get_imagery_frames_and_times()
-        if len(sensor_imagery_times) < 1:
-            return None
-
-        # Find where each track_frame would be inserted in sensor_frames
-        indices = np.searchsorted(sensor_imagery_frames, self.frames)
-
-        # Create output array filled with NaT
-        track_times = np.full(len(self.frames), np.datetime64("NaT"), dtype="datetime64[ns]")
-
-        # Clip so we can safely index; out-of-bounds entries are caught by in_bounds
-        in_bounds = indices < len(sensor_imagery_frames)
-        clipped = np.minimum(indices, len(sensor_imagery_frames) - 1)
-        valid_mask = in_bounds & (sensor_imagery_frames[clipped] == self.frames)
-
-        # Assign matching times
-        track_times[valid_mask] = sensor_imagery_times[indices[valid_mask]]
-
-        return track_times
-
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, sensor: Sensor, name: str = None):
+    def from_dataframe(
+        cls,
+        df: pd.DataFrame,
+        sensor: Sensor,
+        imagery: Optional[Imagery] = None,
+        name: str = None,
+    ):
         """
-        Create Track from DataFrame with automatic coordinate conversion.
+        Create Track from pandas DataFrame with automatic coordinate conversion.
 
         Supports multiple input coordinate systems with automatic conversion:
-        - Frames or Times → Frames (Times require sensor imagery)
-        - Rows/Columns or Lat/Lon/Alt → Rows/Columns (Geodetic requires sensor)
-
-        Priority system: Frames > Times, Rows/Columns > Lat/Lon/Alt
+        - Times or Frames (conversion requires Imagery with times)
+        - Rows/Columns or Lat/Lon/Alt → Rows/Columns (Geodetic requires sensor and times)
 
         Parameters
         ----------
@@ -476,6 +437,8 @@ class Track:
             coordinate system (see Notes)
         sensor : Sensor
             Sensor object for coordinate conversions
+        imagery : Imagery, optional
+            Imagery used to convert times and frames.
         name : str, optional
             Track name, by default taken from df["Track"]
 
@@ -494,8 +457,8 @@ class Track:
         Required columns (one set from each group):
 
         Temporal coordinates (choose one):
-            - "Frames" : Frame numbers (preferred)
-            - "Times" : Timestamps (requires sensor with imagery times)
+            - "Times" : Timestamps (preferred)
+            - "Frames" : Frame numbers
 
         Spatial coordinates (choose one):
             - "Rows" and "Columns" : Pixel coordinates (preferred)
@@ -556,34 +519,27 @@ class Track:
             if pd.notna(labeler_val) and labeler_val != "":
                 kwargs["labeler"] = str(labeler_val)
 
-        # Handle times (optional)
         times = None
         if "Times" in df.columns:
-            # Parse times as datetime64
-            times = pd.to_datetime(df["Times"]).to_numpy()
+            times = pd.to_datetime(df["Times"], format="mixed").to_numpy().astype("datetime64[ns]")
 
-        # Determine frames - priority: Frames column > time-to-frame mapping
+        frames = None
         if "Frames" in df.columns:
-            # Frames take precedence
             frames = df["Frames"].to_numpy()
-        elif times is not None:
-            sensor_imagery_frames, sensor_imagery_times = sensor.get_imagery_frames_and_times()
-            if len(sensor_imagery_times) == 0:
-                # Times present but no cannot map to frames using sensor - raise error
-                raise ValueError(
-                    f"Track '{name}' has times but no frames. Sensor imagery times are required for time-to-frame mapping."
-                )
 
-            # Eliminate track points before and after the time bounds of the selected sensor
-            df = df[(times >= sensor_imagery_times[0]) & (times <= sensor_imagery_times[-1])]
-            if len(df) == 0:
-                raise ValueError(f"Track '{name}' times are not within the bounds of the selected imagery.")
-            times = pd.to_datetime(df["Times"]).to_numpy()
+        # attempt any conversions if able and necessary
+        if imagery is not None and imagery.times is not None:
+            if times is not None and frames is None:
+                indices = [imagery.get_index(time, True) for time in times]
+                if np.all([index is not None for index in indices]):
+                    frames = imagery.frames[indices]
+            elif times is None and frames is not None:
+                indices = [imagery.get_index(frame, False) for frame in frames]
+                if np.all([index is not None for index in indices]):
+                    times = imagery.times[indices]
 
-            # Map times to frames using the sensor imagery
-            frames = map_times_to_frames(times, sensor_imagery_times, sensor_imagery_frames)
-        else:
-            raise ValueError(f"Track '{name}' must have either 'Frames' or 'Times' column")
+        if times is None and frames is None:
+            raise ValueError(f"Track '{name}' must have either 'Times' or 'Frames' column")
 
         # Handle uncertainty data (optional) - covariance matrix elements
         # Only populate if all three columns exist and all values are valid (not NaN)
@@ -620,10 +576,15 @@ class Track:
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no row/column. "
                     "Sensor required for geodetic-to-pixel mapping."
                 )
-            if not hasattr(sensor, "can_geolocate") or not sensor.can_geolocate():
+            if not sensor.can_geolocate():
                 raise ValueError(
                     f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but sensor '{sensor.name}' "
                     "does not support geolocation."
+                )
+            if times is None:
+                raise ValueError(
+                    f"Track '{name}' has geodetic coordinates (Lat/Lon/Alt) but no corresponding times. "
+                    "Times required for geodetic-to-pixel mapping."
                 )
             initial_lons = df["Longitude (deg)"].to_numpy(dtype=np.float64)
             initial_lats = df["Latitude (deg)"].to_numpy(dtype=np.float64)
@@ -632,7 +593,7 @@ class Track:
                 initial_lats,
                 initial_lons,
                 df["Altitude (km)"].to_numpy(),
-                frames,
+                times,
                 sensor,
             )
         else:
@@ -649,6 +610,7 @@ class Track:
 
         track = cls(
             name=name,
+            times=times,
             frames=frames,
             rows=rows,
             columns=columns,
@@ -677,7 +639,7 @@ class Track:
             Total track length in pixels, or 0.0 if track has fewer than 2 points
         """
         if self._length is None:
-            if len(self.rows) < 2:
+            if len(self) < 2:
                 self._length = 0.0
             else:
                 self._length = np.sum(np.sqrt(np.diff(self.rows) ** 2 + np.diff(self.columns) ** 2))
@@ -704,7 +666,8 @@ class Track:
 
         track_copy = self.__class__(
             name=self.name,
-            frames=self.frames.copy(),
+            times=self.times.copy() if self.times is not None else None,
+            frames=self.frames.copy() if self.frames is not None else None,
             rows=self.rows.copy(),
             columns=self.columns.copy(),
             sensor=self.sensor,
@@ -734,6 +697,9 @@ class Track:
             track_copy._cached_lats = self._cached_lats.copy()
         return track_copy
 
+    def to_csv(self, file: Union[str, pathlib.Path]):
+        self.to_dataframe().to_csv(file, index=None)
+
     def to_dataframe(self) -> pd.DataFrame:
         """Convert track to DataFrame
 
@@ -743,7 +709,6 @@ class Track:
         data = {
             "Tracker": len(self) * [self.tracker or ""],
             "Track": len(self) * [self.name],
-            "Frames": self.frames,
             "Rows": self.rows,
             "Columns": self.columns,
             "Color": self.color,
@@ -759,6 +724,10 @@ class Track:
             "Label Time": self.label_time.isoformat() if self.label_time is not None else "",
             "Labeler": self.labeler or "",
         }
+        if self.times is not None:
+            data["Times"] = self.times.astype(str)
+        if self.frames is not None:
+            data["Frames"] = self.frames
 
         # Include geolocation if possible
         geodetic = self.get_geodetic_coords()
@@ -768,18 +737,13 @@ class Track:
             data["Latitude (deg)"] = geodetic[1]
 
             # Single vectorized call for altitude
-            locations = self.sensor.pixel_to_geodetic(self.frames, self.rows, self.columns)
+            locations = self.sensor.pixel_to_geodetic(self.times, self.rows, self.columns)
             data["Altitude (km)"] = np.asarray(locations.height.to("km").value)
         else:
             # Sensor cannot geolocate - fill with NaN
-            data["Latitude (deg)"] = np.full(len(self.frames), np.nan)
-            data["Longitude (deg)"] = np.full(len(self.frames), np.nan)
-            data["Altitude (km)"] = np.full(len(self.frames), np.nan)
-
-        # Include times if possible
-        track_times = self.get_times()
-        if track_times is not None:
-            data["Times"] = pd.to_datetime(track_times).strftime("%Y-%m-%dT%H:%M:%S.%f")
+            data["Latitude (deg)"] = np.full(len(self), np.nan)
+            data["Longitude (deg)"] = np.full(len(self), np.nan)
+            data["Altitude (km)"] = np.full(len(self), np.nan)
 
         # Include extraction metadata if present
         if self.extraction_metadata is not None:

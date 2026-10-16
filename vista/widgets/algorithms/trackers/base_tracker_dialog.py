@@ -304,6 +304,7 @@ class BaseTrackingDialog(QDialog):
         for i, track_data in enumerate(track_data_list):
             vista_track = Track(
                 name=f"Track {i + 1}",
+                times=track_data["times"],
                 frames=track_data["frames"],
                 rows=track_data["rows"],
                 columns=track_data["columns"],
@@ -316,7 +317,7 @@ class BaseTrackingDialog(QDialog):
                 visible=True,
             )
             vista_tracks.append(vista_track)
-            self.viewer.tracks.append(vista_track)
+        self.viewer.add_tracks(vista_tracks)
 
         # Show success message
         QMessageBox.information(self, "Tracking Complete", f"Generated {len(vista_tracks)} track(s).")

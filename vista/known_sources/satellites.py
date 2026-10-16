@@ -122,16 +122,14 @@ class Satellites(KnownSources):
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
-        # TODO: cache results for specific times (frames)?
-
         # SGP4 for a SatrecArray expects an array of times
-        times = np.atleast_1d(times)
-        times = Time(times)
+        astro_times = Time(np.atleast_1d(times))
 
         # errors, positions, velocities
-        e, r, v = self.satellites.sgp4(times.jd1, times.jd2)
+        # positions and velocities shape is (n_satellites, n_times, 3)
+        e, r, v = self.satellites.sgp4(astro_times.jd1, astro_times.jd2)
 
         # if satellite propagation errored, ensure position is set to NaN
         # TODO: raise actual SGP4 error code values for satellites?
@@ -139,20 +137,21 @@ class Satellites(KnownSources):
         if np.any(e != 0):
             r[e != 0] = np.nan
 
-        # now remove extra dimensions if time was single value
-        r = np.squeeze(r)
+        # remove time dimensions if time was single value
+        if np.asarray(times).ndim == 0:
+            r = np.squeeze(r, axis=-2)
 
         # SGP4 provides satellite True Equator Mean Equinox coordinates...
         teme_coords = SkyCoord(
             x=r[..., 0] * u.km,
             y=r[..., 1] * u.km,
             z=r[..., 2] * u.km,
-            obstime=times,
+            obstime=astro_times,
             frame=TEME,
             representation_type="cartesian",
         )
         # ...which we transform to ITRS (ECEF) coordinates
-        ecef_coords = teme_coords.transform_to(ITRS(obstime=times))
+        ecef_coords = teme_coords.transform_to(ITRS(obstime=astro_times))
 
         # unpack cartesian xyz coordinates into xyz arguments
-        return EarthLocation(*ecef_coords.cartesian.xyz)
+        return EarthLocation(*ecef_coords.cartesian.xyz, unit=u.km)

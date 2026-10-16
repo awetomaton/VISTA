@@ -51,24 +51,18 @@ Creating KnownSources
    stars = Stars("My favorite stars", "Hipparcos")
 
 Creating Tracks
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+
+``create_tracks()`` evaluates source positions at the imagery timestamps and uses its sensor to map the positions onto
+pixels. The imagery must contain timestamps and have a sensor that can geolocate.
 
 .. code-block:: python
-
-   import numpy as np
-   from vista.imagery.imagery import Imagery
-   from vista.sensors.sensor import Sensor
-
-   sensor = Sensor(name="My Sensor")
-   images = np.random.randn(100, 256, 256).astype(np.float32)
-   frames = np.arange(100)
-
-   img = Imagery(name="Test", images=images, frames=frames, sensor=sensor)
-
    # this will project the positions of the stars onto the imagery,
    # determine which stars are in each frame, and create tracks from
    # the resulting pixel positions over all the imagery's frames
-   tracks = stars.create_tracks(img)
+   tracks = stars.create_tracks(imagery)
+
+For a complete GUI workflow and source-specific loading options, see :doc:`../user_guide/known_sources`.
 
 Module Reference
 ----------------

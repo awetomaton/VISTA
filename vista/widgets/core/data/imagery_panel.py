@@ -1,30 +1,57 @@
 """Imagery panel for data manager"""
 
 from pathlib import Path
+from typing import Iterator, Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QItemSelectionModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
     QMessageBox,
     QProgressBar,
     QPushButton,
     QSpinBox,
-    QTableWidget,
-    QTableWidgetItem,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QTreeWidgetItemIterator,
     QVBoxLayout,
     QWidget,
 )
 
-from vista.imagery.imagery import HAS_TORCH
+from vista.imagery.imagery import HAS_TORCH, Imagery
 from vista.widgets.core.data.data_panel import DataPanel
 
 _HDF5_EXTENSIONS = (".h5", ".hdf5")
 
 
+class ImageryTreeWidget(QTreeWidget):
+    """Tree widget that keeps imagery selection when datastream nodes are clicked."""
+
+    def edit(
+        self,
+        index: QModelIndex,
+        trigger: QAbstractItemView.EditTrigger,
+        event: Optional[QEvent] = None,
+    ) -> bool:
+        """Allow editing only in the imagery name column."""
+        if index.column() != 0:
+            return False
+        return super().edit(index, trigger, event)
+
+    def selectionCommand(self, index: QModelIndex, event: Optional[QEvent] = None) -> QItemSelectionModel.SelectionFlag:
+        """Prevent non-selectable datastream nodes from changing imagery selection."""
+        item = self.itemFromIndex(index)
+        if item is not None and not item.flags() & Qt.ItemFlag.ItemIsSelectable:
+            return QItemSelectionModel.SelectionFlag.NoUpdate
+
+        return super().selectionCommand(index, event)
+
+
 class ImageryPanel(DataPanel):
     """Panel for managing imagery"""
 
+    imagery_selected = pyqtSignal(object)  # Signal when imagery selection changes
     cancel_loading_requested = pyqtSignal(object)  # Emits imagery UUID to cancel loading
 
     def __init__(self, viewer):
@@ -51,27 +78,28 @@ class ImageryPanel(DataPanel):
         layout.addLayout(button_layout)
 
         # Imagery table
-        self.imagery_table = QTableWidget()
-        self.imagery_table.setColumnCount(5)
-        self.imagery_table.setHorizontalHeaderLabels(["Name", "Frames", "GPU", "Opacity", "File Location"])
+        self.imagery_table = ImageryTreeWidget()
+        self.imagery_table.setColumnCount(6)
+        self.imagery_table.setHeaderLabels(["Name", "Frames", "Current Frame", "GPU", "Opacity", "File Location"])
 
-        # Enable row selection via vertical header (single selection only)
-        self.imagery_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.imagery_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        # Enable row selection
+        self.imagery_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.imagery_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         # Set column resize modes
-        header = self.imagery_table.horizontalHeader()
+        header = self.imagery_table.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name (can be long)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Frames (numeric)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Opacity
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # File Location
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Current Frame (numeric)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # GPU device
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Opacity
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # File Location
 
         # Opacity column is hidden by default (shown only in map view)
-        self.imagery_table.setColumnHidden(3, True)
+        self.imagery_table.setColumnHidden(4, True)
 
         self.imagery_table.itemSelectionChanged.connect(self.on_imagery_selection_changed)
-        self.imagery_table.cellChanged.connect(self.on_imagery_cell_changed)
+        self.imagery_table.itemChanged.connect(self.on_imagery_item_changed)
 
         layout.addWidget(self.imagery_table)
         self.setLayout(layout)
@@ -80,43 +108,44 @@ class ImageryPanel(DataPanel):
         self.setAcceptDrops(True)
 
     def refresh_imagery_table(self):
-        """Refresh the imagery table, filtering by selected sensor"""
+        """Refresh the imagery table, filtering by selected sensor and grouping by datastream."""
         self.imagery_table.blockSignals(True)
-        self.imagery_table.setRowCount(0)
-
-        # Get selected sensor from viewer
-        selected_sensor = self.viewer.selected_sensor
+        self.imagery_table.clear()
 
         # Filter imageries by selected sensor
-        filtered_imageries = []
-        if selected_sensor is not None:
-            filtered_imageries = [img for img in self.viewer.imageries if img.sensor == selected_sensor]
-        else:
-            filtered_imageries = self.viewer.imageries
+        filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
+        datastream_items = {}
 
-        for row, imagery in enumerate(filtered_imageries):
-            self.imagery_table.insertRow(row)
+        for imagery in filtered_imageries:
+            datastream_item = datastream_items.get(imagery.datastream)
+            if datastream_item is None:
+                datastream_item = QTreeWidgetItem(self.imagery_table, [imagery.datastream])
+                datastream_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable)
+                datastream_item.setToolTip(0, "Imagery Datastream")
+                datastream_item.setData(0, Qt.ItemDataRole.UserRole, imagery.datastream)
+                datastream_items[imagery.datastream] = datastream_item
 
-            # Name (editable)
-            name_item = QTableWidgetItem(imagery.name)
-            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
-            name_item.setData(Qt.ItemDataRole.UserRole, imagery.uuid)  # Store imagery UUID
-            self.imagery_table.setItem(row, 0, name_item)
+            imagery_item = QTreeWidgetItem(datastream_item)
+            imagery_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+            imagery_item.setText(0, imagery.name)
+            imagery_item.setData(0, Qt.ItemDataRole.UserRole, imagery.uuid)
 
             if imagery.is_fully_loaded:
-                # Frames column: static text showing total frame count
-                frames_item = QTableWidgetItem(str(len(imagery.frames)))
-                frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                self.imagery_table.setItem(row, 1, frames_item)
+                imagery_item.setText(1, str(len(imagery)))
             else:
                 # Frames column: progress bar with cancel button for loading imagery
-                self._set_loading_widget(row, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery.frames))
+                self._set_loading_widget(imagery_item, imagery.uuid, imagery.loaded_frame_count or 0, len(imagery))
+
+            if imagery in self.viewer.selected_imageries:
+                timeline = self.viewer.timeline
+                index = imagery.get_index(timeline.current_value, timeline.is_time, nearest=True)
+                current_frame = "-" if index is None else str(imagery.frames[index])
+            else:
+                current_frame = "-"
+            imagery_item.setText(2, current_frame)
 
             # GPU column: show device name if imagery has a GPU tensor copy
-            gpu_text = imagery.gpu_device_name or ""
-            gpu_item = QTableWidgetItem(gpu_text)
-            gpu_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.imagery_table.setItem(row, 2, gpu_item)
+            imagery_item.setText(3, imagery.gpu_device_name or "")
 
             # Opacity column: QSpinBox (0-100%) for map view
             opacity_pct = int(self.viewer.imagery_opacity.get(imagery.uuid, 1.0) * 100)
@@ -126,36 +155,44 @@ class ImageryPanel(DataPanel):
             opacity_spinbox.setValue(opacity_pct)
             opacity_spinbox.setToolTip("Imagery opacity in map view")
             opacity_spinbox.valueChanged.connect(lambda val, uid=imagery.uuid: self._on_opacity_changed(uid, val))
-            self.imagery_table.setCellWidget(row, 3, opacity_spinbox)
+            self.imagery_table.setItemWidget(imagery_item, 4, opacity_spinbox)
 
             fname = imagery.filename
-            imagery_fname_item = QTableWidgetItem(Path(fname).stem)
-            imagery_fname_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.imagery_table.setItem(row, 4, imagery_fname_item)
-            imagery_fname_item.setToolTip(fname)
+            imagery_item.setText(5, Path(fname).stem)
+            imagery_item.setToolTip(5, fname)
+
+            if imagery in self.viewer.selected_imageries:
+                imagery_item.setSelected(True)
+
+            datastream_item.setExpanded(True)
 
         self.imagery_table.blockSignals(False)
 
-        # Select the row for the currently active imagery
-        found = False
-        for row, imagery in enumerate(filtered_imageries):
-            if imagery == self.viewer.imagery:
-                self.imagery_table.selectRow(row)
-                found = True
-                break
+    def on_index_changed(self, _index):
+        """Update the displayed current frame for each imagery."""
+        for imagery_item in self._iter_imagery_items():
+            imagery = self._get_imagery_for_item(imagery_item)
+            if imagery not in self.viewer.selected_imageries:
+                imagery = None
 
-        # If the active imagery is not in the filtered list, clear the viewer
-        if not found and self.viewer.imagery is not None:
-            self.viewer.imagery = None
-            self.viewer.image_item.clear()
+            if imagery is None:
+                current_frame = "-"
+            else:
+                timeline = self.viewer.timeline
+                index = imagery.get_index(timeline.current_value, timeline.is_time, nearest=True)
+                current_frame = "-" if index is None else str(imagery.frames[index])
 
-    def _set_loading_widget(self, row, imagery_uuid, loaded_count, total_frames):
-        """Set a progress bar + cancel button widget in the Frames column for a loading row.
+            imagery_item.setText(2, current_frame)
+
+    def _set_loading_widget(
+        self, imagery_item: QTreeWidgetItem, imagery_uuid: object, loaded_count: int, total_frames: int
+    ) -> None:
+        """Set a progress bar and cancel button in the Frames column for loading imagery.
 
         Parameters
         ----------
-        row : int
-            Table row index
+        imagery_item : QTreeWidgetItem
+            Tree item representing the loading imagery
         imagery_uuid : object
             UUID of the loading imagery (used for cancel signal)
         loaded_count : int
@@ -182,9 +219,9 @@ class ImageryPanel(DataPanel):
         cancel_btn.clicked.connect(lambda checked, uid=imagery_uuid: self.cancel_loading_requested.emit(uid))
         layout.addWidget(cancel_btn)
 
-        self.imagery_table.setCellWidget(row, 1, widget)
+        self.imagery_table.setItemWidget(imagery_item, 1, widget)
 
-    def update_loading_progress(self, imagery_uuid, loaded_count):
+    def update_loading_progress(self, imagery_uuid: object, loaded_count: int) -> None:
         """Update the progress bar for a loading imagery row.
 
         Parameters
@@ -194,17 +231,15 @@ class ImageryPanel(DataPanel):
         loaded_count : int
             Number of frames loaded so far
         """
-        for row in range(self.imagery_table.rowCount()):
-            name_item = self.imagery_table.item(row, 0)
-            if name_item and name_item.data(Qt.ItemDataRole.UserRole) == imagery_uuid:
-                widget = self.imagery_table.cellWidget(row, 1)
-                if widget:
-                    progress_bar = widget.findChild(QProgressBar)
-                    if progress_bar:
-                        progress_bar.setValue(loaded_count)
-                break
+        imagery_item = self._find_imagery_item(imagery_uuid)
+        if imagery_item is not None:
+            widget = self.imagery_table.itemWidget(imagery_item, 1)
+            if widget is not None:
+                progress_bar = widget.findChild(QProgressBar)
+                if progress_bar is not None:
+                    progress_bar.setValue(loaded_count)
 
-    def on_loading_complete(self, imagery_uuid):
+    def on_loading_complete(self, imagery_uuid: object) -> None:
         """Replace progress bar with static frame count when loading finishes.
 
         Parameters
@@ -212,104 +247,125 @@ class ImageryPanel(DataPanel):
         imagery_uuid : object
             UUID of the imagery that finished loading
         """
-        for row in range(self.imagery_table.rowCount()):
-            name_item = self.imagery_table.item(row, 0)
-            if name_item and name_item.data(Qt.ItemDataRole.UserRole) == imagery_uuid:
-                # Find the imagery to get total frame count
-                for imagery in self.viewer.imageries:
-                    if imagery.uuid == imagery_uuid:
-                        self.imagery_table.removeCellWidget(row, 1)
-                        frames_item = QTableWidgetItem(str(len(imagery.frames)))
-                        frames_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-                        self.imagery_table.setItem(row, 1, frames_item)
-                        break
-                break
+        imagery_item = self._find_imagery_item(imagery_uuid)
+        if imagery_item is None:
+            return
+
+        imagery = self._get_imagery_for_item(imagery_item)
+        if imagery is not None:
+            self.imagery_table.removeItemWidget(imagery_item, 1)
+            imagery_item.setText(1, str(len(imagery)))
 
     def on_imagery_selection_changed(self):
-        """Handle imagery selection changes from table"""
+        """Handle imagery selection changes from tree."""
         self._update_gpu_button_state()
 
-        # Get selected rows (should only be one due to SingleSelection mode)
-        selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
+        selected_items = self.imagery_table.selectedItems()
 
-        if selected_rows:
-            row = selected_rows[0]
-            # Get the imagery UUID from the name item
-            name_item = self.imagery_table.item(row, 0)
-            if name_item:
-                imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
-                # Find the imagery by UUID
-                for imagery in self.viewer.imageries:
-                    if imagery.uuid == imagery_uuid:
-                        # Skip if the viewer is already displaying this imagery
-                        if self.viewer.imagery is None or self.viewer.imagery.uuid != imagery_uuid:
-                            self.viewer.select_imagery(imagery)
-                        # Update frame range in main window
-                        self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
-                        break
-        else:
-            # No imagery selected - clear the viewer display
-            self.viewer.imagery = None
-            self.viewer.image_item.clear()
-            self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+        # don't allow deselecting all images, if any exist
+        if not selected_items:
+            self.refresh_imagery_table()
+            return
 
-    def on_imagery_cell_changed(self, row, column):
-        """Handle imagery cell changes"""
-        if column == 0:  # Name column
-            item = self.imagery_table.item(row, column)
-            if item:
-                imagery_uuid = item.data(Qt.ItemDataRole.UserRole)
-                new_name = item.text()
+        selected_imageries = self._get_selected_imagery()
 
-                # Find the imagery and update its name
-                for imagery in self.viewer.imageries:
-                    if imagery.uuid == imagery_uuid:
-                        imagery.name = new_name
-                        self.data_changed.emit()
-                        break
+        imageries_to_deselect = [img for img in self.viewer.selected_imageries if img not in selected_imageries]
+        imageries_to_select = [img for img in selected_imageries if img not in self.viewer.selected_imageries]
 
-    def _get_imagery_at_row(self, row):
-        """Get the Imagery object for a given table row.
+        for img in imageries_to_select:
+            self.imagery_selected.emit(img)
+        for img in imageries_to_deselect:
+            self.viewer.deselect_imagery(img)
 
-        Parameters
-        ----------
-        row : int
-            Table row index
+    def on_imagery_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
+        """Handle imagery item changes."""
+        if column != 0:
+            return
 
-        Returns
-        -------
-        Imagery or None
-            The imagery object, or None if not found
-        """
-        name_item = self.imagery_table.item(row, 0)
-        if name_item is None:
+        if item.parent() is None:
+            old_datastream = item.data(0, Qt.ItemDataRole.UserRole)
+            new_datastream = item.text(0)
+
+            selected_imageries = self._get_selected_imagery()
+            selected_imageries = [img for img in selected_imageries if img.datastream == old_datastream]
+
+            # if no imageries selected under this datastream, revert
+            if not selected_imageries:
+                self.imagery_table.blockSignals(True)
+                item.setText(0, old_datastream)
+                self.imagery_table.blockSignals(False)
+                return
+
+            for imagery in selected_imageries:
+                imagery.datastream = new_datastream
+            item.setData(0, Qt.ItemDataRole.UserRole, new_datastream)
+            self.refresh_imagery_table()
+            self.data_changed.emit()
+            return
+
+        # if not a top level (datastream) in the tree, it must be an imagery
+        imagery = self._get_imagery_for_item(item)
+        if imagery is not None:
+            imagery.name = item.text(0)
+            self.data_changed.emit()
+
+    def _iter_imagery_items(self) -> Iterator[QTreeWidgetItem]:
+        """Yield all imagery items in the tree."""
+        # assumes all selectable items are imagery...
+        iterator = QTreeWidgetItemIterator(
+            self.imagery_table,
+            QTreeWidgetItemIterator.IteratorFlag.Selectable,
+        )
+        while (item := iterator.value()) is not None:
+            # ...but also performs a check that the uuid exists
+            if item.data(0, Qt.ItemDataRole.UserRole) is not None:
+                yield item
+            iterator += 1
+
+    def _find_imagery_item(self, imagery_uuid: object) -> Optional[QTreeWidgetItem]:
+        """Return the tree item containing an imagery UUID."""
+        for imagery_item in self._iter_imagery_items():
+            if imagery_item.data(0, Qt.ItemDataRole.UserRole) == imagery_uuid:
+                return imagery_item
+        return None
+
+    def _get_imagery_for_item(self, item: QTreeWidgetItem) -> Optional[Imagery]:
+        """Return the imagery represented by a tree item."""
+        imagery_uuid = item.data(0, Qt.ItemDataRole.UserRole)
+        if imagery_uuid is None:
             return None
-        imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
         for imagery in self.viewer.imageries:
             if imagery.uuid == imagery_uuid:
                 return imagery
         return None
 
     def _get_selected_imagery(self):
-        """Get the currently selected Imagery object.
+        """Get the currently selected Imagery objects.
 
         Returns
         -------
-        Imagery or None
-            The selected imagery, or None if nothing is selected
+        list[Imagery]
+            The selected imageries
         """
-        selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
-        if not selected_rows:
-            return None
-        return self._get_imagery_at_row(selected_rows[0])
+        return [
+            imagery
+            for item in self.imagery_table.selectedItems()
+            if (imagery := self._get_imagery_for_item(item)) is not None
+        ]
 
     def _update_gpu_button_state(self):
         """Update the GPU button text and enabled state based on the selected imagery."""
         if not HAS_TORCH:
             return
 
-        imagery = self._get_selected_imagery()
-        if imagery is None or not imagery.is_fully_loaded:
+        selected_imageries = self._get_selected_imagery()
+        if len(selected_imageries) != 1:
+            self.gpu_btn.setEnabled(False)
+            self.gpu_btn.setText("Upload to GPU")
+            return
+
+        imagery = selected_imageries[0]
+        if not imagery.is_fully_loaded:
             self.gpu_btn.setEnabled(False)
             self.gpu_btn.setText("Upload to GPU")
         elif imagery.has_gpu_images:
@@ -321,9 +377,11 @@ class ImageryPanel(DataPanel):
 
     def _on_gpu_button_clicked(self):
         """Handle GPU button click - upload or release based on current state."""
-        imagery = self._get_selected_imagery()
-        if imagery is None:
+        selected_imageries = self._get_selected_imagery()
+        if len(selected_imageries) != 1:
             return
+
+        imagery = selected_imageries[0]
         if imagery.has_gpu_images:
             self._release_imagery_from_gpu(imagery)
         else:
@@ -357,49 +415,23 @@ class ImageryPanel(DataPanel):
         self._update_gpu_button_state()
 
     def delete_selected_imagery(self):
-        """Delete imagery that is selected in the table"""
-        # Get selected rows (should only be one due to SingleSelection mode)
-        selected_rows = [index.row() for index in self.imagery_table.selectedIndexes()]
+        """Delete imagery that is selected in the tree."""
+        selected_imageries = self._get_selected_imagery()
+        for imagery_to_delete in selected_imageries:
+            # If imagery is still loading, cancel the load first
+            if not imagery_to_delete.is_fully_loaded:
+                self.cancel_loading_requested.emit(imagery_to_delete.uuid)
 
-        if not selected_rows:
-            return
+            # Release GPU memory before removing the imagery
+            imagery_to_delete.release_gpu()
 
-        row = selected_rows[0]
-        # Look up imagery by UUID stored in the name item (table may be filtered by sensor)
-        name_item = self.imagery_table.item(row, 0)
-        if name_item is None:
-            return
-        imagery_uuid = name_item.data(Qt.ItemDataRole.UserRole)
+            # Remove from list
+            self.viewer.remove_imagery(imagery_to_delete)
 
-        imagery_to_delete = None
-        for img in self.viewer.imageries:
-            if img.uuid == imagery_uuid:
-                imagery_to_delete = img
-                break
-
-        if imagery_to_delete is None:
-            return
-
-        # If imagery is still loading, cancel the load first
-        if not imagery_to_delete.is_fully_loaded:
-            self.cancel_loading_requested.emit(imagery_to_delete.uuid)
-
-        # Release GPU memory before removing the imagery
-        imagery_to_delete.release_gpu()
-
-        # Check if this is the currently displayed imagery
-        if imagery_to_delete == self.viewer.imagery:
-            # Clear the current imagery
-            self.viewer.imagery = None
-            self.viewer.image_item.clear()
-
-        # Remove from list
-        self.viewer.imageries.remove(imagery_to_delete)
-
-        # If there are still imageries and none is selected, select the first one
-        if len(self.viewer.imageries) > 0 and self.viewer.imagery is None:
-            self.viewer.select_imagery(self.viewer.imageries[0])
-            self.parent().parent().parent().parent().parent().update_frame_range_from_imagery()
+        # If there are still imageries available for the selected sensor, select the first one
+        filtered_imageries = [img for img in self.viewer.imageries if img.sensor == self.viewer.selected_sensor]
+        if len(filtered_imageries) > 0:
+            self.imagery_selected.emit(filtered_imageries[0])
 
         # Refresh table
         self.refresh_imagery_table()
@@ -413,7 +445,7 @@ class ImageryPanel(DataPanel):
         visible : bool
             True to show the opacity column, False to hide it.
         """
-        self.imagery_table.setColumnHidden(3, not visible)
+        self.imagery_table.setColumnHidden(4, not visible)
 
     def _on_opacity_changed(self, imagery_uuid: str, value: int) -> None:
         """Handle opacity spinbox change for an imagery.

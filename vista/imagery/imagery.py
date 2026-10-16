@@ -1,7 +1,7 @@
 """Module that contains the default imagery object
 
-The Imagery object in this class can be subclassed by third-party objects to implement their own logic including
-file readers and pixel-to-geodetic conversions
+The Imagery object in this class can be subclassed by third-party objects
+to implement their own logic such as file readers
 """
 
 import pathlib
@@ -15,6 +15,7 @@ from numpy.typing import NDArray
 
 from vista.aoi import AOI
 from vista.sensors.sensor import Sensor
+from vista.temporal_data.temporal_data import TemporalData
 
 try:
     import torch
@@ -24,14 +25,14 @@ except ImportError:
     HAS_TORCH = False
 
 
-@dataclass
-class Imagery:
+@dataclass(kw_only=True)
+class Imagery(TemporalData):
     """
-    Container for multi-frame imagery datasets with metadata and coordinate conversion capabilities.
+    Container for multi-frame imagery datasets with metadata.
 
-    VISTA's Imagery class represents a temporal sequence of image frames with associated metadata
-    including timestamps, geodetic coordinate conversion polynomials, and sensor calibration data.
-    This class serves as the foundation for all image-based analysis in VISTA.
+    VISTA's Imagery class represents a temporal sequence of image frames with associated
+    metadata including timestamps and sensor. This class serves as the foundation for all
+    image-based analysis in VISTA.
 
     Core Attributes
     ---------------
@@ -53,14 +54,14 @@ class Imagery:
     Temporal Metadata
     -----------------
     times : NDArray[np.datetime64], optional
-        Timestamp for each frame with microsecond precision.
+        Timestamp for each frame with nanosecond precision.
         Enables time-based analysis and temporal coordinate conversion.
 
     Sensor Information
     ------------------
     sensor : Sensor
         Sensor object containing projection polynomials and radiometric calibration data.
-        The Sensor provides geodetic coordinate conversion capabilities, sensor positions,
+        The Sensor provides geodetic coordinate conversion capabilities through its platform
         and optional point spread function modeling for irradiance estimation.
 
     Internal Attributes
@@ -68,7 +69,7 @@ class Imagery:
     description : str, optional
         Long-form description of the imagery (default: "")
     filename : str, optional
-        Filename the imagery was loaded from
+        Filename the imagery was loaded from (default: "")
     _histograms : dict, optional
         Cached histograms for performance. Maps frame_index -> (hist_y, hist_x).
         Computed lazily via get_histogram() method.
@@ -81,14 +82,10 @@ class Imagery:
         Slice imagery by frame range, preserving metadata
     get_aoi(aoi)
         Extract spatial subset defined by Area of Interest
-    pixel_to_geodetic(frame, rows, columns)
-        Convert pixel coordinates to geodetic (lat/lon/alt)
-    (frame, location)
-        Convert geodetic coordinates to pixel (row/column)
     get_histogram(frame_index)
         Compute or retrieve cached histogram for a frame
-    to_hdf5(file)
-        Save imagery and all metadata to HDF5 file
+    to_hdf5(group)
+        Save imagery metadata and arrays to an HDF5 group
     copy()
         Create a shallow copy of the imagery object
 
@@ -116,25 +113,22 @@ class Imagery:
     Notes
     -----
     - Frame numbers in the `frames` array need not be contiguous or zero-indexed
-    - All optional metadata (times, polynomials, calibration data) is preserved during
-      slicing operations
-    - Geodetic conversion requires valid polynomial coefficients for the frame of interest
-    - Calibration frame arrays define ranges: frame N applies until frame N+1 starts
+    - All optional metadata is preserved during slicing operations
     """
 
-    name: str
+    name: Optional[str] = None
     images: NDArray[np.float32]
-    frames: NDArray[np.int_]
-    sensor: Sensor
-    row_offset: int = None
-    column_offset: int = None
-    times: Optional[NDArray[np.datetime64]] = None
+    frames: NDArray[np.int_] = field()  # make frames a requirement for Imagery
+    sensor: Optional[Sensor] = None
+    row_offset: int = 0
+    column_offset: int = 0
     description: str = ""
+    datastream: Optional[str] = ""
+    filename: str = ""  # filename where this imagery came from
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
     default_histogram_bounds: Optional[dict] = None  # Maps frame_index -> (min, max)
-    uuid: str = field(init=None, default=None)
-    filename: str = ""  # filename where this imagery came from
+    uuid: str = field(init=False, default=None)
 
     # Incremental loading support: tracks how many frames have valid image data.
     # None = fully loaded (default for programmatically created imagery).
@@ -147,17 +141,22 @@ class Imagery:
     _gpu_device: Optional[str] = field(default=None, init=False, repr=False)
 
     # Performance optimization: cached data structures
-    _frame_index: Optional[dict] = field(default=None, init=False, repr=False)  # Frame number -> index
-    _frames_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether frames are sorted
     _histogram_bins: Optional[NDArray] = field(default=None, init=False, repr=False)  # Pre-computed histogram bin edges
 
+    # Class variable to track total number of imagery instances created
+    _instance_count: int = 0
+
     def __post_init__(self):
-        if self.row_offset is None:
-            self.row_offset = 0
-        if self.column_offset is None:
-            self.column_offset = 0
+        super().__post_init__()
+        # Increment the class-level counter
+        Imagery._instance_count += 1
+        if self.name is None or self.name == "":
+            self.name = f"Unknown Imagery {Imagery._instance_count}"
+        if self.sensor is None:
+            self.sensor = Sensor()
+        if self.datastream is None or self.datastream == "":
+            self.datastream = "Unknown Datastream"
         self.uuid = uuid.uuid4()
-        self.sensor.add_imagery(self)
 
     def __getitem__(self, s):
         if isinstance(s, (list, np.ndarray, slice)):
@@ -184,6 +183,17 @@ class Imagery:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name}, {self.images.shape})"
+
+    def get_index(
+        self, val: Union[np.datetime64, int], is_time: bool, nearest: bool = False, in_range: bool = False
+    ) -> Optional[int]:
+        """Override parent method to clamp to loaded frames"""
+        index = super().get_index(val, is_time, nearest, in_range)
+        if index is None:
+            return None
+        if self.loaded_frame_count is not None and index >= self.loaded_frame_count:
+            return None
+        return index
 
     @property
     def is_fully_loaded(self):
@@ -317,51 +327,9 @@ class Imagery:
             pass
         return device
 
-    def _check_frames_sorted(self):
-        """Check if frames array is sorted for binary search optimization."""
-        if self._frames_sorted is None:
-            self._frames_sorted = np.all(self.frames[:-1] <= self.frames[1:])
-        return self._frames_sorted
-
-    def _build_frame_index(self):
-        """Build index mapping frame numbers to indices for O(1) lookup."""
-        if self._frame_index is None:
-            self._frame_index = {}
-            for i, frame in enumerate(self.frames):
-                self._frame_index[frame] = i
-
-    def get_frame_index(self, frame_num):
-        """
-        Get array index for a specific frame number using efficient lookup.
-
-        Uses binary search if frames are sorted (O(log n)), otherwise uses
-        cached dictionary lookup (O(1)).
-
-        Parameters
-        ----------
-        frame_num : int
-            Frame number to find
-
-        Returns
-        -------
-        int or None
-            Array index for the frame, or None if frame not found
-        """
-        # If frames are sorted, use binary search
-        if self._check_frames_sorted():
-            idx = np.searchsorted(self.frames, frame_num)
-            if idx < len(self.frames) and self.frames[idx] == frame_num:
-                return idx
-            return None
-        else:
-            # Use dictionary lookup for unsorted frames
-            self._build_frame_index()
-            return self._frame_index.get(frame_num)
-
     def invalidate_caches(self):
         """Invalidate cached data structures when imagery data changes."""
-        self._frame_index = None
-        self._frames_sorted = None
+        super().invalidate_caches()
         self._histograms = None
         self._histogram_bins = None
         self.default_histogram_bounds = {}
@@ -381,12 +349,13 @@ class Imagery:
             column_offset=self.column_offset,
             times=self.times,
             description=self.description,
+            datastream=self.datastream,
         )
         imagery_copy._gpu_images = self._gpu_images
         imagery_copy._gpu_device = self._gpu_device
         return imagery_copy
 
-    def get_histogram(self, frame_index, bins=256, max_rowcol=512):
+    def get_histogram(self, frame_index: int, bins: int = 256, max_rowcol: int = 512):
         """
         Get histogram for a specific frame using consistent bin edges.
 
@@ -499,7 +468,7 @@ class Imagery:
         Parameters
         ----------
         group : h5py.Group
-            HDF5 group to write imagery data to (typically sensors/<sensor_uuid>/imagery/<imagery_uuid>/)
+            HDF5 group to write imagery data to (typically imagery/<imagery_uuid>/)
 
         Notes
         -----
@@ -510,11 +479,12 @@ class Imagery:
         - Row/column offsets
         - Metadata attributes (name, description, uuid)
 
-        Sensor data should be written separately using sensor.to_hdf5()
+        Sensor platform and sensor data should be written separately using platform.to_hdf5() and sensor.to_hdf5()
         """
         # Set imagery attributes
         group.attrs["name"] = self.name
         group.attrs["description"] = self.description
+        group.attrs["datastream"] = self.datastream
         group.attrs["uuid"] = str(self.uuid)
         group.attrs["row_offset"] = self.row_offset
         group.attrs["column_offset"] = self.column_offset
@@ -534,17 +504,17 @@ class Imagery:
 
 def save_imagery_hdf5(
     file_path: Union[str, pathlib.Path],
-    sensor_imagery_map: dict[str, list[Imagery]],
+    imageries: list[Imagery],
 ):
     """
-    Save imagery data to HDF5 file with hierarchical sensor/imagery structure.
+    Save imagery data to HDF5 file with hierarchical sensor_platform/sensor/imagery structure.
 
     Parameters
     ----------
     file_path : Union[str, pathlib.Path]
         Path to the HDF5 file to create
-    sensor_imagery_map : dict[str, list[Imagery]]
-        Dictionary mapping Sensor object names to lists of Imagery objects from that sensor
+    imageries : list[Imagery]
+        List of Imagery objects to save
 
     Notes
     -----
@@ -552,58 +522,76 @@ def save_imagery_hdf5(
     ```
     root/
     ├── [attrs] format_version, created
-    └── sensors/
-        ├── <sensor_uuid>/
-        │   ├── [attrs] name, uuid, sensor_type
-        │   ├── position/ (SampledSensor only)
-        │   ├── geolocation/ (if can_geolocate)
-        │   ├── radiometric/ (if calibration data exists)
-        │   └── imagery/
-        │       ├── <imagery_uuid_1>/
-        │       │   ├── [attrs] name, uuid, description, ...
-        │       └── <imagery_uuid_2>/
-        └── <sensor_uuid_2>/
-            └── ...
+    └── sensor_platforms/
+        └── <sensor_platform_uuid_1>/
+        │   ├── [attrs] name, uuid
+        │   ├── position/ (if positions exist)
+        │   ├── pointing/ (if pointings exist)
+        │   └── sensors/
+        │       ├── <sensor_uuid_1>/
+        │       │   ├── [attrs] name, uuid, sensor_type
+        │       │   ├── geolocation/ (if polynomials exist)
+        │       │   ├── radiometric/ (if calibration data exists)
+        │       │   └── imagery/
+        │       │       ├── <imagery_uuid_1>/
+        │       │       │   ├── [attrs] name, uuid, description,
+        │       │       │   ├── images
+        │       │       │   ├── frames
+        │       │       │   └── unix_nanoseconds (if times exist)
+        │       │       └── <imagery_uuid_2>/
+        │       │       └── ...
+        │       └── <sensor_uuid_2>/
+        │       └── ...
+        └── <sensor_platform_uuid_2>/
+        └── ...
     ```
 
     Examples
     --------
-    >>> sensor = SampledSensor(name="MySensor", ...)
+    >>> platform = SensorPlatform(name="MyPlatform",...)
+    >>> sensor = SampledSensor(name="MySensor", platform=platform, ...)
     >>> imagery1 = Imagery(name="img1", sensor=sensor, ...)
     >>> imagery2 = Imagery(name="img2", sensor=sensor, ...)
-    >>> save_imagery_hdf5("data.h5", {"MySensor": [imagery1, imagery2]})
+    >>> save_imagery_hdf5("data.h5", [imagery1, imagery2])
     """
     file_path = pathlib.Path(file_path)
 
     with h5py.File(file_path, "w") as f:
         # Set root attributes
-        f.attrs["format_version"] = "1.7"
+        f.attrs["format_version"] = "2.0"
         f.attrs["created"] = str(np.datetime64("now").astype(str))
 
-        # Create sensors group
-        sensors_group = f.create_group("sensors")
+        # create sensor platforms group
+        platforms_group = f.create_group("sensor_platforms")
 
-        # Iterate through sensor names and their imagery
-        for sensor_name, imagery_list in sensor_imagery_map.items():
-            if not imagery_list:
-                continue  # Skip if no imagery for this sensor
+        for imagery in imageries:
+            sensor = imagery.sensor
+            platform = sensor.platform
 
-            # Get sensor from first imagery (all imagery in list should have same sensor)
-            sensor = imagery_list[0].sensor
+            if str(platform.uuid) in platforms_group:
+                platform_group = platforms_group[str(platform.uuid)]
+            else:
+                platform_group = platforms_group.create_group(str(platform.uuid))
+                platform.to_hdf5(platform_group)
 
-            # Create sensor group using UUID (guaranteed unique, no sanitization needed)
-            sensor_group = sensors_group.create_group(str(sensor.uuid))
+            if "sensors" in platform_group:
+                sensors_group = platform_group["sensors"]
+            else:
+                sensors_group = platform_group.create_group("sensors")
 
-            # Save sensor data
-            sensor.to_hdf5(sensor_group)
+            if str(sensor.uuid) in sensors_group:
+                sensor_group = sensors_group[str(sensor.uuid)]
+            else:
+                sensor_group = sensors_group.create_group(str(sensor.uuid))
+                sensor.to_hdf5(sensor_group)
 
-            # Create imagery subgroup
-            imagery_group = sensor_group.create_group("imagery")
+            if "imagery" in sensor_group:
+                imagery_group = sensor_group["imagery"]
+            else:
+                imagery_group = sensor_group.create_group("imagery")
 
-            # Save each imagery dataset
-            for imagery in imagery_list:
-                # Create imagery group using UUID (guaranteed unique, no sanitization needed)
-                img_group = imagery_group.create_group(str(imagery.uuid))
-
-                # Save imagery data
-                imagery.to_hdf5(img_group)
+            if str(imagery.uuid) in imagery_group:
+                raise RuntimeError(f"Imagery {imagery.name} already exists in file {file_path}")
+            else:
+                unique_imagery_group = imagery_group.create_group(str(imagery.uuid))
+                imagery.to_hdf5(unique_imagery_group)

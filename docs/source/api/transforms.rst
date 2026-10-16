@@ -13,7 +13,7 @@ VISTA supports various coordinate transformations needed for geospatial imagery 
 * Pixel to geodetic coordinates (lat/lon)
 * Geodetic to pixel coordinates
 * Sensor to ground plane transformations
-* Altitude/Range/Frame (ARF) transformations
+* Attitude Reference Frame (ARF) transformations
 * Polynomial-based transformations
 
 These transformations are essential for working with imagery from calibrated sensors and for integrating VISTA with geospatial tools.
@@ -70,9 +70,9 @@ this module. See :doc:`../developer_guide/custom_sensors` for the full sensor AP
    import astropy.units as u
 
    # Convert pixel coordinates to geodetic (lat/lon/alt)
-   # frame can be a single int or an array of per-point frame numbers
+   # times can be a single time or an array of per-point times
    location = sensor.pixel_to_geodetic(
-       frame=0,
+       times=np.datetime64('now'),
        rows=np.array([100.0, 200.0]),
        columns=np.array([300.0, 400.0]),
    )
@@ -80,7 +80,7 @@ this module. See :doc:`../developer_guide/custom_sensors` for the full sensor AP
 
    # Convert geodetic coordinates to pixel
    loc = EarthLocation(lat=40.7128 * u.deg, lon=-74.0060 * u.deg, height=0 * u.m)
-   rows, columns = sensor.geodetic_to_pixel(frame=0, loc=loc)
+   rows, columns = sensor.geodetic_to_pixel(times=np.datetime64('now'), loc=loc)
 
 Low-Level Transforms
 ~~~~~~~~~~~~~~~~~~~~~

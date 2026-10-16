@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 from vista.algorithms.detectors.pstnn import PSTNN
 from vista.detections.detector import Detector
 from vista.imagery.imagery import HAS_TORCH
+from vista.utils.time_mapping import map_frames_to_times
 from vista.widgets.utils.algorithm_utils import create_aoi_selector, create_frame_range_spinboxes
 
 if HAS_TORCH:
@@ -75,7 +76,7 @@ class PSTNNProcessingThread(QThread):
         self.algorithm_params = algorithm_params
         self.aoi = aoi
         self.start_frame = start_frame
-        self.end_frame = end_frame if end_frame is not None else len(imagery.frames)
+        self.end_frame = end_frame if end_frame is not None else len(imagery)
         self.default_color = default_color
         self.default_marker = default_marker
         self.default_marker_size = default_marker_size
@@ -146,7 +147,7 @@ class PSTNNProcessingThread(QThread):
 
             # Phase 2: Per-frame blob detection
             self.status_updated.emit("Detecting targets...")
-            num_frames = len(temp_imagery.frames)
+            num_frames = len(temp_imagery)
             all_frames = []
             all_rows = []
             all_columns = []
@@ -183,6 +184,7 @@ class PSTNNProcessingThread(QThread):
 
             detector = Detector(
                 name=detector_name,
+                times=map_frames_to_times(all_frames, temp_imagery.frames, temp_imagery.times),
                 frames=all_frames,
                 rows=all_rows,
                 columns=all_columns,
@@ -547,7 +549,7 @@ class PSTNNWidget(QDialog):
 
         selected_aoi = self.aoi_combo.currentData()
         start_frame = self.start_frame_spinbox.value()
-        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery.frames))
+        end_frame = min(self.end_frame_spinbox.value(), len(self.imagery))
 
         # Update UI for processing state
         self._set_ui_enabled(False)
@@ -648,7 +650,7 @@ class PSTNNWidget(QDialog):
         """
         self.detector_processed.emit(detector)
 
-        num_detections = len(detector.frames)
+        num_detections = len(detector)
         QMessageBox.information(
             self,
             "Processing Complete",

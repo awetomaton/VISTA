@@ -458,7 +458,7 @@ pixel and geodetic coordinates using the sensor's methods directly:
    # Convert pixel coordinates to geodetic (if sensor data available)
    if sensor.can_geolocate():
        location = sensor.pixel_to_geodetic(
-           frame=0,
+           times=np.datetime64('now'),
            rows=np.array([512.5]),
            columns=np.array([1024.3]),
        )
@@ -472,7 +472,7 @@ pixel and geodetic coordinates using the sensor's methods directly:
            lon=-80.6480 * u.deg,
            height=0.0 * u.m,
        )
-       rows, cols = sensor.geodetic_to_pixel(frame=0, loc=loc)
+       rows, cols = sensor.geodetic_to_pixel(times=np.datetime64('now'), loc=loc)
 
 Use Cases
 ~~~~~~~~~
@@ -591,7 +591,7 @@ transforms these to pixel coordinates using the imagery's geolocation data:
            lon=shapefile_lon * u.deg,
            height=0.0 * u.m,
        )
-       rows, cols = imagery.sensor.geodetic_to_pixel(frame=0, loc=loc)
+       rows, cols = imagery.sensor.geodetic_to_pixel(times=np.datetime64('now'), loc=loc)
 
 Shapefile Attributes
 ~~~~~~~~~~~~~~~~~~~~

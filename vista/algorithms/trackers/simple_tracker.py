@@ -3,6 +3,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from vista.algorithms.trackers.utils import get_times_for_track_frames
+from vista.temporal_data.temporal_data import all_have_times_frames
+
 
 class SimpleTrack:
     """
@@ -213,6 +216,8 @@ def run_simple_tracker(detectors, config):
             Array of row (y) coordinates for each frame.
         - 'columns' : ndarray
             Array of column (x) coordinates for each frame.
+        - 'times' : ndarray or None
+            Array of timestamps for each frame, or None when unavailable.
 
     Notes
     -----
@@ -240,6 +245,10 @@ def run_simple_tracker(detectors, config):
     """
     # Extract configuration with smart defaults
     min_track_length = config.get("min_track_length", 5)
+
+    all_have_times, all_have_frames = all_have_times_frames(detectors)
+    if not all_have_frames:
+        raise ValueError("Selected detections must all have frames.")
 
     # Collect all detections by frame
     detections_by_frame = {}
@@ -383,6 +392,7 @@ def run_simple_tracker(detectors, config):
             "frames": frames_array,
             "rows": positions[:, 1],  # y
             "columns": positions[:, 0],  # x
+            "times": get_times_for_track_frames(detectors, frames_array),
         }
         track_data_list.append(track_data)
 

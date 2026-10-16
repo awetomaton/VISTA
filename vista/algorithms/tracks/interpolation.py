@@ -78,11 +78,15 @@ class TrackInterpolation:
             If track has fewer than 2 points (cannot interpolate)
         """
         # Validate input
-        if len(self.track.frames) < 2:
+        if self.track.frames is None:
+            raise ValueError("Track has no frames to interpolate")
+
+        if len(self.track) < 2:
             raise ValueError("Track must have at least 2 points to interpolate")
 
         # Get existing track data
         existing_frames = self.track.frames
+        existing_times = self.track.times
         existing_rows = self.track.rows
         existing_columns = self.track.columns
 
@@ -104,8 +108,20 @@ class TrackInterpolation:
                 "n_interpolated": 0,
             }
 
-        # Create interpolation functions for rows and columns
+        # Create interpolation functions for times, rows, and columns
         try:
+            time_interp = None
+            min_time = None
+            if existing_times is not None:
+                interp_times = existing_times.astype("datetime64[ns]").astype(np.int64)
+                min_time = np.min(interp_times)
+                time_interp = interp1d(
+                    existing_frames,
+                    interp_times - min_time,
+                    kind=self.method,
+                    assume_sorted=False,
+                    fill_value="extrapolate",
+                )
             row_interp = interp1d(
                 existing_frames,
                 existing_rows,
@@ -123,13 +139,17 @@ class TrackInterpolation:
         except Exception as e:
             raise ValueError(f"Interpolation failed: {str(e)}")
 
-        # Interpolate positions for all frames
+        # Interpolate times and positions for all frames
+        all_times = None
+        if time_interp is not None:
+            all_times = (time_interp(all_frames) + min_time).astype("datetime64[ns]")
         all_rows = row_interp(all_frames)
         all_columns = col_interp(all_frames)
 
         # Create new interpolated track
         interpolated_track = Track(
             name=self.track.name,
+            times=all_times,
             frames=all_frames,
             rows=all_rows,
             columns=all_columns,

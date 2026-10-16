@@ -292,7 +292,7 @@ class BaseTreatmentWidget(QDialog):
         self.progress_bar_label.setVisible(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.progress_bar.setMaximum(len(self.imagery.frames))
+        self.progress_bar.setMaximum(len(self.imagery))
 
         # Disable treatment-specific UI
         self.set_treatment_ui_enabled(False)

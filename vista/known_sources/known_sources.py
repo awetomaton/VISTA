@@ -50,7 +50,8 @@ class KnownSources:
     def get_geodetics(self, times: Union[np.datetime64, NDArray[np.datetime64], Time]) -> EarthLocation:
         """
         Return an EarthLocation containing the positions of the sources at the provided time(s).
-        Subclasses should implement this function based on the source types
+        Subclasses should implement this function based on the source types and be sure to return
+        the resulting EarthLocation in units of km
 
         Parameters
         ----------
@@ -60,25 +61,23 @@ class KnownSources:
         Returns
         -------
         EarthLocation
-            Astropy EarthLocation object containing geodetic coordinates
+            Astropy EarthLocation object containing geodetic coordinates in km
         """
         raise NotImplementedError
 
     def get_pixels(
-        self, imagery: Imagery, frame: Union[int, NDArray], time: Union[np.datetime64, NDArray[np.datetime64], Time]
+        self, imagery: Imagery, times: Union[np.datetime64, NDArray[np.datetime64], Time]
     ) -> Tuple[NDArray, NDArray]:
         """
-        Return the pixel positions of the source for the provided imagery and frame number(s).
+        Return the pixel positions of the source for the provided imagery and time(s).
         Sources which are off-frame or behind the Earth have NaN locations
 
         Parameters
         ----------
         imagery: Imagery
             The imagery we want to project the source onto
-        frame : int, NDArray
-            The frame number(s) to project onto
-        time : np.datetime64, NDArray[np.datetime64], astropy.time.Time
-            The time(s) corresponding to the frame number(s)
+        times : np.datetime64, NDArray[np.datetime64], astropy.time.Time
+            The time(s) to project at
 
         Returns
         -------
@@ -89,33 +88,47 @@ class KnownSources:
         """
         sensor = imagery.sensor  # get the imagery sensor
 
-        # geodetic positions for the source at those times
-        source_positions = self.get_geodetics(time)
+        # we want at least a 1d array for now
+        times_array = np.atleast_1d(times)
 
-        # check if object is on the other side of the earth via intersection along LOS
-        sensor_positions = sensor.get_positions(np.atleast_1d(time))
-        dx = source_positions.x.to(u.km).value - sensor_positions[0]
-        dy = source_positions.y.to(u.km).value - sensor_positions[1]
-        dz = source_positions.z.to(u.km).value - sensor_positions[2]
-        # normalize for los_to_earth function
-        los_sensor_to_source = np.array([dx, dy, dz]) / np.sqrt(dx**2 + dy**2 + dz**2)
+        # geodetic positions for the source at those times
+        # source_positions is of shape (..., num_times, 3)
+        x, y, z = self.get_geodetics(times_array).to(u.km).to_geocentric()
+        source_positions = np.stack([x.value, y.value, z.value], axis=-1)
+
+        # Below, we will check if object is on the other side of the earth via intersection along LOS
+
+        # transpose so sensor_positions has shape (num_times, 3)
+        sensor_positions = sensor.platform.get_positions(times_array).T
+        # los_sensor_to_source has shape (..., num_times, 3)
+        los_sensor_to_source = source_positions - sensor_positions
+
         # calculate intersection of los from sensor to source with the Earth
-        d, intersection = los_to_earth(sensor_positions, los_sensor_to_source)
+        # d is of shape (..., num_times)
+        d, _ = los_to_earth(sensor_positions, los_sensor_to_source)
+
         # if intersection distance is farther than the source, los from sensor
         # to source does not intersect the earth
-        d[d**2 > dx**2 + dy**2 + dz**2] = np.nan
+        d[d > np.linalg.norm(los_sensor_to_source, axis=-1)] = np.nan
         # values which are not nan are the ones that are blocked by the earth
         # set their source positions to nan, as we don't care about their pixel positions
         source_positions[~np.isnan(d)] = np.nan
 
         # convert from ECEF to ARF to pixels
-        rows, columns = sensor.geodetic_to_pixel(frame, source_positions)
+        # move xyz axis to start so we can unpack
+        earth_loc = EarthLocation(*np.moveaxis(source_positions, -1, 0), unit=u.km)
+        rows, columns = sensor.geodetic_to_pixel(times_array, earth_loc)
+
+        # now squeeze out time axis if number was passed in
+        if np.asarray(times).ndim == 0:
+            rows = np.squeeze(rows, axis=-1)
+            columns = np.squeeze(columns, axis=-1)
 
         # Only display objects within the image frame
-        # TODO: Handle when there's a cropped image
         _, max_rows, max_cols = imagery.images.shape
         # where is the valid region...
-        where = (rows >= 0) & (rows <= max_rows + 1) & (columns >= 0) & (columns <= max_cols + 1)
+        where = (rows - imagery.row_offset >= 0) & (rows - imagery.row_offset <= max_rows + 1)
+        where &= (columns - imagery.column_offset >= 0) & (columns - imagery.column_offset <= max_cols + 1)
         # ... so negate it to set invalid pixels to nan
         rows[~where] = np.nan
         columns[~where] = np.nan
@@ -157,26 +170,20 @@ class KnownSources:
             list of Track objects
         """
         if imagery.times is None:
-            raise ValueError("imagery.times is None, cannot create tracks without frame <-> time mapping")
+            raise ValueError("imagery.times is None, cannot create tracks without time values")
+
+        if len(self.source_names) == 0:
+            return []
 
         tracks = []
-
-        rows = []
-        columns = []
-        for frame, time in zip(imagery.frames, imagery.times):
-            r, c = self.get_pixels(imagery, frame, time)
-            rows.append(r)
-            columns.append(c)
-        # after looping over frames, rows and columns have shape (num_frames, num_sources)
-        # transpose so each source has a row and column
-        rows = np.array(rows).T
-        columns = np.array(columns).T
+        rows, columns = self.get_pixels(imagery, imagery.times)
 
         for source, source_type, row, column in zip(self.source_names, self.source_types, rows, columns):
             slices = self._get_slices(row)  # columns should have the same valid slices
             for slice in slices:
                 track = Track(
                     name=source,
+                    times=imagery.times[slice],
                     frames=imagery.frames[slice],
                     rows=row[slice],
                     columns=column[slice],

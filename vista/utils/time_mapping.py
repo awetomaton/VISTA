@@ -1,63 +1,65 @@
-"""Utility functions for mapping times to frames"""
+"""Utility functions for mapping times to frames and frames to times"""
+
+from typing import Optional
 
 import numpy as np
 from numpy.typing import NDArray
 
 
-def map_times_to_frames(
-    track_times: NDArray[np.datetime64],
-    imagery_times: NDArray[np.datetime64],
+def map_frames_to_times(
+    frames: NDArray[np.int_],
     imagery_frames: NDArray[np.int_],
-) -> NDArray[np.int_]:
+    imagery_times: Optional[NDArray[np.datetime64]],
+) -> Optional[NDArray[np.datetime64]]:
     """
-    Map track times to imagery frames using nearest time before track time.
+    Map frame numbers to timestamps.
 
     Parameters
     ----------
-    track_times : NDArray[np.datetime64]
-        Array of datetime64 times for track points
-    imagery_times : NDArray[np.datetime64]
-        Array of datetime64 times for imagery frames
+    frames : NDArray[np.int_]
+        Frame numbers that need timestamps.
     imagery_frames : NDArray[np.int_]
-        Array of frame numbers corresponding to imagery_times
+        Frame numbers associated with ``imagery_times``.
+    imagery_times : NDArray[np.datetime64] or None
+        Timestamps associated with ``imagery_frames``.
 
     Returns
     -------
-    NDArray[np.int_]
-        Array of frame numbers for each track time
+    NDArray[np.datetime64] or None
+        Nanosecond timestamps corresponding to ``frames`` if successful.
+        None if source frames or times are unavailable.
+        None if a desired frame is missing from source frames.
 
     Raises
     ------
     ValueError
-        If track times fall before all imagery times
+        If any input is not one-dimensional or source frames and times
+        have different shape.
     """
-    if len(imagery_times) == 0:
-        raise ValueError("Imagery has no times defined")
+    if imagery_times is None:
+        return None
 
-    if len(track_times) == 0:
-        return np.array([], dtype=np.int_)
+    if frames.ndim != 1 or imagery_frames.ndim != 1 or imagery_times.ndim != 1:
+        raise ValueError("All input arrays must be of dimension one")
 
-    # Convert to numeric for comparison (nanoseconds since epoch)
-    track_times_ns = track_times.astype("datetime64[ns]").astype(np.int64)
-    imagery_times_ns = imagery_times.astype("datetime64[ns]").astype(np.int64)
+    if imagery_frames.shape != imagery_times.shape:
+        raise ValueError("source frames and times must have same shape")
 
-    # For each track time, find the nearest imagery time before it
-    frames = np.empty(len(track_times), dtype=np.int_)
+    if len(imagery_frames) == 0:
+        return None
 
-    for i, track_time_ns in enumerate(track_times_ns):
-        # Find imagery times that are before or equal to track time
-        mask = imagery_times_ns <= track_time_ns
+    # empty desired frames
+    if len(frames) == 0:
+        return np.array([], dtype="datetime64[ns]")
 
-        if not np.any(mask):
-            # Track time is before all imagery times
-            raise ValueError(
-                f"Track time {track_times[i]} is before all imagery times. First imagery time: {imagery_times[0]}"
-            )
+    sorter = np.argsort(imagery_frames)
+    indices = np.searchsorted(imagery_frames, frames, sorter=sorter)
 
-        # Get the closest time before track time
-        valid_indices = np.where(mask)[0]
-        closest_idx = valid_indices[np.argmax(imagery_times_ns[valid_indices])]
+    invalid = indices >= len(imagery_frames)
+    indices[invalid] = len(imagery_frames) - 1
 
-        frames[i] = imagery_frames[closest_idx]
+    frame_found = imagery_frames[sorter][indices] == frames
+    if not np.all(frame_found):
+        return None
 
-    return frames
+    return imagery_times[sorter][indices]
