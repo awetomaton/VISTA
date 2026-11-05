@@ -417,6 +417,27 @@ class ImageryPanel(DataPanel):
     def delete_selected_imagery(self):
         """Delete imagery that is selected in the tree."""
         selected_imageries = self._get_selected_imagery()
+        if len(selected_imageries) == 0:
+            return
+
+        # Confirm deletion
+        if len(selected_imageries) == 1:
+            prompt = f"Delete imagery '{selected_imageries[0].name}'?"
+        else:
+            names = "\n".join(f"  - {imagery.name}" for imagery in selected_imageries[:10])
+            if len(selected_imageries) > 10:
+                names += f"\n  ... and {len(selected_imageries) - 10} more"
+            prompt = f"Delete {len(selected_imageries)} selected imagery items?\n\n{names}"
+        reply = QMessageBox.question(
+            self,
+            "Confirm Deletion",
+            f"{prompt}\n\nThis action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
         for imagery_to_delete in selected_imageries:
             # If imagery is still loading, cancel the load first
             if not imagery_to_delete.is_fully_loaded:

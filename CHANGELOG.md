@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - 🛠️ Updated file loading and saving to introduce a new hierarchy that includes the new `SensorPlatform`
  - 🛠️ Detectors and Tracks no longer require frames, but will accept either/both of times/frames. This means there are less stringent temporal (time/frame) and coordinate (pixel or geodetic) requirements when loading in CSVs
  - 🛠️ Better vectorized pixel <-> geodetic conversion and related functions
+ - 🛠️ Added prompt for imagery deletion confirmation
  - 🔧 Fix ARF handedness from left- to right- handed to match documentation
  - 🔧 Fixed misnamed column names on track CSV load-in
  - 🔧 Fixed track selection via click to only include tracks from the currently selected sensor
