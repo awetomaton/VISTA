@@ -328,7 +328,8 @@ class DataLoaderThread(QThread):
                 bad_pixel_mask_frames = rad_group["bad_pixel_mask_frames"][:]
             if "radiometric_gain" in rad_group:
                 radiometric_gain = rad_group["radiometric_gain"][:]
-                radiometric_gain_frames = rad_group["radiometric_gain_frames"][:]
+                if "radiometric_gain_frames" in rad_group:
+                    radiometric_gain_frames = rad_group["radiometric_gain_frames"][:]
 
         if sensor_type == "SampledSensor":
             # Load position data
@@ -537,7 +538,13 @@ class DataLoaderThread(QThread):
         if imagery_uuid is not None:
             imagery.uuid = uuid.UUID(imagery_uuid)
 
-        if times is not None and isinstance(sensor, SampledSensor) and sensor._geo_data:
+        if isinstance(sensor, SampledSensor) and sensor._geo_data and times is None:
+            self.warning_occurred.emit(
+                "Geolocation Unavailable",
+                f"Imagery '{name}' has geolocation data but no timestamps.\n\n"
+                "VISTA 2.0 geolocation requires timestamps, so this imagery cannot be geolocated.",
+            )
+        elif isinstance(sensor, SampledSensor) and sensor._geo_data:
             geo_data = sensor._geo_data
             # construct temporary temporal data object for indexing, as imagery clamps to loaded frames
             temporal_data = TemporalData(times=times, frames=frames)

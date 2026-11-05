@@ -8,7 +8,7 @@ retrieval via interpolation/extrapolation from discrete samples.
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import ClassVar, Optional
 
 import h5py
 import numpy as np
@@ -94,7 +94,7 @@ class SensorPlatform:
     times_pointings: Optional[NDArray[np.datetime64]] = None
     uuid: str = field(init=False, default=None)
     # Class variable to track total number of sensor platform instances created
-    _instance_count: int = 0
+    _instance_count: ClassVar[int] = 0
 
     def __post_init__(self):
         """

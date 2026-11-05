@@ -210,6 +210,12 @@ class Track(TemporalData):
         NDArray or None
             Array of indices for visible track points, or None if no points visible
         """
+        # A track cannot be shown along an axis (times or frames) it does not have
+        if is_time and self.times is None:
+            return None
+        if not is_time and self.frames is None:
+            return None
+
         if self.complete:
             # Show entire track
             return np.arange(len(self))
@@ -271,6 +277,12 @@ class Track(TemporalData):
         locations = self.sensor.pixel_to_geodetic(self.times, self.rows, self.columns)
         lons = np.asarray(locations.lon.deg, dtype=np.float64)
         lats = np.asarray(locations.lat.deg, dtype=np.float64)
+
+        # Points which do not intersect Earth have NaN geocentric coordinates, which astropy reports as
+        # lat=90, lon=0 with a NaN height. Set those invalid locations to NaN
+        invalid = np.isnan(np.asarray(locations.height.value, dtype=np.float64))
+        lons[invalid] = np.nan
+        lats[invalid] = np.nan
 
         self._cached_lons = lons
         self._cached_lats = lats

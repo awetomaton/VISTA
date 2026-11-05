@@ -34,7 +34,13 @@ class DisplayTimeline:
         self._current_index: Optional[int] = None
 
     def _check_is_time(self):
-        """Check whether all items have times or frames, raising error if not"""
+        """
+        Determine whether the timeline should be in time mode (True) or frame mode (False)
+
+        Time mode is used if all items have times, otherwise frame mode is used if all items have
+        frames. If items are mixed (some only have times and others only have frames), the imagery
+        decides the mode, preferring time mode. Items lacking the chosen axis are not shown.
+        """
         has_times = True
         has_times &= all(imagery.times is not None for imagery in self.imageries)
         has_times &= all(detector.times is not None for detector in self.detectors if detector.visible)
@@ -49,19 +55,23 @@ class DisplayTimeline:
             return True
         elif has_frames:
             return False
-        else:
-            raise ValueError("Selected imagery, tracks, and detectors must all have either times or frames")
+
+        # Mixed items: let the imagery decide, preferring time mode. Since this is called from Qt slots
+        # when data is added, raising here would abort the application, so items lacking the chosen axis
+        # are instead excluded from the timeline (and not displayed)
+        return all(imagery.times is not None for imagery in self.imageries)
 
     def _get_all_unique_times(self):
         all_times = []
         for imagery in self.imageries:
             # clamp to loaded frames
-            all_times.extend(imagery.times[: imagery.loaded_frame_count])
+            if imagery.times is not None:
+                all_times.extend(imagery.times[: imagery.loaded_frame_count])
         for detector in self.detectors:
-            if detector.visible:
+            if detector.visible and detector.times is not None:
                 all_times.extend(detector.times)
         for track in self.tracks:
-            if track.visible:
+            if track.visible and track.times is not None:
                 all_times.extend(track.times)
 
         return np.unique(all_times).astype("datetime64[ns]")
@@ -70,12 +80,13 @@ class DisplayTimeline:
         all_frames = []
         for imagery in self.imageries:
             # clamp to loaded frames
-            all_frames.extend(imagery.frames[: imagery.loaded_frame_count])
+            if imagery.frames is not None:
+                all_frames.extend(imagery.frames[: imagery.loaded_frame_count])
         for detector in self.detectors:
-            if detector.visible:
+            if detector.visible and detector.frames is not None:
                 all_frames.extend(detector.frames)
         for track in self.tracks:
-            if track.visible:
+            if track.visible and track.frames is not None:
                 all_frames.extend(track.frames)
 
         return np.unique(all_frames).astype(np.int_)

@@ -37,6 +37,10 @@ class TemporalData:
         Mapping of time to index
     _times_sorted : bool
         Whether times are sorted or not
+    _times_sorter : NDArray[np.int_]
+        Indices which sort times, cached for nearest-value searches on unsorted times
+    _frames_sorter : NDArray[np.int_]
+        Indices which sort frames, cached for nearest-value searches on unsorted frames
     """
 
     times: Optional[NDArray[np.datetime64]] = None
@@ -47,6 +51,8 @@ class TemporalData:
     _times_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether times are sorted
     _frame_index: Optional[dict[int, int]] = field(default=None, init=False, repr=False)  # Frame number -> index
     _frames_sorted: Optional[bool] = field(default=None, init=False, repr=False)  # Whether frames are sorted
+    _times_sorter: Optional[NDArray[np.int_]] = field(default=None, init=False, repr=False)  # argsort of times
+    _frames_sorter: Optional[NDArray[np.int_]] = field(default=None, init=False, repr=False)  # argsort of frames
 
     def __post_init__(self):
         if self.times is None and self.frames is None:
@@ -75,6 +81,28 @@ class TemporalData:
         if self.frames is not None and self._frames_sorted is None:
             self._frames_sorted = np.all(self.frames[:-1] <= self.frames[1:])
         return self._frames_sorted
+
+    def _get_sorter(self, is_time: bool) -> NDArray[np.int_]:
+        """
+        Get the (cached) indices which sort times or frames, for nearest-value searches on unsorted data.
+
+        Parameters
+        ----------
+        is_time : bool
+            Whether to get the sorter for times (True) or frames (False)
+
+        Returns
+        -------
+        NDArray[np.int_]
+            Indices which sort the times or frames array
+        """
+        if is_time:
+            if self._times_sorter is None:
+                self._times_sorter = np.argsort(self.times, kind="stable")
+            return self._times_sorter
+        if self._frames_sorter is None:
+            self._frames_sorter = np.argsort(self.frames, kind="stable")
+        return self._frames_sorter
 
     def _build_time_index(self):
         """Build index mapping times to indices for O(1) lookup."""
@@ -176,45 +204,48 @@ class TemporalData:
         if val is None:
             return None
 
+        # An index cannot be found along an axis (times or frames) this object does not have
+        if is_time and self.times is None:
+            return None
+        if not is_time and self.frames is None:
+            return None
+
         # Search for exact, not nearest, value
         if not nearest:
             if is_time:
                 return self._get_time_index(val)
             return self._get_frame_index(val)
 
-        # Find nearest previous value for time
+        # Find the nearest preceding value, using the cached sorted check to avoid re-sorting on every call
         if is_time:
-            # If required to be in range and it's not
-            if in_range and (val > np.max(self.times) or val < np.min(self.times)):
-                return None
+            values = self.times
+            val = np.datetime64(val, "ns")
+            is_sorted = self._check_times_sorted()
+        else:
+            values = self.frames
+            is_sorted = self._check_frames_sorted()
 
-            time_ns = val.astype("datetime64[ns]").astype(np.int64)
-            imagery_times_ns = self.times.astype("datetime64[ns]").astype(np.int64)
-            invalid_time = time_ns < np.min(imagery_times_ns)
-            if np.any(invalid_time):
-                return None
-
-            sorter = np.argsort(imagery_times_ns)
-            # side=right so that desired time gets an index *after* imagery time in case of exact match
-            # Since all desired times are guaranted to be >= minimum time, indices will be at least 1,
-            # and at most len(imagery_times). Subtracting 1 then gives the *preceding* index as desired
-            index = np.searchsorted(imagery_times_ns, time_ns, side="right", sorter=sorter) - 1
-            return sorter[index]
-
-        # If required to be in range and it's not
-        if in_range and (val > np.max(self.frames) or val < np.min(self.frames)):
+        if len(values) == 0:
             return None
 
-        # Find nearest previous value for frame
-        invalid_frame = val < np.min(self.frames)
-        if np.any(invalid_frame):
+        sorter = None if is_sorted else self._get_sorter(is_time)
+        if is_sorted:
+            min_val, max_val = values[0], values[-1]
+        else:
+            min_val, max_val = values[sorter[0]], values[sorter[-1]]
+
+        # Values before the first time/frame have no preceding value, and values after the last are
+        # only invalid if required to be in range
+        if val < min_val or (in_range and val > max_val):
             return None
-        sorter = np.argsort(self.frames)
-        # side=right so that desired frame gets an index *after* imagery frame in case of exact match
-        # Since all desired frames are guaranted to be >= minimum frame, indices will be at least 1,
-        # and at most len(imagery_frames). Subtracting 1 then gives the *preceding* index as desired
-        index = np.searchsorted(self.frames, val, side="right", sorter=sorter) - 1
-        return sorter[index]
+
+        # side=right so that desired value gets an index *after* the stored value in case of exact match
+        # Since the desired value is guaranteed to be >= minimum value, the index will be at least 1,
+        # and at most len(values). Subtracting 1 then gives the *preceding* index as desired
+        if is_sorted:
+            return int(np.searchsorted(values, val, side="right") - 1)
+        index = np.searchsorted(values, val, side="right", sorter=sorter) - 1
+        return int(sorter[index])
 
     def get_value(self, index: int, is_time: bool):
         """
@@ -239,8 +270,10 @@ class TemporalData:
     def invalidate_caches(self):
         self._time_index = None
         self._times_sorted = None
+        self._times_sorter = None
         self._frame_index = None
         self._frames_sorted = None
+        self._frames_sorter = None
 
 
 def all_have_times_frames(data: list[TemporalData]) -> tuple[bool, bool]:

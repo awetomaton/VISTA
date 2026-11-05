@@ -7,7 +7,7 @@ to implement their own logic such as file readers
 import pathlib
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import ClassVar, Optional, Union
 
 import h5py
 import numpy as np
@@ -144,7 +144,7 @@ class Imagery(TemporalData):
     _histogram_bins: Optional[NDArray] = field(default=None, init=False, repr=False)  # Pre-computed histogram bin edges
 
     # Class variable to track total number of imagery instances created
-    _instance_count: int = 0
+    _instance_count: ClassVar[int] = 0
 
     def __post_init__(self):
         super().__post_init__()

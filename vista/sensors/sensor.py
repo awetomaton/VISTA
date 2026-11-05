@@ -8,7 +8,7 @@ calibration data (bias, gain, bad pixels), and optional point spread function mo
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional, Tuple, Union
+from typing import ClassVar, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -69,7 +69,7 @@ class Sensor:
     uuid: str = field(init=False, default=None)
 
     # Class variable to track total number of sensor instances created
-    _instance_count: int = 0
+    _instance_count: ClassVar[int] = 0
 
     def __post_init__(self):
         """

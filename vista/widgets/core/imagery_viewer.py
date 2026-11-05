@@ -543,7 +543,11 @@ class ImageryViewer(QWidget):
     def _get_uppermost_imagery(self, row: float, column: float) -> Optional[Imagery]:
         """Return the uppermost visible imagery beneath a pixel position"""
         for imagery in reversed(self._get_imagery_stack()):
-            image_item = self.image_items.get(imagery.uuid)
+            # In map view the pixel image items are hidden and the projected items are displayed instead
+            if self.map_view_mode:
+                image_item = self.projected_image_items.get(imagery.uuid)
+            else:
+                image_item = self.image_items.get(imagery.uuid)
             if image_item is None or not image_item.isVisible():
                 continue
 

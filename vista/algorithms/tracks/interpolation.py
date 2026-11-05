@@ -142,7 +142,9 @@ class TrackInterpolation:
         # Interpolate times and positions for all frames
         all_times = None
         if time_interp is not None:
-            all_times = (time_interp(all_frames) + min_time).astype("datetime64[ns]")
+            # Round and convert to int64 *before* adding the epoch offset: the offset is ~1e18 ns, which
+            # float64 cannot represent to the nanosecond, and would otherwise shift every time by up to 128 ns
+            all_times = (np.round(time_interp(all_frames)).astype(np.int64) + min_time).astype("datetime64[ns]")
         all_rows = row_interp(all_frames)
         all_columns = col_interp(all_frames)
 

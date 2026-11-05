@@ -538,4 +538,5 @@ class SampledSensor(Sensor):
                 radiometric_group = group.create_group("radiometric")
 
             radiometric_group.create_dataset("radiometric_gain", data=self.radiometric_gain)
-            radiometric_group.create_dataset("radiometric_gain_frames", data=self.radiometric_gain_frames)
+            if self.radiometric_gain_frames is not None:
+                radiometric_group.create_dataset("radiometric_gain_frames", data=self.radiometric_gain_frames)
