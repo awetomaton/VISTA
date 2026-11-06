@@ -380,9 +380,9 @@ class Simulation:
             longitudes = location.lon.deg
             altitudes = location.height.to("km").value
 
-            tracks_df["Latitude"] = latitudes
-            tracks_df["Longitude"] = longitudes
-            tracks_df["Altitude"] = altitudes
+            tracks_df["Latitude (deg)"] = latitudes
+            tracks_df["Longitude (deg)"] = longitudes
+            tracks_df["Altitude (km)"] = altitudes
 
             # Remove pixel coordinates to test geodetic-only loading
             tracks_df = tracks_df.drop(columns=["Rows", "Columns"])

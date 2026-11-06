@@ -430,7 +430,8 @@ class DataLoaderThread(QThread):
                 bad_pixel_mask_frames = rad_group["bad_pixel_mask_frames"][:]
             if "radiometric_gain" in rad_group:
                 radiometric_gain = rad_group["radiometric_gain"][:]
-                radiometric_gain_frames = rad_group["radiometric_gain_frames"][:]
+                if "radiometric_gain_frames" in rad_group:
+                    radiometric_gain_frames = rad_group["radiometric_gain_frames"][:]
 
         if sensor_type == "SampledSensor":
             # Load ARF geolocation polynomials

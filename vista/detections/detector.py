@@ -356,15 +356,8 @@ class Detector(TemporalData):
             frames = df["Frames"].to_numpy()
 
         # attempt any conversions if able and necessary
-        if imagery is not None and imagery.times is not None:
-            if times is not None and frames is None:
-                indices = [imagery.get_index(time, True) for time in times]
-                if np.all([index is not None for index in indices]):
-                    frames = imagery.frames[indices]
-            elif times is None and frames is not None:
-                indices = [imagery.get_index(frame, False) for frame in frames]
-                if np.all([index is not None for index in indices]):
-                    times = imagery.times[indices]
+        if imagery is not None:
+            times, frames = imagery.fill_times_frames(times, frames)
 
         if times is None and frames is None:
             raise ValueError(f"Detector '{name}' must have either 'Times' or 'Frames' column")

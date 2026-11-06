@@ -24,6 +24,8 @@ class TemporalData:
     get_index(val, is_time, nearest=False)
         Get the index of a value based on whether it is a time or frame, and
         whether it should require an exact match or the nearest preceding value
+    fill_times_frames(times, frames)
+        Fill in missing times from frames (or frames from times) using this object's own times and frames
     invalidate_caches()
         Invalidate the internal time and frame index caches
 
@@ -266,6 +268,44 @@ class TemporalData:
         if is_time:
             return self.times[index]
         return self.frames[index]
+
+    def fill_times_frames(
+        self, times: Optional[NDArray[np.datetime64]], frames: Optional[NDArray[np.int_]]
+    ) -> tuple[Optional[NDArray[np.datetime64]], Optional[NDArray[np.int_]]]:
+        """
+        Fill in missing times from frames, or missing frames from times, using this object's own times and frames
+
+        The conversion is only performed when this object has both times and frames, exactly one of the
+        inputs is provided, and every provided value is found in this object (via ``get_index``). Otherwise
+        the inputs are returned unchanged.
+
+        Parameters
+        ----------
+        times : NDArray[np.datetime64], optional
+            Times to find matching frames for, or None
+        frames : NDArray[np.int_], optional
+            Frames to find matching times for, or None
+
+        Returns
+        -------
+        times : NDArray[np.datetime64], None
+            The provided times, or the times matching the provided frames when found
+        frames : NDArray[np.int_], None
+            The provided frames, or the frames matching the provided times when found
+        """
+        if self.times is None or self.frames is None:
+            return times, frames
+
+        if times is not None and frames is None:
+            indices = [self.get_index(time, True) for time in times]
+            if all(index is not None for index in indices):
+                frames = self.frames[indices]
+        elif times is None and frames is not None:
+            indices = [self.get_index(frame, False) for frame in frames]
+            if all(index is not None for index in indices):
+                times = self.times[indices]
+
+        return times, frames
 
     def invalidate_caches(self):
         self._time_index = None

@@ -87,6 +87,8 @@ class KnownSources:
             Column coordinates of source positions in the frame(s)
         """
         sensor = imagery.sensor  # get the imagery sensor
+        if not sensor.can_geolocate():
+            raise ValueError(f"Sensor '{sensor.name}' cannot geolocate, so known sources cannot be projected onto it")
 
         # we want at least a 1d array for now
         times_array = np.atleast_1d(times)

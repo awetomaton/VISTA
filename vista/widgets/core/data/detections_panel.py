@@ -1597,8 +1597,9 @@ class DetectionsPanel(DataPanel):
             detector.frames = detector.frames[keep_mask] if detector.frames is not None else None
             detector.rows = detector.rows[keep_mask]
             detector.columns = detector.columns[keep_mask]
-            detector._cached_lats = detector._cached_lats[keep_mask] if detector._cached_lats is not None else None
-            detector._cached_lons = detector._cached_lons[keep_mask] if detector._cached_lons is not None else None
+            # Geodetic coordinates are per-point, so the cached values can be subset rather than recomputed
+            cached_lats = detector._cached_lats[keep_mask] if detector._cached_lats is not None else None
+            cached_lons = detector._cached_lons[keep_mask] if detector._cached_lons is not None else None
 
             # Update labels if they exist
             if detector.labels and len(detector.labels) > 0:
@@ -1608,9 +1609,10 @@ class DetectionsPanel(DataPanel):
             if detector.labelers and len(detector.labelers) > 0:
                 detector.labelers = [name for i, name in enumerate(detector.labelers) if keep_mask[i]]
 
-            # Invalidate time and frame index cache
-            detector._time_index = None
-            detector._frame_index = None
+            # Invalidate index/sort caches built from the old arrays, then restore the subset geodetic cache
+            detector.invalidate_caches()
+            detector._cached_lats = cached_lats
+            detector._cached_lons = cached_lons
 
             # Check if detector is now empty
             if len(detector) == 0:

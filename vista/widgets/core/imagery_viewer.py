@@ -2342,16 +2342,7 @@ class ImageryViewer(QWidget):
 
             # attempt any conversions if able and necessary
             if len(self.selected_imageries) == 1:
-                imagery = self.selected_imageries[0]
-                if imagery.times is not None:
-                    if times is not None and frames is None:
-                        indices = [imagery.get_index(time, True) for time in times]
-                        if np.all([index is not None for index in indices]):
-                            frames = imagery.frames[indices]
-                    elif times is None and frames is not None:
-                        indices = [imagery.get_index(frame, False) for frame in frames]
-                        if np.all([index is not None for index in indices]):
-                            times = imagery.times[indices]
+                times, frames = self.selected_imageries[0].fill_times_frames(times, frames)
 
             rows = np.array([self.current_track_data[f][0] for f in sorted_keys])
             columns = np.array([self.current_track_data[f][1] for f in sorted_keys])
@@ -2405,16 +2396,7 @@ class ImageryViewer(QWidget):
 
             # attempt any conversions if able and necessary
             if len(self.selected_imageries) == 1:
-                imagery = self.selected_imageries[0]
-                if imagery.times is not None:
-                    if times is not None and frames is None:
-                        indices = [imagery.get_index(time, True) for time in times]
-                        if np.all([index is not None for index in indices]):
-                            frames = imagery.frames[indices]
-                    elif times is None and frames is not None:
-                        indices = [imagery.get_index(frame, False) for frame in frames]
-                        if np.all([index is not None for index in indices]):
-                            times = imagery.times[indices]
+                times, frames = self.selected_imageries[0].fill_times_frames(times, frames)
 
             editing_track.times = times
             editing_track.frames = frames
@@ -2741,16 +2723,7 @@ class ImageryViewer(QWidget):
 
             # attempt any conversions if able and necessary
             if len(self.selected_imageries) == 1:
-                imagery = self.selected_imageries[0]
-                if imagery.times is not None:
-                    if times is not None and frames is None:
-                        indices = [imagery.get_index(time, True) for time in times]
-                        if np.all([index is not None for index in indices]):
-                            frames = imagery.frames[indices]
-                    elif times is None and frames is not None:
-                        indices = [imagery.get_index(frame, False) for frame in frames]
-                        if np.all([index is not None for index in indices]):
-                            times = imagery.times[indices]
+                times, frames = self.selected_imageries[0].fill_times_frames(times, frames)
 
             detector = Detector(
                 name=f"Detector {len(self.detectors) + 1}",
@@ -2810,16 +2783,7 @@ class ImageryViewer(QWidget):
 
             # attempt any conversions if able and necessary
             if len(self.selected_imageries) == 1:
-                imagery = self.selected_imageries[0]
-                if imagery.times is not None:
-                    if times is not None and frames is None:
-                        indices = [imagery.get_index(time, True) for time in times]
-                        if np.all([index is not None for index in indices]):
-                            frames = imagery.frames[indices]
-                    elif times is None and frames is not None:
-                        indices = [imagery.get_index(frame, False) for frame in frames]
-                        if np.all([index is not None for index in indices]):
-                            times = imagery.times[indices]
+                times, frames = self.selected_imageries[0].fill_times_frames(times, frames)
 
             editing_detector.times = times
             editing_detector.frames = frames

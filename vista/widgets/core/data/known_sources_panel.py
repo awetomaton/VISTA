@@ -208,6 +208,19 @@ class KnownSourcesPanel(DataPanel):
             QMessageBox.warning(self, "Multiple Imagery", "Please select a single Imagery before creating Tracks.")
             return
 
+        imagery = self.viewer.selected_imageries[0]
+        if imagery.times is None:
+            QMessageBox.warning(self, "No Times", "The selected Imagery has no times, so Tracks cannot be created.")
+            return
+        if not imagery.sensor.can_geolocate():
+            QMessageBox.warning(
+                self,
+                "Cannot Geolocate",
+                f"Sensor '{imagery.sensor.name}' cannot geolocate (missing platform positions or geolocation "
+                "polynomials), so known sources cannot be projected onto the selected Imagery.",
+            )
+            return
+
         # Collect Known Sources from selected rows
         for row in selected_rows:
             name_item = self.known_sources_table.item(row, 0)  # Name column
@@ -234,7 +247,7 @@ class KnownSourcesPanel(DataPanel):
         self.progress_dialog.show()
 
         # Create tracks in a worker thread. Viewer updates remain on the GUI thread.
-        self.create_tracks_thread = KnownSourcesTrackCreationThread(known_sources, self.viewer.selected_imageries[0])
+        self.create_tracks_thread = KnownSourcesTrackCreationThread(known_sources, imagery)
         self.create_tracks_thread.progress_updated.connect(self.on_track_creation_progress)
         self.create_tracks_thread.tracks_created.connect(self.on_tracks_created)
         self.create_tracks_thread.creation_cancelled.connect(self.on_track_creation_cancelled)

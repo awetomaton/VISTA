@@ -192,6 +192,8 @@ def _make_pixel_viewer(imageries: list[Imagery]) -> SimpleNamespace:
     """Create the pixel state needed by the pixel-value helper."""
     viewer = SimpleNamespace(
         image_items={imagery.uuid: FakeImageItem() for imagery in imageries},
+        map_view_mode=False,
+        projected_image_items={},
         selected_imageries=imageries,
         timeline=DisplayTimeline(imageries),
     )

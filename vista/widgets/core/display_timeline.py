@@ -66,30 +66,36 @@ class DisplayTimeline:
         for imagery in self.imageries:
             # clamp to loaded frames
             if imagery.times is not None:
-                all_times.extend(imagery.times[: imagery.loaded_frame_count])
+                all_times.append(imagery.times[: imagery.loaded_frame_count])
         for detector in self.detectors:
             if detector.visible and detector.times is not None:
-                all_times.extend(detector.times)
+                all_times.append(detector.times)
         for track in self.tracks:
             if track.visible and track.times is not None:
-                all_times.extend(track.times)
+                all_times.append(track.times)
 
-        return np.unique(all_times).astype("datetime64[ns]")
+        if not all_times:
+            return np.array([], dtype="datetime64[ns]")
+        # concatenate the arrays directly rather than extending a Python list element by element
+        return np.unique(np.concatenate(all_times)).astype("datetime64[ns]")
 
     def _get_all_unique_frames(self):
         all_frames = []
         for imagery in self.imageries:
             # clamp to loaded frames
             if imagery.frames is not None:
-                all_frames.extend(imagery.frames[: imagery.loaded_frame_count])
+                all_frames.append(imagery.frames[: imagery.loaded_frame_count])
         for detector in self.detectors:
             if detector.visible and detector.frames is not None:
-                all_frames.extend(detector.frames)
+                all_frames.append(detector.frames)
         for track in self.tracks:
             if track.visible and track.frames is not None:
-                all_frames.extend(track.frames)
+                all_frames.append(track.frames)
 
-        return np.unique(all_frames).astype(np.int_)
+        if not all_frames:
+            return np.array([], dtype=np.int_)
+        # concatenate the arrays directly rather than extending a Python list element by element
+        return np.unique(np.concatenate(all_frames)).astype(np.int_)
 
     @property
     def current_index(self) -> int:
