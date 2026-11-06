@@ -1,0 +1,6 @@
+﻿vista.algorithms.background\_removal.static\_median\_background\_removal.static\_median\_background\_removal
+============================================================================================================
+
+.. currentmodule:: vista.algorithms.background_removal.static_median_background_removal
+
+.. autofunction:: static_median_background_removal

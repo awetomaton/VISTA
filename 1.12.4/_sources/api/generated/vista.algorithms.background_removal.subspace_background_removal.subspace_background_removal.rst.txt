@@ -1,0 +1,6 @@
+﻿vista.algorithms.background\_removal.subspace\_background\_removal.subspace\_background\_removal
+================================================================================================
+
+.. currentmodule:: vista.algorithms.background_removal.subspace_background_removal
+
+.. autofunction:: subspace_background_removal

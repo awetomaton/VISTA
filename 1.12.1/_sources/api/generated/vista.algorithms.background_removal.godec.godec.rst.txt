@@ -1,0 +1,6 @@
+﻿vista.algorithms.background\_removal.godec.godec
+================================================
+
+.. currentmodule:: vista.algorithms.background_removal.godec
+
+.. autofunction:: godec

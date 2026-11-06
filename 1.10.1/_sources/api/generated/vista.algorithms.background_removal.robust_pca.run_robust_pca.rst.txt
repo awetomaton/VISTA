@@ -1,0 +1,6 @@
+﻿vista.algorithms.background\_removal.robust\_pca.run\_robust\_pca
+=================================================================
+
+.. currentmodule:: vista.algorithms.background_removal.robust_pca
+
+.. autofunction:: run_robust_pca

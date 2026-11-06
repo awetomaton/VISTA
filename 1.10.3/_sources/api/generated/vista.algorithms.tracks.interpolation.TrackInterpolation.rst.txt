@@ -1,0 +1,22 @@
+﻿vista.algorithms.tracks.interpolation.TrackInterpolation
+========================================================
+
+.. currentmodule:: vista.algorithms.tracks.interpolation
+
+.. autoclass:: TrackInterpolation
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrackInterpolation.__init__
+   
+   
+
+   
+   
+   

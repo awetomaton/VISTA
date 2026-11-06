@@ -1,0 +1,37 @@
+﻿vista.sensor\_platforms.sensor\_platform.SensorPlatform
+=======================================================
+
+.. currentmodule:: vista.sensor_platforms.sensor_platform
+
+.. autoclass:: SensorPlatform
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SensorPlatform.__init__
+      ~SensorPlatform.append
+      ~SensorPlatform.get_pointings
+      ~SensorPlatform.get_positions
+      ~SensorPlatform.to_hdf5
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SensorPlatform.name
+      ~SensorPlatform.pointings
+      ~SensorPlatform.positions
+      ~SensorPlatform.times_pointings
+      ~SensorPlatform.times_positions
+      ~SensorPlatform.uuid
+   
+   

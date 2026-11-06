@@ -1,0 +1,25 @@
+﻿vista.known\_sources.known\_sources.KnownSources
+================================================
+
+.. currentmodule:: vista.known_sources.known_sources
+
+.. autoclass:: KnownSources
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~KnownSources.__init__
+      ~KnownSources.create_tracks
+      ~KnownSources.get_geodetics
+      ~KnownSources.get_pixels
+   
+   
+
+   
+   
+   

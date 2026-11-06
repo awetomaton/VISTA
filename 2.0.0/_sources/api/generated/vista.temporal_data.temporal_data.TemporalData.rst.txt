@@ -1,0 +1,33 @@
+﻿vista.temporal\_data.temporal\_data.TemporalData
+================================================
+
+.. currentmodule:: vista.temporal_data.temporal_data
+
+.. autoclass:: TemporalData
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TemporalData.__init__
+      ~TemporalData.fill_times_frames
+      ~TemporalData.get_index
+      ~TemporalData.get_value
+      ~TemporalData.invalidate_caches
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TemporalData.frames
+      ~TemporalData.times
+   
+   
