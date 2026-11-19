@@ -194,6 +194,7 @@ The HDF5 file has the following hierarchical structure:
                            │   ├── uuid: "uuid-string"
                            │   ├── description: "Optional description"
                            │   ├── datastream: "Datastream"
+                           │   ├── datastream_uuid: "uuid-string"
                            │   ├── row_offset: 0
                            │   └── column_offset: 0
                            ├── images             [N × H × W array, float32, chunked]
@@ -265,6 +266,7 @@ Imagery Attributes
 :uuid: Unique identifier for this imagery dataset
 :description: Optional long-form description
 :datastream: Name used to group related imagery in the Imagery panel
+:datastream_uuid: Unique identifier for the datastream
 :row_offset: Vertical offset if imagery is a spatial crop (default: 0)
 :column_offset: Horizontal offset if imagery is a spatial crop (default: 0)
 
@@ -301,6 +303,7 @@ Using the VISTA API
 .. code-block:: python
 
    import numpy as np
+   from vista.datastreams import Datastream
    from vista.imagery import Imagery, save_imagery_hdf5
    from vista.sensor_platforms import SensorPlatform
    from vista.sensors import Sensor
@@ -330,7 +333,7 @@ Using the VISTA API
        times=img_times,
        sensor=sensor,
        description="Example imagery dataset",
-       datastream="Datastream 1",
+       datastream=Datastream(name="Datastream 1"),
    )
 
    # Save to HDF5
@@ -373,6 +376,8 @@ For advanced users, you can create HDF5 files directly:
        img_group.attrs['name'] = 'MyImagery'
        img_group.attrs['uuid'] = 'imagery-uuid-here'
        img_group.attrs['description'] = 'Custom imagery'
+       img_group.attrs['datastream'] = 'Datastream 1'
+       img_group.attrs['datastream_uuid'] = 'datastream-uuid-here'
        img_group.attrs['row_offset'] = 0
        img_group.attrs['column_offset'] = 0
 

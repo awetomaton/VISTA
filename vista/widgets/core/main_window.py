@@ -1010,8 +1010,19 @@ class VistaMainWindow(QMainWindow):
     def on_imagery_available(self, imagery: Imagery, total_frames: int):
         """Handle imagery becoming available for viewing (first block loaded, loading continues in background)"""
 
+        datastream = imagery.datastream
         sensor = imagery.sensor
         platform = sensor.platform
+
+        # Handle datastream - check if a datastream with the same UUID already exists
+        existing_datastream = None
+        for existing_imagery in self.viewer.imageries:
+            if existing_imagery.datastream == datastream:
+                existing_datastream = existing_imagery.datastream
+                break
+
+        if existing_datastream is not None:
+            imagery.datastream = existing_datastream
 
         # Handle platform - check if platform with same UUID already exists
         existing_platform = None

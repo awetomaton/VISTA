@@ -4,12 +4,13 @@ import numpy as np
 from PyQt6.QtCore import QItemSelectionModel, Qt
 from PyQt6.QtWidgets import QProgressBar, QSpinBox, QTreeWidget, QTreeWidgetItem
 
+from vista.datastreams import Datastream
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.widgets.core.data.imagery_panel import ImageryPanel
 
 
-def _make_imagery(name: str, datastream: str, sensor: Sensor, filename: str = "") -> Imagery:
+def _make_imagery(name: str, datastream: Datastream, sensor: Sensor, filename: str = "") -> Imagery:
     return Imagery(
         name=name,
         datastream=datastream,
@@ -36,10 +37,11 @@ def _make_viewer(
 def test_imagery_panel_groups_imagery_by_datastream(qtbot) -> None:
     sensor = Sensor(name="Sensor")
     other_sensor = Sensor(name="Other Sensor")
-    imagery_a = _make_imagery("Imagery A", "Visible", sensor, "/data/a.h5")
-    imagery_b = _make_imagery("Imagery B", "Visible", sensor, "/data/b.h5")
-    imagery_c = _make_imagery("Imagery C", "Infrared", sensor, "/data/c.h5")
-    other_imagery = _make_imagery("Other", "Visible", other_sensor)
+    visible = Datastream(name="Visible")
+    imagery_a = _make_imagery("Imagery A", visible, sensor, "/data/a.h5")
+    imagery_b = _make_imagery("Imagery B", visible, sensor, "/data/b.h5")
+    imagery_c = _make_imagery("Imagery C", Datastream(name="Infrared"), sensor, "/data/c.h5")
+    other_imagery = _make_imagery("Other", visible, other_sensor)
     viewer = _make_viewer([imagery_a, imagery_b, imagery_c, other_imagery], sensor, [imagery_b])
     panel = ImageryPanel(viewer)
     qtbot.addWidget(panel)
@@ -75,7 +77,7 @@ def test_imagery_panel_groups_imagery_by_datastream(qtbot) -> None:
 
 def test_imagery_panel_updates_imagery_name(qtbot) -> None:
     sensor = Sensor(name="Sensor")
-    imagery = _make_imagery("Original", "Visible", sensor)
+    imagery = _make_imagery("Original", Datastream(name="Visible"), sensor)
     viewer = _make_viewer([imagery], sensor, [imagery])
     panel = ImageryPanel(viewer)
     qtbot.addWidget(panel)
@@ -88,12 +90,13 @@ def test_imagery_panel_updates_imagery_name(qtbot) -> None:
     assert imagery.name == "Renamed"
 
 
-def test_imagery_panel_updates_datastream_for_selected_grouped_imagery(qtbot) -> None:
+def test_imagery_panel_updates_shared_datastream_name(qtbot) -> None:
     sensor = Sensor(name="Sensor")
     other_sensor = Sensor(name="Other Sensor")
-    imagery_a = _make_imagery("Imagery A", "Visible", sensor)
-    imagery_b = _make_imagery("Imagery B", "Visible", sensor)
-    other_imagery = _make_imagery("Other Imagery", "Visible", other_sensor)
+    visible = Datastream(name="Visible")
+    imagery_a = _make_imagery("Imagery A", visible, sensor)
+    imagery_b = _make_imagery("Imagery B", visible, sensor)
+    other_imagery = _make_imagery("Other Imagery", visible, other_sensor)
     viewer = _make_viewer([imagery_a, imagery_b, other_imagery], sensor, [imagery_a])
     panel = ImageryPanel(viewer)
     qtbot.addWidget(panel)
@@ -105,18 +108,20 @@ def test_imagery_panel_updates_datastream_for_selected_grouped_imagery(qtbot) ->
     with qtbot.waitSignal(panel.data_changed):
         datastream_item.setText(0, "Color")
 
-    assert imagery_a.datastream == "Color"
-    assert imagery_b.datastream == "Visible"
-    assert other_imagery.datastream == "Visible"
-    assert panel.imagery_table.topLevelItemCount() == 2
+    assert imagery_a.datastream is visible
+    assert imagery_a.datastream.name == "Color"
+    assert imagery_b.datastream is visible
+    assert other_imagery.datastream is visible
+    assert imagery_b.datastream.name == "Color"
+    assert other_imagery.datastream.name == "Color"
+    assert panel.imagery_table.topLevelItemCount() == 1
     assert panel.imagery_table.topLevelItem(0).text(0) == "Color"
-    assert panel.imagery_table.topLevelItem(1).text(0) == "Visible"
 
 
-def test_imagery_panel_preserves_datastream_when_group_has_no_selected_imagery(qtbot) -> None:
+def test_imagery_panel_updates_datastream_without_selected_imagery_in_group(qtbot) -> None:
     sensor = Sensor(name="Sensor")
-    imagery_a = _make_imagery("Imagery A", "Visible", sensor)
-    imagery_b = _make_imagery("Imagery B", "Infrared", sensor)
+    imagery_a = _make_imagery("Imagery A", Datastream(name="Visible"), sensor)
+    imagery_b = _make_imagery("Imagery B", Datastream(name="Infrared"), sensor)
     viewer = _make_viewer([imagery_a, imagery_b], sensor, [imagery_b])
     panel = ImageryPanel(viewer)
     qtbot.addWidget(panel)
@@ -125,13 +130,13 @@ def test_imagery_panel_preserves_datastream_when_group_has_no_selected_imagery(q
     datastream_item = panel.imagery_table.topLevelItem(0)
     datastream_item.setText(0, "Color")
 
-    assert imagery_a.datastream == "Visible"
-    assert datastream_item.text(0) == "Visible"
+    assert imagery_a.datastream.name == "Color"
+    assert panel.imagery_table.topLevelItem(0).text(0) == "Color"
 
 
 def test_datastream_selection_preserves_imagery_selection(qtbot) -> None:
     sensor = Sensor(name="Sensor")
-    imagery = _make_imagery("Imagery", "Visible", sensor)
+    imagery = _make_imagery("Imagery", Datastream(name="Visible"), sensor)
     viewer = _make_viewer([imagery], sensor, [imagery])
     panel = ImageryPanel(viewer)
     qtbot.addWidget(panel)
@@ -147,7 +152,7 @@ def test_datastream_selection_preserves_imagery_selection(qtbot) -> None:
 
 def test_imagery_item_iteration_supports_additional_grouping_levels(qtbot) -> None:
     sensor = Sensor(name="Sensor")
-    imagery = _make_imagery("Imagery", "Visible", sensor)
+    imagery = _make_imagery("Imagery", Datastream(name="Visible"), sensor)
     viewer = _make_viewer([imagery], sensor, [imagery])
     panel = ImageryPanel(viewer)
     qtbot.addWidget(panel)
@@ -167,7 +172,7 @@ def test_imagery_item_iteration_supports_additional_grouping_levels(qtbot) -> No
 
 def test_imagery_panel_updates_loading_progress(qtbot) -> None:
     sensor = Sensor(name="Sensor")
-    imagery = _make_imagery("Imagery", "Visible", sensor)
+    imagery = _make_imagery("Imagery", Datastream(name="Visible"), sensor)
     imagery.loaded_frame_count = 1
     viewer = _make_viewer([imagery], sensor, [imagery])
     panel = ImageryPanel(viewer)

@@ -9,6 +9,7 @@ import pandas as pd
 from PyQt6.QtCore import QSettings, QThread, pyqtSignal
 
 from vista.aoi.aoi import AOI
+from vista.datastreams import Datastream
 from vista.detections.detector import Detector
 from vista.imagery.imagery import Imagery
 from vista.known_sources.satellites import Satellites
@@ -576,7 +577,8 @@ class DataLoaderThread(QThread):
         # Load attributes
         name = img_group.attrs.get("name")
         description = img_group.attrs.get("description", "")
-        datastream = img_group.attrs.get("datastream")
+        datastream_name = img_group.attrs.get("datastream")
+        datastream_uuid = img_group.attrs.get("datastream_uuid")
         imagery_uuid = img_group.attrs.get("uuid")
         row_offset = img_group.attrs.get("row_offset", 0)
         column_offset = img_group.attrs.get("column_offset", 0)
@@ -593,6 +595,15 @@ class DataLoaderThread(QThread):
         # Pre-allocate images array with zeros (safe if cancelled mid-load)
         images_dataset = img_group["images"]
         images = np.zeros(images_dataset.shape, dtype=np.float32)
+
+        datastream = Datastream(name=datastream_name)
+        if datastream_uuid is not None:
+            datastream.uuid = uuid.UUID(datastream_uuid)
+        else:
+            # for files without a datastream uuid attribute (i.e., created before this commit),
+            # generate one based on sensor-datastream uuid/name. Guaranteed unique for that unique pair
+            uname = str(sensor.uuid) + datastream.name
+            datastream.uuid = uuid.uuid5(uuid.NAMESPACE_OID, uname)
 
         imagery = Imagery(
             name=name,

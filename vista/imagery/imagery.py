@@ -14,6 +14,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from vista.aoi import AOI
+from vista.datastreams import Datastream
 from vista.sensors.sensor import Sensor
 from vista.temporal_data.temporal_data import TemporalData
 
@@ -63,6 +64,8 @@ class Imagery(TemporalData):
         Sensor object containing projection polynomials and radiometric calibration data.
         The Sensor provides geodetic coordinate conversion capabilities through its platform
         and optional point spread function modeling for irradiance estimation.
+    datastream : Datastream
+        Datastream object used to group related imagery.
 
     Internal Attributes
     -------------------
@@ -123,7 +126,7 @@ class Imagery(TemporalData):
     row_offset: int = 0
     column_offset: int = 0
     description: str = ""
-    datastream: Optional[str] = ""
+    datastream: Optional[Datastream] = None
     filename: str = ""  # filename where this imagery came from
     # Cached histograms for performance (computed lazily)
     _histograms: Optional[dict] = None  # Maps frame_index -> (hist_y, hist_x)
@@ -154,8 +157,8 @@ class Imagery(TemporalData):
             self.name = f"Unknown Imagery {Imagery._instance_count}"
         if self.sensor is None:
             self.sensor = Sensor()
-        if self.datastream is None or self.datastream == "":
-            self.datastream = "Unknown Datastream"
+        if self.datastream is None:
+            self.datastream = Datastream()
         self.uuid = uuid.uuid4()
 
     def __getitem__(self, s):
@@ -477,14 +480,15 @@ class Imagery(TemporalData):
         - Frame numbers
         - Times (as unix_nanoseconds)
         - Row/column offsets
-        - Metadata attributes (name, description, uuid)
+        - Metadata attributes (name, description, datastream name/UUID, uuid)
 
         Sensor platform and sensor data should be written separately using platform.to_hdf5() and sensor.to_hdf5()
         """
         # Set imagery attributes
         group.attrs["name"] = self.name
         group.attrs["description"] = self.description
-        group.attrs["datastream"] = self.datastream
+        group.attrs["datastream"] = self.datastream.name
+        group.attrs["datastream_uuid"] = str(self.datastream.uuid)
         group.attrs["uuid"] = str(self.uuid)
         group.attrs["row_offset"] = self.row_offset
         group.attrs["column_offset"] = self.column_offset

@@ -117,13 +117,13 @@ class ImageryPanel(DataPanel):
         datastream_items = {}
 
         for imagery in filtered_imageries:
-            datastream_item = datastream_items.get(imagery.datastream)
+            datastream_item = datastream_items.get(imagery.datastream.uuid)
             if datastream_item is None:
-                datastream_item = QTreeWidgetItem(self.imagery_table, [imagery.datastream])
+                datastream_item = QTreeWidgetItem(self.imagery_table, [imagery.datastream.name])
                 datastream_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable)
                 datastream_item.setToolTip(0, "Imagery Datastream")
-                datastream_item.setData(0, Qt.ItemDataRole.UserRole, imagery.datastream)
-                datastream_items[imagery.datastream] = datastream_item
+                datastream_item.setData(0, Qt.ItemDataRole.UserRole, imagery.datastream.uuid)
+                datastream_items[imagery.datastream.uuid] = datastream_item
 
             imagery_item = QTreeWidgetItem(datastream_item)
             imagery_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
@@ -283,22 +283,15 @@ class ImageryPanel(DataPanel):
             return
 
         if item.parent() is None:
-            old_datastream = item.data(0, Qt.ItemDataRole.UserRole)
-            new_datastream = item.text(0)
-
-            selected_imageries = self._get_selected_imagery()
-            selected_imageries = [img for img in selected_imageries if img.datastream == old_datastream]
-
-            # if no imageries selected under this datastream, revert
-            if not selected_imageries:
-                self.imagery_table.blockSignals(True)
-                item.setText(0, old_datastream)
-                self.imagery_table.blockSignals(False)
+            datastream_uuid = item.data(0, Qt.ItemDataRole.UserRole)
+            datastream = next(
+                (imagery.datastream for imagery in self.viewer.imageries if imagery.datastream.uuid == datastream_uuid),
+                None,
+            )
+            if datastream is None:
                 return
 
-            for imagery in selected_imageries:
-                imagery.datastream = new_datastream
-            item.setData(0, Qt.ItemDataRole.UserRole, new_datastream)
+            datastream.name = item.text(0)
             self.refresh_imagery_table()
             self.data_changed.emit()
             return
