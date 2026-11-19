@@ -446,7 +446,7 @@ class ImageryViewer(QWidget):
         self.histogram_imagery_combo.blockSignals(True)
         self.histogram_imagery_combo.clear()
         for imagery in selected_imageries:
-            self.histogram_imagery_combo.addItem(f"{imagery.datastream} - {imagery.name}", imagery.uuid)
+            self.histogram_imagery_combo.addItem(f"{imagery.datastream.name} - {imagery.name}", imagery.uuid)
 
         if selected_imagery_uuid is not None:
             selected_index = self.histogram_imagery_combo.findData(selected_imagery_uuid)

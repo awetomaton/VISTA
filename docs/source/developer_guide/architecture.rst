@@ -283,7 +283,7 @@ VISTA's native file format is HDF5 with a hierarchical structure:
                    ├── radiometric/       # Bias, gain, bad-pixel-mask arrays
                    └── imagery/
                        └── <imagery_uuid>/
-                           ├── [attrs] name, uuid, description, datastream, row_offset, column_offset
+                           ├── [attrs] name, uuid, description, datastream, datastream_uuid, row_offset, column_offset
                            ├── images              # (num_frames, height, width)
                            ├── frames              # 1D int array
                            └── unix_nanoseconds    # Optional timestamps

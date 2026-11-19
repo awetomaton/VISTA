@@ -3,6 +3,7 @@ from types import MethodType, SimpleNamespace
 import numpy as np
 from PyQt6.QtWidgets import QComboBox
 
+from vista.datastreams import Datastream
 from vista.imagery.imagery import Imagery
 from vista.sensors.sensor import Sensor
 from vista.widgets.core.display_timeline import DisplayTimeline
@@ -257,8 +258,8 @@ def test_histogram_selector_uses_imagery_order_and_falls_back(qtbot) -> None:
     """The selector should retain its choice or fall back in stable imagery order."""
     first = _make_imagery("First", [1.0], (2, 2))
     second = _make_imagery("Second", [2.0], (2, 2))
-    first.datastream = "Visible"
-    second.datastream = "Infrared"
+    first.datastream = Datastream(name="Visible")
+    second.datastream = Datastream(name="Infrared")
     image_items = {
         first.uuid: FakeImageItem(),
         second.uuid: FakeImageItem(),
@@ -284,7 +285,7 @@ def test_histogram_selector_uses_imagery_order_and_falls_back(qtbot) -> None:
     assert viewer._get_histogram_imagery_uuid() is second.uuid
     assert viewer.histogram.imageItem() is image_items[second.uuid]
 
-    second.datastream = "Thermal"
+    second.datastream.name = "Thermal"
     second.name = "Renamed"
     ImageryViewer.refresh_histogram_imagery_selector(viewer)
 
